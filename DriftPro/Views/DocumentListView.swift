@@ -226,6 +226,44 @@ struct DocumentListView: View {
         .padding(.horizontal, 32)
     }
     
+    private func mapDocument(doc: QueryDocumentSnapshot) -> Document {
+        let d = doc.data()
+        let id = doc.documentID
+        let title = d["title"] as? String ?? ""
+        let description = d["description"] as? String
+        let category = DocumentCategory(rawValue: d["category"] as? String ?? "other") ?? .other
+        let fileURL = d["fileURL"] as? String ?? ""
+        let fileName = d["fileName"] as? String ?? ""
+        let fileSize = d["fileSize"] as? Int64 ?? 0
+        let fileType = d["fileType"] as? String ?? ""
+        let uploadedBy = d["uploadedBy"] as? String ?? ""
+        let uploadedByName = d["uploadedByName"] as? String ?? ""
+        let companyId = d["companyId"] as? String ?? ""
+        let department = d["department"] as? String
+        let tags = d["tags"] as? [String] ?? []
+        let isPublic = d["isPublic"] as? Bool ?? true
+        let createdAt = (d["createdAt"] as? Timestamp)?.dateValue() ?? Date()
+        let updatedAt = (d["updatedAt"] as? Timestamp)?.dateValue() ?? Date()
+        let downloadCount = d["downloadCount"] as? Int ?? 0
+        let isActive = d["isActive"] as? Bool ?? true
+        return Document(
+            id: id,
+            title: title,
+            description: description,
+            category: category,
+            fileURL: fileURL,
+            fileName: fileName,
+            fileSize: fileSize,
+            fileType: fileType,
+            uploadedBy: uploadedBy,
+            uploadedByName: uploadedByName,
+            companyId: companyId,
+            department: department,
+            tags: tags,
+            isPublic: isPublic
+        )
+    }
+    
     private func loadDocuments() {
         isLoading = true
         let db = Firestore.firestore()
@@ -233,29 +271,7 @@ struct DocumentListView: View {
             .addSnapshotListener { snap, err in
                 isLoading = false
                 if let docs = snap?.documents {
-                    self.documents = docs.map { doc in
-                        let d = doc.data()
-                        return Document(
-                            id: doc.documentID,
-                            title: d["title"] as? String ?? "",
-                            description: d["description"] as? String ?? nil,
-                            category: DocumentCategory(rawValue: d["category"] as? String ?? "other") ?? .other,
-                            fileURL: d["fileURL"] as? String ?? "",
-                            fileName: d["fileName"] as? String ?? "",
-                            fileSize: d["fileSize"] as? Int64 ?? 0,
-                            fileType: d["fileType"] as? String ?? "",
-                            uploadedBy: d["uploadedBy"] as? String ?? "",
-                            uploadedByName: d["uploadedByName"] as? String ?? "",
-                            companyId: d["companyId"] as? String ?? "",
-                            department: d["department"] as? String ?? nil,
-                            tags: d["tags"] as? [String] ?? [],
-                            isPublic: d["isPublic"] as? Bool ?? true,
-                            createdAt: (d["createdAt"] as? Timestamp)?.dateValue() ?? Date(),
-                            updatedAt: (d["updatedAt"] as? Timestamp)?.dateValue() ?? Date(),
-                            downloadCount: d["downloadCount"] as? Int ?? 0,
-                            isActive: d["isActive"] as? Bool ?? true
-                        )
-                    }
+                    self.documents = docs.map { mapDocument(doc: $0) }
                 }
             }
     }
