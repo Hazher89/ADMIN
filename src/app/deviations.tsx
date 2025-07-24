@@ -56,7 +56,12 @@ export default function DeviationsPage() {
   async function handleEdit() {
     if (!selected) return;
     try {
-      await updateDoc(doc(db, "deviations", selected.id), selected);
+      await updateDoc(doc(db, "deviations", selected.id), {
+        title: selected.title,
+        description: selected.description,
+        status: selected.status,
+        severity: selected.severity
+      });
       showToast("Avvik oppdatert", "success");
       setEditMode(false);
       fetchDeviations();

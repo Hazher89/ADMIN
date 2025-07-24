@@ -55,7 +55,12 @@ export default function ShiftsPage() {
   async function handleEdit() {
     if (!selected) return;
     try {
-      await updateDoc(doc(db, "shifts", selected.id), selected);
+      await updateDoc(doc(db, "shifts", selected.id), {
+        title: selected.title,
+        date: selected.date,
+        type: selected.type,
+        assignedTo: selected.assignedTo
+      });
       showToast("Skift oppdatert", "success");
       setEditMode(false);
       fetchShifts();

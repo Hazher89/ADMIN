@@ -54,7 +54,11 @@ export default function DocumentsPage() {
   async function handleEdit() {
     if (!selected) return;
     try {
-      await updateDoc(doc(db, "documents", selected.id), selected);
+      await updateDoc(doc(db, "documents", selected.id), {
+        title: selected.title,
+        type: selected.type,
+        uploadedBy: selected.uploadedBy
+      });
       showToast("Dokument oppdatert", "success");
       setEditMode(false);
       fetchDocuments();

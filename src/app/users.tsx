@@ -54,7 +54,11 @@ export default function UsersPage() {
   async function handleEdit() {
     if (!selected) return;
     try {
-      await updateDoc(doc(db, "users", selected.id), selected);
+      await updateDoc(doc(db, "users", selected.id), {
+        name: selected.name,
+        email: selected.email,
+        role: selected.role
+      });
       showToast("Bruker oppdatert", "success");
       setEditMode(false);
       fetchUsers();
