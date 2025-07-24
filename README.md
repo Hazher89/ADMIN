@@ -241,3 +241,5 @@ For support og spørsmål:
 ---
 
 **DriftPro Admin Panel** - Administrer din bedrift med makt og presisjon! 🚀
+
+*Last updated: $(date)*
