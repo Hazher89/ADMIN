@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "137181225938",
+    "project_id": "driftpro-40ccd",
+    "storage_bucket": "driftpro-40ccd.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:137181225938:android:945515ac1dbb4bdbf4de0b",
+        "android_client_info": {
+          "package_name": "com.driftpro.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAdSmglfJ3lieCfU6LhsfVZif-QtC6PXXY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

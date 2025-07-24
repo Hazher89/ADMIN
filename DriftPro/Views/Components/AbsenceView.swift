@@ -44,7 +44,7 @@ struct AbsenceView: View {
                     .buttonStyle(.borderedProminent)
                     .disabled(submitting)
                 }
-                .padding().background(BlurView(style: .systemMaterial)).cornerRadius(20)
+                .padding().background(.ultraThinMaterial).cornerRadius(20)
                 // Liste over søknader
                 if loading {
                     ProgressView("Laster søknader...")
@@ -130,7 +130,7 @@ struct AbsenceCard: View {
             }
         }
         .padding()
-        .background(BlurView(style: .systemMaterialDark))
+        .background(.ultraThinMaterial)
         .cornerRadius(16)
         .shadow(radius: 6)
     }

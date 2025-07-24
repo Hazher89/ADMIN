@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="accent">#FF9800</color>
+    <color name="background_light">#F5F5F5</color>
+    <color name="black">#000000</color>
+    <color name="blue">#0066FF</color>
+    <color name="divider">#BDBDBD</color>
+    <color name="gray">#8E8E93</color>
+    <color name="green">#34C759</color>
+    <color name="orange">#FF9500</color>
+    <color name="pink">#FF2D92</color>
+    <color name="primary">#2196F3</color>
+    <color name="primary_dark">#1976D2</color>
+    <color name="purple">#AF52DE</color>
+    <color name="red">#FF3B30</color>
+    <color name="teal">#5AC8FA</color>
+    <color name="text_primary">#212121</color>
+    <color name="text_secondary">#757575</color>
+    <color name="white">#FFFFFF</color>
+    <color name="white_transparent">#B3FFFFFF</color>
+    <color name="yellow">#FFCC00</color>
+    <string name="app_name">DriftPro</string>
+    <string name="gcm_defaultSenderId" translatable="false">137181225938</string>
+    <string name="google_api_key" translatable="false">AIzaSyAdSmglfJ3lieCfU6LhsfVZif-QtC6PXXY</string>
+    <string name="google_app_id" translatable="false">1:137181225938:android:945515ac1dbb4bdbf4de0b</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyAdSmglfJ3lieCfU6LhsfVZif-QtC6PXXY</string>
+    <string name="google_storage_bucket" translatable="false">driftpro-40ccd.firebasestorage.app</string>
+    <string name="project_id" translatable="false">driftpro-40ccd</string>
+    <style name="AppTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="colorPrimary">@color/primary</item>
+        <item name="colorPrimaryDark">@color/primary_dark</item>
+        <item name="colorAccent">@color/accent</item>
+        <item name="android:colorPrimary">@color/primary</item>
+        <item name="android:colorPrimaryDark">@color/primary_dark</item>
+        <item name="android:colorAccent">@color/accent</item>
+    </style>
+</resources>

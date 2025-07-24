@@ -46,7 +46,7 @@ struct ClockInOutView: View {
                         }
                     }
                 }
-                .padding().background(BlurView(style: .systemMaterial)).cornerRadius(20)
+                .padding().background(.ultraThinMaterial).cornerRadius(20)
                 // Historikk
                 Text("Historikk")
                     .font(.headline).foregroundColor(.white)
@@ -131,7 +131,7 @@ struct ClockEventCard: View {
             Text("\(event.time, formatter: dateTimeFormatter)")
         }
         .padding()
-        .background(BlurView(style: .systemMaterialDark))
+        .background(.ultraThinMaterial)
         .cornerRadius(16)
         .shadow(radius: 6)
     }

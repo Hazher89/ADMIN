@@ -2,6 +2,17 @@ import SwiftUI
 // For Firestore-integrasjon
 import Firebase
 
+struct Shift: Identifiable {
+    var id: String
+    var type: String
+    var time: String
+    var date: String
+    var resource: String
+    var comment: String
+    var status: String
+    var accepted: Bool
+}
+
 struct ShiftPlanView: View {
     @State private var shifts: [Shift] = []
     @State private var loading = true
@@ -56,7 +67,7 @@ struct ShiftPlanView: View {
                         }.foregroundColor(.green)
                     }
                 }
-                .padding().background(BlurView(style: .systemMaterial)).cornerRadius(20)
+                .padding().background(.ultraThinMaterial).cornerRadius(20)
                 .shadow(radius: 10)
             }
         }
@@ -138,7 +149,7 @@ struct ShiftCard: View {
             }
         }
         .padding()
-        .background(BlurView(style: .systemMaterialDark))
+        .background(.ultraThinMaterial)
         .cornerRadius(16)
         .shadow(radius: 6)
     }

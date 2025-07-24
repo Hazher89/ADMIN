@@ -13,9 +13,7 @@ struct ContentView: View {
     @State private var selectedDestination: AppDestination? = nil
     var body: some View {
         NavigationStack {
-            DashboardView(onNavigate: { destination in
-                selectedDestination = destination
-            })
+            DashboardView()
             .navigationDestination(item: $selectedDestination) { destination in
                 switch destination {
                 case .shiftplan:
@@ -25,7 +23,7 @@ struct ContentView: View {
                 case .clock:
                     ClockInOutView()
                 case .chat:
-                    ChatView()
+                    ConversationListView()
                 case .settings:
                     ProfileView()
                 }

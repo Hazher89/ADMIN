@@ -1,0 +1,161 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:background="@color/background_light">
+
+    <!-- Toolbar -->
+    <com.google.android.material.appbar.MaterialToolbar
+        android:id="@+id/toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="?attr/actionBarSize"
+        android:background="@color/white"
+        app:titleTextColor="@color/text_primary"
+        app:navigationIcon="@drawable/ic_chevron_left"
+        app:title="Chat" />
+
+    <!-- Messages RecyclerView -->
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/messages_recycler_view"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:padding="8dp"
+        android:clipToPadding="false" />
+
+    <!-- Typing Indicator -->
+    <TextView
+        android:id="@+id/typing_indicator"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:text="Skriver..."
+        android:textSize="12sp"
+        android:textColor="@color/text_secondary"
+        android:background="@color/white"
+        android:visibility="gone" />
+
+    <!-- Reply Preview -->
+    <LinearLayout
+        android:id="@+id/reply_preview"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:padding="8dp"
+        android:background="@color/white"
+        android:visibility="gone">
+
+        <View
+            android:layout_width="4dp"
+            android:layout_height="match_parent"
+            android:background="@color/blue"
+            android:layout_marginEnd="8dp" />
+
+        <LinearLayout
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/reply_text"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="Svar til melding"
+                android:textSize="12sp"
+                android:textColor="@color/text_secondary"
+                android:maxLines="2"
+                android:ellipsize="end" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/cancel_reply_button"
+            android:layout_width="24dp"
+            android:layout_height="24dp"
+            android:src="@drawable/ic_close"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:contentDescription="Avbryt svar" />
+    </LinearLayout>
+
+    <!-- Attachment Options -->
+    <com.google.android.material.chip.ChipGroup
+        android:id="@+id/attachment_chip_group"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp"
+        android:background="@color/white"
+        android:visibility="gone"
+        app:singleSelection="true" />
+
+    <!-- Message Input Area -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:background="@color/white"
+        android:padding="8dp">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="center_vertical">
+
+            <!-- Attachment Button -->
+            <ImageButton
+                android:id="@+id/attachment_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_plus"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:tint="@color/blue"
+                android:contentDescription="Vedlegg" />
+
+            <!-- Camera Button -->
+            <ImageButton
+                android:id="@+id/camera_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_camera"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:tint="@color/blue"
+                android:contentDescription="Kamera" />
+
+            <!-- Message Input -->
+            <EditText
+                android:id="@+id/message_input"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginHorizontal="8dp"
+                android:padding="12dp"
+                android:background="@drawable/message_input_background"
+                android:hint="Skriv en melding..."
+                android:textSize="16sp"
+                android:maxLines="4"
+                android:inputType="textMultiLine|textCapSentences" />
+
+            <!-- Send/Microphone Button -->
+            <ImageButton
+                android:id="@+id/send_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_send"
+                android:background="@drawable/send_button_background"
+                android:visibility="gone"
+                android:contentDescription="Send" />
+
+            <ImageButton
+                android:id="@+id/microphone_button"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
+                android:src="@drawable/ic_microphone"
+                android:background="@drawable/microphone_button_background"
+                android:contentDescription="Mikrofon" />
+
+        </LinearLayout>
+    </LinearLayout>
+
+</LinearLayout> 

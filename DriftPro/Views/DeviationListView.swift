@@ -12,93 +12,108 @@ struct DeviationListView: View {
     
     var filteredDeviations: [Deviation] {
         var filtered = deviations
-        
         if !searchText.isEmpty {
             filtered = filtered.filter { deviation in
                 deviation.title.localizedCaseInsensitiveContains(searchText) ||
                 deviation.description.localizedCaseInsensitiveContains(searchText)
             }
         }
-        
         if let category = selectedCategory {
             filtered = filtered.filter { $0.category == category }
         }
-        
         if let severity = selectedSeverity {
             filtered = filtered.filter { $0.severity == severity }
         }
-        
         return filtered
     }
     
     var body: some View {
         NavigationView {
-            ZStack {
-                // Gradient bakgrunn
-                AppTheme.mainGradient.ignoresSafeArea()
-                
-                VStack(spacing: 0) {
-                    // Hero/velkomstseksjon
-                    VStack(spacing: 16) {
-                        HStack(spacing: 16) {
-                            ZStack {
-                                Circle()
-                                    .fill(AppTheme.accentGradient)
-                                    .frame(width: 56, height: 56)
-                                Image(systemName: "exclamationmark.triangle.fill")
-                                    .font(.system(size: 28, weight: .bold))
+            VStack(spacing: 0) {
+                // Toppseksjon med søk og filter
+                VStack(spacing: 12) {
+                    HStack {
+                        Text("Avvik")
+                            .font(.largeTitle).bold()
+                        Spacer()
+                        Button(action: { showingNewDeviation = true }) {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 28, weight: .bold))
+                                .foregroundColor(.blue)
+                        }
+                    }
+                    .padding(.horizontal)
+                    HStack(spacing: 10) {
+                        Image(systemName: "magnifyingglass")
+                            .foregroundColor(.gray)
+                        TextField("Søk i avvik...", text: $searchText)
+                            .textFieldStyle(PlainTextFieldStyle())
+                            .font(.system(size: 16))
+                    }
+                    .padding(10)
+                    .background(Color(.systemGray6))
+                    .cornerRadius(12)
+                    .padding(.horizontal)
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 8) {
+                            FilterChip(title: "Alle", isSelected: selectedCategory == nil && selectedSeverity == nil) {
+                                selectedCategory = nil; selectedSeverity = nil
+                            }
+                            ForEach(DeviationCategory.allCases, id: \.self) { category in
+                                FilterChip(title: category.displayName, isSelected: selectedCategory == category) {
+                                    selectedCategory = category; selectedSeverity = nil
+                                }
+                            }
+                        }
+                        .padding(.horizontal)
+                    }
+                }
+                .padding(.top)
+                .background(Color(.systemBackground))
+                Divider()
+                // Liste
+                if isLoading {
+                    Spacer()
+                    ProgressView("Laster avvik...")
+                        .padding()
+                    Spacer()
+                } else if filteredDeviations.isEmpty {
+                    VStack(spacing: 20) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 48)).foregroundColor(.gray)
+                        Text("Ingen avvik funnet")
+                            .font(.title3).foregroundColor(.gray)
+                        if searchText.isEmpty {
+                            Button(action: { showingNewDeviation = true }) {
+                                Label("Rapporter første avvik", systemImage: "plus.circle.fill")
+                                    .font(.headline)
+                                    .padding(.horizontal, 24).padding(.vertical, 12)
+                                    .background(Color.blue)
                                     .foregroundColor(.white)
+                                    .cornerRadius(12)
                             }
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text("Avvik & Rapportering")
-                                    .font(.system(size: 20, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.9))
-                                Text("Spor og håndter avvik systematisk")
-                                    .font(.system(size: 14, weight: .medium))
-                                    .foregroundColor(.white.opacity(0.7))
-                            }
-                            Spacer()
                         }
-                        .padding(.horizontal, 20)
+                    }
+                    .padding(.top, 60)
+                    Spacer()
+                } else {
+                    ScrollView {
+                        LazyVStack(spacing: 16) {
+                            ForEach(filteredDeviations) { deviation in
+                                NavigationLink(destination: DeviationDetailView(deviation: deviation)) {
+                                    DeviationCardFlat(deviation: deviation)
+                                }
+                                .buttonStyle(PlainButtonStyle())
+                                .padding(.horizontal)
+                            }
+                        }
                         .padding(.top, 16)
-                        .transition(.opacity.combined(with: .move(edge: .top)))
-                        
-                        // Search and filter bar
-                        searchAndFilterSection
-                    }
-                    
-                    // Deviations list
-                    if isLoading {
-                        Spacer()
-                        VStack(spacing: 20) {
-                            ProgressView()
-                                .progressViewStyle(CircularProgressViewStyle(tint: .white))
-                                .scaleEffect(1.3)
-                            
-                            Text("Laster avvik...")
-                                .font(.system(size: 18, weight: .medium))
-                                .foregroundColor(.white.opacity(0.8))
-                        }
-                        .transition(.opacity.combined(with: .scale))
-                        Spacer()
-                    } else if filteredDeviations.isEmpty {
-                        emptyStateView
-                    } else {
-                        deviationsList
+                        .padding(.bottom, 32)
                     }
                 }
             }
-            .navigationTitle("")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .navigationBarTrailing) {
-                    Button(action: { showingNewDeviation = true }) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 24, weight: .medium))
-                            .foregroundColor(.white)
-                    }
-                }
-            }
+            .background(Color(.systemGroupedBackground).ignoresSafeArea())
+            .navigationBarHidden(true)
         }
         .sheet(isPresented: $showingNewDeviation) {
             NewDeviationView()
@@ -106,130 +121,10 @@ struct DeviationListView: View {
         }
         .onAppear {
             loadDeviations()
-            withAnimation(.easeInOut(duration: 0.8)) {
-                animateList = true
-            }
         }
         .refreshable {
             await loadDeviationsAsync()
         }
-    }
-    
-    private var searchAndFilterSection: some View {
-        VStack(spacing: 16) {
-            // Search bar
-            HStack(spacing: 12) {
-                Image(systemName: "magnifyingglass")
-                    .font(.system(size: 18, weight: .medium))
-                    .foregroundColor(.white.opacity(0.8))
-                
-                TextField("Søk i avvik...", text: $searchText)
-                    .textFieldStyle(PlainTextFieldStyle())
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white)
-                    .accentColor(.white)
-            }
-            .padding(.horizontal, 20)
-            .padding(.vertical, 16)
-            .background(AppTheme.glassBackground(cornerRadius: 16))
-            .padding(.horizontal, 20)
-            .transition(.opacity.combined(with: .move(edge: .top)))
-            
-            // Filter chips
-            ScrollView(.horizontal, showsIndicators: false) {
-                HStack(spacing: 12) {
-                    FilterChip(
-                        title: "Alle",
-                        isSelected: selectedCategory == nil && selectedSeverity == nil
-                    ) {
-                        selectedCategory = nil
-                        selectedSeverity = nil
-                    }
-                    
-                    ForEach(DeviationCategory.allCases, id: \.self) { category in
-                        FilterChip(
-                            title: category.displayName,
-                            isSelected: selectedCategory == category
-                        ) {
-                            selectedCategory = category
-                            selectedSeverity = nil
-                        }
-                    }
-                }
-                .padding(.horizontal, 20)
-            }
-            .transition(.opacity.combined(with: .move(edge: .top)))
-        }
-    }
-    
-    private var deviationsList: some View {
-        ScrollView {
-            LazyVStack(spacing: 16) {
-                ForEach(Array(filteredDeviations.enumerated()), id: \.element.id) { index, deviation in
-                    NavigationLink(destination: DeviationDetailView(deviation: deviation)) {
-                        DeviationCard(deviation: deviation)
-                            .background(AppTheme.glassBackground(cornerRadius: 20))
-                    }
-                    .buttonStyle(PlainButtonStyle())
-                    .padding(.horizontal, 20)
-                    .offset(x: animateList ? 0 : 300)
-                    .opacity(animateList ? 1 : 0)
-                    .animation(.easeOut(duration: 0.6).delay(Double(index) * 0.1), value: animateList)
-                }
-            }
-            .padding(.top, 20)
-            .padding(.bottom, 32)
-        }
-    }
-    
-    private var emptyStateView: some View {
-        VStack(spacing: 24) {
-            Spacer()
-            
-            ZStack {
-                Circle()
-                    .fill(AppTheme.accentGradient)
-                    .frame(width: 120, height: 120)
-                    .opacity(0.3)
-                
-                Image(systemName: "exclamationmark.triangle")
-                    .font(.system(size: 60, weight: .light))
-                    .foregroundColor(.white)
-            }
-            .transition(.opacity.combined(with: .scale))
-            
-            VStack(spacing: 12) {
-                Text(searchText.isEmpty ? "Ingen avvik funnet" : "Ingen resultater")
-                    .font(.system(size: 24, weight: .bold))
-                    .foregroundColor(.white)
-                
-                Text(searchText.isEmpty ? "Det er ingen rapporterte avvik for øyeblikket" : "Prøv å endre søkekriteriene")
-                    .font(.system(size: 16, weight: .medium))
-                    .foregroundColor(.white.opacity(0.8))
-                    .multilineTextAlignment(.center)
-            }
-            
-            if searchText.isEmpty {
-                Button(action: { showingNewDeviation = true }) {
-                    HStack(spacing: 12) {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 20, weight: .medium))
-                        Text("Rapporter første avvik")
-                            .font(.system(size: 18, weight: .semibold))
-                    }
-                    .foregroundColor(.white)
-                    .padding(.horizontal, 32)
-                    .padding(.vertical, 16)
-                    .background(AppTheme.accentGradient)
-                    .cornerRadius(16)
-                    .shadow(color: .blue.opacity(0.3), radius: 8, x: 0, y: 4)
-                }
-                .transition(.opacity.combined(with: .move(edge: .bottom)))
-            }
-            
-            Spacer()
-        }
-        .padding(.horizontal, 32)
     }
     
     private func loadDeviations() {
@@ -255,7 +150,6 @@ struct DeviationListView: View {
             }
         }
     }
-    
     private func loadDeviationsAsync() async {
         guard let companyId = firebaseManager.currentUser?.companyId else {
             await MainActor.run {
@@ -285,19 +179,61 @@ struct FilterChip: View {
     let title: String
     let isSelected: Bool
     let action: () -> Void
-    
     var body: some View {
         Button(action: action) {
             Text(title)
                 .font(.system(size: 14, weight: .medium))
-                .foregroundColor(isSelected ? .white : .white.opacity(0.8))
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
-                .background(
-                    isSelected ? AnyShapeStyle(AppTheme.accentGradient) : AnyShapeStyle(Color.clear)
-                )
-                .cornerRadius(12)
+                .foregroundColor(isSelected ? .white : .blue)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 7)
+                .background(isSelected ? Color.blue : Color(.systemGray5))
+                .cornerRadius(10)
         }
+    }
+}
+
+struct DeviationCardFlat: View {
+    let deviation: Deviation
+    var statusColor: Color {
+        deviation.status == .reported ? .orange : .green
+    }
+    var body: some View {
+        HStack(alignment: .top, spacing: 16) {
+            ZStack {
+                Circle().fill(statusColor.opacity(0.18)).frame(width: 44, height: 44)
+                Image(systemName: "exclamationmark.triangle.fill")
+                    .font(.system(size: 22, weight: .bold))
+                    .foregroundColor(statusColor)
+            }
+            VStack(alignment: .leading, spacing: 6) {
+                HStack {
+                    Text(deviation.title)
+                        .font(.headline)
+                        .foregroundColor(.primary)
+                    Spacer()
+                    Text(deviation.status.displayName)
+                        .font(.caption).bold()
+                        .foregroundColor(statusColor)
+                        .padding(.horizontal, 8).padding(.vertical, 4)
+                        .background(statusColor.opacity(0.12))
+                        .cornerRadius(8)
+                }
+                Text(deviation.description)
+                    .font(.subheadline)
+                    .foregroundColor(.secondary)
+                    .lineLimit(2)
+                HStack(spacing: 12) {
+                    Label(deviation.category.displayName, systemImage: "tag")
+                        .font(.caption2).foregroundColor(.gray)
+                    Label(deviation.severity.displayName, systemImage: "bolt.fill")
+                        .font(.caption2).foregroundColor(.gray)
+                }
+            }
+        }
+        .padding(14)
+        .background(Color(.systemBackground))
+        .cornerRadius(16)
+        .shadow(color: statusColor.opacity(0.07), radius: 4, x: 0, y: 2)
     }
 }
 

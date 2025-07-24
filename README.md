@@ -1,224 +1,243 @@
-# DriftPro - Bedriftsstyring og Avvikshåndtering
+# DriftPro Admin Panel
 
-DriftPro er en moderne, omfattende bedriftsstyringsløsning designet for å håndtere avvik, dokumenter, kommunikasjon og ledelsesprosesser i bedrifter av alle størrelser.
+En profesjonell admin-panel for DriftPro som lar deg administrere brukere, avdelinger, chat, avvik, dokumenter og skiftplan for både Android og iOS appene.
 
 ## 🚀 Funksjoner
 
-### 1. Avvikssystem med bilder og video
-- **Rapportering**: Ansatte kan enkelt rapportere avvik direkte fra mobilen
-- **Media-støtte**: Last opp bilder og video for bedre dokumentasjon
-- **Kategorisering**: Organiser avvik etter type (sikkerhet, kvalitet, miljø, etc.)
-- **Alvorlighetsgrad**: Prioriter avvik med ulike alvorlighetsnivåer
-- **Admin-håndtering**: Administrerer kan behandle og svare på avvik
+### 🔐 **Autentisering & Tilgangskontroll**
+- Bedriftsvelger før innlogging
+- Sikker login med e-post/passord
+- Rollebasert tilgangskontroll (Super Admin, Admin, Manager, Employee)
 
-### 2. Brukerhåndtering
-- **Selvregistrering**: Ansatte kan opprette konto via e-post og passord
-- **Admin-kontroll**: Administratorer kan opprette og administrere alle brukere
-- **Rollebasert tilgang**: Forskjellige tilgangsnivåer for ansatte og admin
-- **Bedriftsbasert**: Hver bedrift har egne brukere og data
+### 📊 **Dashboard**
+- Oversikt over alle statistikk
+- Hurtighandlinger
+- Siste aktivitet
 
-### 3. Ledelsessystem (som Landax)
-- **Risikoanalyse**: Maler og skjemaer for risikovurdering
-- **Dokumentarkiv**: Sentralisert lagring av rutiner, HMS, protokoller
-- **Internkontroll**: Revisjonspunkter og kontrollrutiner
-- **Samtalearkiv**: Logg over kommunikasjon mellom ansatte og ledelse
-- **Bursdagskalender**: Automatiske varsler for bursdager
+### 👥 **Brukeradministrasjon**
+- Se alle brukere i bedriften
+- Filtrering på rolle og søk
+- Brukerstatistikker og status
+- Legg til, rediger og slett brukere
 
-### 4. Felles chat og varsling
-- **Gruppechat**: Avdelings- og bedriftsomfattende chatter
-- **Individuelle samtaler**: Privat kommunikasjon mellom ansatte
-- **Media-deling**: Del bilder og video i chat
-- **Push-varsler**: Varsling ved nye meldinger og hendelser
+### 🏢 **Avdelingsadministrasjon**
+- Opprett og administrer avdelinger
+- Tildel managere til avdelinger
+- Se brukerfordeling per avdeling
 
-### 5. Bedriftsbasert struktur
-- **Multi-tenant**: Flere bedrifter på samme plattform
-- **Lukkede områder**: Hver bedrift har egne data og brukere
-- **Tilpasning**: Logo, farger og innhold per bedrift
-- **Admin per bedrift**: Dedikert administrator for hver bedrift
+### 💬 **Chat-oversikt**
+- Se alle chat-rom i bedriften
+- Filtre på chat-type (direkte/gruppe)
+- Se deltakere og siste meldinger
 
-## 🛠 Teknisk Stack
+### ⚠️ **Avvik-administrasjon**
+- Oversikt over alle avvik
+- Filtrering på status og prioritet
+- Se rapporterende bruker og avdeling
 
-- **Frontend**: SwiftUI (iOS)
-- **Backend**: Firebase
-  - **Authentication**: Firebase Auth
-  - **Database**: Firestore
-  - **Storage**: Firebase Storage
-  - **Push Notifications**: Firebase Cloud Messaging
-- **Arkitektur**: MVVM med Combine
-- **Minimum iOS**: 15.0+
+### 📄 **Dokumentadministrasjon**
+- Se alle dokumenter i bedriften
+- Filtrering på kategori
+- Se opplastet av og nedlastinger
 
-## 📱 App-struktur
+### 📅 **Skiftplan-administrasjon**
+- Oversikt over alle skift
+- Filtrering på status og type
+- Se clock-in/out tider
 
-```
-DriftPro/
-├── Models/                 # Data models
-│   ├── User.swift
-│   ├── Company.swift
-│   ├── Deviation.swift
-│   ├── Chat.swift
-│   └── Document.swift
-├── Views/                  # UI Views
-│   ├── Components/         # Reusable components
-│   ├── LoadingView.swift
-│   ├── CompanySelectionView.swift
-│   ├── LoginView.swift
-│   ├── MainTabView.swift
-│   ├── DashboardView.swift
-│   ├── DeviationListView.swift
-│   ├── ChatListView.swift
-│   ├── DocumentListView.swift
-│   ├── ProfileView.swift
-│   └── PlaceholderViews.swift
-├── Services/               # Business logic
-│   └── FirebaseManager.swift
-├── DriftProApp.swift       # App entry point
-└── GoogleService-Info.plist # Firebase config
-```
+### 📈 **Rapporter & Analyser**
+- Detaljerte statistikk
+- Brukeraktivitet
+- Kommunikasjon
+- Avvik og dokumenter
 
-## 🔧 Installasjon og Oppsett
+### ⚙️ **Innstillinger**
+- Profilinformasjon
+- Sikkerhet (passord, 2FA)
+- Varsler
+- Bedriftsinnstillinger
 
-### Forutsetninger
-- Xcode 14.0 eller nyere
-- iOS 15.0+ som målplattform
-- Firebase-prosjekt opprettet
+## 🛠️ Teknisk Stack
 
-### 1. Klone prosjektet
+- **Frontend**: Next.js 14, React 19, TypeScript
+- **Styling**: Tailwind CSS
+- **Backend**: Firebase (Firestore, Authentication, Storage)
+- **Form Handling**: React Hook Form + Zod
+- **Icons**: Heroicons
+- **Charts**: Recharts (for fremtidige utvidelser)
+
+## 📦 Installasjon
+
+1. **Klon prosjektet**
 ```bash
 git clone <repository-url>
-cd DriftPro
+cd driftpro-admin
 ```
 
-### 2. Firebase-oppsett
+2. **Installer avhengigheter**
+```bash
+npm install
+```
+
+3. **Konfigurer Firebase**
+   - Opprett et Firebase-prosjekt
+   - Kopier Firebase-konfigurasjonen til `src/lib/firebase.ts`
+   - Aktiver Authentication og Firestore
+
+4. **Start utviklingsserver**
+```bash
+npm run dev
+```
+
+5. **Åpne i nettleseren**
+```
+http://localhost:3000
+```
+
+## 🔧 Konfigurasjon
+
+### Firebase Setup
+
 1. Gå til [Firebase Console](https://console.firebase.google.com/)
 2. Opprett et nytt prosjekt
-3. Legg til iOS-app:
-   - Bundle ID: `com.yourcompany.DriftPro`
-   - App nickname: `DriftPro`
-4. Last ned `GoogleService-Info.plist`
-5. Erstatt placeholder-filen i prosjektet med den nedlastede filen
+3. Aktiver Authentication (Email/Password)
+4. Opprett Firestore database
+5. Kopier konfigurasjonen til `src/lib/firebase.ts`:
 
-### 3. Firebase-konfigurasjon
-Aktiver følgende Firebase-tjenester:
-- **Authentication**: E-post/passord
-- **Firestore Database**: Strukturert data
-- **Storage**: Fil-opplasting
-- **Cloud Messaging**: Push-varsler
-
-### 4. Firestore-regler
-Sett opp sikkerhetsregler for Firestore:
-
-```javascript
-rules_version = '2';
-service cloud.firestore {
-  match /databases/{database}/documents {
-    // Users can only access their own company's data
-    match /users/{userId} {
-      allow read, write: if request.auth != null && 
-        request.auth.uid == userId;
-    }
-    
-    match /companies/{companyId} {
-      allow read, write: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == companyId;
-    }
-    
-    match /deviations/{deviationId} {
-      allow read, write: if request.auth != null && 
-        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.companyId == resource.data.companyId;
-    }
-    
-    // Similar rules for documents, chats, etc.
-  }
-}
+```typescript
+const firebaseConfig = {
+  apiKey: "din-api-key",
+  authDomain: "ditt-prosjekt.firebaseapp.com",
+  projectId: "ditt-prosjekt",
+  storageBucket: "ditt-prosjekt.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
 ```
 
-### 5. Bygg og kjør
-1. Åpne `DriftPro.xcodeproj` i Xcode
-2. Velg målplattform (iPhone/iPad)
-3. Bygg og kjør prosjektet (⌘+R)
+### Firestore Collections
 
-## 🎨 Design-prinsipper
+Følgende collections må opprettes i Firestore:
 
-### Moderne og brukervennlig
-- **Konsistent design**: Samme visuelt språk gjennom hele appen
-- **Intuitiv navigasjon**: Enkel å forstå og bruke
-- **Responsivt design**: Fungerer på alle iOS-enheter
-- **Tilgjengelighet**: Støtte for VoiceOver og andre tilgjengelighetsfunksjoner
+- `companies` - Bedriftsinformasjon
+- `users` - Brukerdata
+- `departments` - Avdelinger
+- `chats` - Chat-rom
+- `chatMessages` - Chat-meldinger
+- `deviations` - Avvik
+- `documents` - Dokumenter
+- `shifts` - Skiftplan
 
-### Fargepalett
-- **Primærfarge**: Blå (#007AFF)
-- **Sekundærfarge**: Lilla (#5856D6)
-- **Suksess**: Grønn (#34C759)
-- **Advarsel**: Oransje (#FF9500)
-- **Feil**: Rød (#FF3B30)
+## 🚀 Deployment
 
-### Typografi
-- **Overskrifter**: SF Pro Display Bold
-- **Brødtekst**: SF Pro Text Regular
-- **Knapper**: SF Pro Text Semibold
+### Netlify (Anbefalt)
+
+1. **Koble til GitHub**
+   - Push koden til GitHub
+   - Koble Netlify til GitHub-repositoriet
+
+2. **Konfigurer build settings**
+   - Build command: `npm run build`
+   - Publish directory: `.next`
+
+3. **Sett miljøvariabler**
+   - `NEXT_PUBLIC_FIREBASE_API_KEY`
+   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
+   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
+   - etc.
+
+4. **Deploy**
+   - Netlify vil automatisk bygge og deploye
+
+### Vercel
+
+1. **Koble til GitHub**
+2. **Import prosjekt**
+3. **Konfigurer miljøvariabler**
+4. **Deploy**
+
+## 📱 Integrasjon med Mobile Apps
+
+Admin-panelet er designet for å fungere sammen med:
+- **DriftPro iOS App** (SwiftUI)
+- **DriftPro Android App** (Java/Kotlin)
+
+Begge appene deler samme Firebase-backend og datastruktur.
 
 ## 🔒 Sikkerhet
 
-### Autentisering
-- Firebase Authentication med e-post/passord
-- Sikker token-håndtering
-- Automatisk utlogging ved inaktivitet
+- Firebase Authentication for brukerautentisering
+- Firestore Security Rules for datatilgang
+- Rollebasert tilgangskontroll
+- HTTPS-kryptering
+- To-faktor autentisering (2FA)
 
-### Datasikkerhet
-- Firestore sikkerhetsregler
-- Bedriftsbasert dataseparasjon
-- Kryptert kommunikasjon
+## 📊 Datastruktur
 
-### Personvern
-- GDPR-kompatibel
-- Minimal datainnsamling
-- Brukerkontroll over egne data
+### Company
+```typescript
+interface Company {
+  id: string;
+  name: string;
+  logoURL?: string;
+  primaryColor?: string;
+  secondaryColor?: string;
+  address?: string;
+  phoneNumber?: string;
+  email?: string;
+  website?: string;
+  description?: string;
+  adminUserId: string;
+  subscriptionPlan?: 'basic' | 'premium' | 'enterprise';
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
-## 🚀 Utvidelser og fremtidige funksjoner
+### User
+```typescript
+interface User {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  companyId: string;
+  departmentId?: string;
+  role: 'super_admin' | 'admin' | 'manager' | 'employee';
+  phoneNumber?: string;
+  avatarURL?: string;
+  isActive: boolean;
+  lastLoginAt?: Date;
+  createdAt: Date;
+  updatedAt: Date;
+}
+```
 
-### Planlagte funksjoner
-- **Web-dashboard**: Administrasjon via nettleser
-- **API-integrasjon**: Kobling mot andre systemer
-- **Rapportering**: Avanserte rapporter og analyser
-- **Offline-støtte**: Fungerer uten internett
-- **Multi-språk**: Støtte for flere språk
+## 🤝 Bidrag
 
-### Tekniske forbedringer
-- **Performance**: Optimalisering av datalasting
-- **Caching**: Lokal caching for raskere tilgang
-- **Testing**: Omfattende test-suite
-- **CI/CD**: Automatisert bygging og testing
-
-## 📞 Support og bidrag
-
-### Rapportering av feil
-- Bruk GitHub Issues for feilrapporter
-- Inkluder detaljerte beskrivelser og skjermbilder
-- Spesifiser iOS-versjon og enhet
-
-### Bidrag
-- Fork prosjektet
-- Opprett feature branch
-- Send pull request med beskrivelse av endringer
-
-### Kontakt
-- **E-post**: support@driftpro.no
-- **Dokumentasjon**: [Wiki](link-to-wiki)
-- **Discord**: [DriftPro Community](link-to-discord)
+1. Fork prosjektet
+2. Opprett en feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit endringene (`git commit -m 'Add some AmazingFeature'`)
+4. Push til branchen (`git push origin feature/AmazingFeature`)
+5. Åpne en Pull Request
 
 ## 📄 Lisens
 
 Dette prosjektet er lisensiert under MIT License - se [LICENSE](LICENSE) filen for detaljer.
 
-## 🙏 Takk
+## 📞 Support
 
-Takk til alle som har bidratt til DriftPro-prosjektet. Spesiell takk til:
-- Firebase-teamet for den utmerkede plattformen
-- SwiftUI-community for inspirasjon og støtte
-- Alle beta-testere som har gitt verdifull tilbakemelding
+For support og spørsmål:
+- E-post: support@driftpro.no
+- Dokumentasjon: [docs.driftpro.no](https://docs.driftpro.no)
+
+## 🔄 Oppdateringer
+
+- **v1.0.0** - Første release med grunnleggende funksjoner
+- **v1.1.0** - Lagt til skiftplan-administrasjon
+- **v1.2.0** - Forbedret rapporter og analyser
 
 ---
 
-**DriftPro** - Moderne bedriftsstyring for det digitale arbeidslivet 🏢✨ 
+**DriftPro Admin Panel** - Administrer din bedrift med makt og presisjon! 🚀 

@@ -55,7 +55,7 @@ struct CompanySelectionView: View {
                             searchCompanies()
                         })
                         .padding()
-                        .background(BlurView(style: .systemMaterialDark))
+                        .background(.ultraThinMaterial)
                         .cornerRadius(14)
                         .foregroundColor(.white)
                         .accentColor(.white)
@@ -160,7 +160,7 @@ struct LoginOrRegisterView: View {
                 // LoginView med glass-effekt
                 VStack {
                     LoginView(company: company)
-                        .background(BlurView(style: .systemMaterialDark))
+                        .background(.ultraThinMaterial)
                         .cornerRadius(18)
                         .shadow(radius: 10)
                 }
@@ -221,7 +221,7 @@ struct CompanyRow: View {
                 .foregroundColor(.white.opacity(0.7))
         }
         .padding()
-        .background(BlurView(style: .systemMaterialDark))
+        .background(.ultraThinMaterial)
         .cornerRadius(16)
         .shadow(color: .black.opacity(0.15), radius: 8, x: 0, y: 4)
     }

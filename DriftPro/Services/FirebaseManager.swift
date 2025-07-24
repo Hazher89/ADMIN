@@ -4,22 +4,25 @@ import FirebaseAuth
 import FirebaseFirestore
 import FirebaseStorage
 import Combine
+import FirebaseMessaging
+import UserNotifications
 
-class FirebaseManager: ObservableObject {
+class FirebaseManager: NSObject, ObservableObject {
     static let shared = FirebaseManager()
     
     let auth = Auth.auth()
     let db = Firestore.firestore()
     let storage = Storage.storage()
     
-    @Published var currentUser: User?
+    @Published var currentUser: DriftPro.User?
     @Published var currentCompany: Company?
     @Published var isAuthenticated = false
     @Published var isLoading = false
     
     private var cancellables = Set<AnyCancellable>()
     
-    private init() {
+    override init() {
+        super.init()
         // Logg ut bruker ved appstart for å tvinge ny innlogging
         do {
             try auth.signOut()
@@ -52,7 +55,7 @@ class FirebaseManager: ObservableObject {
                 self?.isLoading = false
                 if let document = document, document.exists {
                     do {
-                        let user = try document.data(as: User.self)
+                        let user = try document.data(as: DriftPro.User.self)
                         self?.currentUser = user
                         self?.fetchCompanyData(companyId: user.companyId)
                         self?.isAuthenticated = true
@@ -91,14 +94,14 @@ class FirebaseManager: ObservableObject {
         await MainActor.run { self.isLoading = true }
         defer { Task { @MainActor in self.isLoading = false } }
         let _ = try await auth.createUser(withEmail: email, password: password)
-        let user = User(
+        let user = DriftPro.User(
             email: email,
             firstName: firstName,
             lastName: lastName,
             role: role,
             companyId: companyId
         )
-        try await db.collection("users").document(auth.currentUser?.uid ?? UUID().uuidString).setData(from: user)
+        try db.collection("users").document(auth.currentUser?.uid ?? UUID().uuidString).setData(from: user)
         await MainActor.run { self.isAuthenticated = true }
     }
     
@@ -115,7 +118,7 @@ class FirebaseManager: ObservableObject {
         let metadata = StorageMetadata()
         metadata.contentType = "application/octet-stream"
         
-        _ = try await storageRef.putDataAsync(data, metadata: metadata)
+        _ = try await storageRef.putData(data, metadata: metadata)
         let downloadURL = try await storageRef.downloadURL()
         return downloadURL.absoluteString
     }
@@ -174,5 +177,39 @@ class FirebaseManager: ObservableObject {
             print("[FirebaseManager] Feil ved sletting av avvik: \(error)")
             throw error
         }
+    }
+    
+    func configurePushNotifications() {
+        UNUserNotificationCenter.current().delegate = self
+        UNUserNotificationCenter.current().requestAuthorization(options: [.alert, .badge, .sound]) { granted, error in
+            if granted {
+                DispatchQueue.main.async {
+                    UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
+        Messaging.messaging().delegate = self
+    }
+}
+extension FirebaseManager: UNUserNotificationCenterDelegate {
+    func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification, withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
+        completionHandler([.banner, .sound, .badge])
+    }
+}
+extension FirebaseManager: MessagingDelegate {
+    func messaging(_ messaging: Messaging, didReceiveRegistrationToken fcmToken: String?) {
+        print("[FCM] Registration token: \(fcmToken ?? "nil")")
+        // Her kan du sende token til server/Firestore for å knytte til bruker
+    }
+}
+// For å sende test-varsel fra appen (lokalt)
+extension FirebaseManager {
+    func sendLocalTestNotification(title: String, body: String) {
+        let content = UNMutableNotificationContent()
+        content.title = title
+        content.body = body
+        content.sound = .default
+        let request = UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: UNTimeIntervalNotificationTrigger(timeInterval: 1, repeats: false))
+        UNUserNotificationCenter.current().add(request)
     }
 } 

@@ -19,8 +19,8 @@ struct AppTheme {
     )
     // Glassmorfisme
     static func glassBackground(cornerRadius: CGFloat = 20) -> some View {
-        BlurView(style: .systemUltraThinMaterial)
-            .background(cardGradient)
+        Color.clear
+            .background(.ultraThinMaterial)
             .cornerRadius(cornerRadius)
             .overlay(
                 RoundedRectangle(cornerRadius: cornerRadius)

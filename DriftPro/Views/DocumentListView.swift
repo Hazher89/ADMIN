@@ -242,10 +242,6 @@ struct DocumentListView: View {
         let department = d["department"] as? String
         let tags = d["tags"] as? [String] ?? []
         let isPublic = d["isPublic"] as? Bool ?? true
-        let createdAt = (d["createdAt"] as? Timestamp)?.dateValue() ?? Date()
-        let updatedAt = (d["updatedAt"] as? Timestamp)?.dateValue() ?? Date()
-        let downloadCount = d["downloadCount"] as? Int ?? 0
-        let isActive = d["isActive"] as? Bool ?? true
         return Document(
             id: id,
             title: title,

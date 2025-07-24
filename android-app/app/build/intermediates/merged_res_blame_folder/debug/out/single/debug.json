@@ -1,0 +1,350 @@
+[
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_message_received.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_message_received.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_deviation.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_deviation.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_documents.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_documents.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_activity_chat_enhanced.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/activity_chat_enhanced.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/menu_chat_menu.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/menu/chat_menu.xml"
+    },
+    {
+        "merged": "com.driftpro.app-merged_res-37:/drawable_ic_check.xml.flat",
+        "source": "com.driftpro.app-main-39:/drawable/ic_check.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_activity_main.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/activity_main.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_activity_icon_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/activity_icon_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_deviation_status_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/deviation_status_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_question_circle.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_question_circle.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_word.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_word.xml"
+    },
+    {
+        "merged": "com.driftpro.app-merged_res-37:/drawable_ic_camera.xml.flat",
+        "source": "com.driftpro.app-main-39:/drawable/ic_camera.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_user.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_user.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_status_resolved_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/status_resolved_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_placeholder.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_placeholder.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_chat_bubble.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_chat_bubble.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_chevron_right.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_chevron_right.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_company.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_company.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_profile_image_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/profile_image_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_error.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_error.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_send_button_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/send_button_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_calendar.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_calendar.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_deviations.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_deviations.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_document.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_document.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_activity.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_activity.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_message_input_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/message_input_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_profile.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_profile.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_chart_line.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_chart_line.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_chat.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_chat.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_clock.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_clock.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_dashboard_new.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_dashboard_new.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_plus.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_plus.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/xml_network_security_config.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/xml/network_security_config.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_company_icon_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/company_icon_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_search_button_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/search_button_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_file_size.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_file_size.xml"
+    },
+    {
+        "merged": "com.driftpro.app-merged_res-37:/drawable_ic_chevron_left.xml.flat",
+        "source": "com.driftpro.app-main-39:/drawable/ic_chevron_left.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_person.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_person.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_building.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_building.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_more.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_more.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_message_sent.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_message_sent.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_documents.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_documents.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_warning.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_warning.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_menu.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_menu.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_company_item_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/company_item_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_message_received_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/message_received_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_document.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_document.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_activity_chat.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/activity_chat.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_plus_circle.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_plus_circle.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_chat.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_chat.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_quick_action.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_quick_action.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_message_sent_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/message_sent_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_tag.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_tag.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_main_tab.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_main_tab.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_gradient_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/gradient_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_pdf.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_pdf.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_company_selection.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_company_selection.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_dashboard.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_dashboard.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_profile.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_profile.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_stat_card.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_stat_card.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_document_icon_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/document_icon_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_close.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_close.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_microphone_button_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/microphone_button_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_conversations.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_conversations.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_status_reported_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/status_reported_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/menu_bottom_navigation_menu.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/menu/bottom_navigation_menu.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_excel.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_excel.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_send.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_send.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_login.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_login.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_item_profile_stat.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/item_profile_stat.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_house.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_house.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_search_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/search_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_search.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_search.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_reply_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/reply_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_person_badge.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_person_badge.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_powerpoint.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_powerpoint.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_dashboard.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_dashboard.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_bolt.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_bolt.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_avatar_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/avatar_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_microphone.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_microphone.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_person_walk.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_person_walk.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_button_background.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/button_background.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/layout_fragment_deviations.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/layout/fragment_deviations.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/menu_main_tab_menu.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/menu/main_tab_menu.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_person_group.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_person_group.xml"
+    },
+    {
+        "merged": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-merged_res-37:/drawable_ic_check_circle.xml.flat",
+        "source": "/Users/hazherprivat/.gradle/daemon/8.14.3/com.driftpro.app-main-39:/drawable/ic_check_circle.xml"
+    }
+]
