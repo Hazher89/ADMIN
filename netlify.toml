@@ -10,6 +10,47 @@
   to = "/index.html"
   status = 200
 
+# Next.js App Router redirects
+[[redirects]]
+  from = "/dashboard/*"
+  to = "/dashboard"
+  status = 200
+
+[[redirects]]
+  from = "/users/*"
+  to = "/users"
+  status = 200
+
+[[redirects]]
+  from = "/deviations/*"
+  to = "/deviations"
+  status = 200
+
+[[redirects]]
+  from = "/documents/*"
+  to = "/documents"
+  status = 200
+
+[[redirects]]
+  from = "/shifts/*"
+  to = "/shifts"
+  status = 200
+
+[[redirects]]
+  from = "/reports/*"
+  to = "/reports"
+  status = 200
+
+[[redirects]]
+  from = "/settings/*"
+  to = "/settings"
+  status = 200
+
+[[redirects]]
+  from = "/help/*"
+  to = "/help"
+  status = 200
+
 [[headers]]
   for = "/*"
   [headers.values]
