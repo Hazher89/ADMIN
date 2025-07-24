@@ -42,4 +42,4 @@ export default function HomePage() {
   return (
     <CompanySelector onCompanySelect={setTempSelectedCompany} />
   );
-} 
+}
