@@ -30,7 +30,7 @@ export default function LoginForm({ selectedCompany, onBack }: LoginFormProps) {
       await login(email, password);
       
       // Redirect to dashboard
-      window.location.href = '/dashboard';
+      window.location.href = '/dashboard/';
     } catch (error: any) {
       console.error('Login error:', error);
       setError('Innlogging mislyktes. Sjekk e-post og passord.');
