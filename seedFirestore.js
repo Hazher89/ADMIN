@@ -1,10 +1,16 @@
 // seedFirestore.js
-const { initializeApp, applicationDefault } = require('firebase-admin/app');
+const { initializeApp, cert } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
-// Sett opp Firebase Admin SDK
+// Sett opp Firebase Admin SDK med riktig prosjekt-ID
 initializeApp({
-  credential: applicationDefault(),
+  projectId: 'driftpro-40ccd',
+  // For testing, bruk service account key eller application default credentials
+  credential: cert({
+    projectId: 'driftpro-40ccd',
+    clientEmail: 'firebase-adminsdk-xxxxx@driftpro-40ccd.iam.gserviceaccount.com',
+    privateKey: '-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n'
+  })
 });
 const db = getFirestore();
 
