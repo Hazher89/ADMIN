@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState } from 'react';
-import Link from 'next/link';
 import { useAuth } from '@/contexts/AuthContext';
 import { Company } from '@/types';
 import CompanySelector from '@/components/CompanySelector';
@@ -18,12 +17,12 @@ export default function HomePage() {
         <div className="text-center">
           <h1 className="text-2xl font-bold text-gray-900 mb-4">Du er logget inn!</h1>
           <p className="text-gray-600 mb-4">Velkommen til {selectedCompany.name}</p>
-          <Link
-            href="/dashboard/"
+          <a
+            href="/dashboard"
             className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
           >
             Gå til Dashboard
-          </Link>
+          </a>
         </div>
       </div>
     );
