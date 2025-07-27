@@ -82,99 +82,72 @@ interface RecentActivity {
 }
 
 export default function DashboardPage() {
-  const { userProfile, isAuthenticated, loading } = useAuth();
+  const { userProfile } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
-    totalEmployees: 0,
-    activeShifts: 0,
-    pendingRequests: 0,
-    recentDeviations: 0,
-    departmentCount: 0,
-    documentsShared: 0
+    totalEmployees: 156,
+    activeShifts: 23,
+    pendingRequests: 8,
+    recentDeviations: 3,
+    departmentCount: 12,
+    documentsShared: 45
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [dashboardLoading, setDashboardLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!loading) {
-      loadDashboardData();
-    }
-  }, [loading]);
+    loadDashboardData();
+  }, []);
 
   const loadDashboardData = async () => {
-    try {
-      setDashboardLoading(true);
-      setError(null);
-      
-      // Mock data for demonstration - in real app this would come from Firebase
-      const mockStats: DashboardStats = {
-        totalEmployees: 156,
-        activeShifts: 23,
-        pendingRequests: 8,
-        recentDeviations: 3,
-        departmentCount: 12,
-        documentsShared: 45
-      };
+    // Mock data for demonstration - in real app this would come from Firebase
+    const mockActivities: RecentActivity[] = [
+      {
+        id: '1',
+        type: 'shift',
+        title: 'Nytt skiftplan publisert',
+        description: 'Skiftplan for uke 32 er publisert av HR-avdelingen',
+        timestamp: '2024-07-27T10:30:00Z',
+        user: 'HR Manager',
+        status: 'pending'
+      },
+      {
+        id: '2',
+        type: 'deviation',
+        title: 'Avvik rapportert',
+        description: 'Sikkerhetsavvik rapportert i produksjonsavdelingen',
+        timestamp: '2024-07-27T09:15:00Z',
+        user: 'Produksjonsleder',
+        status: 'pending'
+      },
+      {
+        id: '3',
+        type: 'vacation',
+        title: 'Ferieforespørsel godkjent',
+        description: 'Ferieforespørsel for John Doe er godkjent',
+        timestamp: '2024-07-27T08:45:00Z',
+        user: 'Department Leader',
+        status: 'approved'
+      },
+      {
+        id: '4',
+        type: 'document',
+        title: 'Nytt dokument delt',
+        description: 'Sikkerhetsmanual v2.1 er delt med alle ansatte',
+        timestamp: '2024-07-27T08:00:00Z',
+        user: 'Admin',
+        status: 'resolved'
+      },
+      {
+        id: '5',
+        type: 'absence',
+        title: 'Fraværsmelding registrert',
+        description: 'Sykemelding registrert for Jane Smith',
+        timestamp: '2024-07-27T07:30:00Z',
+        user: 'Employee',
+        status: 'pending'
+      }
+    ];
 
-      const mockActivities: RecentActivity[] = [
-        {
-          id: '1',
-          type: 'shift',
-          title: 'Nytt skiftplan publisert',
-          description: 'Skiftplan for uke 32 er publisert av HR-avdelingen',
-          timestamp: '2024-07-27T10:30:00Z',
-          user: 'HR Manager',
-          status: 'pending'
-        },
-        {
-          id: '2',
-          type: 'deviation',
-          title: 'Avvik rapportert',
-          description: 'Sikkerhetsavvik rapportert i produksjonsavdelingen',
-          timestamp: '2024-07-27T09:15:00Z',
-          user: 'Produksjonsleder',
-          status: 'pending'
-        },
-        {
-          id: '3',
-          type: 'vacation',
-          title: 'Ferieforespørsel godkjent',
-          description: 'Ferieforespørsel for John Doe er godkjent',
-          timestamp: '2024-07-27T08:45:00Z',
-          user: 'Department Leader',
-          status: 'approved'
-        },
-        {
-          id: '4',
-          type: 'document',
-          title: 'Nytt dokument delt',
-          description: 'Sikkerhetsmanual v2.1 er delt med alle ansatte',
-          timestamp: '2024-07-27T08:00:00Z',
-          user: 'Admin',
-          status: 'resolved'
-        },
-        {
-          id: '5',
-          type: 'absence',
-          title: 'Fraværsmelding registrert',
-          description: 'Sykemelding registrert for Jane Smith',
-          timestamp: '2024-07-27T07:30:00Z',
-          user: 'Employee',
-          status: 'pending'
-        }
-      ];
-
-      // Simulate loading delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      setStats(mockStats);
-      setRecentActivities(mockActivities);
-    } catch (error) {
-      console.error('Error loading dashboard data:', error);
-      setError('Kunne ikke laste dashboard-data. Prøv å oppdatere siden.');
-    } finally {
-      setDashboardLoading(false);
-    }
+    setRecentActivities(mockActivities);
   };
 
   const getActivityIcon = (type: RecentActivity['type']) => {
@@ -198,41 +171,6 @@ export default function DashboardPage() {
       default: return 'text-gray-600 bg-gray-100';
     }
   };
-
-  // Show loading state
-  if (loading || dashboardLoading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600">Laster dashboard...</p>
-        </div>
-      </div>
-    );
-  }
-
-  // Show error state
-  if (error) {
-    return (
-      <div className="space-y-6">
-        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
-          <div className="flex items-center">
-            <AlertTriangle className="h-5 w-5 text-red-600 mr-3" />
-            <div>
-              <h3 className="text-lg font-medium text-red-800">Feil ved lasting av dashboard</h3>
-              <p className="text-red-700 mt-1">{error}</p>
-            </div>
-          </div>
-          <button
-            onClick={loadDashboardData}
-            className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
-          >
-            Prøv igjen
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="space-y-6">

@@ -1,84 +1,54 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
 
-/* Global error handling */
-.error-boundary {
-  @apply min-h-screen bg-gray-50 flex items-center justify-center;
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
 }
 
-/* Loading states */
-.loading-spinner {
-  @apply animate-spin rounded-full border-b-2 border-blue-600;
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
 }
 
-/* Firebase fallback styles */
-.firebase-error {
-  @apply bg-yellow-50 border border-yellow-200 text-yellow-800 px-4 py-2 rounded-lg;
-}
-
-/* Ensure proper fallbacks for missing data */
-.no-data {
-  @apply text-center py-8 text-gray-500;
-}
-
-/* Modal backdrop */
-.modal-backdrop {
-  @apply fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50;
-}
-
-/* Form validation */
-.form-error {
-  @apply text-red-600 text-sm mt-1;
-}
-
-.form-success {
-  @apply text-green-600 text-sm mt-1;
-}
-
-/* Responsive improvements */
-@media (max-width: 640px) {
-  .modal-content {
-    @apply w-full max-w-sm mx-4;
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
   }
 }
 
-/* Animation improvements */
-.fade-in {
-  animation: fadeIn 0.3s ease-in-out;
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
 }
 
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
+/* Blob animation */
+@keyframes blob {
+  0% {
+    transform: translate(0px, 0px) scale(1);
   }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+  33% {
+    transform: translate(30px, -50px) scale(1.1);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
   }
 }
 
-/* Ensure proper z-index stacking */
-.z-modal {
-  z-index: 1000;
+.animate-blob {
+  animation: blob 7s infinite;
 }
 
-.z-dropdown {
-  z-index: 100;
+.animation-delay-2000 {
+  animation-delay: 2s;
 }
 
-/* Loading state improvements */
-.skeleton {
-  @apply animate-pulse bg-gray-200 rounded;
-}
-
-/* Error state improvements */
-.error-state {
-  @apply bg-red-50 border border-red-200 text-red-800 px-4 py-3 rounded-lg;
-}
-
-/* Success state improvements */
-.success-state {
-  @apply bg-green-50 border border-green-200 text-green-800 px-4 py-3 rounded-lg;
+.animation-delay-4000 {
+  animation-delay: 4s;
 }
