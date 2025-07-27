@@ -41,70 +41,6 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(true);
   const [searching, setSearching] = useState(false);
 
-  // Mock companies for demonstration - in real app this would come from Firebase
-  const mockCompanies: Company[] = [
-    {
-      id: 'company-1',
-      name: 'DriftPro AS',
-      domain: 'driftpro.no',
-      address: 'Oslo, Norge',
-      phone: '+47 123 45 678',
-      email: 'kontakt@driftpro.no',
-      website: 'https://driftpro.no',
-      employeeCount: 25,
-      industry: 'Teknologi',
-      logo: '/api/placeholder/60/60'
-    },
-    {
-      id: 'company-2',
-      name: 'TechCorp Norge',
-      domain: 'techcorp.no',
-      address: 'Bergen, Norge',
-      phone: '+47 987 65 432',
-      email: 'info@techcorp.no',
-      website: 'https://techcorp.no',
-      employeeCount: 150,
-      industry: 'Programvare',
-      logo: '/api/placeholder/60/60'
-    },
-    {
-      id: 'company-3',
-      name: 'Innovation Labs',
-      domain: 'innovationlabs.no',
-      address: 'Trondheim, Norge',
-      phone: '+47 555 12 34',
-      email: 'hello@innovationlabs.no',
-      website: 'https://innovationlabs.no',
-      employeeCount: 75,
-      industry: 'Forskning & Utvikling',
-      logo: '/api/placeholder/60/60'
-    },
-    {
-      id: 'company-4',
-      name: 'Nordic Solutions',
-      domain: 'nordicsolutions.no',
-      address: 'Stavanger, Norge',
-      phone: '+47 444 56 78',
-      email: 'kontakt@nordicsolutions.no',
-      website: 'https://nordicsolutions.no',
-      employeeCount: 200,
-      industry: 'Konsulenttjenester',
-      logo: '/api/placeholder/60/60'
-    },
-    {
-      id: 'company-5',
-      name: 'Digital Future',
-      domain: 'digitalfuture.no',
-      address: 'Tromsø, Norge',
-      phone: '+47 333 90 12',
-      email: 'info@digitalfuture.no',
-      website: 'https://digitalfuture.no',
-      employeeCount: 45,
-      industry: 'Digital Markedsføring',
-      logo: '/api/placeholder/60/60'
-    }
-  ];
-
   useEffect(() => {
     // Simulate loading companies from Firebase
     const loadCompanies = async () => {
@@ -114,6 +50,70 @@ export default function CompaniesPage() {
         // const companiesRef = collection(db, 'companies');
         // const snapshot = await getDocs(companiesRef);
         // const companiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        
+        // Mock companies for demonstration - in real app this would come from Firebase
+        const mockCompanies: Company[] = [
+          {
+            id: 'company-1',
+            name: 'DriftPro AS',
+            domain: 'driftpro.no',
+            address: 'Oslo, Norge',
+            phone: '+47 123 45 678',
+            email: 'kontakt@driftpro.no',
+            website: 'https://driftpro.no',
+            employeeCount: 25,
+            industry: 'Teknologi',
+            logo: '/api/placeholder/60/60'
+          },
+          {
+            id: 'company-2',
+            name: 'TechCorp Norge',
+            domain: 'techcorp.no',
+            address: 'Bergen, Norge',
+            phone: '+47 987 65 432',
+            email: 'info@techcorp.no',
+            website: 'https://techcorp.no',
+            employeeCount: 150,
+            industry: 'Programvare',
+            logo: '/api/placeholder/60/60'
+          },
+          {
+            id: 'company-3',
+            name: 'Innovation Labs',
+            domain: 'innovationlabs.no',
+            address: 'Trondheim, Norge',
+            phone: '+47 555 12 34',
+            email: 'hello@innovationlabs.no',
+            website: 'https://innovationlabs.no',
+            employeeCount: 75,
+            industry: 'Forskning & Utvikling',
+            logo: '/api/placeholder/60/60'
+          },
+          {
+            id: 'company-4',
+            name: 'Nordic Solutions',
+            domain: 'nordicsolutions.no',
+            address: 'Stavanger, Norge',
+            phone: '+47 444 56 78',
+            email: 'kontakt@nordicsolutions.no',
+            website: 'https://nordicsolutions.no',
+            employeeCount: 200,
+            industry: 'Konsulenttjenester',
+            logo: '/api/placeholder/60/60'
+          },
+          {
+            id: 'company-5',
+            name: 'Digital Future',
+            domain: 'digitalfuture.no',
+            address: 'Tromsø, Norge',
+            phone: '+47 333 90 12',
+            email: 'info@digitalfuture.no',
+            website: 'https://digitalfuture.no',
+            employeeCount: 45,
+            industry: 'Digital Markedsføring',
+            logo: '/api/placeholder/60/60'
+          }
+        ];
         
         // For now, use mock data with minimal delay
         await new Promise(resolve => setTimeout(resolve, 200)); // Reduced from 1000ms to 200ms
@@ -127,7 +127,7 @@ export default function CompaniesPage() {
     };
 
     loadCompanies();
-  }, [mockCompanies]);
+  }, []); // Remove mockCompanies dependency
 
   useEffect(() => {
     // Filter companies based on search term
