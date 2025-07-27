@@ -38,133 +38,112 @@ export default function CompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
 
-  useEffect(() => {
-    // Simulate loading companies from Firebase
-    const loadCompanies = async () => {
-      setLoading(true);
-      try {
-        // In real app, this would fetch from Firebase
-        // const companiesRef = collection(db, 'companies');
-        // const snapshot = await getDocs(companiesRef);
-        // const companiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        
-        // Mock companies for demonstration - in real app this would come from Firebase
-        const mockCompanies: Company[] = [
-          {
-            id: 'company-1',
-            name: 'DriftPro AS',
-            domain: 'driftpro.no',
-            address: 'Oslo, Norge',
-            phone: '+47 123 45 678',
-            email: 'kontakt@driftpro.no',
-            website: 'https://driftpro.no',
-            employeeCount: 25,
-            industry: 'Teknologi',
-            logo: '/api/placeholder/60/60'
-          },
-          {
-            id: 'company-2',
-            name: 'TechCorp Norge',
-            domain: 'techcorp.no',
-            address: 'Bergen, Norge',
-            phone: '+47 987 65 432',
-            email: 'info@techcorp.no',
-            website: 'https://techcorp.no',
-            employeeCount: 150,
-            industry: 'Programvare',
-            logo: '/api/placeholder/60/60'
-          },
-          {
-            id: 'company-3',
-            name: 'Innovation Labs',
-            domain: 'innovationlabs.no',
-            address: 'Trondheim, Norge',
-            phone: '+47 555 12 34',
-            email: 'hello@innovationlabs.no',
-            website: 'https://innovationlabs.no',
-            employeeCount: 75,
-            industry: 'Forskning & Utvikling',
-            logo: '/api/placeholder/60/60'
-          },
-          {
-            id: 'company-4',
-            name: 'Nordic Solutions',
-            domain: 'nordicsolutions.no',
-            address: 'Stavanger, Norge',
-            phone: '+47 444 56 78',
-            email: 'kontakt@nordicsolutions.no',
-            website: 'https://nordicsolutions.no',
-            employeeCount: 200,
-            industry: 'Konsulenttjenester',
-            logo: '/api/placeholder/60/60'
-          },
-          {
-            id: 'company-5',
-            name: 'Digital Future',
-            domain: 'digitalfuture.no',
-            address: 'Tromsø, Norge',
-            phone: '+47 333 90 12',
-            email: 'info@digitalfuture.no',
-            website: 'https://digitalfuture.no',
-            employeeCount: 45,
-            industry: 'Digital Markedsføring',
-            logo: '/api/placeholder/60/60'
-          }
-        ];
-        
-        // For now, use mock data with minimal delay
-        await new Promise(resolve => setTimeout(resolve, 200)); // Reduced from 1000ms to 200ms
-        setCompanies(mockCompanies);
-        setFilteredCompanies(mockCompanies);
-      } catch (error) {
-        console.error('Error loading companies:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    loadCompanies();
-  }, []); // Remove mockCompanies dependency
-
-  useEffect(() => {
-    // Filter companies based on search term
-    if (searchTerm.trim() === '') {
-      setFilteredCompanies(companies);
-    } else {
-      const filtered = companies.filter(company =>
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.industry?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredCompanies(filtered);
+  // Mock companies data - in real app this would come from Firebase
+  const mockCompanies: Company[] = [
+    {
+      id: 'company-1',
+      name: 'DriftPro AS',
+      domain: 'driftpro.no',
+      address: 'Oslo, Norge',
+      phone: '+47 123 45 678',
+      email: 'kontakt@driftpro.no',
+      website: 'https://driftpro.no',
+      employeeCount: 25,
+      industry: 'Teknologi',
+      logo: '/api/placeholder/60/60'
+    },
+    {
+      id: 'company-2',
+      name: 'TechCorp Norge',
+      domain: 'techcorp.no',
+      address: 'Bergen, Norge',
+      phone: '+47 987 65 432',
+      email: 'info@techcorp.no',
+      website: 'https://techcorp.no',
+      employeeCount: 150,
+      industry: 'Programvare',
+      logo: '/api/placeholder/60/60'
+    },
+    {
+      id: 'company-3',
+      name: 'Innovation Labs',
+      domain: 'innovationlabs.no',
+      address: 'Trondheim, Norge',
+      phone: '+47 555 12 34',
+      email: 'hello@innovationlabs.no',
+      website: 'https://innovationlabs.no',
+      employeeCount: 75,
+      industry: 'Forskning & Utvikling',
+      logo: '/api/placeholder/60/60'
+    },
+    {
+      id: 'company-4',
+      name: 'Nordic Solutions',
+      domain: 'nordicsolutions.no',
+      address: 'Stavanger, Norge',
+      phone: '+47 444 56 78',
+      email: 'kontakt@nordicsolutions.no',
+      website: 'https://nordicsolutions.no',
+      employeeCount: 200,
+      industry: 'Konsulenttjenester',
+      logo: '/api/placeholder/60/60'
+    },
+    {
+      id: 'company-5',
+      name: 'Digital Future',
+      domain: 'digitalfuture.no',
+      address: 'Tromsø, Norge',
+      phone: '+47 333 90 12',
+      email: 'info@digitalfuture.no',
+      website: 'https://digitalfuture.no',
+      employeeCount: 45,
+      industry: 'Digital Markedsføring',
+      logo: '/api/placeholder/60/60'
     }
-  }, [searchTerm, companies]);
+  ];
 
   const handleCompanySelect = (company: Company) => {
-    // Store selected company in localStorage or context
+    // Store selected company in localStorage
     localStorage.setItem('selectedCompany', JSON.stringify(company));
     // Redirect to login page
     router.push('/login');
   };
 
   const handleSearch = async () => {
-    if (!searchTerm.trim()) return;
-    
+    if (!searchTerm.trim()) {
+      setFilteredCompanies([]);
+      setHasSearched(false);
+      return;
+    }
+
     setSearching(true);
+    setHasSearched(true);
+
     try {
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+
       // In real app, this would search Firebase
       // const companiesRef = collection(db, 'companies');
       // const q = query(companiesRef, where('name', '>=', searchTerm), where('name', '<=', searchTerm + '\uf8ff'));
       // const snapshot = await getDocs(q);
-      // const searchResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // For now, just filter existing companies with minimal delay
-      await new Promise(resolve => setTimeout(resolve, 100)); // Reduced from 500ms to 100ms
+      // const companiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      // Filter mock companies based on search term
+      const filtered = mockCompanies.filter(company =>
+        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.industry?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+      setFilteredCompanies(filtered);
     } catch (error) {
       console.error('Error searching companies:', error);
+      setFilteredCompanies([]);
     } finally {
       setSearching(false);
     }
