@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   Zap,
@@ -77,6 +77,7 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
   const { userProfile, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [expandedItems, setExpandedItems] = useState<string[]>(['dashboard']);
@@ -143,8 +144,12 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     try {
       await logout();
+      // Redirect to login page after successful logout
+      router.push('/login');
     } catch (error) {
       console.error('Error logging out:', error);
+      // Still redirect even if there's an error
+      router.push('/login');
     }
   };
 
