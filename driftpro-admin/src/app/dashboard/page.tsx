@@ -1,10 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import {
-  Zap,
   Users,
   Calendar,
   Clock,
@@ -14,11 +12,6 @@ import {
   Building,
   TrendingUp,
   Activity,
-  Bell,
-  Settings,
-  LogOut,
-  User,
-  Home,
   BarChart3,
   PieChart,
   LineChart,
@@ -61,7 +54,12 @@ import {
   Palette,
   Download,
   Database,
-  Shield
+  Shield,
+  Settings,
+  LogOut,
+  User,
+  Home,
+  Bell
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -84,9 +82,7 @@ interface RecentActivity {
 }
 
 export default function DashboardPage() {
-  const router = useRouter();
-  const { user, userProfile, isAuthenticated, loading, logout } = useAuth();
-  const [isLoading, setIsLoading] = useState(true);
+  const { userProfile } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     activeShifts: 0,
@@ -96,21 +92,10 @@ export default function DashboardPage() {
     documentsShared: 0
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
-  const [selectedTimeframe, setSelectedTimeframe] = useState('today');
 
   useEffect(() => {
-    // Check authentication status
-    if (!loading) {
-      if (!isAuthenticated) {
-        router.push('/login');
-        return;
-      }
-      
-      // Load dashboard data
-      loadDashboardData();
-      setIsLoading(false);
-    }
-  }, [isAuthenticated, loading, router]);
+    loadDashboardData();
+  }, []);
 
   const loadDashboardData = async () => {
     try {
@@ -182,15 +167,6 @@ export default function DashboardPage() {
     }
   };
 
-  const handleLogout = async () => {
-    try {
-      await logout();
-      router.push('/login');
-    } catch (error) {
-      console.error('Error logging out:', error);
-    }
-  };
-
   const getActivityIcon = (type: RecentActivity['type']) => {
     switch (type) {
       case 'shift': return <Clock className="h-5 w-5" />;
@@ -213,237 +189,275 @@ export default function DashboardPage() {
     }
   };
 
-  if (loading || isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <Zap className="h-8 w-8 text-white" />
+  return (
+    <div className="space-y-6">
+      {/* Welcome Section */}
+      <div className="bg-white rounded-lg shadow-sm p-6">
+        <h2 className="text-2xl font-bold text-gray-900 mb-2">
+          Velkommen tilbake, {userProfile?.displayName || 'Bruker'}!
+        </h2>
+        <p className="text-gray-600">
+          Her er oversikten over din bedrift for i dag
+        </p>
+      </div>
+
+      {/* KPI Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">TOTALT ANSATTE</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.totalEmployees}</p>
+              <p className="text-sm text-green-600">+12% denne måneden</p>
             </div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-2xl animate-spin mx-auto"></div>
+            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
+              <Users className="h-6 w-6 text-blue-600" />
+            </div>
           </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Laster dashboard...</h3>
-          <p className="text-gray-600">Henter bedriftsdata og aktiviteter</p>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">AKTIVE SKIFT</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.activeShifts}</p>
+              <p className="text-sm text-green-600">+5% denne uken</p>
+            </div>
+            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
+              <Clock className="h-6 w-6 text-green-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">VENTENDE FORESPØRSLER</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.pendingRequests}</p>
+              <p className="text-sm text-yellow-600">Krever handling</p>
+            </div>
+            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
+              <AlertTriangle className="h-6 w-6 text-yellow-600" />
+            </div>
+          </div>
+        </div>
+
+        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-purple-500">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-medium text-gray-600">AVDELINGER</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.departmentCount}</p>
+              <p className="text-sm text-purple-600">Aktive avdelinger</p>
+            </div>
+            <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">
+              <Building className="h-6 w-6 text-purple-600" />
+            </div>
+          </div>
         </div>
       </div>
-    );
-  }
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow-sm border-b border-gray-200">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                <Zap className="h-6 w-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-xl font-bold text-gray-900">DriftPro</h1>
-                <p className="text-sm text-gray-500">Admin Dashboard</p>
-              </div>
-            </div>
-
-            <div className="flex items-center space-x-4">
-              <button className="relative p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100">
-                <Bell className="h-5 w-5" />
-                <span className="absolute top-0 right-0 h-2 w-2 bg-red-500 rounded-full"></span>
-              </button>
-              
-              <div className="flex items-center space-x-3">
-                <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                  <span className="text-white text-sm font-medium">
-                    {userProfile?.displayName?.charAt(0) || 'U'}
-                  </span>
-                </div>
-                <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-900">{userProfile?.displayName || 'Bruker'}</p>
-                  <p className="text-xs text-gray-500">{userProfile?.role || 'employee'}</p>
-                </div>
-              </div>
-
-              <button
-                onClick={handleLogout}
-                className="p-2 text-gray-600 hover:text-gray-900 rounded-lg hover:bg-gray-100"
-                title="Logg ut"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </nav>
-
-      {/* Main Content */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Welcome Section */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-2">
-            Velkommen tilbake, {userProfile?.displayName || 'Bruker'}!
-          </h2>
-          <p className="text-gray-600">
-            Her er oversikten over din bedrift for {selectedTimeframe === 'today' ? 'i dag' : 'denne uken'}
-          </p>
-        </div>
-
-        {/* Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-6 mb-8">
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Totalt ansatte</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.totalEmployees}</p>
-              </div>
-              <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center">
-                <Users className="h-6 w-6 text-blue-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Aktive skift</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.activeShifts}</p>
-              </div>
-              <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center">
-                <Clock className="h-6 w-6 text-green-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Ventende forespørsler</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.pendingRequests}</p>
-              </div>
-              <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-yellow-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Nylige avvik</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.recentDeviations}</p>
-              </div>
-              <div className="w-12 h-12 bg-red-100 rounded-xl flex items-center justify-center">
-                <AlertTriangle className="h-6 w-6 text-red-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Avdelinger</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.departmentCount}</p>
-              </div>
-              <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center">
-                <Building className="h-6 w-6 text-purple-600" />
-              </div>
-            </div>
-          </div>
-
-          <div className="bg-white rounded-xl shadow-sm p-6 border border-gray-200">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-gray-600">Dokumenter delt</p>
-                <p className="text-2xl font-bold text-gray-900">{stats.documentsShared}</p>
-              </div>
-              <div className="w-12 h-12 bg-indigo-100 rounded-xl flex items-center justify-center">
-                <FileText className="h-6 w-6 text-indigo-600" />
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* Recent Activities */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200">
-          <div className="px-6 py-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Nylige aktiviteter</h3>
-              <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
-                Se alle
-              </button>
+      {/* Charts and Statistics */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Monthly Activity Chart */}
+        <div className="lg:col-span-2 bg-white rounded-lg shadow-sm p-6">
+          <div className="flex items-center justify-between mb-6">
+            <h3 className="text-lg font-semibold text-gray-900">Månedlig aktivitet</h3>
+            <div className="flex items-center space-x-2">
+              <button className="text-sm text-blue-600 hover:text-blue-700">Se alle</button>
             </div>
           </div>
           
-          <div className="divide-y divide-gray-200">
-            {recentActivities.map((activity) => (
-              <div key={activity.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
-                <div className="flex items-start space-x-4">
-                  <div className="flex-shrink-0">
-                    <div className="w-10 h-10 bg-gray-100 rounded-xl flex items-center justify-center">
-                      {getActivityIcon(activity.type)}
-                    </div>
-                  </div>
-                  
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center justify-between">
-                      <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                      {activity.status && (
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(activity.status)}`}>
-                          {activity.status === 'approved' && 'Godkjent'}
-                          {activity.status === 'rejected' && 'Avvist'}
-                          {activity.status === 'pending' && 'Venter'}
-                          {activity.status === 'resolved' && 'Løst'}
-                        </span>
-                      )}
-                    </div>
-                    <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                    <div className="flex items-center space-x-4 mt-2">
-                      <span className="text-xs text-gray-500">{activity.user}</span>
-                      <span className="text-xs text-gray-500">
-                        {new Date(activity.timestamp).toLocaleString('no-NO')}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))}
+          {/* Mock Chart Area */}
+          <div className="h-64 bg-gradient-to-br from-blue-50 to-indigo-50 rounded-lg flex items-center justify-center">
+            <div className="text-center">
+              <BarChart3 className="h-12 w-12 text-blue-400 mx-auto mb-4" />
+              <p className="text-gray-600">Interaktivt diagram kommer snart</p>
+              <p className="text-sm text-gray-500">Visning av månedlig aktivitet og trender</p>
+            </div>
+          </div>
+
+          {/* Summary Stats */}
+          <div className="grid grid-cols-3 gap-4 mt-6">
+            <div className="text-center">
+              <p className="text-2xl font-bold text-green-600">+17%</p>
+              <p className="text-sm text-gray-600">Totalt aktivitet</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-blue-600">+8%</p>
+              <p className="text-sm text-gray-600">Nye ansatte</p>
+            </div>
+            <div className="text-center">
+              <p className="text-2xl font-bold text-purple-600">+23%</p>
+              <p className="text-sm text-gray-600">Skiftplaner</p>
+            </div>
           </div>
         </div>
 
-        {/* Quick Actions */}
-        <div className="mt-8 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-          <button className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left">
-            <div className="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center mb-4">
-              <Users className="h-6 w-6 text-blue-600" />
+        {/* Quick Stats */}
+        <div className="space-y-6">
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">Rask statistikk</h3>
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-orange-100 rounded-lg flex items-center justify-center">
+                    <FileText className="h-4 w-4 text-orange-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">Dokumenter</span>
+                </div>
+                <span className="text-lg font-bold text-gray-900">{stats.documentsShared}</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-green-100 rounded-lg flex items-center justify-center">
+                    <MessageSquare className="h-4 w-4 text-green-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">Chat meldinger</span>
+                </div>
+                <span className="text-lg font-bold text-gray-900">1,247</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-red-100 rounded-lg flex items-center justify-center">
+                    <AlertTriangle className="h-4 w-4 text-red-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">Avvik</span>
+                </div>
+                <span className="text-lg font-bold text-gray-900">{stats.recentDeviations}</span>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                    <Calendar className="h-4 w-4 text-blue-600" />
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">Ferieplaner</span>
+                </div>
+                <span className="text-lg font-bold text-gray-900">89</span>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Administrer ansatte</h3>
-            <p className="text-sm text-gray-600">Legg til, rediger eller fjern ansatte</p>
-          </button>
+          </div>
 
-          <button className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left">
-            <div className="w-12 h-12 bg-green-100 rounded-xl flex items-center justify-center mb-4">
-              <Calendar className="h-6 w-6 text-green-600" />
+          {/* Browser Usage Chart */}
+          <div className="bg-white rounded-lg shadow-sm p-6">
+            <h3 className="text-lg font-semibold text-gray-900 mb-4">System bruk</h3>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Mobil app</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-20 bg-gray-200 rounded-full h-2">
+                    <div className="bg-blue-600 h-2 rounded-full" style={{ width: '70%' }}></div>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">70%</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Web admin</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-20 bg-gray-200 rounded-full h-2">
+                    <div className="bg-green-600 h-2 rounded-full" style={{ width: '85%' }}></div>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">85%</span>
+                </div>
+              </div>
+              
+              <div className="flex items-center justify-between">
+                <span className="text-sm text-gray-600">Desktop app</span>
+                <div className="flex items-center space-x-2">
+                  <div className="w-20 bg-gray-200 rounded-full h-2">
+                    <div className="bg-purple-600 h-2 rounded-full" style={{ width: '45%' }}></div>
+                  </div>
+                  <span className="text-sm font-medium text-gray-900">45%</span>
+                </div>
+              </div>
             </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Skiftplanlegging</h3>
-            <p className="text-sm text-gray-600">Opprett og administrer skiftplaner</p>
-          </button>
-
-          <button className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left">
-            <div className="w-12 h-12 bg-yellow-100 rounded-xl flex items-center justify-center mb-4">
-              <FileText className="h-6 w-6 text-yellow-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Dokumenter</h3>
-            <p className="text-sm text-gray-600">Del og administrer dokumenter</p>
-          </button>
-
-          <button className="bg-white rounded-xl shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left">
-            <div className="w-12 h-12 bg-purple-100 rounded-xl flex items-center justify-center mb-4">
-              <BarChart3 className="h-6 w-6 text-purple-600" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">Rapporter</h3>
-            <p className="text-sm text-gray-600">Se statistikk og rapporter</p>
-          </button>
+          </div>
         </div>
+      </div>
+
+      {/* Recent Activities */}
+      <div className="bg-white rounded-lg shadow-sm">
+        <div className="px-6 py-4 border-b border-gray-200">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-gray-900">Nylige aktiviteter</h3>
+            <button className="text-sm text-blue-600 hover:text-blue-700 font-medium">
+              Se alle
+            </button>
+          </div>
+        </div>
+        
+        <div className="divide-y divide-gray-200">
+          {recentActivities.map((activity) => (
+            <div key={activity.id} className="px-6 py-4 hover:bg-gray-50 transition-colors">
+              <div className="flex items-start space-x-4">
+                <div className="flex-shrink-0">
+                  <div className="w-10 h-10 bg-gray-100 rounded-lg flex items-center justify-center">
+                    {getActivityIcon(activity.type)}
+                  </div>
+                </div>
+                
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <p className="text-sm font-medium text-gray-900">{activity.title}</p>
+                    {activity.status && (
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(activity.status)}`}>
+                        {activity.status === 'approved' && 'Godkjent'}
+                        {activity.status === 'rejected' && 'Avvist'}
+                        {activity.status === 'pending' && 'Venter'}
+                        {activity.status === 'resolved' && 'Løst'}
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
+                  <div className="flex items-center space-x-4 mt-2">
+                    <span className="text-xs text-gray-500">{activity.user}</span>
+                    <span className="text-xs text-gray-500">
+                      {new Date(activity.timestamp).toLocaleString('no-NO')}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Quick Actions */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <button className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left">
+          <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center mb-4">
+            <Users className="h-6 w-6 text-blue-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Administrer ansatte</h3>
+          <p className="text-sm text-gray-600">Legg til, rediger eller fjern ansatte</p>
+        </button>
+
+        <button className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left">
+          <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center mb-4">
+            <Calendar className="h-6 w-6 text-green-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Skiftplanlegging</h3>
+          <p className="text-sm text-gray-600">Opprett og administrer skiftplaner</p>
+        </button>
+
+        <button className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left">
+          <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center mb-4">
+            <FileText className="h-6 w-6 text-yellow-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Dokumenter</h3>
+          <p className="text-sm text-gray-600">Del og administrer dokumenter</p>
+        </button>
+
+        <button className="bg-white rounded-lg shadow-sm p-6 border border-gray-200 hover:shadow-md transition-shadow text-left">
+          <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center mb-4">
+            <BarChart3 className="h-6 w-6 text-purple-600" />
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Rapporter</h3>
+          <p className="text-sm text-gray-600">Se statistikk og rapporter</p>
+        </button>
       </div>
     </div>
   );
