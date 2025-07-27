@@ -284,12 +284,12 @@ export default function EmployeesPage() {
             manageUsers: false,
             manageDepartments: false,
             manageSystemSettings: false,
-            viewReports: false,
-            exportData: false,
-            manageNotifications: false,
-            accessAnalytics: false,
+            viewReports: true,
+            exportData: true,
+            manageNotifications: true,
+            accessAnalytics: true,
             manageRoles: false,
-            approveDocuments: false,
+            approveDocuments: true,
             manageTemplates: false,
             accessAuditLogs: false,
             manageIntegrations: false,
@@ -301,6 +301,59 @@ export default function EmployeesPage() {
           startDate: '2023-06-01',
           status: 'active',
           createdAt: '2023-06-01T09:00:00Z'
+        },
+        {
+          id: '3',
+          firstName: 'Admin',
+          lastName: 'Bruker',
+          email: 'admin@driftpro.no',
+          phone: '+47 999 99 999',
+          department: 'Administrasjon',
+          position: 'Systemadministrator',
+          role: 'admin',
+          emergencyContact: {
+            name: 'Admin Kontakt',
+            phone: '+47 888 88 888',
+            relationship: 'Kollega'
+          },
+          address: {
+            street: 'Adminveien 1',
+            city: 'Oslo',
+            postalCode: '0001'
+          },
+          permissions: {
+            fullAccess: true,
+            manageOwnDepartment: true,
+            approveVacation: true,
+            approveAbsence: true,
+            manageShifts: true,
+            handleDeviations: true,
+            submitDeviations: true,
+            submitAbsence: true,
+            submitVacation: true,
+            useChat: true,
+            readDocuments: true,
+            editOwnRequests: true,
+            manageUsers: true,
+            manageDepartments: true,
+            manageSystemSettings: true,
+            viewReports: true,
+            exportData: true,
+            manageNotifications: true,
+            accessAnalytics: true,
+            manageRoles: true,
+            approveDocuments: true,
+            manageTemplates: true,
+            accessAuditLogs: true,
+            manageIntegrations: true,
+            viewSensitiveData: true,
+            manageWorkflows: true,
+            accessAPI: true,
+            manageBackups: true
+          },
+          startDate: '2023-01-01',
+          status: 'active',
+          createdAt: '2023-01-01T08:00:00Z'
         }
       ];
       setEmployees(mockEmployees);
@@ -1289,6 +1342,14 @@ export default function EmployeesPage() {
               </button>
             </div>
             
+            {/* Debug Info */}
+            <div className="bg-yellow-50 p-4 rounded-lg mb-4">
+              <p className="text-sm text-yellow-800">
+                <strong>Debug:</strong> Totalt tilganger: {Object.keys(formData.permissions).length} | 
+                Aktive: {Object.values(formData.permissions).filter(Boolean).length}
+              </p>
+            </div>
+            
             <div className="space-y-8">
               {/* Quick Actions */}
               <div className="flex space-x-4">
@@ -1327,155 +1388,62 @@ export default function EmployeesPage() {
                 </button>
               </div>
 
-              {/* Permissions by Category */}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                {/* Basic Permissions */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Grunnleggende tilganger</h3>
-                  <div className="space-y-3">
-                    {Object.entries(formData.permissions)
-                      .filter(([key]) => [
-                        'submitDeviations', 'submitAbsence', 'submitVacation', 
-                        'useChat', 'readDocuments', 'editOwnRequests'
-                      ].includes(key))
-                      .map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <input
-                              type="checkbox"
-                              checked={value}
-                              onChange={(e) => setFormData(prev => ({
-                                ...prev,
-                                permissions: { ...prev.permissions, [key]: e.target.checked }
-                              }))}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm font-medium text-gray-700">
-                              {key === 'submitDeviations' && 'Send avviksrapporter'}
-                              {key === 'submitAbsence' && 'Send fraværsforespørsler'}
-                              {key === 'submitVacation' && 'Send ferieforespørsler'}
-                              {key === 'useChat' && 'Bruk chat-system'}
-                              {key === 'readDocuments' && 'Les delte dokumenter'}
-                              {key === 'editOwnRequests' && 'Rediger egne forespørsler'}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-500 bg-green-100 text-green-800 px-2 py-1 rounded">Alle</span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* Department Leader Permissions */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Avdelingsleder tilganger</h3>
-                  <div className="space-y-3">
-                    {Object.entries(formData.permissions)
-                      .filter(([key]) => [
-                        'manageOwnDepartment', 'approveVacation', 'approveAbsence', 
-                        'manageShifts', 'handleDeviations'
-                      ].includes(key))
-                      .map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <input
-                              type="checkbox"
-                              checked={value}
-                              onChange={(e) => setFormData(prev => ({
-                                ...prev,
-                                permissions: { ...prev.permissions, [key]: e.target.checked }
-                              }))}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm font-medium text-gray-700">
-                              {key === 'manageOwnDepartment' && 'Administrer egen avdeling'}
-                              {key === 'approveVacation' && 'Godkjenn ferieforespørsler'}
-                              {key === 'approveAbsence' && 'Godkjenn fraværsforespørsler'}
-                              {key === 'manageShifts' && 'Administrer skiftplaner'}
-                              {key === 'handleDeviations' && 'Håndter avviksrapporter'}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-500 bg-blue-100 text-blue-800 px-2 py-1 rounded">Leder</span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* Admin Permissions */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Administrator tilganger</h3>
-                  <div className="space-y-3">
-                    {Object.entries(formData.permissions)
-                      .filter(([key]) => [
-                        'fullAccess', 'manageUsers', 'manageDepartments', 'manageSystemSettings',
-                        'manageRoles', 'accessAuditLogs', 'manageIntegrations', 'viewSensitiveData',
-                        'manageWorkflows', 'accessAPI', 'manageBackups'
-                      ].includes(key))
-                      .map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <input
-                              type="checkbox"
-                              checked={value}
-                              onChange={(e) => setFormData(prev => ({
-                                ...prev,
-                                permissions: { ...prev.permissions, [key]: e.target.checked }
-                              }))}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm font-medium text-gray-700">
-                              {key === 'fullAccess' && 'Full tilgang til alt'}
-                              {key === 'manageUsers' && 'Administrer brukere'}
-                              {key === 'manageDepartments' && 'Administrer avdelinger'}
-                              {key === 'manageSystemSettings' && 'Administrer systeminnstillinger'}
-                              {key === 'manageRoles' && 'Administrer roller'}
-                              {key === 'accessAuditLogs' && 'Tilgang til audit logger'}
-                              {key === 'manageIntegrations' && 'Administrer integrasjoner'}
-                              {key === 'viewSensitiveData' && 'Se sensitive data'}
-                              {key === 'manageWorkflows' && 'Administrer arbeidsflyter'}
-                              {key === 'accessAPI' && 'API-tilgang'}
-                              {key === 'manageBackups' && 'Administrer backups'}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-500 bg-red-100 text-red-800 px-2 py-1 rounded">Admin</span>
-                        </div>
-                      ))}
-                  </div>
-                </div>
-
-                {/* Reporting & Analytics */}
-                <div>
-                  <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Rapportering & Analyse</h3>
-                  <div className="space-y-3">
-                    {Object.entries(formData.permissions)
-                      .filter(([key]) => [
-                        'viewReports', 'exportData', 'manageNotifications', 'accessAnalytics',
-                        'approveDocuments', 'manageTemplates'
-                      ].includes(key))
-                      .map(([key, value]) => (
-                        <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
-                          <div className="flex items-center space-x-3">
-                            <input
-                              type="checkbox"
-                              checked={value}
-                              onChange={(e) => setFormData(prev => ({
-                                ...prev,
-                                permissions: { ...prev.permissions, [key]: e.target.checked }
-                              }))}
-                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                            />
-                            <span className="text-sm font-medium text-gray-700">
-                              {key === 'viewReports' && 'Se rapporter'}
-                              {key === 'exportData' && 'Eksporter data'}
-                              {key === 'manageNotifications' && 'Administrer varsler'}
-                              {key === 'accessAnalytics' && 'Tilgang til analyser'}
-                              {key === 'approveDocuments' && 'Godkjenn dokumenter'}
-                              {key === 'manageTemplates' && 'Administrer maler'}
-                            </span>
-                          </div>
-                          <span className="text-xs text-gray-500 bg-purple-100 text-purple-800 px-2 py-1 rounded">Admin/Leder</span>
-                        </div>
-                      ))}
-                  </div>
+              {/* All Permissions List */}
+              <div>
+                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Alle tilganger</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  {Object.entries(formData.permissions).map(([key, value]) => (
+                    <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                      <div className="flex items-center space-x-3">
+                        <input
+                          type="checkbox"
+                          checked={value}
+                          onChange={(e) => {
+                            console.log('Changing permission:', key, 'from', value, 'to', e.target.checked);
+                            setFormData(prev => ({
+                              ...prev,
+                              permissions: { ...prev.permissions, [key]: e.target.checked }
+                            }));
+                          }}
+                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                        />
+                        <span className="text-sm font-medium text-gray-700">
+                          {key === 'fullAccess' && 'Full tilgang til alt'}
+                          {key === 'manageOwnDepartment' && 'Administrer egen avdeling'}
+                          {key === 'approveVacation' && 'Godkjenn ferieforespørsler'}
+                          {key === 'approveAbsence' && 'Godkjenn fraværsforespørsler'}
+                          {key === 'manageShifts' && 'Administrer skiftplaner'}
+                          {key === 'handleDeviations' && 'Håndter avviksrapporter'}
+                          {key === 'submitDeviations' && 'Send avviksrapporter'}
+                          {key === 'submitAbsence' && 'Send fraværsforespørsler'}
+                          {key === 'submitVacation' && 'Send ferieforespørsler'}
+                          {key === 'useChat' && 'Bruk chat-system'}
+                          {key === 'readDocuments' && 'Les delte dokumenter'}
+                          {key === 'editOwnRequests' && 'Rediger egne forespørsler'}
+                          {key === 'manageUsers' && 'Administrer brukere'}
+                          {key === 'manageDepartments' && 'Administrer avdelinger'}
+                          {key === 'manageSystemSettings' && 'Administrer systeminnstillinger'}
+                          {key === 'viewReports' && 'Se rapporter'}
+                          {key === 'exportData' && 'Eksporter data'}
+                          {key === 'manageNotifications' && 'Administrer varsler'}
+                          {key === 'accessAnalytics' && 'Tilgang til analyser'}
+                          {key === 'manageRoles' && 'Administrer roller'}
+                          {key === 'approveDocuments' && 'Godkjenn dokumenter'}
+                          {key === 'manageTemplates' && 'Administrer maler'}
+                          {key === 'accessAuditLogs' && 'Tilgang til audit logger'}
+                          {key === 'manageIntegrations' && 'Administrer integrasjoner'}
+                          {key === 'viewSensitiveData' && 'Se sensitive data'}
+                          {key === 'manageWorkflows' && 'Administrer arbeidsflyter'}
+                          {key === 'accessAPI' && 'API-tilgang'}
+                          {key === 'manageBackups' && 'Administrer backups'}
+                          {!key.includes('fullAccess') && !key.includes('manageOwnDepartment') && !key.includes('approveVacation') && !key.includes('approveAbsence') && !key.includes('manageShifts') && !key.includes('handleDeviations') && !key.includes('submitDeviations') && !key.includes('submitAbsence') && !key.includes('submitVacation') && !key.includes('useChat') && !key.includes('readDocuments') && !key.includes('editOwnRequests') && !key.includes('manageUsers') && !key.includes('manageDepartments') && !key.includes('manageSystemSettings') && !key.includes('viewReports') && !key.includes('exportData') && !key.includes('manageNotifications') && !key.includes('accessAnalytics') && !key.includes('manageRoles') && !key.includes('approveDocuments') && !key.includes('manageTemplates') && !key.includes('accessAuditLogs') && !key.includes('manageIntegrations') && !key.includes('viewSensitiveData') && !key.includes('manageWorkflows') && !key.includes('accessAPI') && !key.includes('manageBackups') && key}
+                        </span>
+                      </div>
+                      <div className="text-xs text-gray-500">
+                        {value ? '✅ Aktiv' : '❌ Inaktiv'}
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
