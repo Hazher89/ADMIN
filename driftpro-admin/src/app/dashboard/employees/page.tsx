@@ -52,41 +52,19 @@ interface Employee {
     postalCode: string;
   };
   permissions: {
-    // Admin permissions
+    // Basic permissions that can be manually controlled
     fullAccess: boolean;
-    
-    // Department leader permissions
     manageOwnDepartment: boolean;
     approveVacation: boolean;
     approveAbsence: boolean;
     manageShifts: boolean;
     handleDeviations: boolean;
-    
-    // Employee permissions
     submitDeviations: boolean;
     submitAbsence: boolean;
     submitVacation: boolean;
     useChat: boolean;
     readDocuments: boolean;
     editOwnRequests: boolean;
-    
-    // Additional advanced permissions
-    manageUsers: boolean;
-    manageDepartments: boolean;
-    manageSystemSettings: boolean;
-    viewReports: boolean;
-    exportData: boolean;
-    manageNotifications: boolean;
-    accessAnalytics: boolean;
-    manageRoles: boolean;
-    approveDocuments: boolean;
-    manageTemplates: boolean;
-    accessAuditLogs: boolean;
-    manageIntegrations: boolean;
-    viewSensitiveData: boolean;
-    manageWorkflows: boolean;
-    accessAPI: boolean;
-    manageBackups: boolean;
   };
   startDate: string;
   status: 'active' | 'inactive';
@@ -149,22 +127,6 @@ export default function EmployeesPage() {
       useChat: true,
       readDocuments: true,
       editOwnRequests: true,
-      manageUsers: false,
-      manageDepartments: false,
-      manageSystemSettings: false,
-      viewReports: false,
-      exportData: false,
-      manageNotifications: false,
-      accessAnalytics: false,
-      manageRoles: false,
-      approveDocuments: false,
-      manageTemplates: false,
-      accessAuditLogs: false,
-      manageIntegrations: false,
-      viewSensitiveData: false,
-      manageWorkflows: false,
-      accessAPI: false,
-      manageBackups: false
     }
   });
 
@@ -227,23 +189,7 @@ export default function EmployeesPage() {
             submitVacation: true,
             useChat: true,
             readDocuments: true,
-            editOwnRequests: true,
-            manageUsers: false,
-            manageDepartments: false,
-            manageSystemSettings: false,
-            viewReports: false,
-            exportData: false,
-            manageNotifications: false,
-            accessAnalytics: false,
-            manageRoles: false,
-            approveDocuments: false,
-            manageTemplates: false,
-            accessAuditLogs: false,
-            manageIntegrations: false,
-            viewSensitiveData: false,
-            manageWorkflows: false,
-            accessAPI: false,
-            manageBackups: false
+            editOwnRequests: true
           },
           startDate: '2024-01-15',
           status: 'active',
@@ -280,23 +226,7 @@ export default function EmployeesPage() {
             submitVacation: true,
             useChat: true,
             readDocuments: true,
-            editOwnRequests: true,
-            manageUsers: false,
-            manageDepartments: false,
-            manageSystemSettings: false,
-            viewReports: true,
-            exportData: true,
-            manageNotifications: true,
-            accessAnalytics: true,
-            manageRoles: false,
-            approveDocuments: true,
-            manageTemplates: false,
-            accessAuditLogs: false,
-            manageIntegrations: false,
-            viewSensitiveData: false,
-            manageWorkflows: false,
-            accessAPI: false,
-            manageBackups: false
+            editOwnRequests: true
           },
           startDate: '2023-06-01',
           status: 'active',
@@ -333,23 +263,7 @@ export default function EmployeesPage() {
             submitVacation: true,
             useChat: true,
             readDocuments: true,
-            editOwnRequests: true,
-            manageUsers: true,
-            manageDepartments: true,
-            manageSystemSettings: true,
-            viewReports: true,
-            exportData: true,
-            manageNotifications: true,
-            accessAnalytics: true,
-            manageRoles: true,
-            approveDocuments: true,
-            manageTemplates: true,
-            accessAuditLogs: true,
-            manageIntegrations: true,
-            viewSensitiveData: true,
-            manageWorkflows: true,
-            accessAPI: true,
-            manageBackups: true
+            editOwnRequests: true
           },
           startDate: '2023-01-01',
           status: 'active',
@@ -427,22 +341,6 @@ export default function EmployeesPage() {
           useChat: true,
           readDocuments: true,
           editOwnRequests: true,
-          manageUsers: true,
-          manageDepartments: true,
-          manageSystemSettings: true,
-          viewReports: true,
-          exportData: true,
-          manageNotifications: true,
-          accessAnalytics: true,
-          manageRoles: true,
-          approveDocuments: true,
-          manageTemplates: true,
-          accessAuditLogs: true,
-          manageIntegrations: true,
-          viewSensitiveData: true,
-          manageWorkflows: true,
-          accessAPI: true,
-          manageBackups: true
         };
       case 'department_leader':
         return {
@@ -458,22 +356,6 @@ export default function EmployeesPage() {
           useChat: true,
           readDocuments: true,
           editOwnRequests: true,
-          manageUsers: false,
-          manageDepartments: false,
-          manageSystemSettings: false,
-          viewReports: true,
-          exportData: true,
-          manageNotifications: true,
-          accessAnalytics: true,
-          manageRoles: false,
-          approveDocuments: true,
-          manageTemplates: false,
-          accessAuditLogs: false,
-          manageIntegrations: false,
-          viewSensitiveData: false,
-          manageWorkflows: false,
-          accessAPI: false,
-          manageBackups: false
         };
       case 'employee':
         return {
@@ -489,22 +371,6 @@ export default function EmployeesPage() {
           useChat: true,
           readDocuments: true,
           editOwnRequests: true,
-          manageUsers: false,
-          manageDepartments: false,
-          manageSystemSettings: false,
-          viewReports: false,
-          exportData: false,
-          manageNotifications: false,
-          accessAnalytics: false,
-          manageRoles: false,
-          approveDocuments: false,
-          manageTemplates: false,
-          accessAuditLogs: false,
-          manageIntegrations: false,
-          viewSensitiveData: false,
-          manageWorkflows: false,
-          accessAPI: false,
-          manageBackups: false
         };
     }
   };
@@ -1331,7 +1197,7 @@ export default function EmployeesPage() {
       {/* Permissions Modal */}
       {showPermissionsModal && selectedEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Tilganger for {selectedEmployee.firstName} {selectedEmployee.lastName}</h2>
               <button
@@ -1342,15 +1208,7 @@ export default function EmployeesPage() {
               </button>
             </div>
             
-            {/* Debug Info */}
-            <div className="bg-yellow-50 p-4 rounded-lg mb-4">
-              <p className="text-sm text-yellow-800">
-                <strong>Debug:</strong> Totalt tilganger: {Object.keys(formData.permissions).length} | 
-                Aktive: {Object.values(formData.permissions).filter(Boolean).length}
-              </p>
-            </div>
-            
-            <div className="space-y-8">
+            <div className="space-y-6">
               {/* Quick Actions */}
               <div className="flex space-x-4">
                 <button
@@ -1388,24 +1246,23 @@ export default function EmployeesPage() {
                 </button>
               </div>
 
-              {/* All Permissions List */}
+              {/* Permissions List */}
               <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Alle tilganger</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <h3 className="text-lg font-medium text-gray-900 mb-4">Tilganger</h3>
+                <div className="space-y-3">
                   {Object.entries(formData.permissions).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                    <div key={key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg hover:bg-gray-50">
                       <div className="flex items-center space-x-3">
                         <input
                           type="checkbox"
                           checked={value}
                           onChange={(e) => {
-                            console.log('Changing permission:', key, 'from', value, 'to', e.target.checked);
                             setFormData(prev => ({
                               ...prev,
                               permissions: { ...prev.permissions, [key]: e.target.checked }
                             }));
                           }}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                          className="h-5 w-5 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
                         />
                         <span className="text-sm font-medium text-gray-700">
                           {key === 'fullAccess' && 'Full tilgang til alt'}
@@ -1420,23 +1277,6 @@ export default function EmployeesPage() {
                           {key === 'useChat' && 'Bruk chat-system'}
                           {key === 'readDocuments' && 'Les delte dokumenter'}
                           {key === 'editOwnRequests' && 'Rediger egne forespørsler'}
-                          {key === 'manageUsers' && 'Administrer brukere'}
-                          {key === 'manageDepartments' && 'Administrer avdelinger'}
-                          {key === 'manageSystemSettings' && 'Administrer systeminnstillinger'}
-                          {key === 'viewReports' && 'Se rapporter'}
-                          {key === 'exportData' && 'Eksporter data'}
-                          {key === 'manageNotifications' && 'Administrer varsler'}
-                          {key === 'accessAnalytics' && 'Tilgang til analyser'}
-                          {key === 'manageRoles' && 'Administrer roller'}
-                          {key === 'approveDocuments' && 'Godkjenn dokumenter'}
-                          {key === 'manageTemplates' && 'Administrer maler'}
-                          {key === 'accessAuditLogs' && 'Tilgang til audit logger'}
-                          {key === 'manageIntegrations' && 'Administrer integrasjoner'}
-                          {key === 'viewSensitiveData' && 'Se sensitive data'}
-                          {key === 'manageWorkflows' && 'Administrer arbeidsflyter'}
-                          {key === 'accessAPI' && 'API-tilgang'}
-                          {key === 'manageBackups' && 'Administrer backups'}
-                          {!key.includes('fullAccess') && !key.includes('manageOwnDepartment') && !key.includes('approveVacation') && !key.includes('approveAbsence') && !key.includes('manageShifts') && !key.includes('handleDeviations') && !key.includes('submitDeviations') && !key.includes('submitAbsence') && !key.includes('submitVacation') && !key.includes('useChat') && !key.includes('readDocuments') && !key.includes('editOwnRequests') && !key.includes('manageUsers') && !key.includes('manageDepartments') && !key.includes('manageSystemSettings') && !key.includes('viewReports') && !key.includes('exportData') && !key.includes('manageNotifications') && !key.includes('accessAnalytics') && !key.includes('manageRoles') && !key.includes('approveDocuments') && !key.includes('manageTemplates') && !key.includes('accessAuditLogs') && !key.includes('manageIntegrations') && !key.includes('viewSensitiveData') && !key.includes('manageWorkflows') && !key.includes('accessAPI') && !key.includes('manageBackups') && key}
                         </span>
                       </div>
                       <div className="text-xs text-gray-500">
