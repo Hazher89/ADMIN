@@ -1,488 +1,514 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { absenceService, userService, departmentService } from '@/lib/firebase-services';
-import { Absence, RequestStatus, AbsenceType, User, Department } from '@/types';
+import React, { useState } from 'react';
+import Link from 'next/link';
 import { 
-  Calendar, 
-  Search, 
-  Filter, 
-  Plus, 
-  Eye, 
-  Edit, 
+  Calendar,
+  Plus,
+  Search,
+  Filter,
+  MoreHorizontal,
+  Edit,
+  Trash2,
+  Eye,
   CheckCircle,
   XCircle,
   Clock,
-  User as UserIcon,
+  User,
   Building,
-  AlertCircle,
+  AlertTriangle,
   TrendingUp,
-  CalendarDays,
-  FileText
+  TrendingDown,
+  ArrowUpRight,
+  ArrowDownRight,
+  Activity,
+  BarChart3,
+  PieChart,
+  LineChart,
+  Bell,
+  RefreshCw,
+  Download,
+  Upload,
+  Settings,
+  HelpCircle,
+  LogOut,
+  ChevronRight,
+  Star,
+  Award,
+  Target,
+  Zap,
+  Database,
+  Globe,
+  Palette,
+  Crown,
+  DollarSign,
+  Minus,
+  ArrowUp,
+  ArrowDown,
+  Circle,
+  Square,
+  Triangle,
+  ChevronDown,
+  ChevronUp,
+  SortAsc,
+  SortDesc,
+  FileText,
+  MessageSquare
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
 export default function AbsencePage() {
-  const { userProfile, isAdmin, isDepartmentLeader } = useAuth();
-  const [absences, setAbsences] = useState<Absence[]>([]);
-  const [users, setUsers] = useState<User[]>([]);
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('');
-  const [selectedType, setSelectedType] = useState('');
-  const [selectedDepartment, setSelectedDepartment] = useState('');
-  const [selectedEmployee, setSelectedEmployee] = useState('');
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [selectedAbsence, setSelectedAbsence] = useState<Absence | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [selectedType, setSelectedType] = useState('all');
+  const [sortBy, setSortBy] = useState('createdAt');
+  const [sortOrder, setSortOrder] = useState('desc');
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      
-      // Load departments
-      const deps = await departmentService.getAllDepartments();
-      setDepartments(deps);
-
-      // Load users based on role
-      let allUsers: User[] = [];
-      if (isAdmin) {
-        const employees = await userService.getUsersByRole('employee');
-        const leaders = await userService.getUsersByRole('department_leader');
-        allUsers = [...employees, ...leaders];
-      } else if (isDepartmentLeader && userProfile?.departmentId) {
-        allUsers = await userService.getUsersByDepartment(userProfile.departmentId);
-      }
-      setUsers(allUsers);
-
-      // Load absences based on role
-      let absenceData: Absence[] = [];
-      if (isAdmin) {
-        absenceData = await absenceService.getAllAbsences();
-      } else if (isDepartmentLeader && userProfile?.departmentId) {
-        absenceData = await absenceService.getAbsencesByDepartment(userProfile.departmentId);
-      } else {
-        absenceData = await absenceService.getAbsencesByEmployee(userProfile?.id || '');
-      }
-
-      setAbsences(absenceData);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Kunne ikke laste data');
-    } finally {
-      setLoading(false);
+  // Mock data
+  const absences = [
+    {
+      id: 1,
+      employeeName: 'Ola Nordmann',
+      employeeEmail: 'ola.nordmann@driftpro.no',
+      department: 'IT',
+      type: 'Sykdom',
+      startDate: '2024-01-25',
+      endDate: '2024-01-27',
+      days: 3,
+      status: 'pending',
+      reason: 'Forkjølelse og feber',
+      createdAt: '2024-01-24 14:30',
+      approvedBy: null,
+      approvedAt: null
+    },
+    {
+      id: 2,
+      employeeName: 'Kari Hansen',
+      employeeEmail: 'kari.hansen@driftpro.no',
+      department: 'HR',
+      type: 'Egenmelding',
+      startDate: '2024-01-26',
+      endDate: '2024-01-26',
+      days: 1,
+      status: 'approved',
+      reason: 'Hodepine og kvalme',
+      createdAt: '2024-01-25 09:15',
+      approvedBy: 'Lisa Berg',
+      approvedAt: '2024-01-25 10:30'
+    },
+    {
+      id: 3,
+      employeeName: 'Per Olsen',
+      employeeEmail: 'per.olsen@driftpro.no',
+      department: 'Produksjon',
+      type: 'Sykdom',
+      startDate: '2024-01-23',
+      endDate: '2024-01-25',
+      days: 3,
+      status: 'rejected',
+      reason: 'Ryggsmerter',
+      createdAt: '2024-01-22 16:45',
+      approvedBy: 'Tom Jensen',
+      approvedAt: '2024-01-23 08:20'
+    },
+    {
+      id: 4,
+      employeeName: 'Lisa Berg',
+      employeeEmail: 'lisa.berg@driftpro.no',
+      department: 'Logistikk',
+      type: 'Egenmelding',
+      startDate: '2024-01-28',
+      endDate: '2024-01-28',
+      days: 1,
+      status: 'pending',
+      reason: 'Magesmerter',
+      createdAt: '2024-01-27 11:20',
+      approvedBy: null,
+      approvedAt: null
+    },
+    {
+      id: 5,
+      employeeName: 'Tom Jensen',
+      employeeEmail: 'tom.jensen@driftpro.no',
+      department: 'Økonomi',
+      type: 'Sykdom',
+      startDate: '2024-01-20',
+      endDate: '2024-01-22',
+      days: 3,
+      status: 'approved',
+      reason: 'Influensa',
+      createdAt: '2024-01-19 13:10',
+      approvedBy: 'Kari Hansen',
+      approvedAt: '2024-01-19 15:45'
     }
-  };
+  ];
+
+  const departments = ['IT', 'HR', 'Produksjon', 'Logistikk', 'Økonomi'];
+  const types = ['Sykdom', 'Egenmelding', 'Permisjon', 'Andre'];
+  const statuses = ['pending', 'approved', 'rejected'];
+
+  const stats = [
+    {
+      title: 'Totale fravær',
+      value: absences.length.toString(),
+      change: '+2',
+      changeType: 'positive',
+      icon: Calendar,
+      color: 'blue'
+    },
+    {
+      title: 'Ventende søknader',
+      value: absences.filter(abs => abs.status === 'pending').length.toString(),
+      change: '+1',
+      changeType: 'positive',
+      icon: Clock,
+      color: 'yellow'
+    },
+    {
+      title: 'Godkjente søknader',
+      value: absences.filter(abs => abs.status === 'approved').length.toString(),
+      change: '+3',
+      changeType: 'positive',
+      icon: CheckCircle,
+      color: 'green'
+    },
+    {
+      title: 'Avviste søknader',
+      value: absences.filter(abs => abs.status === 'rejected').length.toString(),
+      change: '-1',
+      changeType: 'negative',
+      icon: XCircle,
+      color: 'red'
+    }
+  ];
 
   const filteredAbsences = absences.filter(absence => {
-    const matchesSearch = absence.reason.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         absence.employeeName.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = !selectedStatus || absence.status === selectedStatus;
-    const matchesType = !selectedType || absence.type === selectedType;
-    const matchesDepartment = !selectedDepartment || 
-                             users.find(u => u.id === absence.employeeId)?.departmentId === selectedDepartment;
-    const matchesEmployee = !selectedEmployee || absence.employeeId === selectedEmployee;
+    const matchesSearch = absence.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         absence.employeeEmail.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         absence.reason.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || absence.status === selectedStatus;
+    const matchesDepartment = selectedDepartment === 'all' || absence.department === selectedDepartment;
+    const matchesType = selectedType === 'all' || absence.type === selectedType;
     
-    return matchesSearch && matchesStatus && matchesType && matchesDepartment && matchesEmployee;
+    return matchesSearch && matchesStatus && matchesDepartment && matchesType;
   });
 
-  const getStatusBadge = (status: RequestStatus) => {
-    const badges = {
-      [RequestStatus.PENDING]: { color: 'bg-yellow-100 text-yellow-800', icon: Clock, text: 'Venter' },
-      [RequestStatus.APPROVED]: { color: 'bg-green-100 text-green-800', icon: CheckCircle, text: 'Godkjent' },
-      [RequestStatus.REJECTED]: { color: 'bg-red-100 text-red-800', icon: XCircle, text: 'Avvist' },
-      [RequestStatus.CANCELLED]: { color: 'bg-gray-100 text-gray-800', icon: XCircle, text: 'Kansellert' }
-    };
+  const sortedAbsences = [...filteredAbsences].sort((a, b) => {
+    let aValue = a[sortBy as keyof typeof a];
+    let bValue = b[sortBy as keyof typeof b];
     
-    const badge = badges[status];
-    const Icon = badge.icon;
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
-        <Icon className="h-3 w-3 mr-1" />
-        {badge.text}
-      </span>
-    );
-  };
-
-  const getTypeBadge = (type: AbsenceType) => {
-    const badges = {
-      [AbsenceType.SICK_LEAVE]: { color: 'bg-red-100 text-red-800', text: 'Sykemelding' },
-      [AbsenceType.VACATION]: { color: 'bg-blue-100 text-blue-800', text: 'Ferie' },
-      [AbsenceType.PERSONAL_LEAVE]: { color: 'bg-purple-100 text-purple-800', text: 'Personlig' },
-      [AbsenceType.MATERNITY_LEAVE]: { color: 'bg-pink-100 text-pink-800', text: 'Foreldrepermisjon' },
-      [AbsenceType.OTHER]: { color: 'bg-gray-100 text-gray-800', text: 'Annet' }
-    };
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      aValue = aValue.toLowerCase();
+      bValue = bValue.toLowerCase();
+    }
     
-    const badge = badges[type];
-    return (
-      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
-        {badge.text}
-      </span>
-    );
-  };
+    if (sortOrder === 'asc') {
+      return aValue > bValue ? 1 : -1;
+    } else {
+      return aValue < bValue ? 1 : -1;
+    }
+  });
 
-  const handleStatusChange = async (absenceId: string, newStatus: RequestStatus, comment?: string) => {
-    try {
-      await absenceService.updateAbsenceStatus(absenceId, newStatus, userProfile?.id || '', comment);
-      toast.success('Status oppdatert');
-      loadData();
-    } catch (error) {
-      console.error('Error updating status:', error);
-      toast.error('Kunne ikke oppdatere status');
+  const handleSort = (field: string) => {
+    if (sortBy === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortBy(field);
+      setSortOrder('asc');
     }
   };
 
-  const getDaysBetween = (startDate: Date, endDate: Date) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = Math.abs(end.getTime() - start.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
-    return diffDays;
-  };
-
-  const formatDateRange = (startDate: Date, endDate: Date) => {
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    
-    if (start.toDateString() === end.toDateString()) {
-      return start.toLocaleDateString('no-NO');
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return 'bg-yellow-100 text-yellow-800';
+      case 'approved':
+        return 'bg-green-100 text-green-800';
+      case 'rejected':
+        return 'bg-red-100 text-red-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
     }
-    
-    return `${start.toLocaleDateString('no-NO')} - ${end.toLocaleDateString('no-NO')}`;
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'Sykdom':
+        return 'bg-red-100 text-red-800';
+      case 'Egenmelding':
+        return 'bg-blue-100 text-blue-800';
+      case 'Permisjon':
+        return 'bg-purple-100 text-purple-800';
+      case 'Andre':
+        return 'bg-gray-100 text-gray-800';
+      default:
+        return 'bg-gray-100 text-gray-800';
+    }
+  };
 
   return (
-    <div className="space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-gray-50 via-blue-50 to-indigo-50">
       {/* Header */}
-      <div className="flex justify-between items-center">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Fravær</h1>
-          <p className="mt-1 text-sm text-gray-500">
-            Håndter fraværsforespørsler og godkjenninger
-          </p>
-        </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-        >
-          <Plus className="h-4 w-4 mr-2" />
-          Søk fravær
-        </button>
-      </div>
-
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <Clock className="h-6 w-6 text-yellow-600" />
+      <div className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+          <div className="flex justify-between items-center h-16">
+            <div className="flex items-center space-x-4">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
+                <Calendar className="h-6 w-6 text-white" />
               </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Venter</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {absences.filter(a => a.status === RequestStatus.PENDING).length}
-                  </dd>
-                </dl>
+              <div>
+                <h1 className="text-xl font-bold text-gray-900">Fravær</h1>
+                <p className="text-sm text-gray-500">Administrer fraværsøknader</p>
               </div>
             </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CheckCircle className="h-6 w-6 text-green-600" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Godkjent</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {absences.filter(a => a.status === RequestStatus.APPROVED).length}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <XCircle className="h-6 w-6 text-red-600" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Avvist</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {absences.filter(a => a.status === RequestStatus.REJECTED).length}
-                  </dd>
-                </dl>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white overflow-hidden shadow rounded-lg">
-          <div className="p-5">
-            <div className="flex items-center">
-              <div className="flex-shrink-0">
-                <CalendarDays className="h-6 w-6 text-blue-600" />
-              </div>
-              <div className="ml-5 w-0 flex-1">
-                <dl>
-                  <dt className="text-sm font-medium text-gray-500 truncate">Totalt dager</dt>
-                  <dd className="text-lg font-medium text-gray-900">
-                    {absences
-                      .filter(a => a.status === RequestStatus.APPROVED)
-                      .reduce((total, absence) => total + getDaysBetween(absence.startDate, absence.endDate), 0)
-                    }
-                  </dd>
-                </dl>
-              </div>
+            
+            <div className="flex items-center space-x-4">
+              <button className="p-2 text-gray-600 hover:text-gray-900 transition-colors">
+                <RefreshCw className="h-5 w-5" />
+              </button>
+              <button className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-lg text-white bg-blue-600 hover:bg-blue-700 transition-colors">
+                <Plus className="h-4 w-4 mr-2" />
+                Ny fraværsøknad
+              </button>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white shadow rounded-lg p-6">
-        <div className="grid grid-cols-1 md:grid-cols-6 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Søk
-            </label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Søk etter grunn eller navn..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="pl-10 block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-              />
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Stats */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+          {stats.map((stat, index) => {
+            const IconComponent = stat.icon;
+            return (
+              <div key={index} className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-medium text-gray-600 mb-1">{stat.title}</p>
+                    <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                    <div className="flex items-center mt-2">
+                      {stat.changeType === 'positive' ? (
+                        <ArrowUpRight className="h-4 w-4 text-green-500 mr-1" />
+                      ) : (
+                        <ArrowDownRight className="h-4 w-4 text-red-500 mr-1" />
+                      )}
+                      <span className={`text-sm font-medium ${
+                        stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'
+                      }`}>
+                        {stat.change}
+                      </span>
+                      <span className="text-sm text-gray-500 ml-1">fra forrige uke</span>
+                    </div>
+                  </div>
+                  <div className={`w-12 h-12 bg-gradient-to-r from-${stat.color}-500 to-${stat.color}-600 rounded-xl flex items-center justify-center`}>
+                    <IconComponent className="h-6 w-6 text-white" />
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+
+        {/* Filters and Search */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mb-8">
+          <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between space-y-4 lg:space-y-0">
+            <div className="flex-1 max-w-md">
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                <input
+                  type="text"
+                  placeholder="Søk etter ansatt, årsak..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
             </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Status
-            </label>
-            <select
-              value={selectedStatus}
-              onChange={(e) => setSelectedStatus(e.target.value)}
-              className="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="">Alle statuser</option>
-              <option value={RequestStatus.PENDING}>Venter</option>
-              <option value={RequestStatus.APPROVED}>Godkjent</option>
-              <option value={RequestStatus.REJECTED}>Avvist</option>
-              <option value={RequestStatus.CANCELLED}>Kansellert</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              Type
-            </label>
-            <select
-              value={selectedType}
-              onChange={(e) => setSelectedType(e.target.value)}
-              className="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
-            >
-              <option value="">Alle typer</option>
-              <option value={AbsenceType.SICK_LEAVE}>Sykemelding</option>
-              <option value={AbsenceType.VACATION}>Ferie</option>
-              <option value={AbsenceType.PERSONAL_LEAVE}>Personlig</option>
-              <option value={AbsenceType.MATERNITY_LEAVE}>Foreldrepermisjon</option>
-              <option value={AbsenceType.OTHER}>Annet</option>
-            </select>
-          </div>
-
-          {(isAdmin || isDepartmentLeader) && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Avdeling
-              </label>
+            
+            <div className="flex flex-wrap gap-4">
+              <select
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Alle statuser</option>
+                {statuses.map(status => (
+                  <option key={status} value={status}>
+                    {status === 'pending' ? 'Venter' : status === 'approved' ? 'Godkjent' : 'Avvist'}
+                  </option>
+                ))}
+              </select>
+              
               <select
                 value={selectedDepartment}
                 onChange={(e) => setSelectedDepartment(e.target.value)}
-                className="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Alle avdelinger</option>
+                <option value="all">Alle avdelinger</option>
                 {departments.map(dept => (
-                  <option key={dept.id} value={dept.id}>{dept.name}</option>
+                  <option key={dept} value={dept}>{dept}</option>
                 ))}
               </select>
-            </div>
-          )}
-
-          {(isAdmin || isDepartmentLeader) && (
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Ansatt
-              </label>
+              
               <select
-                value={selectedEmployee}
-                onChange={(e) => setSelectedEmployee(e.target.value)}
-                className="block w-full border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+                className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
               >
-                <option value="">Alle ansatte</option>
-                {users.map(user => (
-                  <option key={user.id} value={user.id}>{user.displayName}</option>
+                <option value="all">Alle typer</option>
+                {types.map(type => (
+                  <option key={type} value={type}>{type}</option>
                 ))}
               </select>
             </div>
-          )}
-
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setSelectedStatus('');
-                setSelectedType('');
-                setSelectedDepartment('');
-                setSelectedEmployee('');
-              }}
-              className="w-full inline-flex justify-center items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-            >
-              <Filter className="h-4 w-4 mr-2" />
-              Nullstill
-            </button>
           </div>
         </div>
-      </div>
 
-      {/* Absences List */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h3 className="text-lg font-medium text-gray-900">
-            Fraværsforespørsler ({filteredAbsences.length})
-          </h3>
+        {/* Absences Table */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden">
+          <div className="overflow-x-auto">
+            <table className="min-w-full divide-y divide-gray-200">
+              <thead className="bg-gray-50">
+                <tr>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('employeeName')}>
+                    <div className="flex items-center space-x-1">
+                      <span>Ansatt</span>
+                      {sortBy === 'employeeName' && (
+                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('type')}>
+                    <div className="flex items-center space-x-1">
+                      <span>Type</span>
+                      {sortBy === 'type' && (
+                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('startDate')}>
+                    <div className="flex items-center space-x-1">
+                      <span>Periode</span>
+                      {sortBy === 'startDate' && (
+                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('days')}>
+                    <div className="flex items-center space-x-1">
+                      <span>Dager</span>
+                      {sortBy === 'days' && (
+                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('status')}>
+                    <div className="flex items-center space-x-1">
+                      <span>Status</span>
+                      {sortBy === 'status' && (
+                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Årsak
+                  </th>
+                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider cursor-pointer hover:bg-gray-100" onClick={() => handleSort('createdAt')}>
+                    <div className="flex items-center space-x-1">
+                      <span>Søknadsdato</span>
+                      {sortBy === 'createdAt' && (
+                        sortOrder === 'asc' ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />
+                      )}
+                    </div>
+                  </th>
+                  <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    Handlinger
+                  </th>
+                </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                {sortedAbsences.map((absence) => (
+                  <tr key={absence.id} className="hover:bg-gray-50 transition-colors">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-full flex items-center justify-center text-white font-medium">
+                          {absence.employeeName.split(' ').map(n => n[0]).join('')}
+                        </div>
+                        <div className="ml-4">
+                          <div className="text-sm font-medium text-gray-900">{absence.employeeName}</div>
+                          <div className="text-sm text-gray-500">{absence.employeeEmail}</div>
+                          <div className="text-sm text-gray-500">{absence.department}</div>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getTypeColor(absence.type)}`}>
+                        {absence.type}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <div>
+                        <div>{absence.startDate}</div>
+                        <div className="text-gray-500">til {absence.endDate}</div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      {absence.days} dager
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(absence.status)}`}>
+                        {absence.status === 'pending' ? 'Venter' : absence.status === 'approved' ? 'Godkjent' : 'Avvist'}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                      {absence.reason}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      {absence.createdAt}
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                      <div className="flex items-center justify-end space-x-2">
+                        <button className="text-blue-600 hover:text-blue-900 transition-colors">
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button className="text-gray-600 hover:text-gray-900 transition-colors">
+                          <Edit className="h-4 w-4" />
+                        </button>
+                        <button className="text-red-600 hover:text-red-900 transition-colors">
+                          <Trash2 className="h-4 w-4" />
+                        </button>
+                        <button className="text-gray-600 hover:text-gray-900 transition-colors">
+                          <MoreHorizontal className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         </div>
-        
-        <div className="divide-y divide-gray-200">
-          {filteredAbsences.map((absence) => (
-            <div key={absence.id} className="p-6 hover:bg-gray-50 transition-colors">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <div className="flex items-center space-x-3 mb-2">
-                    {getStatusBadge(absence.status)}
-                    {getTypeBadge(absence.type)}
-                    <span className="text-sm text-gray-500">
-                      {getDaysBetween(absence.startDate, absence.endDate)} dager
-                    </span>
-                  </div>
-                  
-                  <div className="flex items-center space-x-6 mb-3">
-                    <div className="flex items-center">
-                      <UserIcon className="h-4 w-4 text-gray-400 mr-2" />
-                      <span className="text-sm font-medium text-gray-900">
-                        {absence.employeeName}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-600">
-                        {formatDateRange(absence.startDate, absence.endDate)}
-                      </span>
-                    </div>
-                    
-                    <div className="flex items-center">
-                      <Building className="h-4 w-4 text-gray-400 mr-2" />
-                      <span className="text-sm text-gray-600">
-                        {departments.find(d => d.id === users.find(u => u.id === absence.employeeId)?.departmentId)?.name || 'Ukjent'}
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <p className="text-sm text-gray-600 mb-3">
-                    <strong>Grunn:</strong> {absence.reason}
-                  </p>
-                  
-                  {absence.comments && absence.comments.length > 0 && (
-                    <div className="text-sm text-gray-500">
-                      <strong>Kommentarer:</strong> {absence.comments[absence.comments.length - 1].content}
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex items-center space-x-2 ml-4">
-                  <button
-                    onClick={() => {
-                      setSelectedAbsence(absence);
-                      setShowAddModal(true);
-                    }}
-                    className="text-blue-600 hover:text-blue-900"
-                    title="Se detaljer"
-                  >
-                    <Eye className="h-4 w-4" />
-                  </button>
-                  
-                  {(isAdmin || isDepartmentLeader) && absence.status === RequestStatus.PENDING && (
-                    <>
-                      <button
-                        onClick={() => handleStatusChange(absence.id, RequestStatus.APPROVED)}
-                        className="text-green-600 hover:text-green-900"
-                        title="Godkjenn"
-                      >
-                        <CheckCircle className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleStatusChange(absence.id, RequestStatus.REJECTED)}
-                        className="text-red-600 hover:text-red-900"
-                        title="Avvis"
-                      >
-                        <XCircle className="h-4 w-4" />
-                      </button>
-                    </>
-                  )}
-                  
-                  {absence.employeeId === userProfile?.id && absence.status === RequestStatus.PENDING && (
-                    <button
-                      onClick={() => handleStatusChange(absence.id, RequestStatus.CANCELLED)}
-                      className="text-gray-600 hover:text-gray-900"
-                      title="Kanseller"
-                    >
-                      <XCircle className="h-4 w-4" />
-                    </button>
-                  )}
-                </div>
-              </div>
+
+        {/* Pagination */}
+        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 mt-8">
+          <div className="flex items-center justify-between">
+            <div className="text-sm text-gray-700">
+              Viser <span className="font-medium">{sortedAbsences.length}</span> av <span className="font-medium">{absences.length}</span> fraværsøknader
             </div>
-          ))}
-        </div>
-
-        {filteredAbsences.length === 0 && (
-          <div className="text-center py-12">
-            <Calendar className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Ingen fraværsforespørsler funnet</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              Prøv å endre søkekriteriene eller søk om fravær.
-            </p>
+            <div className="flex items-center space-x-2">
+              <button className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                Forrige
+              </button>
+              <button className="px-3 py-2 text-sm font-medium text-white bg-blue-600 border border-blue-600 rounded-lg">
+                1
+              </button>
+              <button className="px-3 py-2 text-sm font-medium text-gray-500 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 transition-colors">
+                Neste
+              </button>
+            </div>
           </div>
-        )}
+        </div>
       </div>
-
-      {/* Add/Edit Absence Modal would go here */}
-      {/* This is a placeholder for the modal component */}
     </div>
   );
 } 
