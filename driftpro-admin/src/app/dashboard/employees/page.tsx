@@ -1278,7 +1278,7 @@ export default function EmployeesPage() {
       {/* Permissions Modal */}
       {showPermissionsModal && selectedEmployee && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
             <div className="flex justify-between items-center mb-6">
               <h2 className="text-xl font-bold">Tilganger for {selectedEmployee.firstName} {selectedEmployee.lastName}</h2>
               <button
@@ -1289,123 +1289,265 @@ export default function EmployeesPage() {
               </button>
             </div>
             
-            <div className="space-y-6">
-              {/* Role-based permissions */}
-              <div>
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Rollebaserte tilganger</h3>
-                <div className="grid grid-cols-1 gap-4">
-                  {Object.entries(formData.permissions).map(([key, value]) => (
-                    <div key={key} className="flex items-center justify-between p-4 border border-gray-200 rounded-lg">
-                      <div className="flex items-center space-x-3">
-                        <input
-                          type="checkbox"
-                          checked={value}
-                          onChange={(e) => setFormData(prev => ({
-                            ...prev,
-                            permissions: { ...prev.permissions, [key]: e.target.checked }
-                          }))}
-                          className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                        />
-                        <span className="text-sm font-medium text-gray-700">
-                          {key === 'fullAccess' && 'Full tilgang til alt'}
-                          {key === 'manageOwnDepartment' && 'Administrer egen avdeling'}
-                          {key === 'approveVacation' && 'Godkjenn ferieforespørsler'}
-                          {key === 'approveAbsence' && 'Godkjenn fraværsforespørsler'}
-                          {key === 'manageShifts' && 'Administrer skiftplaner'}
-                          {key === 'handleDeviations' && 'Håndter avviksrapporter'}
-                          {key === 'submitDeviations' && 'Send avviksrapporter'}
-                          {key === 'submitAbsence' && 'Send fraværsforespørsler'}
-                          {key === 'submitVacation' && 'Send ferieforespørsler'}
-                          {key === 'useChat' && 'Bruk chat-system'}
-                          {key === 'readDocuments' && 'Les delte dokumenter'}
-                          {key === 'editOwnRequests' && 'Rediger egne forespørsler'}
-                          {key === 'manageUsers' && 'Administrer brukere'}
-                          {key === 'manageDepartments' && 'Administrer avdelinger'}
-                          {key === 'manageSystemSettings' && 'Administrer systeminnstillinger'}
-                          {key === 'viewReports' && 'Se rapporter'}
-                          {key === 'exportData' && 'Eksporter data'}
-                          {key === 'manageNotifications' && 'Administrer varsler'}
-                          {key === 'accessAnalytics' && 'Tilgang til analyser'}
-                          {key === 'manageRoles' && 'Administrer roller'}
-                          {key === 'approveDocuments' && 'Godkjenn dokumenter'}
-                          {key === 'manageTemplates' && 'Administrer maler'}
-                          {key === 'accessAuditLogs' && 'Tilgang til audit logger'}
-                          {key === 'manageIntegrations' && 'Administrer integrasjoner'}
-                          {key === 'viewSensitiveData' && 'Se sensitive data'}
-                          {key === 'manageWorkflows' && 'Administrer arbeidsflyter'}
-                          {key === 'accessAPI' && 'API-tilgang'}
-                          {key === 'manageBackups' && 'Administrer backups'}
-                        </span>
-                      </div>
-                      <div className="text-xs text-gray-500">
-                        {key === 'fullAccess' && 'Admin'}
-                        {key === 'manageOwnDepartment' && 'Avdelingsleder'}
-                        {key === 'approveVacation' && 'Avdelingsleder'}
-                        {key === 'approveAbsence' && 'Avdelingsleder'}
-                        {key === 'manageShifts' && 'Avdelingsleder'}
-                        {key === 'handleDeviations' && 'Avdelingsleder'}
-                        {key === 'submitDeviations' && 'Alle'}
-                        {key === 'submitAbsence' && 'Alle'}
-                        {key === 'submitVacation' && 'Alle'}
-                        {key === 'useChat' && 'Alle'}
-                        {key === 'readDocuments' && 'Alle'}
-                        {key === 'editOwnRequests' && 'Alle'}
-                        {key === 'manageUsers' && 'Admin'}
-                        {key === 'manageDepartments' && 'Admin'}
-                        {key === 'manageSystemSettings' && 'Admin'}
-                        {key === 'viewReports' && 'Admin/Leder'}
-                        {key === 'exportData' && 'Admin/Leder'}
-                        {key === 'manageNotifications' && 'Admin/Leder'}
-                        {key === 'accessAnalytics' && 'Admin/Leder'}
-                        {key === 'manageRoles' && 'Admin'}
-                        {key === 'approveDocuments' && 'Admin/Leder'}
-                        {key === 'manageTemplates' && 'Admin'}
-                        {key === 'accessAuditLogs' && 'Admin'}
-                        {key === 'manageIntegrations' && 'Admin'}
-                        {key === 'viewSensitiveData' && 'Admin'}
-                        {key === 'manageWorkflows' && 'Admin'}
-                        {key === 'accessAPI' && 'Admin'}
-                        {key === 'manageBackups' && 'Admin'}
-                      </div>
-                    </div>
-                  ))}
+            <div className="space-y-8">
+              {/* Quick Actions */}
+              <div className="flex space-x-4">
+                <button
+                  onClick={() => {
+                    const allTrue = Object.keys(formData.permissions).reduce((acc, key) => {
+                      acc[key as keyof typeof formData.permissions] = true;
+                      return acc;
+                    }, {} as typeof formData.permissions);
+                    setFormData(prev => ({ ...prev, permissions: allTrue }));
+                  }}
+                  className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 text-sm"
+                >
+                  Aktiver alle
+                </button>
+                <button
+                  onClick={() => {
+                    const allFalse = Object.keys(formData.permissions).reduce((acc, key) => {
+                      acc[key as keyof typeof formData.permissions] = false;
+                      return acc;
+                    }, {} as typeof formData.permissions);
+                    setFormData(prev => ({ ...prev, permissions: allFalse }));
+                  }}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 text-sm"
+                >
+                  Deaktiver alle
+                </button>
+                <button
+                  onClick={() => {
+                    const defaultPerms = getDefaultPermissions(selectedEmployee.role);
+                    setFormData(prev => ({ ...prev, permissions: defaultPerms }));
+                  }}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm"
+                >
+                  Standard for rolle
+                </button>
+              </div>
+
+              {/* Permissions by Category */}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                {/* Basic Permissions */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Grunnleggende tilganger</h3>
+                  <div className="space-y-3">
+                    {Object.entries(formData.permissions)
+                      .filter(([key]) => [
+                        'submitDeviations', 'submitAbsence', 'submitVacation', 
+                        'useChat', 'readDocuments', 'editOwnRequests'
+                      ].includes(key))
+                      .map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={value}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                permissions: { ...prev.permissions, [key]: e.target.checked }
+                              }))}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">
+                              {key === 'submitDeviations' && 'Send avviksrapporter'}
+                              {key === 'submitAbsence' && 'Send fraværsforespørsler'}
+                              {key === 'submitVacation' && 'Send ferieforespørsler'}
+                              {key === 'useChat' && 'Bruk chat-system'}
+                              {key === 'readDocuments' && 'Les delte dokumenter'}
+                              {key === 'editOwnRequests' && 'Rediger egne forespørsler'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500 bg-green-100 text-green-800 px-2 py-1 rounded">Alle</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Department Leader Permissions */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Avdelingsleder tilganger</h3>
+                  <div className="space-y-3">
+                    {Object.entries(formData.permissions)
+                      .filter(([key]) => [
+                        'manageOwnDepartment', 'approveVacation', 'approveAbsence', 
+                        'manageShifts', 'handleDeviations'
+                      ].includes(key))
+                      .map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={value}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                permissions: { ...prev.permissions, [key]: e.target.checked }
+                              }))}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">
+                              {key === 'manageOwnDepartment' && 'Administrer egen avdeling'}
+                              {key === 'approveVacation' && 'Godkjenn ferieforespørsler'}
+                              {key === 'approveAbsence' && 'Godkjenn fraværsforespørsler'}
+                              {key === 'manageShifts' && 'Administrer skiftplaner'}
+                              {key === 'handleDeviations' && 'Håndter avviksrapporter'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500 bg-blue-100 text-blue-800 px-2 py-1 rounded">Leder</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Admin Permissions */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Administrator tilganger</h3>
+                  <div className="space-y-3">
+                    {Object.entries(formData.permissions)
+                      .filter(([key]) => [
+                        'fullAccess', 'manageUsers', 'manageDepartments', 'manageSystemSettings',
+                        'manageRoles', 'accessAuditLogs', 'manageIntegrations', 'viewSensitiveData',
+                        'manageWorkflows', 'accessAPI', 'manageBackups'
+                      ].includes(key))
+                      .map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={value}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                permissions: { ...prev.permissions, [key]: e.target.checked }
+                              }))}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">
+                              {key === 'fullAccess' && 'Full tilgang til alt'}
+                              {key === 'manageUsers' && 'Administrer brukere'}
+                              {key === 'manageDepartments' && 'Administrer avdelinger'}
+                              {key === 'manageSystemSettings' && 'Administrer systeminnstillinger'}
+                              {key === 'manageRoles' && 'Administrer roller'}
+                              {key === 'accessAuditLogs' && 'Tilgang til audit logger'}
+                              {key === 'manageIntegrations' && 'Administrer integrasjoner'}
+                              {key === 'viewSensitiveData' && 'Se sensitive data'}
+                              {key === 'manageWorkflows' && 'Administrer arbeidsflyter'}
+                              {key === 'accessAPI' && 'API-tilgang'}
+                              {key === 'manageBackups' && 'Administrer backups'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500 bg-red-100 text-red-800 px-2 py-1 rounded">Admin</span>
+                        </div>
+                      ))}
+                  </div>
+                </div>
+
+                {/* Reporting & Analytics */}
+                <div>
+                  <h3 className="text-lg font-medium text-gray-900 mb-4 border-b pb-2">Rapportering & Analyse</h3>
+                  <div className="space-y-3">
+                    {Object.entries(formData.permissions)
+                      .filter(([key]) => [
+                        'viewReports', 'exportData', 'manageNotifications', 'accessAnalytics',
+                        'approveDocuments', 'manageTemplates'
+                      ].includes(key))
+                      .map(([key, value]) => (
+                        <div key={key} className="flex items-center justify-between p-3 border border-gray-200 rounded-lg hover:bg-gray-50">
+                          <div className="flex items-center space-x-3">
+                            <input
+                              type="checkbox"
+                              checked={value}
+                              onChange={(e) => setFormData(prev => ({
+                                ...prev,
+                                permissions: { ...prev.permissions, [key]: e.target.checked }
+                              }))}
+                              className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                            />
+                            <span className="text-sm font-medium text-gray-700">
+                              {key === 'viewReports' && 'Se rapporter'}
+                              {key === 'exportData' && 'Eksporter data'}
+                              {key === 'manageNotifications' && 'Administrer varsler'}
+                              {key === 'accessAnalytics' && 'Tilgang til analyser'}
+                              {key === 'approveDocuments' && 'Godkjenn dokumenter'}
+                              {key === 'manageTemplates' && 'Administrer maler'}
+                            </span>
+                          </div>
+                          <span className="text-xs text-gray-500 bg-purple-100 text-purple-800 px-2 py-1 rounded">Admin/Leder</span>
+                        </div>
+                      ))}
+                  </div>
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="flex justify-end space-x-4 pt-6 border-t">
-                <button
-                  type="button"
-                  onClick={() => setShowPermissionsModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Avbryt
-                </button>
-                <button
-                  onClick={async () => {
-                    try {
-                      if (!db) throw new Error('Firebase not initialized');
-                      await updateDoc(doc(db, 'employees', selectedEmployee.id), {
-                        permissions: formData.permissions
-                      });
-                      setEmployees(prev => 
-                        prev.map(emp => 
-                          emp.id === selectedEmployee.id 
-                            ? { ...emp, permissions: formData.permissions }
-                            : emp
-                        )
-                      );
-                      setShowPermissionsModal(false);
-                    } catch (error) {
-                      console.error('Error updating permissions:', error);
-                    }
-                  }}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-                >
-                  <Save className="h-4 w-4" />
-                  <span>Lagre tilganger</span>
-                </button>
+              {/* Summary */}
+              <div className="bg-gray-50 p-4 rounded-lg">
+                <h4 className="font-medium text-gray-900 mb-2">Sammendrag</h4>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                  <div>
+                    <span className="text-gray-600">Aktive tilganger:</span>
+                    <span className="ml-2 font-medium text-green-600">
+                      {Object.values(formData.permissions).filter(Boolean).length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Totalt tilganger:</span>
+                    <span className="ml-2 font-medium text-gray-900">
+                      {Object.keys(formData.permissions).length}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Nåværende rolle:</span>
+                    <span className="ml-2 font-medium text-blue-600">
+                      {selectedEmployee.role === 'admin' && 'Administrator'}
+                      {selectedEmployee.role === 'department_leader' && 'Avdelingsleder'}
+                      {selectedEmployee.role === 'employee' && 'Ansatt'}
+                    </span>
+                  </div>
+                  <div>
+                    <span className="text-gray-600">Status:</span>
+                    <span className={`ml-2 font-medium ${
+                      selectedEmployee.status === 'active' ? 'text-green-600' : 'text-red-600'
+                    }`}>
+                      {selectedEmployee.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                    </span>
+                  </div>
+                </div>
               </div>
+            </div>
+
+            {/* Actions */}
+            <div className="flex justify-end space-x-4 pt-6 border-t mt-6">
+              <button
+                type="button"
+                onClick={() => setShowPermissionsModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (!db) throw new Error('Firebase not initialized');
+                    await updateDoc(doc(db, 'employees', selectedEmployee.id), {
+                      permissions: formData.permissions
+                    });
+                    setEmployees(prev => 
+                      prev.map(emp => 
+                        emp.id === selectedEmployee.id 
+                          ? { ...emp, permissions: formData.permissions }
+                          : emp
+                      )
+                    );
+                    setShowPermissionsModal(false);
+                  } catch (error) {
+                    console.error('Error updating permissions:', error);
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+              >
+                <Save className="h-4 w-4" />
+                <span>Lagre tilganger</span>
+              </button>
             </div>
           </div>
         </div>
