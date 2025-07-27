@@ -69,6 +69,24 @@ interface Employee {
     useChat: boolean;
     readDocuments: boolean;
     editOwnRequests: boolean;
+    
+    // Additional advanced permissions
+    manageUsers: boolean;
+    manageDepartments: boolean;
+    manageSystemSettings: boolean;
+    viewReports: boolean;
+    exportData: boolean;
+    manageNotifications: boolean;
+    accessAnalytics: boolean;
+    manageRoles: boolean;
+    approveDocuments: boolean;
+    manageTemplates: boolean;
+    accessAuditLogs: boolean;
+    manageIntegrations: boolean;
+    viewSensitiveData: boolean;
+    manageWorkflows: boolean;
+    accessAPI: boolean;
+    manageBackups: boolean;
   };
   startDate: string;
   status: 'active' | 'inactive';
@@ -91,6 +109,9 @@ export default function EmployeesPage() {
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
   const [showPermissionsModal, setShowPermissionsModal] = useState(false);
+  const [showDepartmentModal, setShowDepartmentModal] = useState(false);
+  const [showRoleModal, setShowRoleModal] = useState(false);
+  const [showStatusModal, setShowStatusModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
@@ -127,7 +148,23 @@ export default function EmployeesPage() {
       submitVacation: true,
       useChat: true,
       readDocuments: true,
-      editOwnRequests: true
+      editOwnRequests: true,
+      manageUsers: false,
+      manageDepartments: false,
+      manageSystemSettings: false,
+      viewReports: false,
+      exportData: false,
+      manageNotifications: false,
+      accessAnalytics: false,
+      manageRoles: false,
+      approveDocuments: false,
+      manageTemplates: false,
+      accessAuditLogs: false,
+      manageIntegrations: false,
+      viewSensitiveData: false,
+      manageWorkflows: false,
+      accessAPI: false,
+      manageBackups: false
     }
   });
 
@@ -139,6 +176,20 @@ export default function EmployeesPage() {
   useEffect(() => {
     filterEmployees();
   }, [employees, searchTerm, departmentFilter, roleFilter]);
+
+  // Handle click outside dropdown
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (selectedEmployee && !(event.target as Element).closest('.dropdown-container')) {
+        setSelectedEmployee(null);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [selectedEmployee]);
 
   const loadEmployees = async () => {
     try {
@@ -176,7 +227,23 @@ export default function EmployeesPage() {
             submitVacation: true,
             useChat: true,
             readDocuments: true,
-            editOwnRequests: true
+            editOwnRequests: true,
+            manageUsers: false,
+            manageDepartments: false,
+            manageSystemSettings: false,
+            viewReports: false,
+            exportData: false,
+            manageNotifications: false,
+            accessAnalytics: false,
+            manageRoles: false,
+            approveDocuments: false,
+            manageTemplates: false,
+            accessAuditLogs: false,
+            manageIntegrations: false,
+            viewSensitiveData: false,
+            manageWorkflows: false,
+            accessAPI: false,
+            manageBackups: false
           },
           startDate: '2024-01-15',
           status: 'active',
@@ -213,7 +280,23 @@ export default function EmployeesPage() {
             submitVacation: true,
             useChat: true,
             readDocuments: true,
-            editOwnRequests: true
+            editOwnRequests: true,
+            manageUsers: false,
+            manageDepartments: false,
+            manageSystemSettings: false,
+            viewReports: false,
+            exportData: false,
+            manageNotifications: false,
+            accessAnalytics: false,
+            manageRoles: false,
+            approveDocuments: false,
+            manageTemplates: false,
+            accessAuditLogs: false,
+            manageIntegrations: false,
+            viewSensitiveData: false,
+            manageWorkflows: false,
+            accessAPI: false,
+            manageBackups: false
           },
           startDate: '2023-06-01',
           status: 'active',
@@ -290,7 +373,23 @@ export default function EmployeesPage() {
           submitVacation: true,
           useChat: true,
           readDocuments: true,
-          editOwnRequests: true
+          editOwnRequests: true,
+          manageUsers: true,
+          manageDepartments: true,
+          manageSystemSettings: true,
+          viewReports: true,
+          exportData: true,
+          manageNotifications: true,
+          accessAnalytics: true,
+          manageRoles: true,
+          approveDocuments: true,
+          manageTemplates: true,
+          accessAuditLogs: true,
+          manageIntegrations: true,
+          viewSensitiveData: true,
+          manageWorkflows: true,
+          accessAPI: true,
+          manageBackups: true
         };
       case 'department_leader':
         return {
@@ -305,7 +404,23 @@ export default function EmployeesPage() {
           submitVacation: true,
           useChat: true,
           readDocuments: true,
-          editOwnRequests: true
+          editOwnRequests: true,
+          manageUsers: false,
+          manageDepartments: false,
+          manageSystemSettings: false,
+          viewReports: true,
+          exportData: true,
+          manageNotifications: true,
+          accessAnalytics: true,
+          manageRoles: false,
+          approveDocuments: true,
+          manageTemplates: false,
+          accessAuditLogs: false,
+          manageIntegrations: false,
+          viewSensitiveData: false,
+          manageWorkflows: false,
+          accessAPI: false,
+          manageBackups: false
         };
       case 'employee':
         return {
@@ -320,7 +435,23 @@ export default function EmployeesPage() {
           submitVacation: true,
           useChat: true,
           readDocuments: true,
-          editOwnRequests: true
+          editOwnRequests: true,
+          manageUsers: false,
+          manageDepartments: false,
+          manageSystemSettings: false,
+          viewReports: false,
+          exportData: false,
+          manageNotifications: false,
+          accessAnalytics: false,
+          manageRoles: false,
+          approveDocuments: false,
+          manageTemplates: false,
+          accessAuditLogs: false,
+          manageIntegrations: false,
+          viewSensitiveData: false,
+          manageWorkflows: false,
+          accessAPI: false,
+          manageBackups: false
         };
     }
   };
@@ -585,6 +716,86 @@ export default function EmployeesPage() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                     <div className="flex items-center justify-end space-x-2">
+                      {/* Dropdown Menu */}
+                      <div className="relative dropdown-container">
+                        <button
+                          onClick={() => setSelectedEmployee(employee)}
+                          className="text-gray-600 hover:text-gray-900 p-1 rounded-lg hover:bg-gray-100"
+                          title="Flere handlinger"
+                        >
+                          <ChevronDown className="h-4 w-4" />
+                        </button>
+                        
+                        {/* Dropdown Content */}
+                        {selectedEmployee?.id === employee.id && (
+                          <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 z-10">
+                            <div className="py-1">
+                              <button
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  setShowDepartmentModal(true);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                              >
+                                <Building className="h-4 w-4" />
+                                <span>Endre avdeling</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  setShowRoleModal(true);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                              >
+                                <Shield className="h-4 w-4" />
+                                <span>Endre rolle</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => {
+                                  setSelectedEmployee(employee);
+                                  setShowStatusModal(true);
+                                }}
+                                className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                              >
+                                <UserCheck className="h-4 w-4" />
+                                <span>Endre status</span>
+                              </button>
+                              
+                              <hr className="my-1" />
+                              
+                              <button
+                                onClick={() => openPermissionsModal(employee)}
+                                className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center space-x-2"
+                              >
+                                <Shield className="h-4 w-4" />
+                                <span>Tilganger</span>
+                              </button>
+                              
+                              <button
+                                onClick={() => openEditModal(employee)}
+                                className="w-full text-left px-4 py-2 text-sm text-indigo-600 hover:bg-indigo-50 flex items-center space-x-2"
+                              >
+                                <Edit className="h-4 w-4" />
+                                <span>Rediger</span>
+                              </button>
+                              
+                              <hr className="my-1" />
+                              
+                              <button
+                                onClick={() => handleDelete(employee.id)}
+                                className="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 flex items-center space-x-2"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                                <span>Slett</span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                      
+                      {/* Quick Actions */}
                       <button
                         onClick={() => openPermissionsModal(employee)}
                         className="text-blue-600 hover:text-blue-900 p-1"
@@ -598,13 +809,6 @@ export default function EmployeesPage() {
                         title="Rediger"
                       >
                         <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => handleDelete(employee.id)}
-                        className="text-red-600 hover:text-red-900 p-1"
-                        title="Slett"
-                      >
-                        <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
                   </td>
@@ -1115,6 +1319,22 @@ export default function EmployeesPage() {
                           {key === 'useChat' && 'Bruk chat-system'}
                           {key === 'readDocuments' && 'Les delte dokumenter'}
                           {key === 'editOwnRequests' && 'Rediger egne forespørsler'}
+                          {key === 'manageUsers' && 'Administrer brukere'}
+                          {key === 'manageDepartments' && 'Administrer avdelinger'}
+                          {key === 'manageSystemSettings' && 'Administrer systeminnstillinger'}
+                          {key === 'viewReports' && 'Se rapporter'}
+                          {key === 'exportData' && 'Eksporter data'}
+                          {key === 'manageNotifications' && 'Administrer varsler'}
+                          {key === 'accessAnalytics' && 'Tilgang til analyser'}
+                          {key === 'manageRoles' && 'Administrer roller'}
+                          {key === 'approveDocuments' && 'Godkjenn dokumenter'}
+                          {key === 'manageTemplates' && 'Administrer maler'}
+                          {key === 'accessAuditLogs' && 'Tilgang til audit logger'}
+                          {key === 'manageIntegrations' && 'Administrer integrasjoner'}
+                          {key === 'viewSensitiveData' && 'Se sensitive data'}
+                          {key === 'manageWorkflows' && 'Administrer arbeidsflyter'}
+                          {key === 'accessAPI' && 'API-tilgang'}
+                          {key === 'manageBackups' && 'Administrer backups'}
                         </span>
                       </div>
                       <div className="text-xs text-gray-500">
@@ -1130,6 +1350,22 @@ export default function EmployeesPage() {
                         {key === 'useChat' && 'Alle'}
                         {key === 'readDocuments' && 'Alle'}
                         {key === 'editOwnRequests' && 'Alle'}
+                        {key === 'manageUsers' && 'Admin'}
+                        {key === 'manageDepartments' && 'Admin'}
+                        {key === 'manageSystemSettings' && 'Admin'}
+                        {key === 'viewReports' && 'Admin/Leder'}
+                        {key === 'exportData' && 'Admin/Leder'}
+                        {key === 'manageNotifications' && 'Admin/Leder'}
+                        {key === 'accessAnalytics' && 'Admin/Leder'}
+                        {key === 'manageRoles' && 'Admin'}
+                        {key === 'approveDocuments' && 'Admin/Leder'}
+                        {key === 'manageTemplates' && 'Admin'}
+                        {key === 'accessAuditLogs' && 'Admin'}
+                        {key === 'manageIntegrations' && 'Admin'}
+                        {key === 'viewSensitiveData' && 'Admin'}
+                        {key === 'manageWorkflows' && 'Admin'}
+                        {key === 'accessAPI' && 'Admin'}
+                        {key === 'manageBackups' && 'Admin'}
                       </div>
                     </div>
                   ))}
@@ -1170,6 +1406,279 @@ export default function EmployeesPage() {
                   <span>Lagre tilganger</span>
                 </button>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Department Change Modal */}
+      {showDepartmentModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Endre avdeling</h2>
+              <button
+                onClick={() => setShowDepartmentModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ansatt
+                </label>
+                <p className="text-sm text-gray-900">
+                  {selectedEmployee.firstName} {selectedEmployee.lastName}
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nåværende avdeling
+                </label>
+                <p className="text-sm text-gray-900">{selectedEmployee.department}</p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ny avdeling *
+                </label>
+                <select
+                  value={formData.department}
+                  onChange={(e) => setFormData(prev => ({ ...prev, department: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Velg avdeling</option>
+                  {departments.map(dept => (
+                    <option key={dept.id} value={dept.name}>{dept.name}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setShowDepartmentModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (!db) throw new Error('Firebase not initialized');
+                    await updateDoc(doc(db, 'employees', selectedEmployee.id), {
+                      department: formData.department
+                    });
+                    setEmployees(prev => 
+                      prev.map(emp => 
+                        emp.id === selectedEmployee.id 
+                          ? { ...emp, department: formData.department }
+                          : emp
+                      )
+                    );
+                    setShowDepartmentModal(false);
+                  } catch (error) {
+                    console.error('Error updating department:', error);
+                  }
+                }}
+                disabled={!formData.department}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
+              >
+                Oppdater avdeling
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Role Change Modal */}
+      {showRoleModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Endre rolle</h2>
+              <button
+                onClick={() => setShowRoleModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ansatt
+                </label>
+                <p className="text-sm text-gray-900">
+                  {selectedEmployee.firstName} {selectedEmployee.lastName}
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nåværende rolle
+                </label>
+                <p className="text-sm text-gray-900">
+                  {selectedEmployee.role === 'admin' && 'Administrator'}
+                  {selectedEmployee.role === 'department_leader' && 'Avdelingsleder'}
+                  {selectedEmployee.role === 'employee' && 'Ansatt'}
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ny rolle *
+                </label>
+                <select
+                  value={formData.role}
+                  onChange={(e) => handleRoleChange(e.target.value as 'admin' | 'department_leader' | 'employee')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="employee">Ansatt</option>
+                  <option value="department_leader">Avdelingsleder</option>
+                  <option value="admin">Administrator</option>
+                </select>
+              </div>
+              
+              <div className="bg-yellow-50 p-4 rounded-lg">
+                <p className="text-sm text-yellow-800">
+                  <strong>Advarsel:</strong> Endring av rolle vil oppdatere alle tilganger automatisk.
+                </p>
+              </div>
+            </div>
+
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setShowRoleModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (!db) throw new Error('Firebase not initialized');
+                    await updateDoc(doc(db, 'employees', selectedEmployee.id), {
+                      role: formData.role,
+                      permissions: formData.permissions
+                    });
+                    setEmployees(prev => 
+                      prev.map(emp => 
+                        emp.id === selectedEmployee.id 
+                          ? { ...emp, role: formData.role, permissions: formData.permissions }
+                          : emp
+                      )
+                    );
+                    setShowRoleModal(false);
+                  } catch (error) {
+                    console.error('Error updating role:', error);
+                  }
+                }}
+                className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+              >
+                Oppdater rolle
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Status Change Modal */}
+      {showStatusModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold">Endre status</h2>
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ansatt
+                </label>
+                <p className="text-sm text-gray-900">
+                  {selectedEmployee.firstName} {selectedEmployee.lastName}
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Nåværende status
+                </label>
+                <p className="text-sm text-gray-900">
+                  {selectedEmployee.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                </p>
+              </div>
+              
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Ny status *
+                </label>
+                <select
+                  value={selectedEmployee.status === 'active' ? 'inactive' : 'active'}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                </select>
+              </div>
+              
+              {selectedEmployee.status === 'active' && (
+                <div className="bg-red-50 p-4 rounded-lg">
+                  <p className="text-sm text-red-800">
+                    <strong>Advarsel:</strong> Inaktive ansatte vil ikke ha tilgang til systemet.
+                  </p>
+                </div>
+              )}
+            </div>
+
+            <div className="flex justify-end space-x-4 mt-6">
+              <button
+                onClick={() => setShowStatusModal(false)}
+                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={async () => {
+                  try {
+                    if (!db) throw new Error('Firebase not initialized');
+                    const newStatus = selectedEmployee.status === 'active' ? 'inactive' : 'active';
+                    await updateDoc(doc(db, 'employees', selectedEmployee.id), {
+                      status: newStatus
+                    });
+                    setEmployees(prev => 
+                      prev.map(emp => 
+                        emp.id === selectedEmployee.id 
+                          ? { ...emp, status: newStatus }
+                          : emp
+                      )
+                    );
+                    setShowStatusModal(false);
+                  } catch (error) {
+                    console.error('Error updating status:', error);
+                  }
+                }}
+                className={`px-4 py-2 text-white rounded-lg ${
+                  selectedEmployee.status === 'active' 
+                    ? 'bg-red-600 hover:bg-red-700' 
+                    : 'bg-green-600 hover:bg-green-700'
+                }`}
+              >
+                {selectedEmployee.status === 'active' ? 'Deaktiver' : 'Aktiver'}
+              </button>
             </div>
           </div>
         </div>
