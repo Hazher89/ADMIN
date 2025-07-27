@@ -13,94 +13,182 @@ import {
   Phone,
   MapPin,
   Crown,
-  Shield
+  Shield,
+  UserPlus,
+  UserMinus,
+  ArrowRight,
+  X,
+  Save,
+  User,
+  Settings,
+  MoreVertical,
+  ChevronDown,
+  CheckCircle,
+  AlertCircle
 } from 'lucide-react';
+import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  department: string;
+  role: 'admin' | 'department_leader' | 'employee';
+  status: 'active' | 'inactive';
+}
 
 interface Department {
   id: string;
   name: string;
   description: string;
-  leader: string;
+  leaders: string[]; // Array of employee IDs who are leaders
   employeeCount: number;
   location: string;
   phone: string;
   email: string;
   status: 'active' | 'inactive';
+  createdAt: string;
+}
+
+interface DepartmentWithEmployees extends Department {
+  employees: Employee[];
 }
 
 export default function DepartmentsPage() {
-  const [departments, setDepartments] = useState<Department[]>([]);
-  const [filteredDepartments, setFilteredDepartments] = useState<Department[]>([]);
+  const [departments, setDepartments] = useState<DepartmentWithEmployees[]>([]);
+  const [filteredDepartments, setFilteredDepartments] = useState<DepartmentWithEmployees[]>([]);
+  const [allEmployees, setAllEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
+  const [showDepartmentDetailModal, setShowDepartmentDetailModal] = useState(false);
+  const [showMoveEmployeeModal, setShowMoveEmployeeModal] = useState(false);
+  const [showManageLeadersModal, setShowManageLeadersModal] = useState(false);
+  const [selectedDepartment, setSelectedDepartment] = useState<DepartmentWithEmployees | null>(null);
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // Form data for adding/editing departments
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    location: '',
+    phone: '',
+    email: '',
+    status: 'active' as 'active' | 'inactive'
+  });
+
+  // Form data for moving employees
+  const [moveFormData, setMoveFormData] = useState({
+    targetDepartment: ''
+  });
+
+  // Form data for managing leaders
+  const [leadersFormData, setLeadersFormData] = useState({
+    selectedLeaders: [] as string[]
+  });
 
   useEffect(() => {
-    loadDepartments();
+    loadData();
   }, []);
 
   useEffect(() => {
     filterDepartments();
   }, [departments, searchTerm]);
 
-  const loadDepartments = async () => {
-    const mockDepartments: Department[] = [
+  const loadData = async () => {
+    try {
+      setLoading(true);
+      
+      // Load employees from Firebase
+      if (db) {
+        const employeesSnapshot = await getDocs(collection(db, 'employees'));
+        const employeesData = employeesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Employee[];
+        setAllEmployees(employeesData);
+        
+        // Load departments from Firebase
+        const departmentsSnapshot = await getDocs(collection(db, 'departments'));
+        const departmentsData = departmentsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Department[];
+        
+        // Combine departments with their employees
+        const departmentsWithEmployees = departmentsData.map(dept => ({
+          ...dept,
+          employees: employeesData.filter(emp => emp.department === dept.name)
+        }));
+        
+        setDepartments(departmentsWithEmployees);
+      } else {
+        // Fallback to mock data
+        loadMockData();
+      }
+    } catch (error) {
+      console.error('Error loading data:', error);
+      loadMockData();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadMockData = () => {
+    const mockEmployees: Employee[] = [
+      { id: '1', firstName: 'Ola', lastName: 'Nordmann', email: 'ola@driftpro.no', department: 'IT', role: 'employee', status: 'active' },
+      { id: '2', firstName: 'Kari', lastName: 'Hansen', email: 'kari@driftpro.no', department: 'HR', role: 'department_leader', status: 'active' },
+      { id: '3', firstName: 'Admin', lastName: 'Bruker', email: 'admin@driftpro.no', department: 'Administrasjon', role: 'admin', status: 'active' },
+      { id: '4', firstName: 'Per', lastName: 'Olsen', email: 'per@driftpro.no', department: 'IT', role: 'department_leader', status: 'active' },
+      { id: '5', firstName: 'Anne', lastName: 'Berg', email: 'anne@driftpro.no', department: 'HR', role: 'employee', status: 'active' },
+    ];
+
+    const mockDepartments: DepartmentWithEmployees[] = [
       {
         id: '1',
-        name: 'IT-avdelingen',
+        name: 'IT',
         description: 'Informasjonsteknologi og systemutvikling',
-        leader: 'John Doe',
-        employeeCount: 15,
+        leaders: ['4'], // Per Olsen
+        employeeCount: 2,
         location: '2. etasje, kontor 201-215',
         phone: '+47 123 45 678',
-        email: 'it@company.com',
-        status: 'active'
+        email: 'it@driftpro.no',
+        status: 'active',
+        createdAt: '2024-01-01T00:00:00Z',
+        employees: mockEmployees.filter(emp => emp.department === 'IT')
       },
       {
         id: '2',
-        name: 'HR-avdelingen',
+        name: 'HR',
         description: 'Menneskelige ressurser og personaladministrasjon',
-        leader: 'Jane Smith',
-        employeeCount: 8,
+        leaders: ['2'], // Kari Hansen
+        employeeCount: 2,
         location: '1. etasje, kontor 101-108',
         phone: '+47 234 56 789',
-        email: 'hr@company.com',
-        status: 'active'
+        email: 'hr@driftpro.no',
+        status: 'active',
+        createdAt: '2024-01-01T00:00:00Z',
+        employees: mockEmployees.filter(emp => emp.department === 'HR')
       },
       {
         id: '3',
-        name: 'Salgsavdelingen',
-        description: 'Salg og kundeservice',
-        leader: 'Mike Johnson',
-        employeeCount: 25,
-        location: '3. etasje, kontor 301-325',
+        name: 'Administrasjon',
+        description: 'Administrasjon og ledelse',
+        leaders: ['3'], // Admin Bruker
+        employeeCount: 1,
+        location: '3. etasje, kontor 301',
         phone: '+47 345 67 890',
-        email: 'sales@company.com',
-        status: 'active'
-      },
-      {
-        id: '4',
-        name: 'Markedsføringsavdelingen',
-        description: 'Markedsføring og kommunikasjon',
-        leader: 'Sarah Wilson',
-        employeeCount: 12,
-        location: '2. etasje, kontor 216-227',
-        phone: '+47 456 78 901',
-        email: 'marketing@company.com',
-        status: 'active'
-      },
-      {
-        id: '5',
-        name: 'Økonomiavdelingen',
-        description: 'Økonomi og regnskap',
-        leader: 'David Brown',
-        employeeCount: 10,
-        location: '1. etasje, kontor 109-118',
-        phone: '+47 567 89 012',
-        email: 'finance@company.com',
-        status: 'active'
+        email: 'admin@driftpro.no',
+        status: 'active',
+        createdAt: '2024-01-01T00:00:00Z',
+        employees: mockEmployees.filter(emp => emp.department === 'Administrasjon')
       }
     ];
 
+    setAllEmployees(mockEmployees);
     setDepartments(mockDepartments);
   };
 
@@ -110,13 +198,130 @@ export default function DepartmentsPage() {
     if (searchTerm) {
       filtered = filtered.filter(dept =>
         dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        dept.leader.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        dept.description.toLowerCase().includes(searchTerm.toLowerCase())
+        dept.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        dept.leaders.some(leaderId => {
+          const leader = allEmployees.find(emp => emp.id === leaderId);
+          return leader && `${leader.firstName} ${leader.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+        })
       );
     }
 
     setFilteredDepartments(filtered);
   };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      setSaving(true);
+      
+      if (db) {
+        const newDepartment = {
+          ...formData,
+          leaders: [],
+          employeeCount: 0,
+          createdAt: new Date().toISOString()
+        };
+        
+        await addDoc(collection(db, 'departments'), newDepartment);
+      }
+      
+      setShowAddModal(false);
+      resetForm();
+      loadData();
+    } catch (error) {
+      console.error('Error adding department:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleMoveEmployee = async () => {
+    if (!selectedEmployee || !moveFormData.targetDepartment) return;
+    
+    try {
+      setSaving(true);
+      
+      if (db) {
+        await updateDoc(doc(db, 'employees', selectedEmployee.id), {
+          department: moveFormData.targetDepartment
+        });
+      }
+      
+      setShowMoveEmployeeModal(false);
+      setSelectedEmployee(null);
+      setMoveFormData({ targetDepartment: '' });
+      loadData();
+    } catch (error) {
+      console.error('Error moving employee:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleManageLeaders = async () => {
+    if (!selectedDepartment) return;
+    
+    try {
+      setSaving(true);
+      
+      if (db) {
+        await updateDoc(doc(db, 'departments', selectedDepartment.id), {
+          leaders: leadersFormData.selectedLeaders
+        });
+      }
+      
+      setShowManageLeadersModal(false);
+      setSelectedDepartment(null);
+      setLeadersFormData({ selectedLeaders: [] });
+      loadData();
+    } catch (error) {
+      console.error('Error updating leaders:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      description: '',
+      location: '',
+      phone: '',
+      email: '',
+      status: 'active'
+    });
+  };
+
+  const openDepartmentDetail = (department: DepartmentWithEmployees) => {
+    setSelectedDepartment(department);
+    setShowDepartmentDetailModal(true);
+  };
+
+  const openMoveEmployeeModal = (employee: Employee) => {
+    setSelectedEmployee(employee);
+    setShowMoveEmployeeModal(true);
+  };
+
+  const openManageLeadersModal = (department: DepartmentWithEmployees) => {
+    setSelectedDepartment(department);
+    setLeadersFormData({ selectedLeaders: department.leaders });
+    setShowManageLeadersModal(true);
+  };
+
+  const getLeaderNames = (leaderIds: string[]) => {
+    return leaderIds.map(id => {
+      const leader = allEmployees.find(emp => emp.id === id);
+      return leader ? `${leader.firstName} ${leader.lastName}` : 'Ukjent';
+    }).join(', ');
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -163,18 +368,23 @@ export default function DepartmentsPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">{department.name}</h3>
-                    <p className="text-sm text-gray-500">{department.employeeCount} ansatte</p>
+                    <p className="text-sm text-gray-500">{department.employees.length} ansatte</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
-                  <button className="text-blue-600 hover:text-blue-900 p-1" title="Rediger">
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button className="text-gray-600 hover:text-gray-900 p-1" title="Se detaljer">
+                  <button 
+                    onClick={() => openDepartmentDetail(department)}
+                    className="text-blue-600 hover:text-blue-900 p-1" 
+                    title="Se detaljer"
+                  >
                     <Eye className="h-4 w-4" />
                   </button>
-                  <button className="text-red-600 hover:text-red-900 p-1" title="Slett">
-                    <Trash2 className="h-4 w-4" />
+                  <button 
+                    onClick={() => openManageLeadersModal(department)}
+                    className="text-green-600 hover:text-green-900 p-1" 
+                    title="Administrer ledere"
+                  >
+                    <Crown className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -184,7 +394,9 @@ export default function DepartmentsPage() {
               <div className="space-y-3">
                 <div className="flex items-center space-x-2">
                   <Crown className="h-4 w-4 text-yellow-600" />
-                  <span className="text-sm text-gray-900">Leder: {department.leader}</span>
+                  <span className="text-sm text-gray-900">
+                    Leder: {getLeaderNames(department.leaders) || 'Ingen leder'}
+                  </span>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -224,13 +436,24 @@ export default function DepartmentsPage() {
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Legg til ny avdeling</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Legg til ny avdeling</h2>
+              <button
+                onClick={() => setShowAddModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
             
-            <form className="space-y-4">
+            <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Avdelingsnavn</label>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Avdelingsnavn *</label>
                 <input
                   type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -239,14 +462,8 @@ export default function DepartmentsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Beskrivelse</label>
                 <textarea
                   rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Avdelingsleder</label>
-                <input
-                  type="text"
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -255,6 +472,8 @@ export default function DepartmentsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Lokasjon</label>
                 <input
                   type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -263,6 +482,8 @@ export default function DepartmentsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
                 <input
                   type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
               </div>
@@ -271,8 +492,22 @@ export default function DepartmentsPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-1">E-post</label>
                 <input
                   type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                 />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                </select>
               </div>
 
               <div className="flex space-x-3 pt-4">
@@ -285,12 +520,311 @@ export default function DepartmentsPage() {
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
+                  disabled={saving}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
                 >
-                  Legg til
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Lagrer...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4" />
+                      <span>Legg til</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Department Detail Modal */}
+      {showDepartmentDetailModal && selectedDepartment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">{selectedDepartment.name}</h2>
+              <button
+                onClick={() => setShowDepartmentDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Department Info */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-medium text-gray-900">Avdelingsinformasjon</h3>
+                
+                <div className="bg-gray-50 p-4 rounded-lg space-y-3">
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Beskrivelse:</span>
+                    <p className="text-sm text-gray-600 mt-1">{selectedDepartment.description}</p>
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Lokasjon:</span>
+                    <p className="text-sm text-gray-600 mt-1">{selectedDepartment.location}</p>
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Telefon:</span>
+                    <p className="text-sm text-gray-600 mt-1">{selectedDepartment.phone}</p>
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">E-post:</span>
+                    <p className="text-sm text-gray-600 mt-1">{selectedDepartment.email}</p>
+                  </div>
+                  
+                  <div>
+                    <span className="text-sm font-medium text-gray-700">Status:</span>
+                    <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ml-2 ${
+                      selectedDepartment.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedDepartment.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="flex space-x-3">
+                  <button
+                    onClick={() => openManageLeadersModal(selectedDepartment)}
+                    className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <Crown className="h-4 w-4" />
+                    <span>Administrer ledere</span>
+                  </button>
+                </div>
+              </div>
+
+              {/* Employees List */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-medium text-gray-900">Ansatte ({selectedDepartment.employees.length})</h3>
+                </div>
+
+                <div className="space-y-3">
+                  {selectedDepartment.employees.length > 0 ? (
+                    selectedDepartment.employees.map((employee) => (
+                      <div key={employee.id} className="bg-gray-50 p-4 rounded-lg">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-3">
+                            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                              <span className="text-white font-medium text-sm">
+                                {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+                              </span>
+                            </div>
+                            <div>
+                              <p className="font-medium text-gray-900">
+                                {employee.firstName} {employee.lastName}
+                              </p>
+                              <p className="text-sm text-gray-600">{employee.email}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-center space-x-2">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                              employee.role === 'admin' ? 'bg-red-100 text-red-800' :
+                              employee.role === 'department_leader' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-blue-100 text-blue-800'
+                            }`}>
+                              {employee.role === 'admin' ? 'Admin' :
+                               employee.role === 'department_leader' ? 'Leder' : 'Ansatt'}
+                            </span>
+                            <button
+                              onClick={() => openMoveEmployeeModal(employee)}
+                              className="text-blue-600 hover:text-blue-900 p-1"
+                              title="Flytt til annen avdeling"
+                            >
+                              <ArrowRight className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                      <p>Ingen ansatte i denne avdelingen</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Move Employee Modal */}
+      {showMoveEmployeeModal && selectedEmployee && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Flytt ansatt</h2>
+              <button
+                onClick={() => setShowMoveEmployeeModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-600">
+                Flytt <strong>{selectedEmployee.firstName} {selectedEmployee.lastName}</strong> til en annen avdeling
+              </p>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Velg avdeling</label>
+                <select
+                  value={moveFormData.targetDepartment}
+                  onChange={(e) => setMoveFormData(prev => ({ ...prev, targetDepartment: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="">Velg avdeling...</option>
+                  {departments
+                    .filter(dept => dept.name !== selectedEmployee.department)
+                    .map(dept => (
+                      <option key={dept.id} value={dept.name}>{dept.name}</option>
+                    ))
+                  }
+                </select>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowMoveEmployeeModal(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={handleMoveEmployee}
+                  disabled={!moveFormData.targetDepartment || saving}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Flytter...</span>
+                    </>
+                  ) : (
+                    <>
+                      <ArrowRight className="h-4 w-4" />
+                      <span>Flytt ansatt</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Manage Leaders Modal */}
+      {showManageLeadersModal && selectedDepartment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Administrer ledere for {selectedDepartment.name}</h2>
+              <button
+                onClick={() => setShowManageLeadersModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <p className="text-gray-600">
+                Velg ansatte som skal være ledere for denne avdelingen. Du kan velge flere ledere.
+              </p>
+
+              <div className="space-y-3">
+                {allEmployees
+                  .filter(emp => emp.department === selectedDepartment.name)
+                  .map((employee) => (
+                    <div key={employee.id} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
+                      <input
+                        type="checkbox"
+                        checked={leadersFormData.selectedLeaders.includes(employee.id)}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setLeadersFormData(prev => ({
+                              ...prev,
+                              selectedLeaders: [...prev.selectedLeaders, employee.id]
+                            }));
+                          } else {
+                            setLeadersFormData(prev => ({
+                              ...prev,
+                              selectedLeaders: prev.selectedLeaders.filter(id => id !== employee.id)
+                            }));
+                          }
+                        }}
+                        className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
+                      />
+                      <div className="flex items-center space-x-3">
+                        <div className="w-8 h-8 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-medium text-xs">
+                            {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-gray-900">
+                            {employee.firstName} {employee.lastName}
+                          </p>
+                          <p className="text-sm text-gray-600">{employee.email}</p>
+                        </div>
+                      </div>
+                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                        employee.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        employee.role === 'department_leader' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {employee.role === 'admin' ? 'Admin' :
+                         employee.role === 'department_leader' ? 'Leder' : 'Ansatt'}
+                      </span>
+                    </div>
+                  ))
+                }
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowManageLeadersModal(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={handleManageLeaders}
+                  disabled={saving}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Lagrer...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>Lagre ledere</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}
