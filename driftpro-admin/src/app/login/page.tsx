@@ -9,10 +9,7 @@ import {
   EyeOff,
   Mail,
   Lock,
-  Building,
-  User,
   AlertCircle,
-  CheckCircle,
   ArrowRight,
   Loader2
 } from 'lucide-react';
@@ -25,14 +22,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState('');
-
-  // Mock companies - in real app this would come from Firebase
-  const companies = [
-    { id: 'company-1', name: 'DriftPro AS', domain: 'driftpro.no' },
-    { id: 'company-2', name: 'TechCorp Norge', domain: 'techcorp.no' },
-    { id: 'company-3', name: 'Innovation Labs', domain: 'innovationlabs.no' }
-  ];
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -76,29 +65,6 @@ export default function LoginPage() {
         {/* Login Form */}
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <form onSubmit={handleLogin} className="space-y-6">
-            {/* Company Selection */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Velg bedrift
-              </label>
-              <div className="relative">
-                <select
-                  value={selectedCompany}
-                  onChange={(e) => setSelectedCompany(e.target.value)}
-                  className="block w-full px-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  required
-                >
-                  <option value="">Velg din bedrift</option>
-                  {companies.map((company) => (
-                    <option key={company.id} value={company.id}>
-                      {company.name}
-                    </option>
-                  ))}
-                </select>
-                <Building className="absolute right-3 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
-              </div>
-            </div>
-
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
