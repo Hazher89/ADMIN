@@ -1,76 +1,97 @@
-# DriftPro Admin Panel
+# DriftPro Admin - Avansert Administrasjonssystem
 
-En profesjonell admin-panel for DriftPro som lar deg administrere brukere, avdelinger, chat, avvik, dokumenter og skiftplan for både Android og iOS appene.
+Et komplett og avansert administrasjonssystem for DriftPro med full funksjonalitet for å styre både iOS og Android appene.
 
 ## 🚀 Funksjoner
 
-### 🔐 **Autentisering & Tilgangskontroll**
-- Bedriftsvelger før innlogging
-- Sikker login med e-post/passord
-- Rollebasert tilgangskontroll (Super Admin, Admin, Manager, Employee)
+### 🔐 Sikkerhet & Autentisering
+- Firebase Authentication
+- Rollebasert tilgangskontroll (Admin, Avdelingsleder, Ansatt)
+- GDPR-compliance
+- Sikker session-håndtering
 
-### 📊 **Dashboard**
-- Oversikt over alle statistikk
-- Hurtighandlinger
-- Siste aktivitet
+### 👥 Brukeradministrasjon
+- **Ansatte**: Avansert skjema med tilganger og tillatelser
+- **Avdelinger**: Avdelingsstyring med ledere og ansatte
+- **Tilganger**: Granulær kontroll over funksjoner og data
 
-### 👥 **Brukeradministrasjon**
-- Se alle brukere i bedriften
-- Filtrering på rolle og søk
-- Brukerstatistikker og status
-- Legg til, rediger og slett brukere
+### 📅 Fravær & Ferie
+- **Fravær**: Komplett system med godkjenning/avvisning
+- **Ferie**: Avansert feriesystem med kalender og dager-overføring
+- **5 års oversikt**: Historikk og fremtidig planlegging
+- **Automatisk varsling**: E-post og push-notifikasjoner
 
-### 🏢 **Avdelingsadministrasjon**
-- Opprett og administrer avdelinger
-- Tildel managere til avdelinger
-- Se brukerfordeling per avdeling
+### ⚠️ Avvikshåndtering
+- **Unik ID**: Sporing av alle avvik
+- **Status tracking**: Pending → In Progress → Resolved
+- **Kommentarer**: Kommunikasjon mellom parter
+- **Prioritering**: Kritisk, Høy, Medium, Lav
 
-### 💬 **Chat-oversikt**
-- Se alle chat-rom i bedriften
-- Filtre på chat-type (direkte/gruppe)
-- Se deltakere og siste meldinger
+### 💬 Chat & Kommunikasjon
+- **WhatsApp-lignende**: Grupper, PM, filer, bilder, video
+- **Read receipts**: Se hvem som har lest meldinger
+- **Real-time**: Øyeblikkelig oppdateringer
+- **Fildeling**: Støtte for alle filtyper
 
-### ⚠️ **Avvik-administrasjon**
-- Oversikt over alle avvik
-- Filtrering på status og prioritet
-- Se rapporterende bruker og avdeling
+### 📄 Dokumenter
+- **Fildeling**: PDF, Word, Excel, PowerPoint, Video
+- **Tilganger**: Granulær kontroll over hvem som kan se/endre
+- **Versjonering**: Sporing av endringer
+- **Søk**: Avansert søkefunksjonalitet
 
-### 📄 **Dokumentadministrasjon**
-- Se alle dokumenter i bedriften
-- Filtrering på kategori
-- Se opplastet av og nedlastinger
+### ⏰ Skiftplan & Stemple
+- **Skiftplan**: Dag, uke, måned, år
+- **E-post varsling**: Automatisk til ansatte
+- **Godkjenning**: Ansatte kan godkjenne/avvise skift
+- **Stemple**: Time tracking med lokasjon
 
-### 📅 **Skiftplan-administrasjon**
-- Oversikt over alle skift
-- Filtrering på status og type
-- Se clock-in/out tider
+### 📊 Rapporter & Analytics
+- **Diagrammer**: Visualisering av data
+- **Lovdata-integrasjon**: Compliance tracking
+- **Rød/grønn status**: Oversikt over regelverket
+- **Eksport**: PDF, Excel, CSV
 
-### 📈 **Rapporter & Analyser**
-- Detaljerte statistikk
-- Brukeraktivitet
-- Kommunikasjon
-- Avvik og dokumenter
-
-### ⚙️ **Innstillinger**
-- Profilinformasjon
-- Sikkerhet (passord, 2FA)
-- Varsler
-- Bedriftsinnstillinger
+### 🔔 Notifikasjoner
+- **Real-time**: Øyeblikkelige varsler
+- **Klikkbar**: Direkte navigering til relevant side
+- **Kategorisert**: Fravær, ferie, avvik, chat, etc.
+- **Push-notifikasjoner**: Mobil og web
 
 ## 🛠️ Teknisk Stack
 
-- **Frontend**: Next.js 14, React 19, TypeScript
-- **Styling**: Tailwind CSS
-- **Backend**: Firebase (Firestore, Authentication, Storage)
-- **Form Handling**: React Hook Form + Zod
-- **Icons**: Heroicons
-- **Charts**: Recharts (for fremtidige utvidelser)
+### Frontend
+- **Next.js 14**: App Router, Server Components
+- **TypeScript**: Type safety
+- **Tailwind CSS**: Utility-first styling
+- **Lucide React**: Ikoner
+- **Framer Motion**: Animasjoner
+- **React Hook Form**: Form håndtering
+- **Zod**: Validering
+
+### Backend & Database
+- **Firebase**: Backend-as-a-Service
+- **Firestore**: NoSQL database
+- **Firebase Auth**: Autentisering
+- **Firebase Storage**: Fildeling
+- **Firebase Messaging**: Push-notifikasjoner
+
+### State Management
+- **React Context**: Global state
+- **Real-time listeners**: Live oppdateringer
+- **Optimistic updates**: Rask UI feedback
 
 ## 📦 Installasjon
 
-1. **Klon prosjektet**
+### Forutsetninger
+- Node.js 18+
+- npm eller yarn
+- Firebase prosjekt
+
+### Steg
+
+1. **Klon repositoriet**
 ```bash
-git clone <repository-url>
+git clone https://github.com/your-username/driftpro-admin.git
 cd driftpro-admin
 ```
 
@@ -80,147 +101,145 @@ npm install
 ```
 
 3. **Konfigurer Firebase**
-   - Opprett et Firebase-prosjekt
-   - Kopier Firebase-konfigurasjonen til `src/lib/firebase.ts`
-   - Aktiver Authentication og Firestore
+   - Opprett et Firebase prosjekt
+   - Aktiver Authentication, Firestore, Storage, Messaging
+   - Kopier konfigurasjonen til `.env.local`
 
-4. **Start utviklingsserver**
+4. **Miljøvariabler**
+```bash
+cp env.example .env.local
+# Rediger .env.local med dine Firebase-opplysninger
+```
+
+5. **Start utviklingsserver**
 ```bash
 npm run dev
 ```
 
-5. **Åpne i nettleseren**
-```
-http://localhost:3000
+6. **Bygg for produksjon**
+```bash
+npm run build
+npm start
 ```
 
 ## 🔧 Konfigurasjon
 
 ### Firebase Setup
 
-1. Gå til [Firebase Console](https://console.firebase.google.com/)
-2. Opprett et nytt prosjekt
-3. Aktiver Authentication (Email/Password)
-4. Opprett Firestore database
-5. Kopier konfigurasjonen til `src/lib/firebase.ts`:
+1. **Authentication**
+   - Aktiver Email/Password
+   - Konfigurer tilpassede claims for roller
 
-```typescript
-const firebaseConfig = {
-  apiKey: "din-api-key",
-  authDomain: "ditt-prosjekt.firebaseapp.com",
-  projectId: "ditt-prosjekt",
-  storageBucket: "ditt-prosjekt.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
-};
+2. **Firestore Rules**
+```javascript
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // User can read their own data
+    match /users/{userId} {
+      allow read, write: if request.auth != null && request.auth.uid == userId;
+    }
+    
+    // Admin can read all data
+    match /{document=**} {
+      allow read, write: if request.auth != null && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin';
+    }
+  }
+}
 ```
 
-### Firestore Collections
-
-Følgende collections må opprettes i Firestore:
-
-- `companies` - Bedriftsinformasjon
-- `users` - Brukerdata
-- `departments` - Avdelinger
-- `chats` - Chat-rom
-- `chatMessages` - Chat-meldinger
-- `deviations` - Avvik
-- `documents` - Dokumenter
-- `shifts` - Skiftplan
+3. **Storage Rules**
+```javascript
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    match /{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
+```
 
 ## 🚀 Deployment
 
 ### Netlify (Anbefalt)
 
 1. **Koble til GitHub**
-   - Push koden til GitHub
-   - Koble Netlify til GitHub-repositoriet
+   - Push kode til GitHub
+   - Koble Netlify til repositoriet
 
-2. **Konfigurer build settings**
+2. **Build Settings**
    - Build command: `npm run build`
-   - Publish directory: `.next`
+   - Publish directory: `out`
+   - Node version: `18`
 
-3. **Sett miljøvariabler**
-   - `NEXT_PUBLIC_FIREBASE_API_KEY`
-   - `NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN`
-   - `NEXT_PUBLIC_FIREBASE_PROJECT_ID`
-   - etc.
+3. **Environment Variables**
+   - Legg til alle Firebase-variabler i Netlify
 
 4. **Deploy**
    - Netlify vil automatisk bygge og deploye
 
 ### Vercel
 
-1. **Koble til GitHub**
-2. **Import prosjekt**
-3. **Konfigurer miljøvariabler**
-4. **Deploy**
+1. **Import Project**
+   - Koble til GitHub repositoriet
+   - Vercel vil automatisk oppdage Next.js
 
-## 📱 Integrasjon med Mobile Apps
+2. **Environment Variables**
+   - Legg til Firebase-konfigurasjon
 
-Admin-panelet er designet for å fungere sammen med:
-- **DriftPro iOS App** (SwiftUI)
-- **DriftPro Android App** (Java/Kotlin)
+3. **Deploy**
+   - Vercel håndterer alt automatisk
 
-Begge appene deler samme Firebase-backend og datastruktur.
+## 📱 Mobile App Integration
+
+### iOS & Android
+- **Firebase SDK**: Deler samme backend
+- **Push Notifications**: Real-time varsler
+- **Data Sync**: Automatisk synkronisering
+- **Offline Support**: Lokal caching
+
+### API Endpoints
+Alle mobile apper bruker samme Firebase-backend som web admin.
 
 ## 🔒 Sikkerhet
 
-- Firebase Authentication for brukerautentisering
-- Firestore Security Rules for datatilgang
-- Rollebasert tilgangskontroll
-- HTTPS-kryptering
-- To-faktor autentisering (2FA)
+### GDPR Compliance
+- **Data Minimization**: Kun nødvendig data lagres
+- **Consent Management**: Bruker samtykke
+- **Right to be Forgotten**: Sletting av brukerdata
+- **Data Portability**: Eksport av brukerdata
+- **Audit Logs**: Sporing av alle handlinger
 
-## 📊 Datastruktur
+### Sikkerhetstiltak
+- **HTTPS**: All kommunikasjon kryptert
+- **Input Validation**: Alle inputs valideres
+- **SQL Injection Protection**: Firestore er NoSQL
+- **XSS Protection**: React håndterer dette automatisk
+- **CSRF Protection**: Firebase Auth håndterer dette
 
-### Company
-```typescript
-interface Company {
-  id: string;
-  name: string;
-  logoURL?: string;
-  primaryColor?: string;
-  secondaryColor?: string;
-  address?: string;
-  phoneNumber?: string;
-  email?: string;
-  website?: string;
-  description?: string;
-  adminUserId: string;
-  subscriptionPlan?: 'basic' | 'premium' | 'enterprise';
-  isActive: boolean;
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
+## 📊 Performance
 
-### User
-```typescript
-interface User {
-  id: string;
-  email: string;
-  firstName: string;
-  lastName: string;
-  companyId: string;
-  departmentId?: string;
-  role: 'super_admin' | 'admin' | 'manager' | 'employee';
-  phoneNumber?: string;
-  avatarURL?: string;
-  isActive: boolean;
-  lastLoginAt?: Date;
-  createdAt: Date;
-  updatedAt: Date;
-}
-```
+### Optimaliseringer
+- **Code Splitting**: Automatisk med Next.js
+- **Image Optimization**: Next.js Image component
+- **Caching**: Firebase caching
+- **Lazy Loading**: Komponenter lastes ved behov
+- **Bundle Analysis**: `npm run analyze`
+
+### Monitoring
+- **Firebase Analytics**: Brukeradferd
+- **Error Tracking**: Firebase Crashlytics
+- **Performance**: Firebase Performance Monitoring
 
 ## 🤝 Bidrag
 
-1. Fork prosjektet
-2. Opprett en feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit endringene (`git commit -m 'Add some AmazingFeature'`)
-4. Push til branchen (`git push origin feature/AmazingFeature`)
-5. Åpne en Pull Request
+1. Fork repositoriet
+2. Opprett feature branch (`git checkout -b feature/AmazingFeature`)
+3. Commit endringer (`git commit -m 'Add some AmazingFeature'`)
+4. Push til branch (`git push origin feature/AmazingFeature`)
+5. Opprett Pull Request
 
 ## 📄 Lisens
 
@@ -228,20 +247,21 @@ Dette prosjektet er lisensiert under MIT License - se [LICENSE](LICENSE) filen f
 
 ## 📞 Support
 
-For support og spørsmål:
-- E-post: support@driftpro.no
-- Dokumentasjon: [docs.driftpro.no](https://docs.driftpro.no)
+- **E-post**: support@driftpro.no
+- **Dokumentasjon**: [docs.driftpro.no](https://docs.driftpro.no)
+- **Issues**: [GitHub Issues](https://github.com/your-username/driftpro-admin/issues)
 
-## 🔄 Oppdateringer
+## 🔄 Changelog
 
-- **v1.0.0** - Første release med grunnleggende funksjoner
-- **v1.1.0** - Lagt til skiftplan-administrasjon
-- **v1.2.0** - Forbedret rapporter og analyser
+### v1.0.0 (2024-01-XX)
+- 🎉 Første offisielle utgivelse
+- ✨ Komplett admin system
+- 🔐 Firebase integration
+- 📱 Mobile app support
+- 🔔 Real-time notifications
+- 📊 Advanced reporting
+- 🛡️ GDPR compliance
 
 ---
 
-**DriftPro Admin Panel** - Administrer din bedrift med makt og presisjon! 🚀
-
-*Last updated: $(date)*
-
-**✅ Build Status: All TypeScript errors fixed and ready for deployment!**
+**DriftPro Admin** - Avansert administrasjonssystem for moderne bedrifter 🚀
