@@ -18,30 +18,43 @@ let auth: Auth | undefined;
 let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 
-if (typeof window !== 'undefined') {
+// Safe initialization function
+const initializeFirebase = () => {
+  if (typeof window === 'undefined') {
+    console.log('Firebase: Server-side rendering, skipping initialization');
+    return;
+  }
+
   try {
-    // Only initialize Firebase on client side
-    if (!getApps().length) {
-      app = initializeApp(firebaseConfig);
-      console.log('Firebase initialized successfully');
-    } else {
+    // Check if Firebase is already initialized
+    if (getApps().length > 0) {
       app = getApps()[0];
-      console.log('Firebase already initialized');
+      console.log('Firebase: Already initialized');
+    } else {
+      // Initialize new Firebase app
+      app = initializeApp(firebaseConfig);
+      console.log('Firebase: Initialized successfully');
     }
     
+    // Initialize services
     auth = getAuth(app);
     db = getFirestore(app);
     storage = getStorage(app);
     
-    console.log('Firebase services initialized:', {
+    console.log('Firebase: Services initialized successfully', {
       auth: !!auth,
       db: !!db,
       storage: !!storage
     });
   } catch (error) {
-    console.error('Error initializing Firebase:', error);
+    console.error('Firebase: Error during initialization:', error);
+    // Don't throw error, just log it and continue
   }
-}
+};
 
+// Initialize Firebase when this module is imported
+initializeFirebase();
+
+// Export services with fallbacks
 export { auth, db, storage };
 export default app; 

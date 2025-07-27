@@ -104,29 +104,35 @@ export default function DepartmentsPage() {
       
       // Load employees from Firebase
       if (db) {
-        const employeesSnapshot = await getDocs(collection(db, 'employees'));
-        const employeesData = employeesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Employee[];
-        setAllEmployees(employeesData);
-        
-        // Load departments from Firebase
-        const departmentsSnapshot = await getDocs(collection(db, 'departments'));
-        const departmentsData = departmentsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Department[];
-        
-        // Combine departments with their employees
-        const departmentsWithEmployees = departmentsData.map(dept => ({
-          ...dept,
-          employees: employeesData.filter(emp => emp.department === dept.name)
-        }));
-        
-        setDepartments(departmentsWithEmployees);
+        try {
+          const employeesSnapshot = await getDocs(collection(db, 'employees'));
+          const employeesData = employeesSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Employee[];
+          setAllEmployees(employeesData);
+          
+          // Load departments from Firebase
+          const departmentsSnapshot = await getDocs(collection(db, 'departments'));
+          const departmentsData = departmentsSnapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+          })) as Department[];
+          
+          // Combine departments with their employees
+          const departmentsWithEmployees = departmentsData.map(dept => ({
+            ...dept,
+            employees: employeesData.filter(emp => emp.department === dept.name)
+          }));
+          
+          setDepartments(departmentsWithEmployees);
+          console.log('Data loaded from Firebase successfully');
+        } catch (firebaseError) {
+          console.error('Firebase error, falling back to mock data:', firebaseError);
+          loadMockData();
+        }
       } else {
-        // Fallback to mock data
+        console.log('Firebase not available, using mock data');
         loadMockData();
       }
     } catch (error) {
@@ -215,14 +221,22 @@ export default function DepartmentsPage() {
       setSaving(true);
       
       if (db) {
-        const newDepartment = {
-          ...formData,
-          leaders: [],
-          employeeCount: 0,
-          createdAt: new Date().toISOString()
-        };
-        
-        await addDoc(collection(db, 'departments'), newDepartment);
+        try {
+          const newDepartment = {
+            ...formData,
+            leaders: [],
+            employeeCount: 0,
+            createdAt: new Date().toISOString()
+          };
+          
+          await addDoc(collection(db, 'departments'), newDepartment);
+          console.log('Department added to Firebase successfully');
+        } catch (firebaseError) {
+          console.error('Firebase error adding department:', firebaseError);
+          // Still close modal and reset form even if Firebase fails
+        }
+      } else {
+        console.log('Firebase not available, department not saved');
       }
       
       setShowAddModal(false);
@@ -242,9 +256,17 @@ export default function DepartmentsPage() {
       setSaving(true);
       
       if (db) {
-        await updateDoc(doc(db, 'employees', selectedEmployee.id), {
-          department: moveFormData.targetDepartment
-        });
+        try {
+          await updateDoc(doc(db, 'employees', selectedEmployee.id), {
+            department: moveFormData.targetDepartment
+          });
+          console.log('Employee moved in Firebase successfully');
+        } catch (firebaseError) {
+          console.error('Firebase error moving employee:', firebaseError);
+          // Still close modal even if Firebase fails
+        }
+      } else {
+        console.log('Firebase not available, employee not moved');
       }
       
       setShowMoveEmployeeModal(false);
@@ -265,9 +287,17 @@ export default function DepartmentsPage() {
       setSaving(true);
       
       if (db) {
-        await updateDoc(doc(db, 'departments', selectedDepartment.id), {
-          leaders: leadersFormData.selectedLeaders
-        });
+        try {
+          await updateDoc(doc(db, 'departments', selectedDepartment.id), {
+            leaders: leadersFormData.selectedLeaders
+          });
+          console.log('Leaders updated in Firebase successfully');
+        } catch (firebaseError) {
+          console.error('Firebase error updating leaders:', firebaseError);
+          // Still close modal even if Firebase fails
+        }
+      } else {
+        console.log('Firebase not available, leaders not updated');
       }
       
       setShowManageLeadersModal(false);
