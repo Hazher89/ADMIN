@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
@@ -31,36 +30,21 @@ import {
   MessageCircle,
   Phone,
   Mail,
-  FileText as FileTextIcon,
-  Download as DownloadIcon,
-  Play as PlayIcon,
   ChevronDown,
   ChevronRight,
   ExternalLink,
-  Star as StarIcon,
   ThumbsUp,
   ThumbsDown,
   Send,
-  Clock as ClockIcon,
   User,
   Settings,
-  Shield as ShieldIcon,
-  Calendar as CalendarIcon,
-  AlertTriangle as AlertTriangleIcon,
-  CheckCircle as CheckCircleIcon,
   Info,
-  Zap as ZapIcon,
-  Target as TargetIcon,
-  Award as AwardIcon,
-  Users as UsersIcon,
-  Building as BuildingIcon,
   XCircle,
   Search,
   Bell,
   Menu,
   X,
   LogOut,
-  ChevronDown as ChevronDownIcon,
   Activity,
   BarChart3,
   PieChart,
@@ -68,89 +52,29 @@ import {
   Eye,
   Plus,
   Filter,
-  Search as SearchIcon,
-  Download as DownloadIcon2,
   RefreshCw,
-  Bell as BellIcon,
-  Star as StarIcon2,
-  Crown as CrownIcon,
-  User as UserIcon,
-  MapPin,
-  Phone as PhoneIcon,
-  Mail as MailIcon,
-  ArrowUpRight,
-  ArrowDownRight,
-  Minus,
-  DollarSign,
-  CalendarDays,
-  FileText as FileTextIcon2,
-  MessageSquare as MessageSquareIcon,
-  Settings as SettingsIcon,
-  HelpCircle,
-  Shield as ShieldIcon2,
-  Database as DatabaseIcon,
-  Globe as GlobeIcon,
-  Palette as PaletteIcon,
-  Download as DownloadIcon3,
   Upload,
   Trash2,
   Edit,
   Save,
   Camera,
-  Eye as EyeIcon,
-  EyeOff,
   Key,
-  Lock,
   Unlock,
   Wifi,
   Battery,
-  Signal,
-  Wifi as WifiIcon,
-  Battery as BatteryIcon,
-  Signal as SignalIcon,
-  Wifi as WifiIcon2,
-  Battery as BatteryIcon2,
-  Signal as SignalIcon2,
-  Wifi as WifiIcon3,
-  Battery as BatteryIcon3,
-  Signal as SignalIcon3,
-  Wifi as WifiIcon4,
-  Battery as BatteryIcon4,
-  Signal as SignalIcon4,
-  Wifi as WifiIcon5,
-  Battery as BatteryIcon5,
-  Signal as SignalIcon5,
-  Wifi as WifiIcon6,
-  Battery as BatteryIcon6,
-  Signal as SignalIcon6,
-  Wifi as WifiIcon7,
-  Battery as BatteryIcon7,
-  Signal as SignalIcon7,
-  Wifi as WifiIcon8,
-  Battery as BatteryIcon8,
-  Signal as SignalIcon8,
-  Wifi as WifiIcon9,
-  Battery as BatteryIcon9,
-  Signal as SignalIcon9,
-  Wifi as WifiIcon10,
-  Battery as BatteryIcon10,
-  Signal as SignalIcon10
+  Signal
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
 export default function HomePage() {
-  const { userProfile, isAuthenticated } = useAuth();
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    // Check authentication status
-    if (isAuthenticated) {
-      router.push('/dashboard');
-    } else {
+    // Simulate loading time
+    setTimeout(() => {
       setIsLoading(false);
-    }
-  }, [isAuthenticated, router]);
+    }, 1000);
+  }, []);
 
   if (isLoading) {
     return (

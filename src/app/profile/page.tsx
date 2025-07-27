@@ -1,9 +1,6 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
-import { userService, departmentService } from '@/lib/firebase-services';
-import { User, Department, UserRole } from '@/types';
 import { 
   User as UserIcon,
   Settings,
@@ -44,29 +41,48 @@ import {
   Trophy,
   Medal,
   Badge,
-  Certificate
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
 export default function ProfilePage() {
-  const { userProfile, isAdmin, isDepartmentLeader, updateProfile } = useAuth();
-  const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [editing, setEditing] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showNotificationsModal, setShowNotificationsModal] = useState(false);
   const [activeTab, setActiveTab] = useState<'overview' | 'settings' | 'activity' | 'security'>('overview');
   
+  // Mock user data
+  const userProfile = {
+    id: '1',
+    displayName: 'Ola Nordmann',
+    email: 'ola.nordmann@bedrift.no',
+    phone: '+47 123 45 678',
+    departmentId: 'dept-1',
+    position: 'Avdelingsleder',
+    bio: 'Erfaren leder med fokus på teamutvikling og effektivitet.',
+    address: 'Storgata 123, 0001 Oslo',
+    emergencyContact: 'Kari Nordmann (+47 987 65 432)',
+    role: 'department_leader' as const,
+    createdAt: '2023-01-15T10:00:00Z',
+    avatar: null
+  };
+
+  // Mock departments data
+  const departments = [
+    { id: 'dept-1', name: 'Produksjon', leaderId: '1' },
+    { id: 'dept-2', name: 'Kvalitet', leaderId: '2' },
+    { id: 'dept-3', name: 'Logistikk', leaderId: '3' }
+  ];
+  
   // Form states
   const [formData, setFormData] = useState({
-    displayName: userProfile?.displayName || '',
-    email: userProfile?.email || '',
-    phone: userProfile?.phone || '',
-    departmentId: userProfile?.departmentId || '',
-    position: userProfile?.position || '',
-    bio: userProfile?.bio || '',
-    address: userProfile?.address || '',
-    emergencyContact: userProfile?.emergencyContact || ''
+    displayName: userProfile.displayName,
+    email: userProfile.email,
+    phone: userProfile.phone,
+    departmentId: userProfile.departmentId,
+    position: userProfile.position,
+    bio: userProfile.bio,
+    address: userProfile.address,
+    emergencyContact: userProfile.emergencyContact
   });
 
   // Settings states
@@ -81,52 +97,34 @@ export default function ProfilePage() {
   });
 
   useEffect(() => {
-    loadData();
+    // Simulate loading
+    setTimeout(() => {
+      setLoading(false);
+    }, 1000);
   }, []);
 
-  const loadData = async () => {
-    try {
-      setLoading(true);
-      const deps = await departmentService.getAllDepartments();
-      setDepartments(deps);
-    } catch (error) {
-      console.error('Error loading data:', error);
-      toast.error('Kunne ikke laste data');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSaveProfile = async () => {
-    try {
-      await updateProfile(formData);
-      setEditing(false);
-      toast.success('Profil oppdatert');
-    } catch (error) {
-      console.error('Error updating profile:', error);
-      toast.error('Kunne ikke oppdatere profil');
-    }
+    // Mock save functionality
+    console.log('Saving profile:', formData);
+    setEditing(false);
+    // In a real app, you would call an API here
   };
 
   const handleChangePassword = async (currentPassword: string, newPassword: string) => {
-    try {
-      // Password change logic would go here
-      toast.success('Passord endret');
-      setShowPasswordModal(false);
-    } catch (error) {
-      console.error('Error changing password:', error);
-      toast.error('Kunne ikke endre passord');
-    }
+    // Mock password change
+    console.log('Changing password');
+    setShowPasswordModal(false);
+    // In a real app, you would call an API here
   };
 
-  const getRoleBadge = (role: UserRole) => {
+  const getRoleBadge = (role: string) => {
     const badges = {
       admin: { color: 'bg-red-100 text-red-800', icon: Crown, text: 'Administrator' },
       department_leader: { color: 'bg-blue-100 text-blue-800', icon: Star, text: 'Avdelingsleder' },
       employee: { color: 'bg-green-100 text-green-800', icon: UserIcon, text: 'Ansatt' }
     };
     
-    const badge = badges[role];
+    const badge = badges[role as keyof typeof badges];
     const Icon = badge.icon;
     return (
       <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${badge.color}`}>
@@ -141,7 +139,6 @@ export default function ProfilePage() {
   };
 
   const getActivityStats = () => {
-    // Mock data for demonstration
     return {
       totalShifts: 156,
       completedShifts: 152,
@@ -156,7 +153,6 @@ export default function ProfilePage() {
   };
 
   const getRecentActivity = () => {
-    // Mock data for demonstration
     return [
       { id: 1, type: 'shift', action: 'Stemplet inn', time: '08:00', date: '2024-01-15', status: 'completed' },
       { id: 2, type: 'vacation', action: 'Ferie godkjent', time: '14:30', date: '2024-01-14', status: 'approved' },
@@ -167,7 +163,6 @@ export default function ProfilePage() {
   };
 
   const getAchievements = () => {
-    // Mock data for demonstration
     return [
       { id: 1, name: 'Perfekt oppmøte', icon: Award, description: '100% oppmøte i 3 måneder', earned: true, date: '2024-01-10' },
       { id: 2, name: 'Team Player', icon: Users, description: 'Hjelpet 10 kollegaer', earned: true, date: '2024-01-05' },
@@ -244,20 +239,20 @@ export default function ProfilePage() {
               )}
             </div>
             <div>
-              <h2 className="text-2xl font-bold mb-2">{userProfile?.displayName}</h2>
+              <h2 className="text-2xl font-bold mb-2">{userProfile.displayName}</h2>
               <div className="flex items-center space-x-3 mb-2">
-                {getRoleBadge(userProfile?.role || 'employee')}
+                {getRoleBadge(userProfile.role)}
                 <span className="text-blue-100">•</span>
-                <span className="text-blue-100">{getDepartmentName(userProfile?.departmentId || '')}</span>
+                <span className="text-blue-100">{getDepartmentName(userProfile.departmentId)}</span>
               </div>
-              <p className="text-blue-100">{userProfile?.position || 'Ansatt'}</p>
+              <p className="text-blue-100">{userProfile.position}</p>
             </div>
           </div>
           
           <div className="text-right">
             <div className="text-sm text-blue-100 mb-1">Medlem siden</div>
             <div className="font-medium">
-              {userProfile?.createdAt ? new Date(userProfile.createdAt).toLocaleDateString('no-NO') : 'Ukjent'}
+              {new Date(userProfile.createdAt).toLocaleDateString('no-NO')}
             </div>
           </div>
         </div>
@@ -348,28 +343,28 @@ export default function ProfilePage() {
                       <Mail className="h-4 w-4 text-gray-400 mr-3" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">E-post</p>
-                        <p className="text-sm text-gray-500">{userProfile?.email}</p>
+                        <p className="text-sm text-gray-500">{userProfile.email}</p>
                       </div>
                     </div>
                     <div className="flex items-center">
                       <Phone className="h-4 w-4 text-gray-400 mr-3" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">Telefon</p>
-                        <p className="text-sm text-gray-500">{userProfile?.phone || 'Ikke registrert'}</p>
+                        <p className="text-sm text-gray-500">{userProfile.phone}</p>
                       </div>
                     </div>
                     <div className="flex items-center">
                       <MapPin className="h-4 w-4 text-gray-400 mr-3" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">Adresse</p>
-                        <p className="text-sm text-gray-500">{userProfile?.address || 'Ikke registrert'}</p>
+                        <p className="text-sm text-gray-500">{userProfile.address}</p>
                       </div>
                     </div>
                     <div className="flex items-center">
                       <Building className="h-4 w-4 text-gray-400 mr-3" />
                       <div>
                         <p className="text-sm font-medium text-gray-900">Avdeling</p>
-                        <p className="text-sm text-gray-500">{getDepartmentName(userProfile?.departmentId || '')}</p>
+                        <p className="text-sm text-gray-500">{getDepartmentName(userProfile.departmentId)}</p>
                       </div>
                     </div>
                   </div>
@@ -428,7 +423,7 @@ export default function ProfilePage() {
                               {achievement.name}
                             </h4>
                             <p className="text-xs text-gray-500">{achievement.description}</p>
-                            {achievement.earned && (
+                            {achievement.earned && achievement.date && (
                               <p className="text-xs text-green-600 mt-1">
                                 Oppnådd {new Date(achievement.date).toLocaleDateString('no-NO')}
                               </p>
