@@ -8,8 +8,8 @@ const firebaseConfig = {
   authDomain: "driftpro-40ccd.firebaseapp.com",
   projectId: "driftpro-40ccd",
   storageBucket: "driftpro-40ccd.appspot.com",
-  messagingSenderId: "123456789", // This will be updated with real sender ID
-  appId: "1:123456789:web:abcdef123456" // This will be updated with real app ID
+  messagingSenderId: "123456789", // This needs to be updated with real sender ID from Firebase console
+  appId: "1:123456789:web:abcdef123456" // This needs to be updated with real app ID from Firebase console
 };
 
 // Initialize Firebase only on client side
@@ -19,16 +19,28 @@ let db: Firestore | undefined;
 let storage: FirebaseStorage | undefined;
 
 if (typeof window !== 'undefined') {
-  // Only initialize Firebase on client side
-  if (!getApps().length) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApps()[0];
+  try {
+    // Only initialize Firebase on client side
+    if (!getApps().length) {
+      app = initializeApp(firebaseConfig);
+      console.log('Firebase initialized successfully');
+    } else {
+      app = getApps()[0];
+      console.log('Firebase already initialized');
+    }
+    
+    auth = getAuth(app);
+    db = getFirestore(app);
+    storage = getStorage(app);
+    
+    console.log('Firebase services initialized:', {
+      auth: !!auth,
+      db: !!db,
+      storage: !!storage
+    });
+  } catch (error) {
+    console.error('Error initializing Firebase:', error);
   }
-  
-  auth = getAuth(app);
-  db = getFirestore(app);
-  storage = getStorage(app);
 }
 
 export { auth, db, storage };
