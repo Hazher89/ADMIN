@@ -82,7 +82,7 @@ interface RecentActivity {
 }
 
 export default function DashboardPage() {
-  const { userProfile } = useAuth();
+  const { userProfile, isAuthenticated, loading } = useAuth();
   const [stats, setStats] = useState<DashboardStats>({
     totalEmployees: 0,
     activeShifts: 0,
@@ -92,13 +92,20 @@ export default function DashboardPage() {
     documentsShared: 0
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
+  const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    loadDashboardData();
-  }, []);
+    if (!loading) {
+      loadDashboardData();
+    }
+  }, [loading]);
 
   const loadDashboardData = async () => {
     try {
+      setDashboardLoading(true);
+      setError(null);
+      
       // Mock data for demonstration - in real app this would come from Firebase
       const mockStats: DashboardStats = {
         totalEmployees: 156,
@@ -164,6 +171,9 @@ export default function DashboardPage() {
       setRecentActivities(mockActivities);
     } catch (error) {
       console.error('Error loading dashboard data:', error);
+      setError('Kunne ikke laste dashboard-data. Prøv å oppdatere siden.');
+    } finally {
+      setDashboardLoading(false);
     }
   };
 
@@ -188,6 +198,41 @@ export default function DashboardPage() {
       default: return 'text-gray-600 bg-gray-100';
     }
   };
+
+  // Show loading state
+  if (loading || dashboardLoading) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Laster dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div className="space-y-6">
+        <div className="bg-red-50 border border-red-200 rounded-lg p-6">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-red-600 mr-3" />
+            <div>
+              <h3 className="text-lg font-medium text-red-800">Feil ved lasting av dashboard</h3>
+              <p className="text-red-700 mt-1">{error}</p>
+            </div>
+          </div>
+          <button
+            onClick={loadDashboardData}
+            className="mt-4 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors"
+          >
+            Prøv igjen
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
