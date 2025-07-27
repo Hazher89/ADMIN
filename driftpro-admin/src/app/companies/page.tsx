@@ -115,8 +115,8 @@ export default function CompaniesPage() {
         // const snapshot = await getDocs(companiesRef);
         // const companiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         
-        // For now, use mock data
-        await new Promise(resolve => setTimeout(resolve, 1000)); // Simulate loading
+        // For now, use mock data with minimal delay
+        await new Promise(resolve => setTimeout(resolve, 200)); // Reduced from 1000ms to 200ms
         setCompanies(mockCompanies);
         setFilteredCompanies(mockCompanies);
       } catch (error) {
@@ -161,8 +161,8 @@ export default function CompaniesPage() {
       // const snapshot = await getDocs(q);
       // const searchResults = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       
-      // For now, just filter existing companies
-      await new Promise(resolve => setTimeout(resolve, 500)); // Simulate search delay
+      // For now, just filter existing companies with minimal delay
+      await new Promise(resolve => setTimeout(resolve, 100)); // Reduced from 500ms to 100ms
     } catch (error) {
       console.error('Error searching companies:', error);
     } finally {
@@ -174,8 +174,14 @@ export default function CompaniesPage() {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="h-12 w-12 animate-spin text-blue-600 mx-auto mb-4" />
-          <p className="text-gray-600">Laster bedrifter...</p>
+          <div className="relative">
+            <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
+              <Building className="h-8 w-8 text-white" />
+            </div>
+            <div className="absolute inset-0 w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-2xl animate-spin mx-auto"></div>
+          </div>
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">Laster bedrifter...</h3>
+          <p className="text-gray-600">Henter bedriftsinformasjon fra databasen</p>
         </div>
       </div>
     );
