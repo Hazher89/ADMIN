@@ -114,15 +114,27 @@ export default function DepartmentsPage() {
           
           // Load departments from Firebase
           const departmentsSnapshot = await getDocs(collection(db, 'departments'));
-          const departmentsData = departmentsSnapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-          })) as Department[];
+          const departmentsData = departmentsSnapshot.docs.map(doc => {
+            const data = doc.data();
+            return {
+              id: doc.id,
+              name: data.name || 'Ukjent avdeling',
+              description: data.description || '',
+              leaders: data.leaders || [],
+              employeeCount: data.employeeCount || 0,
+              location: data.location || '',
+              phone: data.phone || '',
+              email: data.email || '',
+              status: data.status || 'active',
+              createdAt: data.createdAt || new Date().toISOString(),
+              employees: [] // Initialize empty employees array
+            } as Department;
+          });
           
           // Combine departments with their employees
           const departmentsWithEmployees = departmentsData.map(dept => ({
             ...dept,
-            employees: employeesData.filter(emp => emp.department === dept.name)
+            employees: employeesData.filter(emp => emp.department === dept.name) || []
           }));
           
           setDepartments(departmentsWithEmployees);
@@ -338,11 +350,14 @@ export default function DepartmentsPage() {
     setShowManageLeadersModal(true);
   };
 
-  const getLeaderNames = (leaderIds: string[]) => {
+  const getLeaderNames = (leaderIds: string[] | undefined) => {
+    if (!leaderIds || !Array.isArray(leaderIds)) {
+      return 'Ingen leder';
+    }
     return leaderIds.map(id => {
       const leader = allEmployees.find(emp => emp.id === id);
       return leader ? `${leader.firstName} ${leader.lastName}` : 'Ukjent';
-    }).join(', ');
+    }).join(', ') || 'Ingen leder';
   };
 
   if (loading) {
@@ -398,7 +413,7 @@ export default function DepartmentsPage() {
                   </div>
                   <div>
                     <h3 className="text-lg font-semibold text-gray-900">{department.name}</h3>
-                    <p className="text-sm text-gray-500">{department.employees.length} ansatte</p>
+                    <p className="text-sm text-gray-500">{department.employees?.length || 0} ansatte</p>
                   </div>
                 </div>
                 <div className="flex items-center space-x-2">
