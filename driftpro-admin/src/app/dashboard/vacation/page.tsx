@@ -58,12 +58,12 @@ interface Employee {
   lastName: string;
   department: string;
   role: string;
-  vacationDays: {
+  vacationDays: Record<string, {
     total: number;
     used: number;
     remaining: number;
     carriedOver: number;
-  };
+  }>;
 }
 
 interface VacationDay {
@@ -103,7 +103,7 @@ export default function VacationPage() {
     startDate: '',
     endDate: '',
     reason: '',
-    type: 'vacation' as const,
+    type: 'vacation' as 'vacation' | 'sick_leave' | 'other',
     comments: ''
   });
   
@@ -362,7 +362,7 @@ export default function VacationPage() {
     // You can implement additional functionality here, like showing a detailed view
   };
 
-  const handleEmployeeUpdate = (employeeId: string, vacationDays: { total: number; used: number; remaining: number; carriedOver: number }) => {
+  const handleEmployeeUpdate = (employeeId: string, vacationDays: Record<string, { total: number; used: number; remaining: number; carriedOver: number }>) => {
     setEmployees(prev =>
       prev.map(emp =>
         emp.id === employeeId
