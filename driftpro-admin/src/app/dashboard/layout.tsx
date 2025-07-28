@@ -60,7 +60,8 @@ import {
   ThumbsDown,
   Send,
   Info,
-  XCircle
+  XCircle,
+  Dashboard
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -138,6 +139,12 @@ export default function DashboardLayout({
       name: 'Innstillinger',
       href: '/dashboard/settings',
       icon: <Settings className="h-5 w-5" />
+    },
+    {
+      name: 'Bedrifter',
+      href: '/dashboard/companies',
+      icon: <Building className="h-5 w-5" />,
+      badge: 'Admin'
     }
   ];
 
