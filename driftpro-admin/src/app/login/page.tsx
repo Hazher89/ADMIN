@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
@@ -11,8 +11,16 @@ import {
   Lock,
   AlertCircle,
   ArrowRight,
-  Loader2
+  Loader2,
+  Building
 } from 'lucide-react';
+
+interface Company {
+  id: string;
+  name: string;
+  orgNumber: string;
+  adminEmail: string;
+}
 
 export default function LoginPage() {
   const router = useRouter();
@@ -22,6 +30,24 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+
+  useEffect(() => {
+    // Get selected company from localStorage
+    const companyData = localStorage.getItem('selectedCompany');
+    if (companyData) {
+      try {
+        const company = JSON.parse(companyData);
+        setSelectedCompany(company);
+      } catch (error) {
+        console.error('Error parsing company data:', error);
+        router.push('/companies');
+      }
+    } else {
+      // No company selected, redirect to company selection
+      router.push('/companies');
+    }
+  }, [router]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -29,6 +55,13 @@ export default function LoginPage() {
     setError('');
 
     try {
+      // Check if user is trying to login with the correct company admin email
+      if (selectedCompany && email !== selectedCompany.adminEmail) {
+        setError(`Du må logge inn med admin-e-posten for ${selectedCompany.name}: ${selectedCompany.adminEmail}`);
+        setLoading(false);
+        return;
+      }
+
       await login(email, password);
       router.push('/dashboard');
     } catch (error: unknown) {
@@ -44,6 +77,18 @@ export default function LoginPage() {
     return null;
   }
 
+  // Show loading while getting company data
+  if (!selectedCompany) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
+        <div className="text-center">
+          <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-blue-600" />
+          <p className="text-gray-600">Laster bedriftsinformasjon...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
       <div className="max-w-md w-full space-y-8">
@@ -55,10 +100,16 @@ export default function LoginPage() {
             </div>
           </div>
           <h2 className="text-3xl font-bold text-gray-900 mb-2">
-            Velkommen tilbake
+            Logg inn på {selectedCompany.name}
           </h2>
+          <div className="flex items-center justify-center space-x-2 mb-2">
+            <Building className="h-4 w-4 text-gray-500" />
+            <p className="text-sm text-gray-500">
+              Org.nr: {selectedCompany.orgNumber}
+            </p>
+          </div>
           <p className="text-gray-600">
-            Logg inn på ditt DriftPro Admin-panel
+            Bruk admin-e-posten: <span className="font-medium text-blue-600">{selectedCompany.adminEmail}</span>
           </p>
         </div>
 
@@ -68,7 +119,7 @@ export default function LoginPage() {
             {/* Email */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
-                E-postadresse
+                Admin e-postadresse
               </label>
               <div className="relative">
                 <input
@@ -76,11 +127,15 @@ export default function LoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   className="block w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm"
-                  placeholder="din.epost@bedrift.no"
+                  placeholder={selectedCompany.adminEmail}
+                  defaultValue={selectedCompany.adminEmail}
                   required
                 />
                 <Mail className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
               </div>
+              <p className="text-xs text-gray-500 mt-1">
+                Admin-e-post for {selectedCompany.name}
+              </p>
             </div>
 
             {/* Password */}
@@ -142,6 +197,19 @@ export default function LoginPage() {
 
           {/* Additional Options */}
           <div className="mt-6 space-y-4">
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => {
+                  localStorage.removeItem('selectedCompany');
+                  router.push('/companies');
+                }}
+                className="text-sm text-gray-600 hover:text-gray-700 font-medium"
+              >
+                ← Velg annen bedrift
+              </button>
+            </div>
+
             <div className="text-center">
               <a
                 href="/forgot-password"
