@@ -16,21 +16,28 @@ import {
   Mail,
   ExternalLink
 } from 'lucide-react';
-// Firebase imports for future use
-// import { collection, query, where, getDocs } from 'firebase/firestore';
-// import { db } from '@/lib/firebase';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface Company {
   id: string;
   name: string;
-  domain: string;
-  address?: string;
-  phone?: string;
-  email?: string;
-  website?: string;
-  employeeCount?: number;
-  industry?: string;
-  logo?: string;
+  orgNumber: string;
+  phone: string;
+  email: string;
+  adminEmail: string;
+  address: string;
+  industry: string;
+  employeeCount: number;
+  status: 'active' | 'inactive' | 'pending';
+  createdAt: string;
+  updatedAt: string;
+  subscriptionPlan: 'basic' | 'premium' | 'enterprise';
+  contactPerson: {
+    name: string;
+    phone: string;
+    email: string;
+  };
 }
 
 export default function CompaniesPage() {
@@ -42,69 +49,88 @@ export default function CompaniesPage() {
   const [searching, setSearching] = useState(false);
   const [hasSearched, setHasSearched] = useState(false);
 
-  // Mock companies data - in real app this would come from Firebase
-  const mockCompanies: Company[] = [
-    {
-      id: 'company-1',
-      name: 'DriftPro AS',
-      domain: 'driftpro.no',
-      address: 'Oslo, Norge',
-      phone: '+47 123 45 678',
-      email: 'kontakt@driftpro.no',
-      website: 'https://driftpro.no',
-      employeeCount: 25,
-      industry: 'Teknologi',
-      logo: '/api/placeholder/60/60'
-    },
-    {
-      id: 'company-2',
-      name: 'TechCorp Norge',
-      domain: 'techcorp.no',
-      address: 'Bergen, Norge',
-      phone: '+47 987 65 432',
-      email: 'info@techcorp.no',
-      website: 'https://techcorp.no',
-      employeeCount: 150,
-      industry: 'Programvare',
-      logo: '/api/placeholder/60/60'
-    },
-    {
-      id: 'company-3',
-      name: 'Innovation Labs',
-      domain: 'innovationlabs.no',
-      address: 'Trondheim, Norge',
-      phone: '+47 555 12 34',
-      email: 'hello@innovationlabs.no',
-      website: 'https://innovationlabs.no',
-      employeeCount: 75,
-      industry: 'Forskning & Utvikling',
-      logo: '/api/placeholder/60/60'
-    },
-    {
-      id: 'company-4',
-      name: 'Nordic Solutions',
-      domain: 'nordicsolutions.no',
-      address: 'Stavanger, Norge',
-      phone: '+47 444 56 78',
-      email: 'kontakt@nordicsolutions.no',
-      website: 'https://nordicsolutions.no',
-      employeeCount: 200,
-      industry: 'Konsulenttjenester',
-      logo: '/api/placeholder/60/60'
-    },
-    {
-      id: 'company-5',
-      name: 'Digital Future',
-      domain: 'digitalfuture.no',
-      address: 'Tromsø, Norge',
-      phone: '+47 333 90 12',
-      email: 'info@digitalfuture.no',
-      website: 'https://digitalfuture.no',
-      employeeCount: 45,
-      industry: 'Digital Markedsføring',
-      logo: '/api/placeholder/60/60'
+  const loadCompanies = async () => {
+    try {
+      setLoading(true);
+      if (db) {
+        // Fetch only active companies from Firebase
+        const companiesQuery = query(
+          collection(db, 'companies'),
+          where('status', '==', 'active')
+        );
+        const snapshot = await getDocs(companiesQuery);
+        const companiesData = snapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Company[];
+        setCompanies(companiesData);
+      } else {
+        // Fallback to mock data if Firebase is not available
+        setCompanies([
+          {
+            id: 'company-1',
+            name: 'DriftPro AS',
+            orgNumber: '123456789',
+            phone: '+47 123 45 678',
+            email: 'kontakt@driftpro.no',
+            adminEmail: 'admin@driftpro.no',
+            address: 'Oslo, Norge',
+            industry: 'Teknologi',
+            employeeCount: 25,
+            status: 'active',
+            createdAt: '2024-01-01T00:00:00Z',
+            updatedAt: '2024-01-01T00:00:00Z',
+            subscriptionPlan: 'premium',
+            contactPerson: {
+              name: 'Admin',
+              phone: '+47 123 45 678',
+              email: 'admin@driftpro.no'
+            }
+          }
+        ]);
+      }
+    } catch (error) {
+      console.error('Error loading companies:', error);
+      // Fallback to mock data on error
+      setCompanies([
+        {
+          id: 'company-1',
+          name: 'DriftPro AS',
+          orgNumber: '123456789',
+          phone: '+47 123 45 678',
+          email: 'kontakt@driftpro.no',
+          adminEmail: 'admin@driftpro.no',
+          address: 'Oslo, Norge',
+          industry: 'Teknologi',
+          employeeCount: 25,
+          status: 'active',
+          createdAt: '2024-01-01T00:00:00Z',
+          updatedAt: '2024-01-01T00:00:00Z',
+          subscriptionPlan: 'premium',
+          contactPerson: {
+            name: 'Admin',
+            phone: '+47 123 45 678',
+            email: 'admin@driftpro.no'
+          }
+        }
+      ]);
+    } finally {
+      setLoading(false);
     }
-  ];
+  };
+
+  useEffect(() => {
+    loadCompanies();
+  }, []);
+
+  useEffect(() => {
+    if (searchTerm.trim()) {
+      handleSearch();
+    } else {
+      setFilteredCompanies(companies);
+      setHasSearched(false);
+    }
+  }, [searchTerm, companies]);
 
   const handleCompanySelect = (company: Company) => {
     // Store selected company in localStorage
@@ -115,7 +141,7 @@ export default function CompaniesPage() {
 
   const handleSearch = async () => {
     if (!searchTerm.trim()) {
-      setFilteredCompanies([]);
+      setFilteredCompanies(companies);
       setHasSearched(false);
       return;
     }
@@ -124,22 +150,14 @@ export default function CompaniesPage() {
     setHasSearched(true);
 
     try {
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-
-      // In real app, this would search Firebase
-      // const companiesRef = collection(db, 'companies');
-      // const q = query(companiesRef, where('name', '>=', searchTerm), where('name', '<=', searchTerm + '\uf8ff'));
-      // const snapshot = await getDocs(q);
-      // const companiesData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
-      // Filter mock companies based on search term
-      const filtered = mockCompanies.filter(company =>
+      // Filter companies based on search term
+      const filtered = companies.filter(company =>
         company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.domain.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.industry?.toLowerCase().includes(searchTerm.toLowerCase())
+        company.orgNumber.includes(searchTerm) ||
+        company.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.address.toLowerCase().includes(searchTerm.toLowerCase())
       );
-
+      
       setFilteredCompanies(filtered);
     } catch (error) {
       console.error('Error searching companies:', error);
@@ -262,7 +280,7 @@ export default function CompaniesPage() {
                     <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                       {company.name}
                     </h3>
-                    <p className="text-sm text-gray-500">{company.domain}</p>
+                    <p className="text-sm text-gray-500">Org.nr: {company.orgNumber}</p>
                   </div>
                   <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
                 </div>
@@ -302,19 +320,10 @@ export default function CompaniesPage() {
                       {company.email}
                     </div>
                   )}
-                  {company.website && (
+                  {company.contactPerson?.name && (
                     <div className="flex items-center text-sm text-gray-500">
-                      <Globe className="h-4 w-4 mr-2" />
-                      <a
-                        href={company.website}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="hover:text-blue-600 transition-colors"
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        {company.website.replace(/^https?:\/\//, '')}
-                        <ExternalLink className="h-3 w-3 ml-1 inline" />
-                      </a>
+                      <Users className="h-4 w-4 mr-2" />
+                      Kontakt: {company.contactPerson.name}
                     </div>
                   )}
                 </div>
