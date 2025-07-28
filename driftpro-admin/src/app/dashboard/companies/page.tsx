@@ -11,11 +11,24 @@ import {
   CheckCircle,
   AlertTriangle,
   X,
-  Save
+  Save,
+  Loader2
 } from 'lucide-react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+
+// Debounce utility function
+function debounce<T extends (...args: any[]) => any>(
+  func: T,
+  wait: number
+): (...args: Parameters<T>) => void {
+  let timeout: NodeJS.Timeout;
+  return (...args: Parameters<T>) => {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+}
 
 interface Company {
   id: string;
@@ -71,6 +84,9 @@ export default function CompaniesPage() {
     }
   });
 
+  const [isLoadingBrreg, setIsLoadingBrreg] = useState(false);
+  const [brregError, setBrregError] = useState<string | null>(null);
+
   const industries = [
     'Teknologi',
     'Helse',
@@ -83,6 +99,66 @@ export default function CompaniesPage() {
     'Konsulent',
     'Annet'
   ];
+
+  // Brønnøysundregistrene API integration
+  const fetchCompanyFromBrreg = async (orgNumber: string) => {
+    if (!orgNumber || orgNumber.length < 9) return;
+    
+    setIsLoadingBrreg(true);
+    setBrregError(null);
+    
+    try {
+      // Brønnøysundregistrene API endpoint
+      const response = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${orgNumber}`);
+      
+      if (!response.ok) {
+        throw new Error('Bedrift ikke funnet i Brønnøysundregistrene');
+      }
+      
+      const data = await response.json();
+      
+      // Oppdater form data med informasjon fra Brønnøysundregistrene
+      setFormData(prev => ({
+        ...prev,
+        name: data.navn || prev.name,
+        address: data.forretningsadresse?.adresse ? 
+          `${data.forretningsadresse.adresse.join(', ')}` : prev.address,
+        industry: data.naeringskode1?.beskrivelse || prev.industry,
+        phone: data.forretningsadresse?.telefonnummer || prev.phone,
+        email: data.forretningsadresse?.epostadresse || prev.email
+      }));
+      
+    } catch (error) {
+      console.error('Error fetching from Brønnøysundregistrene:', error);
+      setBrregError(error instanceof Error ? error.message : 'Kunne ikke hente bedriftsinformasjon');
+    } finally {
+      setIsLoadingBrreg(false);
+    }
+  };
+
+  // Debounced function for org number input
+  const debouncedFetchBrreg = useCallback(
+    debounce((orgNumber: string) => {
+      if (orgNumber && orgNumber.length >= 9) {
+        fetchCompanyFromBrreg(orgNumber);
+      }
+    }, 1000),
+    []
+  );
+
+  // Handle org number input change
+  const handleOrgNumberChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setFormData(prev => ({ ...prev, orgNumber: value }));
+    
+    // Clear error when user starts typing
+    if (brregError) setBrregError(null);
+    
+    // Fetch from Brønnøysundregistrene if org number is complete
+    if (value.length >= 9) {
+      debouncedFetchBrreg(value);
+    }
+  };
 
   // Check if user is DriftPro AS admin
   const isDriftProAdmin = user?.email === 'admin@driftpro.no' || user?.email === 'baxigshti@hotmail.de' || userProfile?.role === 'admin';
@@ -532,6 +608,32 @@ export default function CompaniesPage() {
             </div>
 
             <form onSubmit={handleSubmit} className="space-y-6">
+              {/* Brønnøysundregistrene Integration Info */}
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                <div className="flex items-start space-x-3">
+                  <div className="flex-shrink-0">
+                    <Building className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-medium text-blue-900">
+                      Automatisk bedriftsinformasjon
+                    </h3>
+                    <p className="text-sm text-blue-700 mt-1">
+                      Når du skriver inn et gyldig organisasjonsnummer, henter systemet automatisk bedriftsinformasjon fra 
+                      <a 
+                        href="https://www.brreg.no/" 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="underline hover:text-blue-900"
+                      >
+                        Brønnøysundregistrene
+                      </a>
+                      . Du kan også klikke "Hent"-knappen for manuell oppdatering.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
               {/* Basic Information */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
@@ -551,13 +653,44 @@ export default function CompaniesPage() {
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Organisasjonsnummer *
                   </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.orgNumber}
-                    onChange={(e) => setFormData(prev => ({ ...prev, orgNumber: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  />
+                  <div className="flex space-x-2">
+                    <input
+                      type="text"
+                      required
+                      value={formData.orgNumber}
+                      onChange={handleOrgNumberChange}
+                      className="flex-1 px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="Eks: 123456789"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => formData.orgNumber && fetchCompanyFromBrreg(formData.orgNumber)}
+                      disabled={!formData.orgNumber || isLoadingBrreg}
+                      className="px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed flex items-center space-x-1"
+                    >
+                      {isLoadingBrreg ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        <Search className="h-4 w-4" />
+                      )}
+                      <span className="hidden sm:inline">Hent</span>
+                    </button>
+                  </div>
+                  {isLoadingBrreg && (
+                    <p className="text-sm text-gray-500 mt-1 flex items-center">
+                      <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                      Henter bedriftsinformasjon fra Brønnøysundregistrene...
+                    </p>
+                  )}
+                  {brregError && (
+                    <p className="text-sm text-red-600 mt-1 flex items-center">
+                      <AlertTriangle className="h-3 w-3 mr-1" />
+                      {brregError}
+                    </p>
+                  )}
+                  <p className="text-xs text-gray-500 mt-1">
+                    Automatisk henting skjer når du skriver inn 9-sifret organisasjonsnummer
+                  </p>
                 </div>
 
                 <div>
