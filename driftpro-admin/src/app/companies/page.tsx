@@ -53,17 +53,36 @@ export default function CompaniesPage() {
     try {
       setLoading(true);
       if (db) {
-        // Fetch active and inactive companies from Firebase (exclude pending)
-        const companiesQuery = query(
-          collection(db, 'companies'),
-          where('status', 'in', ['active', 'inactive'])
-        );
+        // Fetch ALL companies from Firebase (no status filter)
+        const companiesQuery = query(collection(db, 'companies'));
         const snapshot = await getDocs(companiesQuery);
         const companiesData = snapshot.docs.map(doc => ({
           id: doc.id,
-          ...doc.data()
+          // Ensure all fields have default values to prevent undefined errors
+          name: doc.data().name || '',
+          orgNumber: doc.data().orgNumber || '',
+          phone: doc.data().phone || '',
+          email: doc.data().email || '',
+          adminEmail: doc.data().adminEmail || '',
+          address: doc.data().address || '',
+          industry: doc.data().industry || '',
+          employeeCount: doc.data().employeeCount || 0,
+          status: doc.data().status || 'active',
+          createdAt: doc.data().createdAt || new Date().toISOString(),
+          updatedAt: doc.data().updatedAt || new Date().toISOString(),
+          subscriptionPlan: doc.data().subscriptionPlan || 'basic',
+          contactPerson: {
+            name: doc.data().contactPerson?.name || '',
+            phone: doc.data().contactPerson?.phone || '',
+            email: doc.data().contactPerson?.email || ''
+          }
         })) as Company[];
         setCompanies(companiesData);
+        console.log('Loaded companies from Firebase:', companiesData);
+        console.log('Total companies loaded:', companiesData.length);
+        companiesData.forEach(company => {
+          console.log(`Company: ${company.name} (${company.status})`);
+        });
       } else {
         // Fallback to mock data if Firebase is not available
         setCompanies([
