@@ -18,18 +18,6 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy 
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
-// Debounce utility function
-function debounce<T extends (...args: any[]) => any>(
-  func: T,
-  wait: number
-): (...args: Parameters<T>) => void {
-  let timeout: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeout);
-    timeout = setTimeout(() => func(...args), wait);
-  };
-}
-
 interface Company {
   id: string;
   name: string;
@@ -138,12 +126,18 @@ export default function CompaniesPage() {
 
   // Debounced function for org number input
   const debouncedFetchBrreg = useCallback(
-    debounce((orgNumber: string) => {
-      if (orgNumber && orgNumber.length >= 9) {
-        fetchCompanyFromBrreg(orgNumber);
-      }
-    }, 1000),
-    []
+    (() => {
+      let timeout: NodeJS.Timeout;
+      return (orgNumber: string) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+          if (orgNumber && orgNumber.length >= 9) {
+            fetchCompanyFromBrreg(orgNumber);
+          }
+        }, 1000);
+      };
+    })(),
+    [fetchCompanyFromBrreg]
   );
 
   // Handle org number input change
@@ -628,7 +622,7 @@ export default function CompaniesPage() {
                       >
                         Brønnøysundregistrene
                       </a>
-                      . Du kan også klikke "Hent"-knappen for manuell oppdatering.
+                      . Du kan også klikke &quot;Hent&quot;-knappen for manuell oppdatering.
                     </p>
                   </div>
                 </div>
