@@ -53,11 +53,8 @@ export default function CompaniesPage() {
     try {
       setLoading(true);
       if (db) {
-        // Fetch only active companies from Firebase
-        const companiesQuery = query(
-          collection(db, 'companies'),
-          where('status', '==', 'active')
-        );
+        // Fetch all companies from Firebase (not just active ones)
+        const companiesQuery = query(collection(db, 'companies'));
         const snapshot = await getDocs(companiesQuery);
         const companiesData = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -155,7 +152,8 @@ export default function CompaniesPage() {
         company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         company.orgNumber.includes(searchTerm) ||
         company.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.address.toLowerCase().includes(searchTerm.toLowerCase())
+        company.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.status.toLowerCase().includes(searchTerm.toLowerCase())
       );
       
       setFilteredCompanies(filtered);
@@ -280,7 +278,17 @@ export default function CompaniesPage() {
                     <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
                       {company.name}
                     </h3>
-                    <p className="text-sm text-gray-500">Org.nr: {company.orgNumber}</p>
+                    <div className="flex items-center space-x-2">
+                      <p className="text-sm text-gray-500">Org.nr: {company.orgNumber}</p>
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
+                        company.status === 'active' ? 'bg-green-100 text-green-800' :
+                        company.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-red-100 text-red-800'
+                      }`}>
+                        {company.status === 'active' ? 'Aktiv' :
+                         company.status === 'pending' ? 'Venter' : 'Inaktiv'}
+                      </span>
+                    </div>
                   </div>
                   <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
                 </div>
