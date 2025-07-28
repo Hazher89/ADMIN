@@ -1,23 +1,17 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Building, 
   Plus, 
   Edit, 
   Trash2, 
   Search, 
-  Phone, 
-  Mail, 
-  Hash,
   Users,
-  Calendar,
   CheckCircle,
-  XCircle,
   AlertTriangle,
   X,
-  Save,
-  User
+  Save
 } from 'lucide-react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -45,7 +39,7 @@ interface Company {
 }
 
 export default function CompaniesPage() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -91,7 +85,7 @@ export default function CompaniesPage() {
   ];
 
   // Check if user is DriftPro AS admin
-  const isDriftProAdmin = user?.email === 'admin@driftpro.no' || user?.role === 'driftpro_admin';
+  const isDriftProAdmin = user?.email === 'admin@driftpro.no' || userProfile?.role === 'admin';
 
   useEffect(() => {
     if (isDriftProAdmin) {
@@ -99,9 +93,19 @@ export default function CompaniesPage() {
     }
   }, [isDriftProAdmin]);
 
+  const filterCompanies = useCallback(() => {
+    const filtered = companies.filter(company =>
+      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.orgNumber.includes(searchTerm) ||
+      company.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      company.industry.toLowerCase().includes(searchTerm.toLowerCase())
+    );
+    setFilteredCompanies(filtered);
+  }, [companies, searchTerm]);
+
   useEffect(() => {
     filterCompanies();
-  }, [searchTerm, companies]);
+  }, [filterCompanies]);
 
   const loadCompanies = async () => {
     try {
@@ -164,16 +168,6 @@ export default function CompaniesPage() {
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterCompanies = () => {
-    const filtered = companies.filter(company =>
-      company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.orgNumber.includes(searchTerm) ||
-      company.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      company.industry.toLowerCase().includes(searchTerm.toLowerCase())
-    );
-    setFilteredCompanies(filtered);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
