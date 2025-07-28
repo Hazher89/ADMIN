@@ -58,12 +58,12 @@ interface Employee {
   lastName: string;
   department: string;
   role: string;
-  vacationDays: Record<string, {
+  vacationDays: {
     total: number;
     used: number;
     remaining: number;
     carriedOver: number;
-  }>;
+  };
 }
 
 interface VacationDay {
@@ -140,16 +140,22 @@ export default function VacationPage() {
       if (db) {
         const employeesQuery = query(collection(db, 'employees'));
         const employeesSnapshot = await getDocs(employeesQuery);
-        const employeesData = employeesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          vacationDays: {
-            total: 25,
-            used: 0,
-            remaining: 25,
-            carriedOver: 0
-          }
-        })) as Employee[];
+        const employeesData = employeesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            department: data.department || '',
+            role: data.role || '',
+            vacationDays: data.vacationDays || {
+              total: 25,
+              used: 0,
+              remaining: 25,
+              carriedOver: 0
+            }
+          };
+        }) as Employee[];
         setEmployees(employeesData);
       }
     } catch (error) {
@@ -362,7 +368,7 @@ export default function VacationPage() {
     // You can implement additional functionality here, like showing a detailed view
   };
 
-  const handleEmployeeUpdate = (employeeId: string, vacationDays: Record<string, { total: number; used: number; remaining: number; carriedOver: number }>) => {
+  const handleEmployeeUpdate = (employeeId: string, vacationDays: { total: number; used: number; remaining: number; carriedOver: number }) => {
     setEmployees(prev =>
       prev.map(emp =>
         emp.id === employeeId

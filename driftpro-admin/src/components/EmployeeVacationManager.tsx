@@ -29,7 +29,7 @@ interface Employee {
 interface EmployeeVacationManagerProps {
   employees: Employee[];
   onClose: () => void;
-  onUpdate: (employeeId: string, vacationDays: Record<string, { total: number; used: number; remaining: number; carriedOver: number }>) => void;
+  onUpdate: (employeeId: string, vacationDays: { total: number; used: number; remaining: number; carriedOver: number }) => void;
 }
 
 export default function EmployeeVacationManager({ employees, onClose, onUpdate }: EmployeeVacationManagerProps) {
@@ -68,12 +68,10 @@ export default function EmployeeVacationManager({ employees, onClose, onUpdate }
       }
       
       onUpdate(employeeId, {
-        [allocationForm.year]: {
-          total: allocationForm.totalDays,
-          used: 0,
-          remaining: allocationForm.totalDays,
-          carriedOver: allocationForm.carriedOverDays
-        }
+        total: allocationForm.totalDays,
+        used: 0,
+        remaining: allocationForm.totalDays,
+        carriedOver: allocationForm.carriedOverDays
       });
       
       setShowAllocationModal(false);
