@@ -85,7 +85,7 @@ export default function CompaniesPage() {
   ];
 
   // Check if user is DriftPro AS admin
-  const isDriftProAdmin = user?.email === 'admin@driftpro.no' || userProfile?.role === 'admin';
+  const isDriftProAdmin = user?.email === 'admin@driftpro.no' || user?.email === 'baxigshti@hotmail.de' || userProfile?.role === 'admin';
 
   useEffect(() => {
     if (isDriftProAdmin) {
