@@ -362,7 +362,7 @@ export default function VacationPage() {
     // You can implement additional functionality here, like showing a detailed view
   };
 
-  const handleEmployeeUpdate = (employeeId: string, vacationDays: any) => {
+  const handleEmployeeUpdate = (employeeId: string, vacationDays: { total: number; used: number; remaining: number; carriedOver: number }) => {
     setEmployees(prev =>
       prev.map(emp =>
         emp.id === employeeId
@@ -686,7 +686,7 @@ export default function VacationPage() {
                   <select
                     required
                     value={formData.type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as any }))}
+                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'vacation' | 'sick_leave' | 'other' }))}
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                   >
                     <option value="vacation">Ferie</option>

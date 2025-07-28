@@ -1,22 +1,15 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { 
   Users,
-  Calendar,
   Plus,
-  Minus,
-  Save,
   X,
   Download,
-  Upload,
-  AlertTriangle,
-  CheckCircle,
-  Clock,
-  RefreshCw,
-  Edit
+  Edit,
+  RefreshCw
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Employee {
@@ -36,7 +29,7 @@ interface Employee {
 interface EmployeeVacationManagerProps {
   employees: Employee[];
   onClose: () => void;
-  onUpdate: (employeeId: string, vacationDays: any) => void;
+  onUpdate: (employeeId: string, vacationDays: Record<string, { total: number; used: number; remaining: number; carriedOver: number }>) => void;
 }
 
 export default function EmployeeVacationManager({ employees, onClose, onUpdate }: EmployeeVacationManagerProps) {

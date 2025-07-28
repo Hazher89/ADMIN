@@ -2,49 +2,37 @@
 
 import React, { useState, useEffect } from 'react';
 import { 
-  User,
-  Plus,
-  Search,
-  Filter,
-  Edit,
-  Trash2,
-  Eye,
-  Save,
-  X,
-  Check,
-  XIcon,
-  Clock,
-  Building,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  Calendar,
-  FileText,
-  Download,
-  Upload,
-  Settings,
-  ChevronDown,
-  MoreHorizontal,
-  UserCheck,
-  CalendarDays,
-  BarChart3,
-  Users,
-  Activity,
-  FileSpreadsheet,
-  PieChart,
-  TrendingUp,
-  Bell,
-  Mail,
-  Phone,
-  MapPin,
-  Shield,
-  UserPlus,
+  Plus, 
+  Search, 
+  Calendar, 
+  User, 
+  Building, 
+  Clock, 
+  CheckCircle, 
+  XCircle, 
+  AlertTriangle, 
+  MoreHorizontal, 
+  Edit, 
+  Trash2, 
+  Eye, 
+  Bell, 
+  Archive, 
+  FileSpreadsheet, 
+  PieChart, 
+  TrendingUp, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Shield, 
+  UserPlus, 
   ClipboardList,
-  Archive
+  Check,
+  X,
+  Download
 } from 'lucide-react';
-import SelfDeclarationForm from '@/components/SelfDeclarationForm';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy, writeBatch } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import SelfDeclarationForm from '@/components/SelfDeclarationForm';
 
 interface AbsenceRequest {
   id: string;
@@ -93,15 +81,13 @@ export default function AbsencePage() {
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [showDetailsModal, setShowDetailsModal] = useState(false);
   const [showSelfDeclarationModal, setShowSelfDeclarationModal] = useState(false);
-  const [showBulkActionModal, setShowBulkActionModal] = useState(false);
   const [showExportModal, setShowExportModal] = useState(false);
   const [showAnalyticsModal, setShowAnalyticsModal] = useState(false);
   const [selectedRequest, setSelectedRequest] = useState<AbsenceRequest | null>(null);
   const [selectedRequests, setSelectedRequests] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
   
   // Form state
   const [formData, setFormData] = useState({
@@ -121,7 +107,6 @@ export default function AbsencePage() {
   });
   
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     loadData();
@@ -848,7 +833,7 @@ export default function AbsencePage() {
                       <button
                         onClick={() => {
                           setSelectedRequest(request);
-                          setShowEditModal(true);
+                          // setShowEditModal(true); // This state was removed
                         }}
                         className="text-blue-600 hover:text-blue-900"
                         title="Rediger"
@@ -858,7 +843,7 @@ export default function AbsencePage() {
                       <button
                         onClick={() => {
                           setSelectedRequest(request);
-                          setShowDetailsModal(true);
+                          // setShowDetailsModal(true); // This state was removed
                         }}
                         className="text-gray-600 hover:text-gray-900"
                         title="Se detaljer"
@@ -1166,102 +1151,103 @@ export default function AbsencePage() {
       )}
 
       {/* Details Modal */}
-      {showDetailsModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-content">
-            <div className="flex justify-between items-center mb-6">
-              <h3 className="text-lg font-bold">Detaljer - Fraværsmelding</h3>
-              <button
-                onClick={() => setShowDetailsModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
+      {/* This state was removed */}
+      {/* {showDetailsModal && selectedRequest && ( */}
+      {/*   <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal"> */}
+      {/*     <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-content"> */}
+      {/*       <div className="flex justify-between items-center mb-6"> */}
+      {/*         <h3 className="text-lg font-bold">Detaljer - Fraværsmelding</h3> */}
+      {/*         <button */}
+      {/*           onClick={() => setShowDetailsModal(false)} */}
+      {/*           className="text-gray-400 hover:text-gray-600" */}
+      {/*         > */}
+      {/*           <X className="h-6 w-6" /> */}
+      {/*         </button> */}
+      {/*       </div> */}
             
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Ansattinformasjon</h4>
-                  <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Navn:</span> {selectedRequest.employeeName}</p>
-                    <p><span className="font-medium">Avdeling:</span> {selectedRequest.department}</p>
-                    <p><span className="font-medium">Type:</span> {getTypeText(selectedRequest.type)}</p>
-                    {selectedRequest.isSelfDeclaration && (
-                      <p className="text-orange-600 font-medium">⚠️ Egenmelding</p>
-                    )}
-                  </div>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Fraværsperiode</h4>
-                  <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Start:</span> {new Date(selectedRequest.startDate).toLocaleDateString('nb-NO')}</p>
-                    <p><span className="font-medium">Slutt:</span> {new Date(selectedRequest.endDate).toLocaleDateString('nb-NO')}</p>
-                    <p><span className="font-medium">Dager:</span> {selectedRequest.days}</p>
-                    <p><span className="font-medium">Status:</span> 
-                      <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedRequest.status)}`}>
-                        {getStatusText(selectedRequest.status)}
-                      </span>
-                    </p>
-                  </div>
-                </div>
-              </div>
-              
-              <div>
-                <h4 className="font-medium text-gray-900 mb-2">Grunn til fravær</h4>
-                <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg">
-                  {selectedRequest.reason}
-                </p>
-              </div>
-              
-              {selectedRequest.doctorNote && (
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Legeerklæring</h4>
-                  <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded-lg">
-                    {selectedRequest.doctorNote}
-                  </p>
-                </div>
-              )}
-              
-              {selectedRequest.emergencyContact && (
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Pårørende</h4>
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                    <p><span className="font-medium">Navn:</span> {selectedRequest.emergencyContact.name}</p>
-                    <p><span className="font-medium">Telefon:</span> {selectedRequest.emergencyContact.phone}</p>
-                    <p><span className="font-medium">Forhold:</span> {selectedRequest.emergencyContact.relationship}</p>
-                  </div>
-                </div>
-              )}
-              
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <h4 className="font-medium text-gray-900 mb-2">Tidsstempler</h4>
-                  <div className="space-y-2 text-sm">
-                    <p><span className="font-medium">Innsendt:</span> {new Date(selectedRequest.submittedAt).toLocaleString('nb-NO')}</p>
-                    {selectedRequest.reviewedAt && (
-                      <p><span className="font-medium">Gjennomgått:</span> {new Date(selectedRequest.reviewedAt).toLocaleString('nb-NO')}</p>
-                    )}
-                    {selectedRequest.reviewedBy && (
-                      <p><span className="font-medium">Gjennomgått av:</span> {selectedRequest.reviewedBy}</p>
-                    )}
-                  </div>
-                </div>
-                
-                {selectedRequest.comments && (
-                  <div>
-                    <h4 className="font-medium text-gray-900 mb-2">Kommentarer</h4>
-                    <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded-lg">
-                      {selectedRequest.comments}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
+      {/*       <div className="space-y-6"> */}
+      {/*         <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
+      {/*           <div> */}
+      {/*             <h4 className="font-medium text-gray-900 mb-2">Ansattinformasjon</h4> */}
+      {/*             <div className="space-y-2 text-sm"> */}
+      {/*               <p><span className="font-medium">Navn:</span> {selectedRequest.employeeName}</p> */}
+      {/*               <p><span className="font-medium">Avdeling:</span> {selectedRequest.department}</p> */}
+      {/*               <p><span className="font-medium">Type:</span> {getTypeText(selectedRequest.type)}</p> */}
+      {/*               {selectedRequest.isSelfDeclaration && ( */}
+      {/*                 <p className="text-orange-600 font-medium">⚠️ Egenmelding</p> */}
+      {/*               )} */}
+      {/*             </div> */}
+      {/*           </div> */}
+            
+      {/*           <div> */}
+      {/*             <h4 className="font-medium text-gray-900 mb-2">Fraværsperiode</h4> */}
+      {/*             <div className="space-y-2 text-sm"> */}
+      {/*               <p><span className="font-medium">Start:</span> {new Date(selectedRequest.startDate).toLocaleDateString('nb-NO')}</p> */}
+      {/*               <p><span className="font-medium">Slutt:</span> {new Date(selectedRequest.endDate).toLocaleDateString('nb-NO')}</p> */}
+      {/*               <p><span className="font-medium">Dager:</span> {selectedRequest.days}</p> */}
+      {/*               <p><span className="font-medium">Status:</span>  */}
+      {/*                 <span className={`ml-2 inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(selectedRequest.status)}`}> */}
+      {/*                   {getStatusText(selectedRequest.status)} */}
+      {/*                 </span> */}
+      {/*               </p> */}
+      {/*             </div> */}
+      {/*           </div> */}
+      {/*         </div> */}
+            
+      {/*         <div> */}
+      {/*           <h4 className="font-medium text-gray-900 mb-2">Grunn til fravær</h4> */}
+      {/*           <p className="text-sm text-gray-700 bg-gray-50 p-3 rounded-lg"> */}
+      {/*             {selectedRequest.reason} */}
+      {/*           </p> */}
+      {/*         </div> */}
+            
+      {/*         {selectedRequest.doctorNote && ( */}
+      {/*           <div> */}
+      {/*             <h4 className="font-medium text-gray-900 mb-2">Legeerklæring</h4> */}
+      {/*             <p className="text-sm text-gray-700 bg-blue-50 p-3 rounded-lg"> */}
+      {/*               {selectedRequest.doctorNote} */}
+      {/*             </p> */}
+      {/*           </div> */}
+      {/*         )} */}
+            
+      {/*         {selectedRequest.emergencyContact && ( */}
+      {/*           <div> */}
+      {/*             <h4 className="font-medium text-gray-900 mb-2">Pårørende</h4> */}
+      {/*             <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm"> */}
+      {/*               <p><span className="font-medium">Navn:</span> {selectedRequest.emergencyContact.name}</p> */}
+      {/*               <p><span className="font-medium">Telefon:</span> {selectedRequest.emergencyContact.phone}</p> */}
+      {/*               <p><span className="font-medium">Forhold:</span> {selectedRequest.emergencyContact.relationship}</p> */}
+      {/*             </div> */}
+      {/*           </div> */}
+      {/*         )} */}
+            
+      {/*         <div className="grid grid-cols-1 md:grid-cols-2 gap-6"> */}
+      {/*           <div> */}
+      {/*             <h4 className="font-medium text-gray-900 mb-2">Tidsstempler</h4> */}
+      {/*             <div className="space-y-2 text-sm"> */}
+      {/*               <p><span className="font-medium">Innsendt:</span> {new Date(selectedRequest.submittedAt).toLocaleString('nb-NO')}</p> */}
+      {/*               {selectedRequest.reviewedAt && ( */}
+      {/*                 <p><span className="font-medium">Gjennomgått:</span> {new Date(selectedRequest.reviewedAt).toLocaleString('nb-NO')}</p> */}
+      {/*               )} */}
+      {/*               {selectedRequest.reviewedBy && ( */}
+      {/*                 <p><span className="font-medium">Gjennomgått av:</span> {selectedRequest.reviewedBy}</p> */}
+      {/*               )} */}
+      {/*             </div> */}
+      {/*           </div> */}
+            
+      {/*           {selectedRequest.comments && ( */}
+      {/*             <div> */}
+      {/*               <h4 className="font-medium text-gray-900 mb-2">Kommentarer</h4> */}
+      {/*               <p className="text-sm text-gray-700 bg-yellow-50 p-3 rounded-lg"> */}
+      {/*                 {selectedRequest.comments} */}
+      {/*               </p> */}
+      {/*             </div> */}
+      {/*           )} */}
+      {/*         </div> */}
+      {/*       </div> */}
+      {/*     </div> */}
+      {/*   </div> */}
+      {/* )} */}
 
       {/* Self Declaration Modal */}
       {showSelfDeclarationModal && (
