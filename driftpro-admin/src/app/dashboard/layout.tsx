@@ -18,50 +18,9 @@ import {
   LogOut,
   User,
   Home,
-  Bell,
-  Search,
-  Menu,
   X,
-  ChevronDown,
-  ChevronRight,
-  Plus,
-  Eye,
-  Edit,
-  Trash2,
-  Upload,
-  Download,
-  Filter,
-  RefreshCw,
-  Activity,
-  TrendingUp,
-  PieChart,
-  LineChart,
-  Target,
-  Award,
-  Shield,
-  Database,
-  Globe,
-  Mail,
-  Phone,
-  Camera,
-  Key,
-  Unlock,
-  Wifi,
-  Battery,
-  Signal,
-  Crown,
-  Star,
-  Play,
-  Book,
-  Video,
-  MessageCircle,
-  ExternalLink,
-  ThumbsUp,
-  ThumbsDown,
-  Send,
-  Info,
-  XCircle,
-  Dashboard
+  Menu,
+  Bell
 } from 'lucide-react';
 
 interface SidebarItem {
@@ -205,7 +164,6 @@ export default function DashboardLayout({
         {/* Search */}
         <div className="px-4 py-4">
           <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
               placeholder="Søk..."
