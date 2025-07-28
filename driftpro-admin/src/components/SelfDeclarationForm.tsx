@@ -40,11 +40,11 @@ interface SelfDeclarationData {
   reason: string;
   symptoms: string[];
   hasSeenDoctor: boolean;
-  doctorInfo?: {
+  doctorInfo: {
     name: string;
-    clinic: string;
-    phone: string;
-    date: string;
+    clinic?: string;
+    phone?: string;
+    date?: string;
   };
   emergencyContact: {
     name: string;
@@ -64,6 +64,12 @@ export default function SelfDeclarationForm({ onSubmit, onCancel, employee }: Se
     reason: '',
     symptoms: [],
     hasSeenDoctor: false,
+    doctorInfo: {
+      name: '',
+      clinic: '',
+      phone: '',
+      date: ''
+    },
     emergencyContact: {
       name: '',
       phone: '',
