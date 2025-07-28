@@ -213,6 +213,26 @@ export default function CompaniesPage() {
         // Fallback to mock data
         setCompanies([
           {
+            id: 'driftpro-1',
+            name: 'DriftPro AS',
+            orgNumber: '123456789',
+            phone: '+47 123 45 678',
+            email: 'kontakt@driftpro.no',
+            adminEmail: 'baxigshti@hotmail.de',
+            address: 'Oslo, Norge',
+            industry: 'Teknologi',
+            employeeCount: 25,
+            status: 'active',
+            createdAt: '2024-01-01T00:00:00Z',
+            updatedAt: '2024-01-01T00:00:00Z',
+            subscriptionPlan: 'premium',
+            contactPerson: {
+              name: 'Admin',
+              phone: '+47 123 45 678',
+              email: 'baxigshti@hotmail.de'
+            }
+          },
+          {
             id: '1',
             name: 'TechCorp AS',
             orgNumber: '123456789',

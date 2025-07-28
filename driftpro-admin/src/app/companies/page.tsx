@@ -92,7 +92,7 @@ export default function CompaniesPage() {
             orgNumber: '123456789',
             phone: '+47 123 45 678',
             email: 'kontakt@driftpro.no',
-            adminEmail: 'admin@driftpro.no',
+            adminEmail: 'baxigshti@hotmail.de',
             address: 'Oslo, Norge',
             industry: 'Teknologi',
             employeeCount: 25,
@@ -103,7 +103,7 @@ export default function CompaniesPage() {
             contactPerson: {
               name: 'Admin',
               phone: '+47 123 45 678',
-              email: 'admin@driftpro.no'
+              email: 'baxigshti@hotmail.de'
             }
           }
         ]);
@@ -118,7 +118,7 @@ export default function CompaniesPage() {
           orgNumber: '123456789',
           phone: '+47 123 45 678',
           email: 'kontakt@driftpro.no',
-          adminEmail: 'admin@driftpro.no',
+          adminEmail: 'baxigshti@hotmail.de',
           address: 'Oslo, Norge',
           industry: 'Teknologi',
           employeeCount: 25,
@@ -129,7 +129,7 @@ export default function CompaniesPage() {
           contactPerson: {
             name: 'Admin',
             phone: '+47 123 45 678',
-            email: 'admin@driftpro.no'
+            email: 'baxigshti@hotmail.de'
           }
         }
       ]);
