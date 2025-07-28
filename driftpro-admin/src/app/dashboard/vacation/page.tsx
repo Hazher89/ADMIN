@@ -30,7 +30,7 @@ import {
   ChevronDown,
   MoreHorizontal
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, deleteDoc, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import VacationCalendar from '@/components/VacationCalendar';
 import EmployeeVacationManager from '@/components/EmployeeVacationManager';
@@ -364,8 +364,96 @@ export default function VacationPage() {
   };
 
   const handleDateClick = (date: Date, requests: VacationRequest[]) => {
-    console.log('Date clicked:', date, 'Requests:', requests);
-    // You can implement additional functionality here, like showing a detailed view
+    console.log('Clicked date:', date, 'Requests:', requests);
+  };
+
+  const handleAddVacation = async (employeeId: string, startDate: string, endDate: string, reason: string) => {
+    try {
+      const employee = employees.find(emp => emp.id === employeeId);
+      if (!employee) return;
+
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      const newRequest: Omit<VacationRequest, 'id'> = {
+        employeeId,
+        employeeName: `${employee.firstName} ${employee.lastName}`,
+        department: employee.department,
+        startDate,
+        endDate,
+        days,
+        reason,
+        type: 'vacation',
+        status: 'approved', // Auto-approve when added by admin
+        submittedAt: new Date().toISOString(),
+        reviewedBy: 'Admin',
+        reviewedAt: new Date().toISOString()
+      };
+
+      if (db) {
+        const docRef = await addDoc(collection(db, 'vacationRequests'), newRequest);
+        setVacationRequests(prev => [...prev, { ...newRequest, id: docRef.id }]);
+      } else {
+        // Fallback to local state
+        const mockId = Date.now().toString();
+        setVacationRequests(prev => [...prev, { ...newRequest, id: mockId }]);
+      }
+    } catch (error) {
+      console.error('Error adding vacation:', error);
+    }
+  };
+
+  const handleEditVacation = async (requestId: string, startDate: string, endDate: string, reason: string) => {
+    try {
+      const start = new Date(startDate);
+      const end = new Date(endDate);
+      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
+
+      const updateData = {
+        startDate,
+        endDate,
+        days,
+        reason,
+        reviewedAt: new Date().toISOString()
+      };
+
+      if (db) {
+        await updateDoc(doc(db, 'vacationRequests', requestId), updateData);
+        setVacationRequests(prev =>
+          prev.map(req =>
+            req.id === requestId
+              ? { ...req, ...updateData }
+              : req
+          )
+        );
+      } else {
+        // Fallback to local state
+        setVacationRequests(prev =>
+          prev.map(req =>
+            req.id === requestId
+              ? { ...req, ...updateData }
+              : req
+          )
+        );
+      }
+    } catch (error) {
+      console.error('Error editing vacation:', error);
+    }
+  };
+
+  const handleDeleteVacation = async (requestId: string) => {
+    try {
+      if (db) {
+        await deleteDoc(doc(db, 'vacationRequests', requestId));
+        setVacationRequests(prev => prev.filter(req => req.id !== requestId));
+      } else {
+        // Fallback to local state
+        setVacationRequests(prev => prev.filter(req => req.id !== requestId));
+      }
+    } catch (error) {
+      console.error('Error deleting vacation:', error);
+    }
   };
 
   const handleEmployeeUpdate = (employeeId: string, vacationDays: { total: number; used: number; remaining: number; carriedOver: number }) => {
@@ -845,6 +933,10 @@ export default function VacationPage() {
           vacationRequests={vacationRequests}
           onDateClick={handleDateClick}
           onClose={handleCalendarClose}
+          onAddVacation={handleAddVacation}
+          onEditVacation={handleEditVacation}
+          onDeleteVacation={handleDeleteVacation}
+          employees={employees}
         />
       )}
 

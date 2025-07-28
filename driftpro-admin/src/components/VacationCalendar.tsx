@@ -9,7 +9,12 @@ import {
   CheckCircle,
   Clock,
   XCircle,
-  X
+  X,
+  Plus,
+  Edit,
+  Trash2,
+  User,
+  Filter
 } from 'lucide-react';
 
 interface VacationRequest {
@@ -29,16 +34,51 @@ interface VacationRequest {
   type: 'vacation' | 'sick_leave' | 'other';
 }
 
-interface CalendarProps {
-  vacationRequests: VacationRequest[];
-  onDateClick: (date: Date, requests: VacationRequest[]) => void;
-  onClose: () => void;
+interface Employee {
+  id: string;
+  firstName: string;
+  lastName: string;
+  department: string;
+  role: string;
 }
 
-export default function VacationCalendar({ vacationRequests, onDateClick, onClose }: CalendarProps) {
+interface CalendarProps {
+  vacationRequests: VacationRequest[];
+  employees: Employee[];
+  onDateClick: (date: Date, requests: VacationRequest[]) => void;
+  onClose: () => void;
+  onAddVacation: (employeeId: string, startDate: string, endDate: string, reason: string) => void;
+  onEditVacation: (requestId: string, startDate: string, endDate: string, reason: string) => void;
+  onDeleteVacation: (requestId: string) => void;
+}
+
+export default function VacationCalendar({ 
+  vacationRequests, 
+  employees, 
+  onDateClick, 
+  onClose, 
+  onAddVacation,
+  onEditVacation,
+  onDeleteVacation
+}: CalendarProps) {
   const [currentDate, setCurrentDate] = useState(new Date());
   const [viewMode, setViewMode] = useState<'month' | 'year'>('month');
   const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
+  const [showEmployeeFilter, setShowEmployeeFilter] = useState(false);
+  const [showVacationModal, setShowVacationModal] = useState(false);
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [editingRequest, setEditingRequest] = useState<VacationRequest | null>(null);
+  const [vacationForm, setVacationForm] = useState({
+    employeeId: '',
+    startDate: '',
+    endDate: '',
+    reason: ''
+  });
+
+  const filteredRequests = selectedEmployee === 'all' 
+    ? vacationRequests 
+    : vacationRequests.filter(req => req.employeeId === selectedEmployee);
 
   const getDaysInMonth = (date: Date) => {
     return new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
@@ -50,7 +90,7 @@ export default function VacationCalendar({ vacationRequests, onDateClick, onClos
 
   const getVacationRequestsForDate = (date: Date): VacationRequest[] => {
     const dateStr = date.toISOString().split('T')[0];
-    return vacationRequests.filter(request => {
+    return filteredRequests.filter(request => {
       const start = new Date(request.startDate);
       const end = new Date(request.endDate);
       const current = new Date(dateStr);
@@ -59,10 +99,84 @@ export default function VacationCalendar({ vacationRequests, onDateClick, onClos
   };
 
   const getVacationRequestsForMonth = (year: number, month: number): VacationRequest[] => {
-    return vacationRequests.filter(request => {
+    return filteredRequests.filter(request => {
       const requestDate = new Date(request.startDate);
       return requestDate.getFullYear() === year && requestDate.getMonth() === month;
     });
+  };
+
+  const handleDateClick = (date: Date, requests: VacationRequest[]) => {
+    setSelectedDate(date);
+    
+    // If there are existing requests for this date, show them for editing
+    if (requests.length > 0) {
+      // For now, just show the first request for editing
+      // In a more advanced version, you could show a list to choose from
+      const firstRequest = requests[0];
+      setEditingRequest(firstRequest);
+      setVacationForm({
+        employeeId: firstRequest.employeeId,
+        startDate: firstRequest.startDate,
+        endDate: firstRequest.endDate,
+        reason: firstRequest.reason
+      });
+    } else {
+      // No existing requests, prepare for adding new one
+      setEditingRequest(null);
+      setVacationForm({
+        employeeId: selectedEmployee === 'all' ? '' : selectedEmployee,
+        startDate: date.toISOString().split('T')[0],
+        endDate: date.toISOString().split('T')[0],
+        reason: ''
+      });
+    }
+    
+    setShowVacationModal(true);
+    onDateClick(date, requests);
+  };
+
+  const handleAddVacation = () => {
+    if (vacationForm.employeeId && vacationForm.startDate && vacationForm.endDate) {
+      onAddVacation(
+        vacationForm.employeeId,
+        vacationForm.startDate,
+        vacationForm.endDate,
+        vacationForm.reason
+      );
+      setVacationForm({
+        employeeId: '',
+        startDate: '',
+        endDate: '',
+        reason: ''
+      });
+      setShowVacationModal(false);
+    }
+  };
+
+  const handleEditVacation = () => {
+    if (editingRequest && vacationForm.startDate && vacationForm.endDate) {
+      onEditVacation(
+        editingRequest.id,
+        vacationForm.startDate,
+        vacationForm.endDate,
+        vacationForm.reason
+      );
+      setEditingRequest(null);
+      setVacationForm({
+        employeeId: '',
+        startDate: '',
+        endDate: '',
+        reason: ''
+      });
+      setShowVacationModal(false);
+    }
+  };
+
+  const handleDeleteVacation = (requestId: string) => {
+    if (confirm('Er du sikker på at du vil slette denne ferieplanen?')) {
+      onDeleteVacation(requestId);
+      setShowVacationModal(false);
+    }
   };
 
   const renderMonthView = () => {
@@ -86,7 +200,7 @@ export default function VacationCalendar({ vacationRequests, onDateClick, onClos
       days.push(
         <div
           key={day}
-          onClick={() => onDateClick(date, requests)}
+          onClick={() => handleDateClick(date, requests)}
           className={`p-2 border border-gray-200 cursor-pointer hover:bg-gray-50 min-h-[80px] ${
             requests.length > 0 ? 'bg-blue-50' : ''
           }`}
@@ -194,8 +308,58 @@ export default function VacationCalendar({ vacationRequests, onDateClick, onClos
           </button>
         </div>
 
-        {/* Navigation */}
-        <div className="flex justify-between items-center mb-6">
+        {/* Employee Filter */}
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center space-x-4">
+            <div className="relative">
+              <button
+                onClick={() => setShowEmployeeFilter(!showEmployeeFilter)}
+                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                <Filter className="h-4 w-4" />
+                <span>
+                  {selectedEmployee === 'all' 
+                    ? 'Alle ansatte' 
+                    : employees.find(emp => emp.id === selectedEmployee)?.firstName + ' ' + 
+                      employees.find(emp => emp.id === selectedEmployee)?.lastName
+                  }
+                </span>
+              </button>
+              
+              {showEmployeeFilter && (
+                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
+                  <div className="p-2">
+                    <button
+                      onClick={() => {
+                        setSelectedEmployee('all');
+                        setShowEmployeeFilter(false);
+                      }}
+                      className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${
+                        selectedEmployee === 'all' ? 'bg-blue-100 text-blue-700' : ''
+                      }`}
+                    >
+                      Alle ansatte
+                    </button>
+                    {employees.map(employee => (
+                      <button
+                        key={employee.id}
+                        onClick={() => {
+                          setSelectedEmployee(employee.id);
+                          setShowEmployeeFilter(false);
+                        }}
+                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${
+                          selectedEmployee === employee.id ? 'bg-blue-100 text-blue-700' : ''
+                        }`}
+                      >
+                        {employee.firstName} {employee.lastName} - {employee.department}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
           <div className="flex items-center space-x-4">
             <button
               onClick={() => setViewMode('month')}
@@ -218,7 +382,10 @@ export default function VacationCalendar({ vacationRequests, onDateClick, onClos
               År
             </button>
           </div>
+        </div>
 
+        {/* Navigation */}
+        <div className="flex justify-between items-center mb-6">
           <div className="flex items-center space-x-4">
             {viewMode === 'month' ? (
               <>
@@ -300,22 +467,152 @@ export default function VacationCalendar({ vacationRequests, onDateClick, onClos
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
             <div>
               <span className="text-gray-600">Totalt ferieforespørsler:</span>
-              <span className="ml-2 font-medium">{vacationRequests.length}</span>
+              <span className="ml-2 font-medium">{filteredRequests.length}</span>
             </div>
             <div>
               <span className="text-gray-600">Godkjent:</span>
               <span className="ml-2 font-medium text-green-600">
-                {vacationRequests.filter(r => r.status === 'approved').length}
+                {filteredRequests.filter(r => r.status === 'approved').length}
               </span>
             </div>
             <div>
               <span className="text-gray-600">Venter:</span>
               <span className="ml-2 font-medium text-yellow-600">
-                {vacationRequests.filter(r => r.status === 'pending').length}
+                {filteredRequests.filter(r => r.status === 'pending').length}
               </span>
             </div>
           </div>
         </div>
+
+        {/* Vacation Management Modal */}
+        {showVacationModal && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+            <div className="bg-white rounded-lg p-6 w-full max-w-2xl">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-lg font-bold">
+                  {editingRequest ? 'Rediger ferieplan' : 'Legg til ferieplan'}
+                </h3>
+                <button
+                  onClick={() => {
+                    setShowVacationModal(false);
+                    setEditingRequest(null);
+                    setVacationForm({
+                      employeeId: '',
+                      startDate: '',
+                      endDate: '',
+                      reason: ''
+                    });
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Ansatt
+                  </label>
+                  <select
+                    value={vacationForm.employeeId}
+                    onChange={(e) => setVacationForm(prev => ({ ...prev, employeeId: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    disabled={!!editingRequest}
+                  >
+                    <option value="">Velg ansatt</option>
+                    {employees.map(employee => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.firstName} {employee.lastName} - {employee.department}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Startdato
+                    </label>
+                    <input
+                      type="date"
+                      value={vacationForm.startDate}
+                      onChange={(e) => setVacationForm(prev => ({ ...prev, startDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Sluttdato
+                    </label>
+                    <input
+                      type="date"
+                      value={vacationForm.endDate}
+                      onChange={(e) => setVacationForm(prev => ({ ...prev, endDate: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Grunn
+                  </label>
+                  <textarea
+                    value={vacationForm.reason}
+                    onChange={(e) => setVacationForm(prev => ({ ...prev, reason: e.target.value }))}
+                    rows={3}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    placeholder="Beskriv grunnen til ferien..."
+                  />
+                </div>
+
+                <div className="flex justify-end space-x-3 pt-4">
+                  {editingRequest && (
+                    <button
+                      onClick={() => handleDeleteVacation(editingRequest.id)}
+                      className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 flex items-center space-x-2"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                      <span>Slett</span>
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setShowVacationModal(false);
+                      setEditingRequest(null);
+                      setVacationForm({
+                        employeeId: '',
+                        startDate: '',
+                        endDate: '',
+                        reason: ''
+                      });
+                    }}
+                    className="px-4 py-2 bg-gray-300 text-gray-700 rounded-lg hover:bg-gray-400"
+                  >
+                    Avbryt
+                  </button>
+                  <button
+                    onClick={editingRequest ? handleEditVacation : handleAddVacation}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+                  >
+                    {editingRequest ? (
+                      <>
+                        <Edit className="h-4 w-4" />
+                        <span>Oppdater</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4" />
+                        <span>Legg til</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     </div>
   );
