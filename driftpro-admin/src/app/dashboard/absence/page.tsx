@@ -327,11 +327,11 @@ export default function AbsencePage() {
     reason: string;
     symptoms: string[];
     hasSeenDoctor: boolean;
-    doctorInfo?: {
+    doctorInfo: {
       name: string;
-      clinic: string;
-      phone: string;
-      date: string;
+      clinic?: string;
+      phone?: string;
+      date?: string;
     };
     emergencyContact: {
       name: string;
@@ -364,7 +364,7 @@ export default function AbsencePage() {
         status: 'pending',
         submittedAt: new Date().toISOString(),
         isSelfDeclaration: true,
-        doctorNote: data.doctorInfo?.name ? `Lege: ${data.doctorInfo.name}, Klinikk: ${data.doctorInfo.clinic}` : undefined,
+        doctorNote: data.doctorInfo?.name ? `Lege: ${data.doctorInfo.name}${data.doctorInfo.clinic ? `, Klinikk: ${data.doctorInfo.clinic}` : ''}` : undefined,
         emergencyContact: data.emergencyContact
       };
       
