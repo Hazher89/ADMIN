@@ -483,6 +483,41 @@ export default function CompaniesPage() {
     }
   };
 
+  const updateDriftProAdminEmail = async () => {
+    try {
+      setSaving(true);
+      
+      // Find DriftPro AS in companies
+      const driftProCompany = companies.find(company => company.name === 'DriftPro AS');
+      
+      if (driftProCompany && db) {
+        // Update DriftPro AS admin email
+        await updateDoc(doc(db, 'companies', driftProCompany.id), {
+          adminEmail: 'baxigshti@hotmail.de',
+          updatedAt: new Date().toISOString()
+        });
+        
+        // Update local state
+        setCompanies(prev =>
+          prev.map(company =>
+            company.name === 'DriftPro AS'
+              ? { ...company, adminEmail: 'baxigshti@hotmail.de', updatedAt: new Date().toISOString() }
+              : company
+          )
+        );
+        
+        alert('DriftPro AS admin-e-post oppdatert til baxigshti@hotmail.de');
+      } else {
+        alert('DriftPro AS ikke funnet i databasen');
+      }
+    } catch (error) {
+      console.error('Error updating DriftPro AS:', error);
+      alert('Feil ved oppdatering av DriftPro AS: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   // If user is not DriftPro admin, show access denied
   if (!isDriftProAdmin) {
     return (
@@ -519,13 +554,27 @@ export default function CompaniesPage() {
             />
           </div>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Legg til bedrift</span>
-        </button>
+        <div className="flex space-x-2">
+          <button
+            onClick={updateDriftProAdminEmail}
+            disabled={saving}
+            className="flex items-center space-x-2 px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition-colors disabled:opacity-50"
+          >
+            {saving ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <Edit className="h-4 w-4" />
+            )}
+            <span>Oppdater DriftPro AS</span>
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            <span>Legg til bedrift</span>
+          </button>
+        </div>
       </div>
 
       {/* Stats Cards */}
