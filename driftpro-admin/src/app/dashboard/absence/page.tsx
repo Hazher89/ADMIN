@@ -4,33 +4,21 @@ import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
-  Calendar, 
   User, 
-  Building, 
   Clock, 
   CheckCircle, 
-  XCircle, 
   AlertTriangle, 
-  MoreHorizontal, 
   Edit, 
-  Trash2, 
   Eye, 
   Bell, 
   Archive, 
   FileSpreadsheet, 
-  PieChart, 
-  TrendingUp, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Shield, 
-  UserPlus, 
-  ClipboardList,
+  PieChart,
   Check,
   X,
   Download
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where, orderBy, writeBatch } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, doc, writeBatch, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import SelfDeclarationForm from '@/components/SelfDeclarationForm';
 
@@ -402,7 +390,6 @@ export default function AbsencePage() {
       setSaving(true);
       
       if (!db) {
-        // Fallback to individual updates
         for (const id of requestIds) {
           await handleReview(id, action === 'approve' ? 'approved' : 'rejected');
         }
@@ -411,12 +398,14 @@ export default function AbsencePage() {
       
       const batch = writeBatch(db);
       requestIds.forEach(id => {
-        const docRef = doc(db, 'absenceRequests', id);
-        batch.update(docRef, {
-          status: action === 'approve' ? 'approved' : 'rejected',
-          reviewedBy: 'Admin',
-          reviewedAt: new Date().toISOString()
-        });
+        if (db) {
+          const docRef = doc(db, 'absenceRequests', id);
+          batch.update(docRef, {
+            status: action === 'approve' ? 'approved' : 'rejected',
+            reviewedBy: 'Admin',
+            reviewedAt: new Date().toISOString()
+          });
+        }
       });
       await batch.commit();
       
