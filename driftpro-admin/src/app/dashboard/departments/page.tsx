@@ -69,6 +69,10 @@ export default function DepartmentsPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [editingDepartment, setEditingDepartment] = useState<DepartmentWithEmployees | null>(null);
+  const [showEmployeeDetailModal, setShowEmployeeDetailModal] = useState(false);
+  const [selectedEmployeeForDetail, setSelectedEmployeeForDetail] = useState<Employee | null>(null);
 
   // Form data for adding/editing departments
   const [formData, setFormData] = useState({
@@ -350,6 +354,58 @@ export default function DepartmentsPage() {
     setShowManageLeadersModal(true);
   };
 
+  const openEditDepartment = (department: DepartmentWithEmployees) => {
+    setEditingDepartment(department);
+    setFormData({
+      name: department.name,
+      description: department.description,
+      location: department.location,
+      phone: department.phone,
+      email: department.email,
+      status: department.status
+    });
+    setShowEditModal(true);
+  };
+
+  const openEmployeeDetail = (employee: Employee) => {
+    setSelectedEmployeeForDetail(employee);
+    setShowEmployeeDetailModal(true);
+  };
+
+  const handleEditDepartment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingDepartment || !db) return;
+
+    try {
+      setSaving(true);
+      const departmentRef = doc(db, 'departments', editingDepartment.id);
+      await updateDoc(departmentRef, {
+        name: formData.name,
+        description: formData.description,
+        location: formData.location,
+        phone: formData.phone,
+        email: formData.email,
+        status: formData.status,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update local state
+      setDepartments(prev => prev.map(dept => 
+        dept.id === editingDepartment.id 
+          ? { ...dept, ...formData }
+          : dept
+      ));
+
+      setShowEditModal(false);
+      setEditingDepartment(null);
+      resetForm();
+    } catch (error) {
+      console.error('Error updating department:', error);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const getLeaderNames = (leaderIds: string[] | undefined) => {
     if (!leaderIds || !Array.isArray(leaderIds)) {
       return 'Ingen leder';
@@ -404,29 +460,37 @@ export default function DepartmentsPage() {
       {/* Departments Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredDepartments.map((department) => (
-          <div key={department.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+          <div key={department.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer group">
             <div className="p-6">
+              {/* Header with actions */}
               <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center">
+                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-lg flex items-center justify-center group-hover:scale-110 transition-transform">
                     <Building className="h-6 w-6 text-white" />
                   </div>
                   <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{department.name}</h3>
+                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">{department.name}</h3>
                     <p className="text-sm text-gray-500">{department.employees?.length || 0} ansatte</p>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-1 opacity-0 group-hover:opacity-100 transition-opacity">
                   <button 
-                    onClick={() => openDepartmentDetail(department)}
-                    className="text-blue-600 hover:text-blue-900 p-1" 
+                    onClick={(e) => { e.stopPropagation(); openDepartmentDetail(department); }}
+                    className="text-blue-600 hover:text-blue-900 p-2 rounded-lg hover:bg-blue-50 transition-colors" 
                     title="Se detaljer"
                   >
                     <Eye className="h-4 w-4" />
                   </button>
                   <button 
-                    onClick={() => openManageLeadersModal(department)}
-                    className="text-green-600 hover:text-green-900 p-1" 
+                    onClick={(e) => { e.stopPropagation(); openEditDepartment(department); }}
+                    className="text-green-600 hover:text-green-900 p-2 rounded-lg hover:bg-green-50 transition-colors" 
+                    title="Rediger avdeling"
+                  >
+                    <Edit className="h-4 w-4" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); openManageLeadersModal(department); }}
+                    className="text-yellow-600 hover:text-yellow-900 p-2 rounded-lg hover:bg-yellow-50 transition-colors" 
                     title="Administrer ledere"
                   >
                     <Crown className="h-4 w-4" />
@@ -434,9 +498,10 @@ export default function DepartmentsPage() {
                 </div>
               </div>
 
-              <p className="text-gray-600 mb-4">{department.description}</p>
+              <p className="text-gray-600 mb-4 line-clamp-2">{department.description}</p>
 
-              <div className="space-y-3">
+              {/* Quick info */}
+              <div className="space-y-2 mb-4">
                 <div className="flex items-center space-x-2">
                   <Crown className="h-4 w-4 text-yellow-600" />
                   <span className="text-sm text-gray-900">
@@ -446,22 +511,47 @@ export default function DepartmentsPage() {
 
                 <div className="flex items-center space-x-2">
                   <MapPin className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">{department.location}</span>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Phone className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">{department.phone}</span>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Mail className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">{department.email}</span>
+                  <span className="text-sm text-gray-600 truncate">{department.location}</span>
                 </div>
               </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between">
+              {/* Employee preview */}
+              {department.employees && department.employees.length > 0 && (
+                <div className="mb-4">
+                  <h4 className="text-sm font-medium text-gray-700 mb-2">Ansatte:</h4>
+                  <div className="flex flex-wrap gap-1">
+                    {department.employees.slice(0, 3).map((employee) => (
+                      <div 
+                        key={employee.id}
+                        onClick={(e) => { e.stopPropagation(); openEmployeeDetail(employee); }}
+                        className="flex items-center space-x-1 bg-gray-100 hover:bg-gray-200 px-2 py-1 rounded-full text-xs cursor-pointer transition-colors"
+                        title={`${employee.firstName} ${employee.lastName} - ${employee.role}`}
+                      >
+                        <div className="w-4 h-4 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-medium text-xs">
+                            {employee.firstName.charAt(0)}
+                          </span>
+                        </div>
+                        <span className="text-gray-700">{employee.firstName}</span>
+                        <span className={`w-2 h-2 rounded-full ${
+                          employee.role === 'admin' ? 'bg-red-500' :
+                          employee.role === 'department_leader' ? 'bg-yellow-500' :
+                          'bg-blue-500'
+                        }`}></span>
+                      </div>
+                    ))}
+                    {department.employees.length > 3 && (
+                      <div className="bg-gray-100 px-2 py-1 rounded-full text-xs text-gray-600">
+                        +{department.employees.length - 3} flere
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Status and contact */}
+              <div className="pt-4 border-t border-gray-200">
+                <div className="flex items-center justify-between mb-2">
                   <span className="text-sm text-gray-500">Status</span>
                   <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
                     department.status === 'active' 
@@ -471,6 +561,20 @@ export default function DepartmentsPage() {
                     {department.status === 'active' ? 'Aktiv' : 'Inaktiv'}
                   </span>
                 </div>
+                <div className="flex items-center space-x-2 text-xs text-gray-500">
+                  <Phone className="h-3 w-3" />
+                  <span className="truncate">{department.phone}</span>
+                </div>
+              </div>
+
+              {/* Click to view details */}
+              <div className="mt-4 pt-3 border-t border-gray-100">
+                <button
+                  onClick={() => openDepartmentDetail(department)}
+                  className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2 rounded-lg hover:bg-blue-50 transition-colors"
+                >
+                  Se alle detaljer →
+                </button>
               </div>
             </div>
           </div>
@@ -577,6 +681,115 @@ export default function DepartmentsPage() {
                     <>
                       <Plus className="h-4 w-4" />
                       <span>Legg til</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Department Modal */}
+      {showEditModal && editingDepartment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Rediger avdeling</h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={handleEditDepartment} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Avdelingsnavn *</label>
+                <input
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Beskrivelse</label>
+                <textarea
+                  rows={3}
+                  value={formData.description}
+                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lokasjon</label>
+                <input
+                  type="text"
+                  value={formData.location}
+                  onChange={(e) => setFormData(prev => ({ ...prev, location: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Telefon</label>
+                <input
+                  type="tel"
+                  value={formData.phone}
+                  onChange={(e) => setFormData(prev => ({ ...prev, phone: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">E-post</label>
+                <input
+                  type="email"
+                  value={formData.email}
+                  onChange={(e) => setFormData(prev => ({ ...prev, email: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Status</label>
+                <select
+                  value={formData.status}
+                  onChange={(e) => setFormData(prev => ({ ...prev, status: e.target.value as 'active' | 'inactive' }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                </select>
+              </div>
+
+              <div className="flex space-x-3 pt-4">
+                <button
+                  type="button"
+                  onClick={() => setShowEditModal(false)}
+                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+                >
+                  Avbryt
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+                >
+                  {saving ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Lagrer...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Save className="h-4 w-4" />
+                      <span>Lagre endringer</span>
                     </>
                   )}
                 </button>
@@ -868,6 +1081,170 @@ export default function DepartmentsPage() {
                     </>
                   )}
                 </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Employee Detail Modal */}
+      {showEmployeeDetailModal && selectedEmployeeForDetail && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-xl font-bold text-gray-900">Ansatt detaljer</h2>
+              <button
+                onClick={() => setShowEmployeeDetailModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Employee Info */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Basic Info */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <div className="flex items-center space-x-4 mb-4">
+                    <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+                      <span className="text-white font-bold text-lg">
+                        {selectedEmployeeForDetail.firstName.charAt(0)}{selectedEmployeeForDetail.lastName.charAt(0)}
+                      </span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">
+                        {selectedEmployeeForDetail.firstName} {selectedEmployeeForDetail.lastName}
+                      </h3>
+                      <p className="text-gray-600">{selectedEmployeeForDetail.email}</p>
+                      <span className={`inline-flex items-center px-3 py-1 rounded-full text-sm font-medium mt-2 ${
+                        selectedEmployeeForDetail.role === 'admin' ? 'bg-red-100 text-red-800' :
+                        selectedEmployeeForDetail.role === 'department_leader' ? 'bg-yellow-100 text-yellow-800' :
+                        'bg-blue-100 text-blue-800'
+                      }`}>
+                        {selectedEmployeeForDetail.role === 'admin' ? 'Administrator' :
+                         selectedEmployeeForDetail.role === 'department_leader' ? 'Avdelingsleder' : 'Ansatt'}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Avdeling:</span>
+                      <p className="text-sm text-gray-900">{selectedEmployeeForDetail.department}</p>
+                    </div>
+                    <div>
+                      <span className="text-sm font-medium text-gray-700">Status:</span>
+                      <span className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${
+                        selectedEmployeeForDetail.status === 'active' 
+                          ? 'bg-green-100 text-green-800' 
+                          : 'bg-red-100 text-red-800'
+                      }`}>
+                        {selectedEmployeeForDetail.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Contact Info */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Kontaktinformasjon</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center space-x-3">
+                      <Mail className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">{selectedEmployeeForDetail.email}</span>
+                    </div>
+                    <div className="flex items-center space-x-3">
+                      <Building className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm text-gray-600">{selectedEmployeeForDetail.department}</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Permissions */}
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Tilganger og rettigheter</h4>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Avdelingsadministrasjon</span>
+                      <span className={`w-3 h-3 rounded-full ${
+                        selectedEmployeeForDetail.role === 'department_leader' || selectedEmployeeForDetail.role === 'admin' 
+                          ? 'bg-green-500' : 'bg-gray-300'
+                      }`}></span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Ansattadministrasjon</span>
+                      <span className={`w-3 h-3 rounded-full ${
+                        selectedEmployeeForDetail.role === 'admin' ? 'bg-green-500' : 'bg-gray-300'
+                      }`}></span>
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <span className="text-sm text-gray-600">Systemadministrasjon</span>
+                      <span className={`w-3 h-3 rounded-full ${
+                        selectedEmployeeForDetail.role === 'admin' ? 'bg-green-500' : 'bg-gray-300'
+                      }`}></span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="space-y-4">
+                <div className="bg-blue-50 p-4 rounded-lg">
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Handlinger</h4>
+                  <div className="space-y-2">
+                    <button
+                      onClick={() => {
+                        setShowEmployeeDetailModal(false);
+                        openMoveEmployeeModal(selectedEmployeeForDetail);
+                      }}
+                      className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 text-sm"
+                    >
+                      <ArrowRight className="h-4 w-4" />
+                      <span>Flytt til annen avdeling</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowEmployeeDetailModal(false);
+                        // TODO: Open edit employee modal
+                      }}
+                      className="w-full bg-green-600 text-white px-3 py-2 rounded-lg hover:bg-green-700 transition-colors flex items-center justify-center space-x-2 text-sm"
+                    >
+                      <Edit className="h-4 w-4" />
+                      <span>Rediger ansatt</span>
+                    </button>
+                    
+                    <button
+                      onClick={() => {
+                        setShowEmployeeDetailModal(false);
+                        // TODO: Open permissions modal
+                      }}
+                      className="w-full bg-yellow-600 text-white px-3 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2 text-sm"
+                    >
+                      <Shield className="h-4 w-4" />
+                      <span>Administrer tilganger</span>
+                    </button>
+                  </div>
+                </div>
+
+                <div className="bg-gray-50 p-4 rounded-lg">
+                  <h4 className="text-lg font-medium text-gray-900 mb-3">Statistikk</h4>
+                  <div className="space-y-3">
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Tid i avdeling:</span>
+                      <span className="text-sm font-medium text-gray-900">2 år 3 måneder</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Aktive prosjekter:</span>
+                      <span className="text-sm font-medium text-gray-900">3</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm text-gray-600">Fullførte oppgaver:</span>
+                      <span className="text-sm font-medium text-gray-900">47</span>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
