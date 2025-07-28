@@ -14,7 +14,7 @@ import {
   Save,
   Loader2
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, setDoc } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, setDoc, writeBatch, where } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -307,14 +307,15 @@ export default function CompaniesPage() {
       } else {
         // Add new company and create admin user
         if (db && auth && formData.adminEmail && formData.adminPassword) {
-          // Create admin user account
+          // Create admin user account in Firebase Auth
           const userCredential = await createUserWithEmailAndPassword(
             auth,
             formData.adminEmail,
             formData.adminPassword
           );
           
-          // Create user profile in Firestore
+          // Create user profile in Firestore (users collection only)
+          // NOTE: We do NOT create an employee record for admin users
           const userProfile = {
             id: userCredential.user.uid,
             displayName: formData.contactPerson.name || 'Admin',
@@ -328,10 +329,37 @@ export default function CompaniesPage() {
             avatar: '',
             bio: '',
             address: formData.address || '',
-            emergencyContact: ''
+            emergencyContact: '',
+            // Admin-specific permissions
+            handleDeviations: true,
+            manageOwnDepartment: true,
+            manageShifts: true,
+            readDocuments: true,
+            submitAbsence: true,
+            submitDeviations: true,
+            submitVacation: true,
+            useChat: true
           };
           
+          // Create user in users collection only (not employees)
           await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
+          
+          // Check if there's an existing employee record with the same email and delete it
+          // This prevents admin users from appearing in both users and employees collections
+          const employeesQuery = query(
+            collection(db, 'employees'),
+            where('email', '==', formData.adminEmail)
+          );
+          const employeesSnapshot = await getDocs(employeesQuery);
+          if (!employeesSnapshot.empty) {
+            // Delete any existing employee records with the same email
+            const batch = writeBatch(db);
+            employeesSnapshot.docs.forEach(doc => {
+              batch.delete(doc.ref);
+            });
+            await batch.commit();
+            console.log('Deleted existing employee records for admin user');
+          }
           
           // Create company
           const docRef = await addDoc(collection(db, 'companies'), companyData);
