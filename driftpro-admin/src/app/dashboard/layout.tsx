@@ -150,7 +150,7 @@ export default function DashboardLayout({
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white font-medium truncate">
-                {userProfile?.displayName || 'Bruker'}
+                {userProfile?.displayName || userProfile?.email || 'Bruker'}
               </p>
               <p className="text-gray-400 text-sm truncate">
                 {userProfile?.role === 'admin' && 'Administrator'}
@@ -247,7 +247,7 @@ export default function DashboardLayout({
                   </span>
                 </div>
                 <div className="hidden md:block">
-                  <p className="text-sm font-medium text-gray-900">{userProfile?.displayName || 'Bruker'}</p>
+                  <p className="text-sm font-medium text-gray-900">{userProfile?.displayName || userProfile?.email || 'Bruker'}</p>
                   <p className="text-xs text-gray-500">{userProfile?.role || 'employee'}</p>
                 </div>
               </div>
