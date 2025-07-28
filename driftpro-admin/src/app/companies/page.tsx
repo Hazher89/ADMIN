@@ -53,8 +53,11 @@ export default function CompaniesPage() {
     try {
       setLoading(true);
       if (db) {
-        // Fetch all companies from Firebase (not just active ones)
-        const companiesQuery = query(collection(db, 'companies'));
+        // Fetch active and inactive companies from Firebase (exclude pending)
+        const companiesQuery = query(
+          collection(db, 'companies'),
+          where('status', 'in', ['active', 'inactive'])
+        );
         const snapshot = await getDocs(companiesQuery);
         const companiesData = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -282,11 +285,11 @@ export default function CompaniesPage() {
                       <p className="text-sm text-gray-500">Org.nr: {company.orgNumber}</p>
                       <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
                         company.status === 'active' ? 'bg-green-100 text-green-800' :
-                        company.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-red-100 text-red-800'
+                        company.status === 'inactive' ? 'bg-red-100 text-red-800' :
+                        'bg-yellow-100 text-yellow-800'
                       }`}>
                         {company.status === 'active' ? 'Aktiv' :
-                         company.status === 'pending' ? 'Venter' : 'Inaktiv'}
+                         company.status === 'inactive' ? 'Inaktiv' : 'Venter'}
                       </span>
                     </div>
                   </div>

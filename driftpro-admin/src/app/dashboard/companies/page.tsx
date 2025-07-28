@@ -14,8 +14,9 @@ import {
   Save,
   Loader2
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, setDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 
 interface Company {
@@ -60,6 +61,7 @@ export default function CompaniesPage() {
     phone: '',
     email: '',
     adminEmail: '',
+    adminPassword: '',
     address: '',
     industry: '',
     employeeCount: 0,
@@ -283,9 +285,42 @@ export default function CompaniesPage() {
           )
         );
       } else {
-        // Add new company
-        if (db) {
+        // Add new company and create admin user
+        if (db && auth && formData.adminEmail && formData.adminPassword) {
+          // Create admin user account
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            formData.adminEmail,
+            formData.adminPassword
+          );
+          
+          // Create user profile in Firestore
+          const userProfile = {
+            id: userCredential.user.uid,
+            displayName: formData.contactPerson.name || 'Admin',
+            email: formData.adminEmail,
+            role: 'admin',
+            companyId: '', // Will be set after company creation
+            createdAt: new Date().toISOString(),
+            phone: formData.contactPerson.phone || '',
+            departmentId: '',
+            position: 'Administrator',
+            avatar: '',
+            bio: '',
+            address: formData.address || '',
+            emergencyContact: ''
+          };
+          
+          await setDoc(doc(db, 'users', userCredential.user.uid), userProfile);
+          
+          // Create company
           const docRef = await addDoc(collection(db, 'companies'), companyData);
+          
+          // Update user profile with company ID
+          await updateDoc(doc(db, 'users', userCredential.user.uid), {
+            companyId: docRef.id
+          });
+          
           setCompanies(prev => [...prev, { ...companyData, id: docRef.id }]);
         } else {
           // Fallback to local state
@@ -299,6 +334,7 @@ export default function CompaniesPage() {
       setShowEditModal(false);
     } catch (error) {
       console.error('Error saving company:', error);
+      alert('Feil ved opprettelse av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     } finally {
       setSaving(false);
     }
@@ -330,6 +366,7 @@ export default function CompaniesPage() {
       phone: company.phone || '',
       email: company.email || '',
       adminEmail: company.adminEmail || '',
+      adminPassword: '', // Clear password for edit
       address: company.address || '',
       industry: company.industry || '',
       employeeCount: company.employeeCount || 0,
@@ -356,6 +393,7 @@ export default function CompaniesPage() {
       phone: '',
       email: '',
       adminEmail: '',
+      adminPassword: '',
       address: '',
       industry: '',
       employeeCount: 0,
@@ -755,6 +793,24 @@ export default function CompaniesPage() {
                       onChange={(e) => setFormData(prev => ({ ...prev, adminEmail: e.target.value }))}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
                     />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-2">
+                      Admin passord *
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={formData.adminPassword}
+                      onChange={(e) => setFormData(prev => ({ ...prev, adminPassword: e.target.value }))}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                      placeholder="Minst 6 tegn"
+                      minLength={6}
+                    />
+                    <p className="text-xs text-gray-500 mt-1">
+                      Dette passordet brukes for å logge inn som admin for bedriften
+                    </p>
                   </div>
 
                   <div>
