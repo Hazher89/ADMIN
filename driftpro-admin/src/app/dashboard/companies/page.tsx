@@ -113,10 +113,29 @@ export default function CompaniesPage() {
       if (db) {
         const companiesQuery = query(collection(db, 'companies'), orderBy('createdAt', 'desc'));
         const snapshot = await getDocs(companiesQuery);
-        const companiesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Company[];
+        const companiesData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name || '',
+            orgNumber: data.orgNumber || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            adminEmail: data.adminEmail || '',
+            address: data.address || '',
+            industry: data.industry || '',
+            employeeCount: data.employeeCount || 0,
+            status: data.status || 'active',
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString(),
+            subscriptionPlan: data.subscriptionPlan || 'basic',
+            contactPerson: {
+              name: data.contactPerson?.name || '',
+              phone: data.contactPerson?.phone || '',
+              email: data.contactPerson?.email || ''
+            }
+          } as Company;
+        });
         setCompanies(companiesData);
       } else {
         // Fallback to mock data
@@ -236,17 +255,21 @@ export default function CompaniesPage() {
   const openEditModal = (company: Company) => {
     setSelectedCompany(company);
     setFormData({
-      name: company.name,
-      orgNumber: company.orgNumber,
-      phone: company.phone,
-      email: company.email,
-      adminEmail: company.adminEmail,
-      address: company.address,
-      industry: company.industry,
-      employeeCount: company.employeeCount,
-      status: company.status,
-      subscriptionPlan: company.subscriptionPlan,
-      contactPerson: company.contactPerson
+      name: company.name || '',
+      orgNumber: company.orgNumber || '',
+      phone: company.phone || '',
+      email: company.email || '',
+      adminEmail: company.adminEmail || '',
+      address: company.address || '',
+      industry: company.industry || '',
+      employeeCount: company.employeeCount || 0,
+      status: company.status || 'active',
+      subscriptionPlan: company.subscriptionPlan || 'basic',
+      contactPerson: {
+        name: company.contactPerson?.name || '',
+        phone: company.contactPerson?.phone || '',
+        email: company.contactPerson?.email || ''
+      }
     });
     setShowEditModal(true);
   };
@@ -438,31 +461,31 @@ export default function CompaniesPage() {
                   <tr key={company.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div>
-                        <div className="text-sm font-medium text-gray-900">{company.name}</div>
-                        <div className="text-sm text-gray-500">{company.industry}</div>
-                        <div className="text-xs text-gray-400">Org.nr: {company.orgNumber}</div>
+                        <div className="text-sm font-medium text-gray-900">{company.name || 'Ukjent navn'}</div>
+                        <div className="text-sm text-gray-500">{company.industry || 'Ikke spesifisert'}</div>
+                        <div className="text-xs text-gray-400">Org.nr: {company.orgNumber || 'Ikke registrert'}</div>
                       </div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="text-sm text-gray-900">{company.contactPerson.name}</div>
-                      <div className="text-sm text-gray-500">{company.contactPerson.email}</div>
-                      <div className="text-sm text-gray-500">{company.contactPerson.phone}</div>
+                      <div className="text-sm text-gray-900">{company.contactPerson?.name || 'Ikke spesifisert'}</div>
+                      <div className="text-sm text-gray-500">{company.contactPerson?.email || 'Ikke spesifisert'}</div>
+                      <div className="text-sm text-gray-500">{company.contactPerson?.phone || 'Ikke spesifisert'}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(company.status)}`}>
-                        {getStatusText(company.status)}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(company.status || 'active')}`}>
+                        {getStatusText(company.status || 'active')}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPlanColor(company.subscriptionPlan)}`}>
-                        {company.subscriptionPlan}
+                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPlanColor(company.subscriptionPlan || 'basic')}`}>
+                        {company.subscriptionPlan || 'basic'}
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                      {company.employeeCount}
+                      {company.employeeCount || 0}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      {new Date(company.createdAt).toLocaleDateString('nb-NO')}
+                      {company.createdAt ? new Date(company.createdAt).toLocaleDateString('nb-NO') : 'Ikke registrert'}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                       <div className="flex items-center justify-end space-x-2">
