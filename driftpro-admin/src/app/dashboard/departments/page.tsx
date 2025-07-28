@@ -73,6 +73,8 @@ export default function DepartmentsPage() {
   const [editingDepartment, setEditingDepartment] = useState<DepartmentWithEmployees | null>(null);
   const [showEmployeeDetailModal, setShowEmployeeDetailModal] = useState(false);
   const [selectedEmployeeForDetail, setSelectedEmployeeForDetail] = useState<Employee | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [deletingDepartment, setDeletingDepartment] = useState<DepartmentWithEmployees | null>(null);
 
   // Form data for adding/editing departments
   const [formData, setFormData] = useState({
@@ -416,6 +418,40 @@ export default function DepartmentsPage() {
     }).join(', ') || 'Ingen leder';
   };
 
+  const openDeleteDepartment = (department: DepartmentWithEmployees) => {
+    setDeletingDepartment(department);
+    setShowDeleteModal(true);
+  };
+
+  const handleDeleteDepartment = async () => {
+    if (!deletingDepartment || !db) return;
+
+    try {
+      setSaving(true);
+      
+      // Check if department has employees
+      if (deletingDepartment.employees.length > 0) {
+        alert('Kan ikke slette avdeling med ansatte. Flytt alle ansatte først.');
+        return;
+      }
+
+      // Delete from Firebase
+      const departmentRef = doc(db, 'departments', deletingDepartment.id);
+      await deleteDoc(departmentRef);
+
+      // Update local state
+      setDepartments(prev => prev.filter(dept => dept.id !== deletingDepartment.id));
+
+      setShowDeleteModal(false);
+      setDeletingDepartment(null);
+    } catch (error) {
+      console.error('Error deleting department:', error);
+      alert('Feil ved sletting av avdeling. Prøv igjen.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -494,6 +530,13 @@ export default function DepartmentsPage() {
                     title="Administrer ledere"
                   >
                     <Crown className="h-4 w-4" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); openDeleteDepartment(department); }}
+                    className="text-red-600 hover:text-red-900 p-2 rounded-lg hover:bg-red-50 transition-colors" 
+                    title="Slett avdeling"
+                  >
+                    <Trash2 className="h-4 w-4" />
                   </button>
                 </div>
               </div>
@@ -859,6 +902,13 @@ export default function DepartmentsPage() {
                     <Crown className="h-4 w-4" />
                     <span>Administrer ledere</span>
                   </button>
+                  <button
+                    onClick={() => openDeleteDepartment(selectedDepartment)}
+                    className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors flex items-center justify-center space-x-2"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                    <span>Slett avdeling</span>
+                  </button>
                 </div>
               </div>
 
@@ -1008,9 +1058,8 @@ export default function DepartmentsPage() {
               </p>
 
               <div className="space-y-3">
-                {allEmployees
-                  .filter(emp => emp.department === selectedDepartment.name)
-                  .map((employee) => (
+                {allEmployees.length > 0 ? (
+                  allEmployees.map((employee) => (
                     <div key={employee.id} className="flex items-center space-x-3 p-3 border border-gray-200 rounded-lg">
                       <input
                         type="checkbox"
@@ -1043,17 +1092,28 @@ export default function DepartmentsPage() {
                           <p className="text-sm text-gray-600">{employee.email}</p>
                         </div>
                       </div>
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                        employee.role === 'admin' ? 'bg-red-100 text-red-800' :
-                        employee.role === 'department_leader' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-blue-100 text-blue-800'
-                      }`}>
-                        {employee.role === 'admin' ? 'Admin' :
-                         employee.role === 'department_leader' ? 'Leder' : 'Ansatt'}
-                      </span>
+                      <div className="flex items-center space-x-2">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                          employee.role === 'admin' ? 'bg-red-100 text-red-800' :
+                          employee.role === 'department_leader' ? 'bg-yellow-100 text-yellow-800' :
+                          'bg-blue-100 text-blue-800'
+                        }`}>
+                          {employee.role === 'admin' ? 'Admin' :
+                           employee.role === 'department_leader' ? 'Leder' : 'Ansatt'}
+                        </span>
+                        <span className="text-xs text-gray-500">
+                          {employee.department}
+                        </span>
+                      </div>
                     </div>
                   ))
-                }
+                ) : (
+                  <div className="text-center py-8 text-gray-500">
+                    <Users className="h-12 w-12 mx-auto mb-4 text-gray-300" />
+                    <p>Ingen ansatte tilgjengelig</p>
+                    <p className="text-sm">Legg til ansatte først for å kunne velge ledere</p>
+                  </div>
+                )}
               </div>
 
               <div className="flex space-x-3 pt-4">
@@ -1246,6 +1306,57 @@ export default function DepartmentsPage() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Department Modal */}
+      {showDeleteModal && deletingDepartment && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-bold text-gray-900">Slett avdeling</h2>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="mb-4">
+              <p className="text-gray-600">
+                Er du sikker på at du vil slette avdelingen <strong>{deletingDepartment.name}</strong>?
+                Denne handlingen kan ikke angres.
+              </p>
+            </div>
+
+            <div className="flex space-x-3">
+              <button
+                type="button"
+                onClick={() => setShowDeleteModal(false)}
+                className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleDeleteDepartment}
+                disabled={saving}
+                className="flex-1 bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 flex items-center justify-center space-x-2"
+              >
+                {saving ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    <span>Sletter...</span>
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="h-4 w-4" />
+                    <span>Slett avdeling</span>
+                  </>
+                )}
+              </button>
             </div>
           </div>
         </div>
