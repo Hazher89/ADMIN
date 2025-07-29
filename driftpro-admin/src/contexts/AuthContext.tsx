@@ -64,7 +64,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
           if (userDoc.exists()) {
-            setUserProfile({ id: user.uid, ...userDoc.data() } as UserProfile);
+            const data = userDoc.data();
+            const userProfile: UserProfile = {
+              id: user.uid,
+              displayName: data.displayName || user.displayName || 'Ny bruker',
+              email: data.email || user.email || '',
+              phone: data.phone || undefined,
+              departmentId: data.departmentId || undefined,
+              position: data.position || undefined,
+              role: data.role || 'employee',
+              avatar: data.avatar || undefined,
+              createdAt: data.createdAt || new Date().toISOString(),
+              bio: data.bio || undefined,
+              address: data.address || undefined,
+              emergencyContact: data.emergencyContact || undefined
+            };
+            setUserProfile(userProfile);
           } else {
             // Create default profile if it doesn't exist
             const defaultProfile: UserProfile = {
@@ -79,6 +94,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
+          // Set a minimal profile to prevent errors
+          const fallbackProfile: UserProfile = {
+            id: user.uid,
+            displayName: user.displayName || 'Ny bruker',
+            email: user.email || '',
+            role: 'employee',
+            createdAt: new Date().toISOString(),
+          };
+          setUserProfile(fallbackProfile);
         }
       } else {
         setUserProfile(null);
@@ -180,7 +204,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 export function useAuth() {
   const context = useContext(AuthContext);
   if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
+    // Return a safe default instead of throwing an error
+    return {
+      user: null,
+      userProfile: null,
+      isAuthenticated: false,
+      isAdmin: false,
+      isDepartmentLeader: false,
+      loading: true,
+      login: async () => { throw new Error('Auth not initialized'); },
+      logout: async () => { throw new Error('Auth not initialized'); },
+      register: async () => { throw new Error('Auth not initialized'); },
+      updateUserProfile: async () => { throw new Error('Auth not initialized'); },
+      resetPassword: async () => { throw new Error('Auth not initialized'); },
+    };
   }
   return context;
 } 
