@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, 
   Search, 
@@ -11,7 +11,7 @@ import {
   Save,
   X
 } from 'lucide-react';
-import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Employee {
@@ -81,70 +81,64 @@ export default function DepartmentsPage() {
     selectedLeaders: [] as string[]
   });
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    filterDepartments();
-  }, [departments, searchTerm]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      setLoading(true);
-      
-      // Load employees from Firebase
       if (db) {
-        try {
-          const employeesSnapshot = await getDocs(collection(db, 'employees'));
-          const employeesData = employeesSnapshot.docs.map(doc => ({
+        // Load employees
+        const employeesSnapshot = await getDocs(collection(db, 'employees'));
+        const employeesData = employeesSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
             id: doc.id,
-            ...doc.data()
-          })) as Employee[];
-          setAllEmployees(employeesData);
-          
-          // Load departments from Firebase
-          const departmentsSnapshot = await getDocs(collection(db, 'departments'));
-          const departmentsData = departmentsSnapshot.docs.map(doc => {
-            const data = doc.data();
-            return {
-              id: doc.id,
-              name: data.name || 'Ukjent avdeling',
-              description: data.description || '',
-              leaders: data.leaders || [],
-              employeeCount: data.employeeCount || 0,
-              location: data.location || '',
-              phone: data.phone || '',
-              email: data.email || '',
-              status: data.status || 'active',
-              createdAt: data.createdAt || new Date().toISOString(),
-              employees: [] // Initialize empty employees array
-            } as Department;
-          });
-          
-          // Combine departments with their employees
-          const departmentsWithEmployees = departmentsData.map(dept => ({
-            ...dept,
-            employees: employeesData.filter(emp => emp.department === dept.name) || []
-          }));
-          
-          setDepartments(departmentsWithEmployees);
-          console.log('Data loaded from Firebase successfully');
-        } catch (firebaseError) {
-          console.error('Firebase error, falling back to mock data:', firebaseError);
-          loadMockData();
-        }
-      } else {
-        console.log('Firebase not available, using mock data');
-        loadMockData();
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            email: data.email || '',
+            department: data.department || '',
+            role: data.role || 'employee'
+          };
+        });
+        setAllEmployees(employeesData);
+
+        // Load departments
+        const departmentsSnapshot = await getDocs(collection(db, 'departments'));
+        const departmentsData = departmentsSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name || '',
+            description: data.description || '',
+            leaders: data.leaders || [],
+            createdAt: data.createdAt || new Date().toISOString()
+          };
+        });
+        setDepartments(departmentsData);
       }
     } catch (error) {
       console.error('Error loading data:', error);
+      // Fallback to mock data
       loadMockData();
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [db]);
+
+  const filterDepartments = useCallback(() => {
+    const filtered = departments.filter(dept =>
+      dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      dept.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      dept.leaders.some(leaderId => {
+        const leader = allEmployees.find(emp => emp.id === leaderId);
+        return leader && `${leader.firstName} ${leader.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
+      })
+    );
+    setFilteredDepartments(filtered);
+  }, [departments, searchTerm, allEmployees]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    filterDepartments();
+  }, [filterDepartments]);
 
   const loadMockData = () => {
     const mockEmployees: Employee[] = [
@@ -199,23 +193,6 @@ export default function DepartmentsPage() {
 
     setAllEmployees(mockEmployees);
     setDepartments(mockDepartments);
-  };
-
-  const filterDepartments = () => {
-    let filtered = departments;
-
-    if (searchTerm) {
-      filtered = filtered.filter(dept =>
-        dept.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        dept.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        dept.leaders.some(leaderId => {
-          const leader = allEmployees.find(emp => emp.id === leaderId);
-          return leader && `${leader.firstName} ${leader.lastName}`.toLowerCase().includes(searchTerm.toLowerCase());
-        })
-      );
-    }
-
-    setFilteredDepartments(filtered);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {

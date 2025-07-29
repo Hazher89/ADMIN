@@ -7,9 +7,17 @@ import {
   Mail, 
   Phone, 
   MapPin, 
-  Users
+  Users,
+  Plus,
+  Edit,
+  Trash2,
+  Save,
+  X,
+  AlertTriangle,
+  CheckCircle,
+  Loader2
 } from 'lucide-react';
-import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch, where, setDoc } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -43,7 +51,6 @@ export default function CompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [searching, setSearching] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedCompanyForDetail, setSelectedCompanyForDetail] = useState<Company | null>(null);
   

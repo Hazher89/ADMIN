@@ -1,34 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
-  Calendar,
+  Calendar, 
+  Clock, 
+  Users, 
+  CheckCircle, 
+  XCircle, 
   Plus,
-  Search,
-  Filter,
-  Edit,
-  Trash2,
   Eye,
-  Save,
-  X,
   Check,
-  X as XIcon,
-  Clock,
-  User,
-  Building,
-  AlertTriangle,
-  CheckCircle,
-  XCircle,
-  CalendarDays,
-  Users,
-  BarChart3,
-  Download,
-  Upload,
-  Settings,
-  ChevronLeft,
-  ChevronRight,
-  ChevronDown,
-  MoreHorizontal
+  X,
+  Edit
 } from 'lucide-react';
 import { collection, addDoc, updateDoc, doc, deleteDoc, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -79,9 +63,10 @@ export default function VacationPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<VacationRequest[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'vacation' | 'sick_leave' | 'other'>('all');
   const [dateFilter, setDateFilter] = useState('');
+  const [departmentFilter, setDepartmentFilter] = useState('');
   
   // Calendar state
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -94,6 +79,8 @@ export default function VacationPage() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
+  const [showEmployeeManagerModal, setShowEmployeeManagerModal] = useState(false);
+  const [selectedEmployeeForManager, setSelectedEmployeeForManager] = useState<Employee | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   
@@ -110,154 +97,50 @@ export default function VacationPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    filterRequests();
-  }, [vacationRequests, searchTerm, statusFilter, departmentFilter, dateFilter]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
-      setLoading(true);
-      
-      // Load vacation requests from Firebase
       if (db) {
-        const requestsQuery = query(
-          collection(db, 'vacationRequests'),
-          orderBy('submittedAt', 'desc')
-        );
+        // Load vacation requests
+        const requestsQuery = query(collection(db, 'vacationRequests'), orderBy('submittedAt', 'desc'));
         const requestsSnapshot = await getDocs(requestsQuery);
-        const requests = requestsSnapshot.docs.map(doc => ({
+        const requestsData = requestsSnapshot.docs.map(doc => ({
           id: doc.id,
           ...doc.data()
         })) as VacationRequest[];
-        setVacationRequests(requests);
-      }
-      
-      // Load employees from Firebase
-      if (db) {
-        const employeesQuery = query(collection(db, 'employees'));
+        setVacationRequests(requestsData);
+
+        // Load employees
+        const employeesQuery = query(collection(db, 'employees'), orderBy('firstName'));
         const employeesSnapshot = await getDocs(employeesQuery);
-        const employeesData = employeesSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            firstName: data.firstName || '',
-            lastName: data.lastName || '',
-            department: data.department || '',
-            role: data.role || '',
-            vacationDays: data.vacationDays || {
-              total: 25,
-              used: 0,
-              remaining: 25,
-              carriedOver: 0
-            }
-          };
-        }) as Employee[];
+        const employeesData = employeesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Employee[];
         setEmployees(employeesData);
       }
     } catch (error) {
       console.error('Error loading data:', error);
-      // Fallback to mock data
-      loadMockData();
-    } finally {
-      setLoading(false);
     }
-  };
+  }, [db]);
 
-  const loadMockData = () => {
-    const mockRequests: VacationRequest[] = [
-      {
-        id: '1',
-        employeeId: 'emp1',
-        employeeName: 'Ola Nordmann',
-        department: 'IT',
-        startDate: '2024-08-15',
-        endDate: '2024-08-23',
-        days: 7,
-        reason: 'Sommerferie',
-        status: 'pending',
-        submittedAt: '2024-07-20T10:00:00Z',
-        type: 'vacation'
-      },
-      {
-        id: '2',
-        employeeId: 'emp2',
-        employeeName: 'Kari Hansen',
-        department: 'HR',
-        startDate: '2024-09-01',
-        endDate: '2024-09-05',
-        days: 5,
-        reason: 'Familieferie',
-        status: 'approved',
-        submittedAt: '2024-07-15T14:30:00Z',
-        reviewedBy: 'Admin',
-        reviewedAt: '2024-07-16T09:00:00Z',
-        type: 'vacation'
-      }
-    ];
-    
-    const mockEmployees: Employee[] = [
-      {
-        id: 'emp1',
-        firstName: 'Ola',
-        lastName: 'Nordmann',
-        department: 'IT',
-        role: 'employee',
-        vacationDays: {
-          total: 25,
-          used: 5,
-          remaining: 20,
-          carriedOver: 0
-        }
-      },
-      {
-        id: 'emp2',
-        firstName: 'Kari',
-        lastName: 'Hansen',
-        department: 'HR',
-        role: 'department_leader',
-        vacationDays: {
-          total: 30,
-          used: 10,
-          remaining: 20,
-          carriedOver: 5
-        }
-      }
-    ];
-    
-    setVacationRequests(mockRequests);
-    setEmployees(mockEmployees);
-  };
-
-  const filterRequests = () => {
-    let filtered = vacationRequests;
-    
-    if (searchTerm) {
-      filtered = filtered.filter(request =>
-        request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.reason.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    if (statusFilter) {
-      filtered = filtered.filter(request => request.status === statusFilter);
-    }
-    
-    if (departmentFilter) {
-      filtered = filtered.filter(request => request.department === departmentFilter);
-    }
-    
-    if (dateFilter) {
-      filtered = filtered.filter(request => 
-        request.startDate >= dateFilter || request.endDate <= dateFilter
-      );
-    }
-    
+  const filterRequests = useCallback(() => {
+    const filtered = vacationRequests.filter(request => {
+      const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
+      const matchesType = typeFilter === 'all' || request.type === typeFilter;
+      const matchesSearch = request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           request.reason.toLowerCase().includes(searchTerm.toLowerCase());
+      return matchesStatus && matchesType && matchesSearch;
+    });
     setFilteredRequests(filtered);
-  };
+  }, [vacationRequests, statusFilter, typeFilter, searchTerm]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    filterRequests();
+  }, [filterRequests]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -495,7 +378,7 @@ export default function VacationPage() {
             onClick={() => setShowCalendarModal(true)}
             className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2"
           >
-            <CalendarDays className="h-4 w-4" />
+            <Calendar className="h-4 w-4" />
             <span>Kalender</span>
           </button>
           <button
@@ -577,7 +460,6 @@ export default function VacationPage() {
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               <input
                 type="text"
                 placeholder="Søk etter ansatt eller grunn..."
@@ -590,24 +472,24 @@ export default function VacationPage() {
           
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
+            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
           >
-            <option value="">Alle statuser</option>
+            <option value="all">Alle statuser</option>
             <option value="pending">Venter</option>
             <option value="approved">Godkjent</option>
             <option value="rejected">Avvist</option>
           </select>
           
           <select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
+            value={typeFilter}
+            onChange={(e) => setTypeFilter(e.target.value as 'all' | 'vacation' | 'sick_leave' | 'other')}
             className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
           >
-            <option value="">Alle avdelinger</option>
-            {Array.from(new Set(vacationRequests.map(r => r.department))).map(dept => (
-              <option key={dept} value={dept}>{dept}</option>
-            ))}
+            <option value="all">Alle typer</option>
+            <option value="vacation">Ferie</option>
+            <option value="sick_leave">Sykemelding</option>
+            <option value="other">Annet</option>
           </select>
           
           <input
