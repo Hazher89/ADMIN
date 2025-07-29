@@ -14,23 +14,13 @@ import {
   BarChart3
 } from 'lucide-react';
 
-interface DashboardStats {
-  totalEmployees: number;
-  activeShifts: number;
-  pendingRequests: number;
-  recentDeviations: number;
-  departmentCount: number;
-  documentsShared: number;
-}
-
 interface RecentActivity {
   id: string;
-  type: 'shift' | 'deviation' | 'vacation' | 'absence' | 'document' | 'chat';
+  type: 'vacation_request' | 'absence_request' | 'deviation_report' | 'shift_assignment';
   title: string;
   description: string;
   timestamp: string;
-  user: string;
-  status?: 'pending' | 'approved' | 'rejected' | 'resolved';
+  status: 'pending' | 'approved' | 'rejected';
 }
 
 export default function DashboardPage() {
@@ -54,29 +44,26 @@ export default function DashboardPage() {
     const mockActivities: RecentActivity[] = [
       {
         id: '1',
-        type: 'shift',
+        type: 'shift_assignment',
         title: 'Nytt skiftplan publisert',
         description: 'Skiftplan for uke 32 er publisert av HR-avdelingen',
         timestamp: '2024-07-27T10:30:00Z',
-        user: 'HR Manager',
         status: 'pending'
       },
       {
         id: '2',
-        type: 'deviation',
+        type: 'deviation_report',
         title: 'Avvik rapportert',
         description: 'Sikkerhetsavvik rapportert i produksjonsavdelingen',
         timestamp: '2024-07-27T09:15:00Z',
-        user: 'Produksjonsleder',
         status: 'pending'
       },
       {
         id: '3',
-        type: 'vacation',
+        type: 'vacation_request',
         title: 'Ferieforespørsel godkjent',
         description: 'Ferieforespørsel for John Doe er godkjent',
         timestamp: '2024-07-27T08:45:00Z',
-        user: 'Department Leader',
         status: 'approved'
       },
       {
@@ -85,16 +72,14 @@ export default function DashboardPage() {
         title: 'Nytt dokument delt',
         description: 'Sikkerhetsmanual v2.1 er delt med alle ansatte',
         timestamp: '2024-07-27T08:00:00Z',
-        user: 'Admin',
         status: 'resolved'
       },
       {
         id: '5',
-        type: 'absence',
+        type: 'absence_request',
         title: 'Fraværsmelding registrert',
         description: 'Sykemelding registrert for Jane Smith',
         timestamp: '2024-07-27T07:30:00Z',
-        user: 'Employee',
         status: 'pending'
       }
     ];
@@ -104,10 +89,10 @@ export default function DashboardPage() {
 
   const getActivityIcon = (type: RecentActivity['type']) => {
     switch (type) {
-      case 'shift': return <Clock className="h-5 w-5" />;
-      case 'deviation': return <AlertTriangle className="h-5 w-5" />;
-      case 'vacation': return <Calendar className="h-5 w-5" />;
-      case 'absence': return <Users className="h-5 w-5" />; // Changed from User to Users
+      case 'shift_assignment': return <Clock className="h-5 w-5" />;
+      case 'deviation_report': return <AlertTriangle className="h-5 w-5" />;
+      case 'vacation_request': return <Calendar className="h-5 w-5" />;
+      case 'absence_request': return <Users className="h-5 w-5" />; // Changed from User to Users
       case 'document': return <FileText className="h-5 w-5" />;
       case 'chat': return <MessageSquare className="h-5 w-5" />;
       default: return <Activity className="h-5 w-5" />;

@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { 
   Calendar, 
   Clock, 
@@ -50,14 +49,6 @@ interface Employee {
   };
 }
 
-interface VacationDay {
-  date: string;
-  employeeId: string;
-  employeeName: string;
-  type: 'vacation' | 'sick_leave' | 'other';
-  status: 'approved' | 'pending';
-}
-
 export default function VacationPage() {
   const [vacationRequests, setVacationRequests] = useState<VacationRequest[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
@@ -66,12 +57,6 @@ export default function VacationPage() {
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
   const [typeFilter, setTypeFilter] = useState<'all' | 'vacation' | 'sick_leave' | 'other'>('all');
   const [dateFilter, setDateFilter] = useState('');
-  const [departmentFilter, setDepartmentFilter] = useState('');
-  
-  // Calendar state
-  const [currentDate, setCurrentDate] = useState(new Date());
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
-  const [calendarView, setCalendarView] = useState<'month' | 'year'>('month');
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -79,10 +64,7 @@ export default function VacationPage() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
-  const [showEmployeeManagerModal, setShowEmployeeManagerModal] = useState(false);
-  const [selectedEmployeeForManager, setSelectedEmployeeForManager] = useState<Employee | null>(null);
   const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   
   // Form state
   const [formData, setFormData] = useState({

@@ -94,7 +94,8 @@ export default function DepartmentsPage() {
             lastName: data.lastName || '',
             email: data.email || '',
             department: data.department || '',
-            role: data.role || 'employee'
+            role: data.role || 'employee',
+            status: data.status || 'active'
           };
         });
         setAllEmployees(employeesData);
@@ -108,10 +109,23 @@ export default function DepartmentsPage() {
             name: data.name || '',
             description: data.description || '',
             leaders: data.leaders || [],
-            createdAt: data.createdAt || new Date().toISOString()
+            employeeCount: data.employeeCount || 0,
+            location: data.location || '',
+            phone: data.phone || '',
+            email: data.email || '',
+            status: data.status || 'active',
+            createdAt: data.createdAt || new Date().toISOString(),
+            employees: [] // Will be populated below
           };
         });
-        setDepartments(departmentsData);
+
+        // Combine departments with their employees
+        const departmentsWithEmployees = departmentsData.map(dept => ({
+          ...dept,
+          employees: employeesData.filter(emp => emp.department === dept.name)
+        }));
+
+        setDepartments(departmentsWithEmployees);
       }
     } catch (error) {
       console.error('Error loading data:', error);
