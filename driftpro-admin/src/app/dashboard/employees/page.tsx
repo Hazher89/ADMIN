@@ -6,17 +6,14 @@ import {
   Search, 
   Edit, 
   Trash2, 
-  Building,
-  Shield,
+  Users,
   Download,
   Upload,
   FileSpreadsheet,
   ChevronDown,
-  UserCheck,
-  UserX,
-  Eye,
   Save,
   X,
+  UserCheck,
   Check
 } from 'lucide-react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
@@ -1187,7 +1184,7 @@ export default function EmployeesPage() {
                                 }}
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                               >
-                                <Building className="h-4 w-4" />
+                                <Users className="h-4 w-4" />
                                 <span>Endre avdeling</span>
                               </button>
                               
@@ -1198,7 +1195,7 @@ export default function EmployeesPage() {
                                 }}
                                 className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
                               >
-                                <Shield className="h-4 w-4" />
+                                <Users className="h-4 w-4" />
                                 <span>Endre rolle</span>
                               </button>
                               
@@ -1219,7 +1216,7 @@ export default function EmployeesPage() {
                                 onClick={() => openPermissionsModal(employee)}
                                 className="w-full text-left px-4 py-2 text-sm text-blue-600 hover:bg-blue-50 flex items-center space-x-2"
                               >
-                                <Shield className="h-4 w-4" />
+                                <Users className="h-4 w-4" />
                                 <span>Tilganger</span>
                               </button>
                               
@@ -1251,7 +1248,7 @@ export default function EmployeesPage() {
                         className="text-blue-600 hover:text-blue-900 p-1"
                         title="Tilganger"
                       >
-                        <Shield className="h-4 w-4" />
+                        <Users className="h-4 w-4" />
                       </button>
                       <button
                         onClick={() => openEditModal(employee)}

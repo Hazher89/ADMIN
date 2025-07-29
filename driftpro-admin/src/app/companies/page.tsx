@@ -4,17 +4,17 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
-  Zap,
-  Search,
-  Building,
-  Users,
-  MapPin,
-  ArrowRight,
-  Loader2,
-  Globe,
-  Phone,
-  Mail,
-  ExternalLink
+  Search, 
+  Building, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Users, 
+  Plus, 
+  Edit, 
+  Trash2, 
+  Save, 
+  X 
 } from 'lucide-react';
 import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -224,7 +224,7 @@ export default function CompaniesPage() {
           <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-4">
               <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                <Zap className="h-6 w-6 text-white" />
+                {/* Zap icon removed */}
               </div>
               <div>
                 <h1 className="text-xl font-bold text-gray-900">DriftPro</h1>
@@ -285,7 +285,7 @@ export default function CompaniesPage() {
                 className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
               >
                 {searching ? (
-                  <Loader2 className="h-5 w-5 animate-spin" />
+                  'Søk'
                 ) : (
                   'Søk'
                 )}
@@ -324,7 +324,7 @@ export default function CompaniesPage() {
                       </span>
                     </div>
                   </div>
-                  <ArrowRight className="h-5 w-5 text-gray-400 group-hover:text-blue-600 transition-colors" />
+                  {/* ArrowRight icon removed */}
                 </div>
 
                 {/* Company Details */}

@@ -6,24 +6,12 @@ import {
   Search, 
   Edit, 
   Trash2, 
-  Building,
-  Phone,
-  Mail,
-  MapPin,
-  Users,
-  Download,
-  Upload,
-  FileSpreadsheet,
-  ChevronDown,
   Save,
   X,
-  Check,
-  ExternalLink,
-  AlertCircle
+  ExternalLink
 } from 'lucide-react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import * as XLSX from 'xlsx';
 
 interface Partner {
   id: string;
@@ -54,6 +42,22 @@ interface Partner {
   updatedAt: string;
 }
 
+interface BrregResult {
+  orgNumber: string;
+  data: {
+    name: string;
+    orgNumber: string;
+    address: {
+      street: string;
+      city: string;
+      postalCode: string;
+    };
+    brregData: Record<string, string | undefined>;
+  } | null;
+  success: boolean;
+  error?: string;
+}
+
 export default function PartnersPage() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [filteredPartners, setFilteredPartners] = useState<Partner[]>([]);
@@ -65,7 +69,7 @@ export default function PartnersPage() {
   const [saving, setSaving] = useState(false);
   const [brregLoading, setBrregLoading] = useState(false);
   const [orgNumbers, setOrgNumbers] = useState('');
-  const [brregResults, setBrregResults] = useState<any[]>([]);
+  const [brregResults, setBrregResults] = useState<BrregResult[]>([]);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -89,14 +93,6 @@ export default function PartnersPage() {
     status: 'active' as 'active' | 'inactive'
   });
 
-  useEffect(() => {
-    loadPartners();
-  }, []);
-
-  useEffect(() => {
-    filterPartners();
-  }, [partners, searchTerm]);
-
   const filterPartners = useCallback(() => {
     let filtered = partners;
 
@@ -111,6 +107,14 @@ export default function PartnersPage() {
 
     setFilteredPartners(filtered);
   }, [partners, searchTerm]);
+
+  useEffect(() => {
+    loadPartners();
+  }, []);
+
+  useEffect(() => {
+    filterPartners();
+  }, [filterPartners]);
 
   const loadPartners = async () => {
     try {
@@ -143,9 +147,9 @@ export default function PartnersPage() {
       const data = await response.json();
       
       // Extract relevant data
-      const brregData: any = {
+      const brregData: Record<string, string | undefined> = {
         dagligLeder: data.daglig_leder?.navn || '',
-        styreleder: data.styre?.map((member: any) => member.navn).join(', ') || '',
+        styreleder: data.styre?.map((member: { navn: string }) => member.navn).join(', ') || '',
         regnskapsforer: data.regnskapsforer?.navn || '',
         forretningsadresse: data.forretningsadresse?.adresse?.join(', ') || '',
         postadresse: data.postadresse?.adresse?.join(', ') || '',
@@ -191,7 +195,7 @@ export default function PartnersPage() {
 
     try {
       setBrregLoading(true);
-      const results = [];
+      const results: BrregResult[] = [];
 
       for (const orgNumber of orgNumberList) {
         try {

@@ -1,30 +1,15 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Building,
-  Plus,
-  Search,
+import { 
+  Plus, 
+  Search, 
+  Edit, 
+  Trash2, 
   Users,
-  Edit,
-  Trash2,
-  Eye,
-  Mail,
-  Phone,
-  MapPin,
-  Crown,
-  Shield,
-  UserPlus,
-  UserMinus,
-  ArrowRight,
-  X,
+  Building,
   Save,
-  User,
-  Settings,
-  MoreVertical,
-  ChevronDown,
-  CheckCircle,
-  AlertCircle
+  X
 } from 'lucide-react';
 import { collection, doc, getDocs, addDoc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -515,7 +500,7 @@ export default function DepartmentsPage() {
                     className="text-blue-600 hover:text-blue-900 p-2 rounded-lg hover:bg-blue-50 transition-colors" 
                     title="Se detaljer"
                   >
-                    <Eye className="h-4 w-4" />
+                    {/* <Eye className="h-4 w-4" /> */}
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); openEditDepartment(department); }}
@@ -529,7 +514,7 @@ export default function DepartmentsPage() {
                     className="text-yellow-600 hover:text-yellow-900 p-2 rounded-lg hover:bg-yellow-50 transition-colors" 
                     title="Administrer ledere"
                   >
-                    <Crown className="h-4 w-4" />
+                    {/* <Crown className="h-4 w-4" /> */}
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); openDeleteDepartment(department); }}
@@ -546,14 +531,14 @@ export default function DepartmentsPage() {
               {/* Quick info */}
               <div className="space-y-2 mb-4">
                 <div className="flex items-center space-x-2">
-                  <Crown className="h-4 w-4 text-yellow-600" />
+                  {/* <Crown className="h-4 w-4 text-yellow-600" /> */}
                   <span className="text-sm text-gray-900">
                     Leder: {getLeaderNames(department.leaders) || 'Ingen leder'}
                   </span>
                 </div>
 
                 <div className="flex items-center space-x-2">
-                  <MapPin className="h-4 w-4 text-gray-400" />
+                  {/* <MapPin className="h-4 w-4 text-gray-400" /> */}
                   <span className="text-sm text-gray-600 truncate">{department.location}</span>
                 </div>
               </div>
@@ -605,7 +590,7 @@ export default function DepartmentsPage() {
                   </span>
                 </div>
                 <div className="flex items-center space-x-2 text-xs text-gray-500">
-                  <Phone className="h-3 w-3" />
+                  {/* <Phone className="h-3 w-3" /> */}
                   <span className="truncate">{department.phone}</span>
                 </div>
               </div>
@@ -899,7 +884,7 @@ export default function DepartmentsPage() {
                     onClick={() => openManageLeadersModal(selectedDepartment)}
                     className="flex-1 bg-yellow-600 text-white px-4 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2"
                   >
-                    <Crown className="h-4 w-4" />
+                    {/* <Crown className="h-4 w-4" /> */}
                     <span>Administrer ledere</span>
                   </button>
                   <button
@@ -950,7 +935,7 @@ export default function DepartmentsPage() {
                               className="text-blue-600 hover:text-blue-900 p-1"
                               title="Flytt til annen avdeling"
                             >
-                              <ArrowRight className="h-4 w-4" />
+                              {/* <ArrowRight className="h-4 w-4" /> */}
                             </button>
                           </div>
                         </div>
@@ -1027,7 +1012,7 @@ export default function DepartmentsPage() {
                     </>
                   ) : (
                     <>
-                      <ArrowRight className="h-4 w-4" />
+                      {/* <ArrowRight className="h-4 w-4" /> */}
                       <span>Flytt ansatt</span>
                     </>
                   )}
@@ -1211,11 +1196,11 @@ export default function DepartmentsPage() {
                   <h4 className="text-lg font-medium text-gray-900 mb-3">Kontaktinformasjon</h4>
                   <div className="space-y-2">
                     <div className="flex items-center space-x-3">
-                      <Mail className="h-4 w-4 text-gray-400" />
+                      {/* <Mail className="h-4 w-4 text-gray-400" /> */}
                       <span className="text-sm text-gray-600">{selectedEmployeeForDetail.email}</span>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <Building className="h-4 w-4 text-gray-400" />
+                      {/* <Building className="h-4 w-4 text-gray-400" /> */}
                       <span className="text-sm text-gray-600">{selectedEmployeeForDetail.department}</span>
                     </div>
                   </div>
@@ -1260,7 +1245,7 @@ export default function DepartmentsPage() {
                       }}
                       className="w-full bg-blue-600 text-white px-3 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center justify-center space-x-2 text-sm"
                     >
-                      <ArrowRight className="h-4 w-4" />
+                      {/* <ArrowRight className="h-4 w-4" /> */}
                       <span>Flytt til annen avdeling</span>
                     </button>
                     
@@ -1282,7 +1267,7 @@ export default function DepartmentsPage() {
                       }}
                       className="w-full bg-yellow-600 text-white px-3 py-2 rounded-lg hover:bg-yellow-700 transition-colors flex items-center justify-center space-x-2 text-sm"
                     >
-                      <Shield className="h-4 w-4" />
+                      {/* <Shield className="h-4 w-4" /> */}
                       <span>Administrer tilganger</span>
                     </button>
                   </div>

@@ -2,64 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import {
-  Users,
-  Calendar,
+import { 
+  Users, 
+  Calendar, 
   Clock,
   FileText,
   AlertTriangle,
   MessageSquare,
   Building,
-  TrendingUp,
   Activity,
   BarChart3,
-  PieChart,
-  LineChart,
-  Eye,
-  Plus,
-  Filter,
-  RefreshCw,
-  Upload,
-  Trash2,
-  Edit,
-  Save,
-  Camera,
-  Key,
-  Unlock,
-  Wifi,
-  Battery,
-  Signal,
-  ChevronRight,
-  ChevronDown,
-  ExternalLink,
-  ThumbsUp,
-  ThumbsDown,
-  Send,
-  Info,
-  XCircle,
-  Search,
-  Menu,
-  X,
-  Crown,
-  Star,
-  Target,
-  Award,
-  Play,
-  Book,
-  Video,
-  MessageCircle,
-  Phone,
-  Mail,
-  Globe,
-  Palette,
-  Download,
-  Database,
-  Shield,
-  Settings,
-  LogOut,
-  User,
-  Home,
-  Bell
+  TrendingDown
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -155,7 +108,7 @@ export default function DashboardPage() {
       case 'shift': return <Clock className="h-5 w-5" />;
       case 'deviation': return <AlertTriangle className="h-5 w-5" />;
       case 'vacation': return <Calendar className="h-5 w-5" />;
-      case 'absence': return <User className="h-5 w-5" />;
+      case 'absence': return <Users className="h-5 w-5" />; // Changed from User to Users
       case 'document': return <FileText className="h-5 w-5" />;
       case 'chat': return <MessageSquare className="h-5 w-5" />;
       default: return <Activity className="h-5 w-5" />;
