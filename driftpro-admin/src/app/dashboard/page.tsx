@@ -11,8 +11,7 @@ import {
   MessageSquare,
   Building,
   Activity,
-  BarChart3,
-  TrendingDown
+  BarChart3
 } from 'lucide-react';
 
 interface DashboardStats {
@@ -36,12 +35,12 @@ interface RecentActivity {
 
 export default function DashboardPage() {
   const { userProfile } = useAuth();
-  const [stats, setStats] = useState<DashboardStats>({
+  const [stats] = useState({
     totalEmployees: 156,
     activeShifts: 23,
     pendingRequests: 8,
+    totalDepartments: 12,
     recentDeviations: 3,
-    departmentCount: 12,
     documentsShared: 45
   });
   const [recentActivities, setRecentActivities] = useState<RecentActivity[]>([]);
@@ -182,7 +181,7 @@ export default function DashboardPage() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-medium text-gray-600">AVDELINGER</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.departmentCount}</p>
+              <p className="text-3xl font-bold text-gray-900">{stats.totalDepartments}</p>
               <p className="text-sm text-purple-600">Aktive avdelinger</p>
             </div>
             <div className="w-12 h-12 bg-purple-100 rounded-lg flex items-center justify-center">

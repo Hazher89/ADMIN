@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   X, 
   Copy, 
@@ -12,15 +12,12 @@ import {
   FileText, 
   ChevronDown, 
   ChevronRight,
-  Phone,
-  Mail,
   Globe,
   User,
   Shield,
   Activity,
   TrendingUp,
-  AlertCircle,
-  CheckCircle
+  AlertCircle
 } from 'lucide-react';
 
 interface CompanyDetailModalProps {
@@ -100,13 +97,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
   const [error, setError] = useState<string | null>(null);
   const [expandedSections, setExpandedSections] = useState<string[]>(['basic', 'roles']);
 
-  useEffect(() => {
-    if (isOpen && orgNumber) {
-      fetchBrregData();
-    }
-  }, [isOpen, orgNumber]);
-
-  const fetchBrregData = async () => {
+  const fetchBrregData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
@@ -125,7 +116,13 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
     } finally {
       setLoading(false);
     }
-  };
+  }, [orgNumber]);
+
+  useEffect(() => {
+    if (isOpen && orgNumber) {
+      fetchBrregData();
+    }
+  }, [isOpen, orgNumber, fetchBrregData]);
 
   const toggleSection = (section: string) => {
     setExpandedSections(prev => 
@@ -149,7 +146,13 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
     });
   };
 
-  const formatAddress = (address: any) => {
+  const formatAddress = (address: {
+    adresse?: string[];
+    postnummer?: string;
+    poststed?: string;
+    kommune?: string;
+    land?: string;
+  }) => {
     if (!address) return '';
     const parts = [
       address.adresse?.join(', '),

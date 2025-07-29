@@ -2,19 +2,14 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { 
-  Building, 
-  Plus, 
-  Edit, 
-  Trash2, 
   Search, 
-  Users,
-  CheckCircle,
-  AlertTriangle,
-  X,
-  Save,
-  Loader2
+  Building, 
+  Mail, 
+  Phone, 
+  MapPin, 
+  Users
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy, setDoc, writeBatch, where } from 'firebase/firestore';
+import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch } from 'firebase/firestore';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
@@ -187,7 +182,7 @@ export default function CompaniesPage() {
     try {
       setLoading(true);
       if (db) {
-        const companiesQuery = query(collection(db, 'companies'), orderBy('createdAt', 'desc'));
+        const companiesQuery = query(collection(db, 'companies'));
         const snapshot = await getDocs(companiesQuery);
         const companiesData = snapshot.docs.map(doc => {
           const data = doc.data();
