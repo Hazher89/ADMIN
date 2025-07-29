@@ -1,36 +1,41 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
-  Users, 
   Plus, 
   Search, 
   Filter, 
   Edit, 
   Trash2, 
-  Eye, 
-  Save, 
-  X, 
-  ChevronDown,
+  MoreHorizontal,
+  User,
   Building,
   Shield,
+  Calendar,
+  Phone,
+  Mail,
+  MapPin,
+  Users,
+  Download,
+  Upload,
+  FileSpreadsheet,
+  ChevronDown,
   UserCheck,
   UserX,
-  Mail,
-  Phone,
-  MapPin,
-  Calendar,
+  Eye,
+  Save,
+  X,
+  Check,
   Clock,
   FileText,
   AlertTriangle,
   MessageSquare,
   BarChart3,
-  Settings,
-  Check,
-  X as XIcon
+  Settings
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, where } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import * as XLSX from 'xlsx';
 
 interface Employee {
   id: string;
@@ -498,6 +503,274 @@ export default function EmployeesPage() {
     setShowPermissionsModal(true);
   };
 
+  // Import/Export functions
+  const exportToExcel = () => {
+    try {
+      // Prepare data for export
+      const exportData = employees.map(emp => ({
+        'Fornavn': emp.firstName,
+        'Etternavn': emp.lastName,
+        'E-post': emp.email,
+        'Telefon': emp.phone,
+        'Avdeling': emp.department,
+        'Stilling': emp.position,
+        'Rolle': emp.role === 'admin' ? 'Administrator' : 
+                emp.role === 'department_leader' ? 'Avdelingsleder' : 'Ansatt',
+        'Status': emp.status === 'active' ? 'Aktiv' : 'Inaktiv',
+        'Startdato': emp.startDate,
+        'Nødkontakt - Navn': emp.emergencyContact.name,
+        'Nødkontakt - Telefon': emp.emergencyContact.phone,
+        'Nødkontakt - Forhold': emp.emergencyContact.relationship,
+        'Adresse - Gate': emp.address.street,
+        'Adresse - By': emp.address.city,
+        'Adresse - Postnummer': emp.address.postalCode,
+        'Tillatelser - Full tilgang': emp.permissions.fullAccess ? 'Ja' : 'Nei',
+        'Tillatelser - Administrer egen avdeling': emp.permissions.manageOwnDepartment ? 'Ja' : 'Nei',
+        'Tillatelser - Godkjenn ferie': emp.permissions.approveVacation ? 'Ja' : 'Nei',
+        'Tillatelser - Godkjenn fravær': emp.permissions.approveAbsence ? 'Ja' : 'Nei',
+        'Tillatelser - Administrer skift': emp.permissions.manageShifts ? 'Ja' : 'Nei',
+        'Tillatelser - Håndter avvik': emp.permissions.handleDeviations ? 'Ja' : 'Nei',
+        'Tillatelser - Send avvik': emp.permissions.submitDeviations ? 'Ja' : 'Nei',
+        'Tillatelser - Send fravær': emp.permissions.submitAbsence ? 'Ja' : 'Nei',
+        'Tillatelser - Send ferie': emp.permissions.submitVacation ? 'Ja' : 'Nei',
+        'Tillatelser - Bruk chat': emp.permissions.useChat ? 'Ja' : 'Nei',
+        'Tillatelser - Les dokumenter': emp.permissions.readDocuments ? 'Ja' : 'Nei',
+        'Tillatelser - Rediger egne forespørsler': emp.permissions.editOwnRequests ? 'Ja' : 'Nei'
+      }));
+
+      // Create workbook and worksheet
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(exportData);
+
+      // Set column widths
+      const colWidths = [
+        { wch: 15 }, // Fornavn
+        { wch: 15 }, // Etternavn
+        { wch: 25 }, // E-post
+        { wch: 15 }, // Telefon
+        { wch: 20 }, // Avdeling
+        { wch: 20 }, // Stilling
+        { wch: 15 }, // Rolle
+        { wch: 10 }, // Status
+        { wch: 12 }, // Startdato
+        { wch: 20 }, // Nødkontakt - Navn
+        { wch: 15 }, // Nødkontakt - Telefon
+        { wch: 20 }, // Nødkontakt - Forhold
+        { wch: 25 }, // Adresse - Gate
+        { wch: 15 }, // Adresse - By
+        { wch: 12 }, // Adresse - Postnummer
+        { wch: 15 }, // Tillatelser - Full tilgang
+        { wch: 25 }, // Tillatelser - Administrer egen avdeling
+        { wch: 20 }, // Tillatelser - Godkjenn ferie
+        { wch: 20 }, // Tillatelser - Godkjenn fravær
+        { wch: 20 }, // Tillatelser - Administrer skift
+        { wch: 20 }, // Tillatelser - Håndter avvik
+        { wch: 15 }, // Tillatelser - Send avvik
+        { wch: 15 }, // Tillatelser - Send fravær
+        { wch: 15 }, // Tillatelser - Send ferie
+        { wch: 15 }, // Tillatelser - Bruk chat
+        { wch: 20 }, // Tillatelser - Les dokumenter
+        { wch: 25 }  // Tillatelser - Rediger egne forespørsler
+      ];
+      ws['!cols'] = colWidths;
+
+      // Add worksheet to workbook
+      XLSX.utils.book_append_sheet(wb, ws, 'Ansatte');
+
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `ansatte_export_${date}.xlsx`;
+
+      // Save file
+      XLSX.writeFile(wb, filename);
+      
+      alert(`✅ ${employees.length} ansatte eksportert til ${filename}`);
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      alert('❌ Feil ved eksport: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
+  const downloadTemplate = () => {
+    try {
+      // Create template with headers only
+      const templateData = [{
+        'Fornavn': '',
+        'Etternavn': '',
+        'E-post': '',
+        'Telefon': '',
+        'Avdeling': '',
+        'Stilling': '',
+        'Rolle': 'Ansatt',
+        'Status': 'Aktiv',
+        'Startdato': '',
+        'Nødkontakt - Navn': '',
+        'Nødkontakt - Telefon': '',
+        'Nødkontakt - Forhold': '',
+        'Adresse - Gate': '',
+        'Adresse - By': '',
+        'Adresse - Postnummer': '',
+        'Tillatelser - Full tilgang': 'Nei',
+        'Tillatelser - Administrer egen avdeling': 'Nei',
+        'Tillatelser - Godkjenn ferie': 'Nei',
+        'Tillatelser - Godkjenn fravær': 'Nei',
+        'Tillatelser - Administrer skift': 'Nei',
+        'Tillatelser - Håndter avvik': 'Nei',
+        'Tillatelser - Send avvik': 'Ja',
+        'Tillatelser - Send fravær': 'Ja',
+        'Tillatelser - Send ferie': 'Ja',
+        'Tillatelser - Bruk chat': 'Ja',
+        'Tillatelser - Les dokumenter': 'Ja',
+        'Tillatelser - Rediger egne forespørsler': 'Ja'
+      }];
+
+      const wb = XLSX.utils.book_new();
+      const ws = XLSX.utils.json_to_sheet(templateData);
+
+      // Set column widths
+      const colWidths = [
+        { wch: 15 }, { wch: 15 }, { wch: 25 }, { wch: 15 }, { wch: 20 }, { wch: 20 },
+        { wch: 15 }, { wch: 10 }, { wch: 12 }, { wch: 20 }, { wch: 15 }, { wch: 20 },
+        { wch: 25 }, { wch: 15 }, { wch: 12 }, { wch: 15 }, { wch: 25 }, { wch: 20 },
+        { wch: 20 }, { wch: 20 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
+        { wch: 15 }, { wch: 20 }, { wch: 25 }
+      ];
+      ws['!cols'] = colWidths;
+
+      XLSX.utils.book_append_sheet(wb, ws, 'Mal');
+      XLSX.writeFile(wb, 'ansatte_import_mal.xlsx');
+      
+      alert('✅ Mal lastet ned: ansatte_import_mal.xlsx');
+    } catch (error) {
+      console.error('Error downloading template:', error);
+      alert('❌ Feil ved nedlasting av mal: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const importFromExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (!file) return;
+
+    try {
+      const data = await file.arrayBuffer();
+      const workbook = XLSX.read(data, { type: 'buffer' });
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+      if (jsonData.length === 0) {
+        alert('❌ Excel-filen er tom');
+        return;
+      }
+
+      const importedEmployees: Omit<Employee, 'id' | 'createdAt'>[] = [];
+      const errors: string[] = [];
+
+      jsonData.forEach((row: any, index: number) => {
+        try {
+          // Map Excel columns to Employee fields
+          const employee: Omit<Employee, 'id' | 'createdAt'> = {
+            firstName: row['Fornavn'] || '',
+            lastName: row['Etternavn'] || '',
+            email: row['E-post'] || '',
+            phone: row['Telefon'] || '',
+            department: row['Avdeling'] || '',
+            position: row['Stilling'] || '',
+            role: row['Rolle'] === 'Administrator' ? 'admin' :
+                  row['Rolle'] === 'Avdelingsleder' ? 'department_leader' : 'employee',
+            status: row['Status'] === 'Aktiv' ? 'active' : 'inactive',
+            startDate: row['Startdato'] || '',
+            emergencyContact: {
+              name: row['Nødkontakt - Navn'] || '',
+              phone: row['Nødkontakt - Telefon'] || '',
+              relationship: row['Nødkontakt - Forhold'] || ''
+            },
+            address: {
+              street: row['Adresse - Gate'] || '',
+              city: row['Adresse - By'] || '',
+              postalCode: row['Adresse - Postnummer'] || ''
+            },
+            permissions: {
+              fullAccess: row['Tillatelser - Full tilgang'] === 'Ja',
+              manageOwnDepartment: row['Tillatelser - Administrer egen avdeling'] === 'Ja',
+              approveVacation: row['Tillatelser - Godkjenn ferie'] === 'Ja',
+              approveAbsence: row['Tillatelser - Godkjenn fravær'] === 'Ja',
+              manageShifts: row['Tillatelser - Administrer skift'] === 'Ja',
+              handleDeviations: row['Tillatelser - Håndter avvik'] === 'Ja',
+              submitDeviations: row['Tillatelser - Send avvik'] === 'Ja',
+              submitAbsence: row['Tillatelser - Send fravær'] === 'Ja',
+              submitVacation: row['Tillatelser - Send ferie'] === 'Ja',
+              useChat: row['Tillatelser - Bruk chat'] === 'Ja',
+              readDocuments: row['Tillatelser - Les dokumenter'] === 'Ja',
+              editOwnRequests: row['Tillatelser - Rediger egne forespørsler'] === 'Ja'
+            }
+          };
+
+          // Validate required fields
+          if (!employee.firstName || !employee.lastName || !employee.email) {
+            errors.push(`Rad ${index + 2}: Mangler fornavn, etternavn eller e-post`);
+            return;
+          }
+
+          importedEmployees.push(employee);
+        } catch (error) {
+          errors.push(`Rad ${index + 2}: Feil ved parsing - ${error instanceof Error ? error.message : 'Ukjent feil'}`);
+        }
+      });
+
+      if (errors.length > 0) {
+        alert(`❌ Feil i import:\n\n${errors.slice(0, 5).join('\n')}${errors.length > 5 ? '\n... og flere feil' : ''}`);
+        return;
+      }
+
+      if (importedEmployees.length === 0) {
+        alert('❌ Ingen gyldige ansatte funnet i filen');
+        return;
+      }
+
+      // Confirm import
+      const confirmed = confirm(`✅ ${importedEmployees.length} ansatte funnet i filen.\n\nVil du importere disse ansatte?`);
+      if (!confirmed) return;
+
+      // Import to Firebase
+      setSaving(true);
+      let successCount = 0;
+      let errorCount = 0;
+
+      for (const employee of importedEmployees) {
+        try {
+          if (db) {
+            const docRef = await addDoc(collection(db, 'employees'), {
+              ...employee,
+              createdAt: new Date().toISOString()
+            });
+            successCount++;
+          }
+        } catch (error) {
+          console.error('Error importing employee:', error);
+          errorCount++;
+        }
+      }
+
+      // Reload employees
+      await loadEmployees();
+
+      // Clear file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+
+      alert(`✅ Import fullført!\n\n✅ ${successCount} ansatte importert\n❌ ${errorCount} feil`);
+
+    } catch (error) {
+      console.error('Error importing from Excel:', error);
+      alert('❌ Feil ved import: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -514,13 +787,47 @@ export default function EmployeesPage() {
           <h1 className="text-2xl font-bold text-gray-900">Ansatte</h1>
           <p className="text-gray-600">Administrer ansatte og deres tilganger</p>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-        >
-          <Plus className="h-5 w-5" />
-          <span>Legg til ansatt</span>
-        </button>
+        <div className="flex space-x-2">
+          {/* Import/Export buttons */}
+          <button
+            onClick={downloadTemplate}
+            disabled={saving}
+            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50"
+          >
+            <FileSpreadsheet className="h-5 w-5" />
+            <span>Last ned mal</span>
+          </button>
+          
+          <label className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2 cursor-pointer disabled:opacity-50">
+            <Upload className="h-5 w-5" />
+            <span>Importer Excel</span>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx,.xls"
+              onChange={importFromExcel}
+              className="hidden"
+              disabled={saving}
+            />
+          </label>
+          
+          <button
+            onClick={exportToExcel}
+            disabled={saving || employees.length === 0}
+            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center space-x-2 disabled:opacity-50"
+          >
+            <Download className="h-5 w-5" />
+            <span>Eksporter Excel</span>
+          </button>
+          
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+          >
+            <Plus className="h-5 w-5" />
+            <span>Legg til ansatt</span>
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -984,7 +1291,7 @@ export default function EmployeesPage() {
                         {value ? (
                           <Check className="h-4 w-4 text-green-600" />
                         ) : (
-                          <XIcon className="h-4 w-4 text-red-600" />
+                          <X className="h-4 w-4 text-red-600" />
                         )}
                         <span className="text-sm text-gray-700">
                           {key === 'fullAccess' && 'Full tilgang'}
