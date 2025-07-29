@@ -107,7 +107,8 @@ export default function DashboardLayout({
       name: 'Bedrifter',
       href: '/dashboard/companies',
       icon: <Building className="h-5 w-5" />,
-      badge: 'Admin'
+      badge: 'Admin',
+      badgeColor: 'bg-red-500'
     },
     {
       name: 'Samarbeidspartnere',
@@ -122,9 +123,7 @@ export default function DashboardLayout({
     {
       name: 'Varsler',
       href: '/dashboard/notifications',
-      icon: <Bell className="h-5 w-5" />,
-      badge: unreadCount > 0 ? unreadCount.toString() : undefined,
-      badgeColor: 'bg-red-500'
+      icon: <Bell className="h-5 w-5" />
     }
   ];
 
@@ -137,15 +136,16 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen bg-gray-100">
+    <div className="flex h-screen bg-gray-50">
       {/* Sidebar */}
       <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
         sidebarOpen ? 'translate-x-0' : '-translate-x-full'
       }`}>
-        <div className="flex items-center justify-between h-16 px-6 bg-gray-800">
+        {/* Header */}
+        <div className="flex items-center justify-between p-6 border-b border-gray-700">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">DP</span>
+            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">D</span>
             </div>
             <span className="text-white font-semibold text-lg">DriftPro</span>
           </div>
@@ -182,8 +182,13 @@ export default function DashboardLayout({
             <input
               type="text"
               placeholder="Søk..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
             />
+            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+            </div>
           </div>
         </div>
 
@@ -230,7 +235,7 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-64">
+      <div className="flex-1 flex flex-col lg:ml-64 bg-white">
         {/* Top Header */}
         <div className="sticky top-0 z-40 bg-white border-b border-gray-200">
           <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
@@ -257,7 +262,7 @@ export default function DashboardLayout({
         </div>
 
         {/* Page Content */}
-        <main className="flex-1 p-6">
+        <main className="flex-1 bg-white">
           {children}
         </main>
       </div>
