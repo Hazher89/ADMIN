@@ -311,7 +311,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                   </button>
                 </div>
                 
-                {expandedSections.includes('basic') && (
+                {expandedSections.includes('basic') && brregData && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-2">
@@ -319,9 +319,9 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                         <span className="text-sm font-medium text-gray-700">Organisasjonsnummer:</span>
                       </div>
                       <div className="flex items-center space-x-2">
-                        <span className="text-sm text-gray-900 font-mono">{brregData.organisasjonsnummer}</span>
+                        <span className="text-sm text-gray-900 font-mono">{brregData.organisasjonsnummer || 'Ikke tilgjengelig'}</span>
                         <button
-                          onClick={() => copyToClipboard(brregData.organisasjonsnummer)}
+                          onClick={() => copyToClipboard(brregData.organisasjonsnummer || '')}
                           className="text-gray-400 hover:text-gray-600"
                         >
                           <Copy className="h-4 w-4" />
@@ -339,7 +339,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                       </div>
                     )}
 
-                    {brregData.organisasjonsform && (
+                    {brregData.organisasjonsform && brregData.organisasjonsform.beskrivelse && (
                       <div className="flex items-center space-x-2">
                         <Shield className="h-4 w-4 text-gray-400" />
                         <span className="text-sm font-medium text-gray-700">Organisasjonsform:</span>
@@ -347,13 +347,13 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                       </div>
                     )}
 
-                    {brregData.naeringskoder && brregData.naeringskoder.length > 0 && (
+                    {brregData.naeringskoder && brregData.naeringskoder.length > 0 && brregData.naeringskoder[0] && (
                       <div className="flex items-start space-x-2">
                         <Activity className="h-4 w-4 text-gray-400 mt-0.5" />
                         <div className="flex-1">
                           <span className="text-sm font-medium text-gray-700">Næringskode:</span>
                           <p className="text-sm text-gray-900">
-                            {brregData.naeringskoder[0].kode} {brregData.naeringskoder[0].beskrivelse}
+                            {brregData.naeringskoder[0].kode || ''} {brregData.naeringskoder[0].beskrivelse || ''}
                           </p>
                         </div>
                       </div>
@@ -394,7 +394,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                   </button>
                 </div>
                 
-                {expandedSections.includes('business') && (
+                {expandedSections.includes('business') && brregData && (
                   <div className="space-y-3">
                     {brregData.aktivitet && (
                       <div className="flex items-start space-x-2">
@@ -432,7 +432,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                           <div className="space-y-1 mt-1">
                             {brregData.naeringskoder.map((kode, index) => (
                               <p key={index} className="text-sm text-gray-900">
-                                {kode.kode} - {kode.beskrivelse}
+                                {kode.kode || ''} - {kode.beskrivelse || ''}
                               </p>
                             ))}
                           </div>
@@ -459,9 +459,9 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                   </button>
                 </div>
                 
-                {expandedSections.includes('roles') && (
+                {expandedSections.includes('roles') && brregData && (
                   <div className="space-y-4">
-                    {brregData.daglig_leder && (
+                    {brregData.daglig_leder && brregData.daglig_leder.navn && (
                       <div className="flex items-start space-x-2">
                         <User className="h-4 w-4 text-gray-400 mt-0.5" />
                         <div className="flex-1">
@@ -478,25 +478,24 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                       <div className="flex items-start space-x-2">
                         <Shield className="h-4 w-4 text-gray-400 mt-0.5" />
                         <div className="flex-1">
-                          <span className="text-sm font-medium text-gray-700">Styrets leder:</span>
-                          {brregData.styre.map((member, index) => (
-                            <div key={index} className="ml-4 mt-1">
-                              <p className="text-sm text-gray-900">
-                                {member.navn}
-                                {member.fodselsdato && ` (f. ${member.fodselsdato})`}
-                              </p>
-                              {member.rolle && (
-                                <p className="text-xs text-gray-600 ml-4">Representant for de ansatte</p>
-                              )}
-                            </div>
-                          ))}
+                          <span className="text-sm font-medium text-gray-700">Styre:</span>
+                          <div className="space-y-1 mt-1">
+                            {brregData.styre.map((member, index) => (
+                              <div key={index} className="ml-4 mt-1">
+                                <p className="text-sm text-gray-900">
+                                  {member.navn || 'Ukjent'}
+                                  {member.fodselsdato && ` (f. ${member.fodselsdato})`}
+                                </p>
+                              </div>
+                            ))}
+                          </div>
                         </div>
                       </div>
                     )}
 
-                    {brregData.regnskapsforer && (
+                    {brregData.regnskapsforer && brregData.regnskapsforer.navn && (
                       <div className="flex items-start space-x-2">
-                        <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
+                        <User className="h-4 w-4 text-gray-400 mt-0.5" />
                         <div className="flex-1">
                           <span className="text-sm font-medium text-gray-700">Regnskapsfører:</span>
                           <p className="text-sm text-gray-900">{brregData.regnskapsforer.navn}</p>
@@ -533,7 +532,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                   </button>
                 </div>
                 
-                {expandedSections.includes('reports') && (
+                {expandedSections.includes('reports') && brregData && (
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <FileText className="h-4 w-4 text-gray-400" />
@@ -576,7 +575,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                   </button>
                 </div>
                 
-                {expandedSections.includes('registrations') && (
+                {expandedSections.includes('registrations') && brregData && (
                   <div className="space-y-3">
                     <div className="flex items-center space-x-2">
                       <Shield className="h-4 w-4 text-gray-400" />
@@ -587,7 +586,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                       <div className="ml-6 space-y-2">
                         {brregData.registreringer.map((reg, index) => (
                           <div key={index} className="flex items-center space-x-2">
-                            <span className="text-sm text-gray-900 font-medium">{reg.register}</span>
+                            <span className="text-sm text-gray-900 font-medium">{reg.register || 'Ukjent register'}</span>
                             {reg.registreringsdato && (
                               <span className="text-sm text-gray-600">
                                 ({formatDate(reg.registreringsdato)})
@@ -628,12 +627,12 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                       </div>
                     )}
 
-                    {brregData.institusjonell_sektorkode && (
+                    {brregData.institusjonell_sektorkode && brregData.institusjonell_sektorkode.beskrivelse && (
                       <div className="flex items-center space-x-2">
                         <Building className="h-4 w-4 text-gray-400" />
                         <span className="text-sm font-medium text-gray-700">Institusjonell sektorkode:</span>
                         <span className="text-sm text-gray-900">
-                          {brregData.institusjonell_sektorkode.kode} - {brregData.institusjonell_sektorkode.beskrivelse}
+                          {brregData.institusjonell_sektorkode.kode || ''} - {brregData.institusjonell_sektorkode.beskrivelse}
                         </span>
                       </div>
                     )}
@@ -642,7 +641,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
               </div>
 
               {/* Affiliated Businesses */}
-              {brregData.underenheter && brregData.underenheter.length > 0 && (
+              {brregData && brregData.underenheter && brregData.underenheter.length > 0 && (
                 <div className="bg-gray-50 rounded-lg p-4">
                   <div className="flex items-center justify-between mb-4">
                     <h3 className="text-lg font-semibold text-gray-900">Tilknyttede virksomheter</h3>
@@ -664,7 +663,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                       {brregData.underenheter.map((unit, index) => (
                         <div key={index} className="ml-4">
                           <p className="text-sm text-gray-900">
-                            {unit.navn}, organisasjonsnummer {unit.organisasjonsnummer}
+                            {unit.navn || 'Ukjent navn'}, organisasjonsnummer {unit.organisasjonsnummer || 'Ukjent'}
                           </p>
                         </div>
                       ))}
