@@ -1,40 +1,24 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Plus,
-  Search,
+import { 
+  Plus, 
+  Search, 
+  MapPin, 
+  Phone, 
+  Mail, 
+  Building, 
+  Users, 
   Trash2,
-  Building,
-  Users,
-  MapPin,
-  Phone,
-  Mail,
+  Eye,
+  FileText,
+  Image as ImageIcon,
+  Car,
   X,
-  Save,
-  ExternalLink
+  Save
 } from 'lucide-react';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import CompanyDetailModal from '@/components/CompanyDetailModal';
 
-interface Address {
-  city?: string;
-  postalCode?: string;
-  street?: string;
-}
-
-interface BrregData {
-  antallAnsatte?: string;
-  dagligLeder?: string;
-  forretningsadresse?: string;
-  naeringskode?: string;
-  organisasjonsform?: string;
-  postadresse?: string;
-  registreringsdato?: string;
-  regnskapsforer?: string;
-}
-
+// Clean interfaces
 interface Partner {
   id: string;
   name: string;
@@ -42,7 +26,6 @@ interface Partner {
   internalName: string;
   phone: string;
   contactPerson: string;
-  address?: Address;
   email: string;
   website: string;
   industry: string;
@@ -50,28 +33,41 @@ interface Partner {
   revenue: number;
   description: string;
   status: 'active' | 'inactive';
+  createdAt: string;
+  updatedAt: string;
+  // Address fields as separate properties
+  street?: string;
+  city?: string;
+  postalCode?: string;
+  // Brreg data as separate properties
+  brregAntallAnsatte?: string;
+  brregDagligLeder?: string;
+  brregForretningsadresse?: string;
+  brregNaeringskode?: string;
+  brregOrganisasjonsform?: string;
+  brregPostadresse?: string;
+  brregRegistreringsdato?: string;
+  brregRegnskapsforer?: string;
+  // Arrays
   vehicles: Vehicle[];
   images: string[];
   documents: Document[];
-  createdAt: string;
-  updatedAt: string;
-  brregData?: BrregData;
 }
 
 interface Vehicle {
   id: string;
   regNumber: string;
-  manufacturer?: string;
-  brand?: string;
-  model?: string;
-  variant?: string;
-  bodyType?: string;
-  vehicleGroup?: string;
-  firstRegistered?: string;
-  lastEUApproved?: string;
-  nextEUInspection?: string;
-  maxPayload?: string;
-  fetchedAt?: string;
+  manufacturer: string;
+  brand: string;
+  model: string;
+  variant: string;
+  bodyType: string;
+  vehicleGroup: string;
+  firstRegistered: string;
+  lastEUApproved: string;
+  nextEUInspection: string;
+  maxPayload: string;
+  fetchedAt: string;
 }
 
 interface Document {
@@ -85,392 +81,379 @@ interface Document {
 
 interface PartnerFormData {
   name: string;
-  orgNumber: string;
+  organizationNumber: string;
   internalName: string;
   phone: string;
-  email: string;
-  address: string;
   contactPerson: string;
+  email: string;
+  website: string;
+  industry: string;
+  employees: number;
+  revenue: number;
+  description: string;
   status: 'active' | 'inactive';
-  vehicles: Vehicle[];
+  street: string;
+  city: string;
+  postalCode: string;
 }
 
 export default function PartnersPage() {
-  const [searchTerm, setSearchTerm] = useState('');
   const [partners, setPartners] = useState<Partner[]>([]);
-  const [filteredPartners, setFilteredPartners] = useState<Partner[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
-  const [selectedPartnerForDetail, setSelectedPartnerForDetail] = useState<Partner | null>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
   const [formData, setFormData] = useState<PartnerFormData>({
     name: '',
+    organizationNumber: '',
     internalName: '',
-    orgNumber: '',
     phone: '',
     contactPerson: '',
     email: '',
-    address: '',
+    website: '',
+    industry: '',
+    employees: 0,
+    revenue: 0,
+    description: '',
     status: 'active',
-    vehicles: []
+    street: '',
+    city: '',
+    postalCode: ''
   });
 
-  // Vehicle states
-  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [newRegNumber, setNewRegNumber] = useState('');
-  const [isLoadingVehicle, setIsLoadingVehicle] = useState(false);
-  const [vehicleError, setVehicleError] = useState<string | null>(null);
-  const [showVehicleModal, setShowVehicleModal] = useState(false);
-  const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
-
-  const loadPartners = async () => {
+  // Load partners from Firebase
+  const loadPartners = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
-      if (db) {
-        const partnersSnapshot = await getDocs(collection(db, 'partners'));
-        const partnersData = partnersSnapshot.docs.map(doc => {
-          const data = doc.data();
-          
-          // Handle createdAt
-          let createdAt: string;
-          if (data.createdAt?.toDate) {
-            createdAt = data.createdAt.toDate().toISOString();
-          } else if (data.createdAt instanceof Date) {
-            createdAt = data.createdAt.toISOString();
-          } else if (typeof data.createdAt === 'string') {
-            createdAt = data.createdAt;
-          } else {
-            createdAt = new Date().toISOString();
-          }
-          
-          // Handle updatedAt
-          let updatedAt: string;
-          if (data.updatedAt?.toDate) {
-            updatedAt = data.updatedAt.toDate().toISOString();
-          } else if (data.updatedAt instanceof Date) {
-            updatedAt = data.updatedAt.toISOString();
-          } else if (typeof data.updatedAt === 'string') {
-            updatedAt = data.updatedAt;
-          } else {
-            updatedAt = new Date().toISOString();
-          }
-          
-          return {
-            id: doc.id,
-            name: data.name || '',
-            organizationNumber: data.organizationNumber || '',
-            internalName: data.internalName || '',
-            phone: data.phone || '',
-            contactPerson: data.contactPerson || '',
-            address: typeof data.address === 'object' && data.address !== null ? {
-              city: data.address.city || '',
-              postalCode: data.address.postalCode || '',
-              street: data.address.street || ''
-            } : undefined,
-            email: data.email || '',
-            website: data.website || '',
-            industry: data.industry || '',
-            employees: data.employees || 0,
-            revenue: data.revenue || 0,
-            description: data.description || '',
-            status: data.status || 'active',
-            vehicles: Array.isArray(data.vehicles) ? data.vehicles.map((vehicle: Vehicle) => ({
-              id: vehicle.id || '',
-              regNumber: vehicle.regNumber || '',
-              manufacturer: vehicle.manufacturer || '',
-              brand: vehicle.brand || '',
-              model: vehicle.model || '',
-              variant: vehicle.variant || '',
-              bodyType: vehicle.bodyType || '',
-              vehicleGroup: vehicle.vehicleGroup || '',
-              firstRegistered: vehicle.firstRegistered || '',
-              lastEUApproved: vehicle.lastEUApproved || '',
-              nextEUInspection: vehicle.nextEUInspection || '',
-              maxPayload: vehicle.maxPayload || '',
-              fetchedAt: vehicle.fetchedAt || ''
-            })) : [],
-            images: Array.isArray(data.images) ? data.images.filter((img: string) => typeof img === 'string') : [],
-            documents: Array.isArray(data.documents) ? data.documents.map((doc: Document) => ({
-              id: doc.id || '',
-              name: doc.name || '',
-              type: doc.type || 'document',
-              url: doc.url || '',
-              uploadedAt: doc.uploadedAt || new Date().toISOString(),
-              description: doc.description || ''
-            })) : [],
-            createdAt: createdAt,
-            updatedAt: updatedAt,
-            brregData: typeof data.brregData === 'object' && data.brregData !== null ? {
-              antallAnsatte: data.brregData.antallAnsatte || '',
-              dagligLeder: data.brregData.dagligLeder || '',
-              forretningsadresse: data.brregData.forretningsadresse || '',
-              naeringskode: data.brregData.naeringskode || '',
-              organisasjonsform: data.brregData.organisasjonsform || '',
-              postadresse: data.brregData.postadresse || '',
-              registreringsdato: data.brregData.registreringsdato || '',
-              regnskapsforer: data.brregData.regnskapsforer || ''
-            } : undefined
-          } as Partner;
-        });
-        setPartners(partnersData);
+      const { collection, getDocs } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      if (!db) {
+        console.error('Firebase not initialized');
+        return;
       }
+
+      const partnersSnapshot = await getDocs(collection(db, 'partners'));
+      const partnersData: Partner[] = [];
+
+      partnersSnapshot.forEach((doc) => {
+        const data = doc.data();
+        
+        // Handle timestamps
+        let createdAt = new Date().toISOString();
+        if (data.createdAt?.toDate) {
+          createdAt = data.createdAt.toDate().toISOString();
+        } else if (data.createdAt instanceof Date) {
+          createdAt = data.createdAt.toISOString();
+        } else if (typeof data.createdAt === 'string') {
+          createdAt = data.createdAt;
+        }
+
+        let updatedAt = new Date().toISOString();
+        if (data.updatedAt?.toDate) {
+          updatedAt = data.updatedAt.toDate().toISOString();
+        } else if (data.updatedAt instanceof Date) {
+          updatedAt = data.updatedAt.toISOString();
+        } else if (typeof data.updatedAt === 'string') {
+          updatedAt = data.updatedAt;
+        }
+
+        // Handle address - extract from object or use separate fields
+        let street = '';
+        let city = '';
+        let postalCode = '';
+
+        if (data.address && typeof data.address === 'object') {
+          street = data.address.street || '';
+          city = data.address.city || '';
+          postalCode = data.address.postalCode || '';
+        } else {
+          street = data.street || '';
+          city = data.city || '';
+          postalCode = data.postalCode || '';
+        }
+
+        // Handle brreg data - extract from object or use separate fields
+        let brregAntallAnsatte = '';
+        let brregDagligLeder = '';
+        let brregForretningsadresse = '';
+        let brregNaeringskode = '';
+        let brregOrganisasjonsform = '';
+        let brregPostadresse = '';
+        let brregRegistreringsdato = '';
+        let brregRegnskapsforer = '';
+
+        if (data.brregData && typeof data.brregData === 'object') {
+          brregAntallAnsatte = data.brregData.antallAnsatte || '';
+          brregDagligLeder = data.brregData.dagligLeder || '';
+          brregForretningsadresse = data.brregData.forretningsadresse || '';
+          brregNaeringskode = data.brregData.naeringskode || '';
+          brregOrganisasjonsform = data.brregData.organisasjonsform || '';
+          brregPostadresse = data.brregData.postadresse || '';
+          brregRegistreringsdato = data.brregData.registreringsdato || '';
+          brregRegnskapsforer = data.brregData.regnskapsforer || '';
+        }
+
+        const partner: Partner = {
+          id: doc.id,
+          name: data.name || '',
+          organizationNumber: data.organizationNumber || '',
+          internalName: data.internalName || '',
+          phone: data.phone || '',
+          contactPerson: data.contactPerson || '',
+          email: data.email || '',
+          website: data.website || '',
+          industry: data.industry || '',
+          employees: data.employees || 0,
+          revenue: data.revenue || 0,
+          description: data.description || '',
+          status: data.status || 'active',
+          createdAt,
+          updatedAt,
+          street,
+          city,
+          postalCode,
+          brregAntallAnsatte,
+          brregDagligLeder,
+          brregForretningsadresse,
+          brregNaeringskode,
+          brregOrganisasjonsform,
+          brregPostadresse,
+          brregRegistreringsdato,
+          brregRegnskapsforer,
+          vehicles: Array.isArray(data.vehicles) ? data.vehicles.map((v: Vehicle) => ({
+            id: v.id || '',
+            regNumber: v.regNumber || '',
+            manufacturer: v.manufacturer || '',
+            brand: v.brand || '',
+            model: v.model || '',
+            variant: v.variant || '',
+            bodyType: v.bodyType || '',
+            vehicleGroup: v.vehicleGroup || '',
+            firstRegistered: v.firstRegistered || '',
+            lastEUApproved: v.lastEUApproved || '',
+            nextEUInspection: v.nextEUInspection || '',
+            maxPayload: v.maxPayload || '',
+            fetchedAt: v.fetchedAt || ''
+          })) : [],
+          images: Array.isArray(data.images) ? data.images.filter((img: string) => typeof img === 'string') : [],
+          documents: Array.isArray(data.documents) ? data.documents.map((doc: Document) => ({
+            id: doc.id || '',
+            name: doc.name || '',
+            type: doc.type || 'document',
+            url: doc.url || '',
+            uploadedAt: doc.uploadedAt || new Date().toISOString(),
+            description: doc.description || ''
+          })) : []
+        };
+
+        partnersData.push(partner);
+      });
+
+      setPartners(partnersData);
     } catch (error) {
       console.error('Error loading partners:', error);
     } finally {
       setLoading(false);
     }
-  };
-
-  const filterPartners = useCallback(() => {
-    const filtered = partners.filter(partner =>
-      (partner.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (partner.internalName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-      (partner.organizationNumber || '').includes(searchTerm) ||
-      (partner.contactPerson?.toLowerCase() || '').includes(searchTerm.toLowerCase())
-    );
-    setFilteredPartners(filtered);
-  }, [partners, searchTerm]);
-
-  useEffect(() => {
-    loadPartners();
   }, []);
 
   useEffect(() => {
-    filterPartners();
-  }, [filterPartners]);
+    loadPartners();
+  }, [loadPartners]);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
+  // Filter partners
+  const filteredPartners = partners.filter(partner => {
+    const matchesSearch = partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         partner.organizationNumber.includes(searchTerm) ||
+                         partner.internalName.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === 'all' || partner.status === statusFilter;
+    return matchesSearch && matchesStatus;
+  });
+
+  // Fetch data from brreg.no
+  const fetchBrregData = async (orgNumber: string) => {
     try {
-      setSaving(true);
-      if (db) {
-        await addDoc(collection(db, 'partners'), {
-          ...formData,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-        
-        setShowAddModal(false);
-        resetForm();
-        loadPartners();
+      const response = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${orgNumber}`);
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          antallAnsatte: data.antall_ansatte || '',
+          dagligLeder: data.daglig_leder?.navn || '',
+          forretningsadresse: data.forretningsadresse?.adresse?.join(', ') || '',
+          naeringskode: data.naeringskoder?.[0]?.kode || '',
+          organisasjonsform: data.organisasjonsform?.beskrivelse || '',
+          postadresse: data.postadresse?.adresse?.join(', ') || '',
+          registreringsdato: data.stiftelsesdato || '',
+          regnskapsforer: data.regnskapsforer?.navn || ''
+        };
       }
     } catch (error) {
-      console.error('Error adding partner:', error);
-    } finally {
-      setSaving(false);
+      console.error('Error fetching brreg data:', error);
     }
+    return null;
   };
 
-  const handleUpdate = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!selectedPartner) return;
-    
-    try {
-      setSaving(true);
-      if (db) {
-        await updateDoc(doc(db, 'partners', selectedPartner.id), {
-          ...formData,
-          vehicles: vehicles,
-          updatedAt: new Date().toISOString()
-        });
-        setShowEditModal(false);
-        resetForm();
-        setVehicles([]);
-        loadPartners();
-      }
-    } catch (error) {
-      console.error('Error updating partner:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleDelete = async () => {
-    if (!selectedPartner) return;
-    
-    try {
-      setSaving(true);
-      if (db) {
-        await deleteDoc(doc(db, 'partners', selectedPartner.id));
-        loadPartners();
-      }
-    } catch (error) {
-      console.error('Error deleting partner:', error);
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const resetForm = () => {
-    setFormData({
-      name: '',
-      orgNumber: '',
-      internalName: '',
-      phone: '',
-      email: '',
-      address: '',
-      contactPerson: '',
-      status: 'active',
-      vehicles: []
-    });
-    setVehicles([]);
-    setNewRegNumber('');
-    setVehicleError(null);
-  };
-
-  const openEditModal = (partner: Partner) => {
-    setSelectedPartner(partner);
-    setFormData({
-      name: partner.name,
-      orgNumber: partner.organizationNumber,
-      internalName: partner.internalName,
-      phone: partner.phone,
-      email: partner.email,
-      address: partner.address?.street || '',
-      contactPerson: partner.contactPerson,
-      status: partner.status,
-      vehicles: partner.vehicles || []
-    });
-    setVehicles(partner.vehicles || []);
-    setShowEditModal(true);
-  };
-
-  const openPartnerDetail = (partner: Partner) => {
-    setSelectedPartnerForDetail(partner);
-    setShowDetailModal(true);
-  };
-
-  const openDeleteModal = (partner: Partner) => {
-    setSelectedPartner(partner);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'bg-green-100 text-green-800';
-      case 'inactive': return 'bg-red-100 text-red-800';
-      default: return 'bg-gray-100 text-gray-800';
-    }
-  };
-
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'active': return 'Aktiv';
-      case 'inactive': return 'Inaktiv';
-      default: return 'Ukjent';
-    }
-  };
-
+  // Fetch vehicle data from regnr.info
   const fetchVehicleData = async (regNumber: string) => {
-    setIsLoadingVehicle(true);
-    setVehicleError(null);
-    
     try {
-      console.log('Fetching vehicle data for reg number:', regNumber);
       const response = await fetch(`https://regnr.info/api/v1/vehicle/${regNumber}`);
-      
-      if (!response.ok) {
-        throw new Error('Kunne ikke hente data fra regnr.info');
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          manufacturer: data.manufacturer || '',
+          brand: data.brand || '',
+          model: data.model || '',
+          variant: data.variant || '',
+          bodyType: data.bodyType || '',
+          vehicleGroup: data.vehicleGroup || '',
+          firstRegistered: data.firstRegistered || '',
+          lastEUApproved: data.lastEUApproved || '',
+          nextEUInspection: data.nextEUInspection || '',
+          maxPayload: data.maxPayload || '',
+          fetchedAt: new Date().toISOString()
+        };
       }
-
-      const data = await response.json();
-      console.log('Vehicle data received:', data);
-      
-      const vehicle: Vehicle = {
-        id: Date.now().toString(),
-        regNumber: regNumber.toUpperCase(),
-        manufacturer: data.manufacturer || '',
-        brand: data.brand || '',
-        model: data.model || '',
-        variant: data.variant || '',
-        bodyType: data.bodyType || '',
-        vehicleGroup: data.vehicleGroup || '',
-        firstRegistered: data.firstRegistered || '',
-        lastEUApproved: data.lastEUApproved || '',
-        nextEUInspection: data.nextEUInspection || '',
-        maxPayload: data.maxPayload || '',
-        fetchedAt: new Date().toISOString()
-      };
-      
-      return vehicle;
     } catch (error) {
       console.error('Error fetching vehicle data:', error);
-      throw new Error(error instanceof Error ? error.message : 'Ukjent feil');
-    } finally {
-      setIsLoadingVehicle(false);
     }
+    return null;
   };
 
-  const addVehicle = async () => {
-    if (!newRegNumber.trim()) {
-      setVehicleError('Vennligst fyll inn registreringsnummer');
-      return;
-    }
-
+  // Handle form submission
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    
     try {
-      const vehicle = await fetchVehicleData(newRegNumber.trim());
-      setVehicles(prev => [...prev, vehicle]);
+      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
       
-      setNewRegNumber('');
-      setVehicleError(null);
+      if (!db) {
+        console.error('Firebase not initialized');
+        return;
+      }
+
+      // Fetch brreg data if organization number is provided
+      let brregData = null;
+      if (formData.organizationNumber) {
+        brregData = await fetchBrregData(formData.organizationNumber);
+      }
+
+      const partnerData = {
+        ...formData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp(),
+        vehicles: [],
+        images: [],
+        documents: [],
+        ...(brregData && {
+          brregAntallAnsatte: brregData.antallAnsatte,
+          brregDagligLeder: brregData.dagligLeder,
+          brregForretningsadresse: brregData.forretningsadresse,
+          brregNaeringskode: brregData.naeringskode,
+          brregOrganisasjonsform: brregData.organisasjonsform,
+          brregPostadresse: brregData.postadresse,
+          brregRegistreringsdato: brregData.registreringsdato,
+          brregRegnskapsforer: brregData.regnskapsforer
+        })
+      };
+
+      await addDoc(collection(db, 'partners'), partnerData);
+      
+      setShowAddModal(false);
+      setFormData({
+        name: '',
+        organizationNumber: '',
+        internalName: '',
+        phone: '',
+        contactPerson: '',
+        email: '',
+        website: '',
+        industry: '',
+        employees: 0,
+        revenue: 0,
+        description: '',
+        status: 'active',
+        street: '',
+        city: '',
+        postalCode: ''
+      });
+      
+      loadPartners();
     } catch (error) {
-      setVehicleError(error instanceof Error ? error.message : 'Kunne ikke hente kjøretøydata');
+      console.error('Error adding partner:', error);
     }
   };
 
-  const removeVehicle = (vehicleId: string) => {
-    setVehicles(prev => prev.filter(v => v.id !== vehicleId));
-  };
+  // Delete partner
+  const deletePartner = async (partnerId: string) => {
+    if (!confirm('Er du sikker på at du vil slette denne samarbeidspartneren?')) return;
+    
+    try {
+      const { deleteDoc, doc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      if (!db) return;
 
-  const openVehicleModal = (vehicle: Vehicle) => {
-    setSelectedVehicle(vehicle);
-    setShowVehicleModal(true);
+      await deleteDoc(doc(db, 'partners', partnerId));
+      loadPartners();
+    } catch (error) {
+      console.error('Error deleting partner:', error);
+    }
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
       </div>
     );
   }
 
   return (
-    <div className="space-y-6">
+    <div className="p-6">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Samarbeidspartnere</h1>
-          <p className="text-gray-600">Administrer samarbeidspartnere og leverandører</p>
+          <p className="text-gray-600">Administrer samarbeidspartnere og deres informasjon</p>
         </div>
-        
-        <div className="flex space-x-2">
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center space-x-2"
-          >
-            <Plus className="h-5 w-5" />
-            <span>Legg til samarbeidspartner</span>
-          </button>
-        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
+        >
+          <Plus className="h-5 w-5" />
+          <span>Legg til partner</span>
+        </button>
       </div>
 
-      {/* Search and Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col sm:flex-row gap-4">
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg shadow mb-6">
+        <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
             <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
               <input
                 type="text"
-                placeholder="Søk etter navn, intern navn, org.nr eller kontaktperson..."
+                placeholder="Søk etter navn, organisasjonsnummer eller intern navn..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
               />
             </div>
+          </div>
+          <div className="flex gap-2">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
+              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            >
+              <option value="all">Alle statuser</option>
+              <option value="active">Aktive</option>
+              <option value="inactive">Inaktive</option>
+            </select>
           </div>
         </div>
       </div>
@@ -478,113 +461,89 @@ export default function PartnersPage() {
       {/* Partners Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {filteredPartners.map((partner) => (
-          <div
-            key={partner.id}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow"
-          >
-            <div className="p-6">
-              {/* Header */}
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-gray-900 mb-1">
-                    <button
-                      onClick={() => openPartnerDetail(partner)}
-                      className="text-left hover:text-blue-600 transition-colors"
-                    >
-                      {partner.name || 'Ukjent navn'}
-                    </button>
-                  </h3>
-                  {partner.internalName && (
-                    <p className="text-sm text-gray-600 mb-2">({partner.internalName})</p>
-                  )}
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(partner.status || 'active')}`}>
-                    {getStatusText(partner.status || 'active')}
+          <div key={partner.id} className="bg-white rounded-lg shadow-md p-6 hover:shadow-lg transition-shadow">
+            <div className="flex justify-between items-start mb-4">
+              <div>
+                <h3 className="text-lg font-semibold text-gray-900">{partner.name}</h3>
+                <p className="text-sm text-gray-600">{partner.internalName}</p>
+              </div>
+              <span className={`px-2 py-1 text-xs rounded-full ${
+                partner.status === 'active' 
+                  ? 'bg-green-100 text-green-800' 
+                  : 'bg-red-100 text-red-800'
+              }`}>
+                {partner.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+              </span>
+            </div>
+
+            <div className="space-y-2 mb-4">
+              <div className="flex items-center space-x-2">
+                <Building className="h-4 w-4 text-gray-400" />
+                <span className="text-sm text-gray-600">Org.nr:</span>
+                <span className="text-sm font-medium text-gray-900">{partner.organizationNumber}</span>
+              </div>
+              
+              {partner.street && (
+                <div className="flex items-center space-x-2">
+                  <MapPin className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Adresse:</span>
+                  <span className="text-sm font-medium text-gray-900">
+                    {partner.street}, {partner.city} {partner.postalCode}
                   </span>
                 </div>
-              </div>
+              )}
 
-              {/* Company Info */}
-              <div className="space-y-3 mb-4">
+              {partner.phone && (
                 <div className="flex items-center space-x-2">
-                  <Building className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">Org.nr:</span>
-                  <span className="text-sm font-medium text-gray-900">{partner.organizationNumber || 'Ikke tilgjengelig'}</span>
+                  <Phone className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Telefon:</span>
+                  <span className="text-sm font-medium text-gray-900">{partner.phone}</span>
                 </div>
+              )}
 
-                {partner.contactPerson && (
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Kontakt:</span>
-                    <span className="text-sm font-medium text-gray-900">{partner.contactPerson}</span>
-                  </div>
-                )}
+              {partner.email && (
+                <div className="flex items-center space-x-2">
+                  <Mail className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">E-post:</span>
+                  <span className="text-sm font-medium text-gray-900">{partner.email}</span>
+                </div>
+              )}
 
-                {partner.phone && (
-                  <div className="flex items-center space-x-2">
-                    <Phone className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Tlf:</span>
-                    <span className="text-sm font-medium text-gray-900">{partner.phone}</span>
-                  </div>
-                )}
+              {partner.brregAntallAnsatte && (
+                <div className="flex items-center space-x-2">
+                  <Users className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Ansatte:</span>
+                  <span className="text-sm font-medium text-gray-900">{partner.brregAntallAnsatte}</span>
+                </div>
+              )}
 
-                {partner.email && (
-                  <div className="flex items-center space-x-2">
-                    <Mail className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">E-post:</span>
-                    <span className="text-sm font-medium text-gray-900">{partner.email}</span>
-                  </div>
-                )}
+              {partner.vehicles.length > 0 && (
+                <div className="flex items-center space-x-2">
+                  <Car className="h-4 w-4 text-gray-400" />
+                  <span className="text-sm text-gray-600">Kjøretøy:</span>
+                  <span className="text-sm font-medium text-gray-900">{partner.vehicles.length}</span>
+                </div>
+              )}
+            </div>
 
-                {partner.address && (
-                  <div className="flex items-start space-x-2">
-                    <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
-                    <span className="text-sm text-gray-600">Adresse:</span>
-                    <span className="text-sm font-medium text-gray-900">{partner.address.street || 'Ikke tilgjengelig'}</span>
-                    <span className="text-sm font-medium text-gray-900">{partner.address.city || 'Ikke tilgjengelig'}</span>
-                    <span className="text-sm font-medium text-gray-900">{partner.address.postalCode || 'Ikke tilgjengelig'}</span>
-                  </div>
-                )}
-
-                {partner.brregData && (
-                  <div className="flex items-center space-x-2">
-                    <ExternalLink className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">Brreg data:</span>
-                    <span className="text-sm font-medium text-gray-900">
-                      {partner.brregData.antallAnsatte || 'Ikke tilgjengelig'} ansatte
-                    </span>
-                  </div>
-                )}
-
-                {partner.vehicles && partner.vehicles.length > 0 && (
-                  <div className="flex items-center space-x-2">
-                    <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                    <span className="text-sm text-gray-600">Kjøretøy:</span>
-                    <span className="text-sm font-medium text-gray-900">{partner.vehicles.length} registrert</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Actions */}
-              <div className="flex space-x-2 pt-4 border-t border-gray-200">
+            <div className="flex justify-between items-center">
+              <button
+                onClick={() => {
+                  setSelectedPartner(partner);
+                  setShowDetailModal(true);
+                }}
+                className="text-blue-600 hover:text-blue-800 flex items-center space-x-1"
+              >
+                <Eye className="h-4 w-4" />
+                <span>Se detaljer</span>
+              </button>
+              
+              <div className="flex space-x-2">
                 <button
-                  onClick={() => openPartnerDetail(partner)}
-                  className="flex-1 bg-blue-50 text-blue-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-blue-100 transition-colors"
+                  onClick={() => deletePartner(partner.id)}
+                  className="text-red-600 hover:text-red-800"
                 >
-                  Se detaljer
-                </button>
-                <button
-                  onClick={() => openEditModal(partner)}
-                  className="flex-1 bg-gray-50 text-gray-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-gray-100 transition-colors"
-                >
-                  Rediger
-                </button>
-                <button
-                  onClick={() => openDeleteModal(partner)}
-                  className="flex-1 bg-red-50 text-red-700 px-3 py-2 rounded-md text-sm font-medium hover:bg-red-100 transition-colors"
-                >
-                  Slett
+                  <Trash2 className="h-4 w-4" />
                 </button>
               </div>
             </div>
@@ -592,90 +551,152 @@ export default function PartnersPage() {
         ))}
       </div>
 
-      {filteredPartners.length === 0 && !loading && (
-        <div className="text-center py-12">
-          <Building className="mx-auto h-12 w-12 text-gray-400" />
-          <h3 className="mt-2 text-sm font-medium text-gray-900">Ingen samarbeidspartnere</h3>
-          <p className="mt-1 text-sm text-gray-500">
-            {searchTerm ? 'Ingen samarbeidspartnere matcher søket ditt.' : 'Kom i gang ved å legge til en samarbeidspartner.'}
-          </p>
-          {!searchTerm && (
-            <div className="mt-6">
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center space-x-2 mx-auto"
-              >
-                <Plus className="h-5 w-5" />
-                <span>Legg til samarbeidspartner</span>
-              </button>
-            </div>
-          )}
-        </div>
-      )}
-
       {/* Add Partner Modal */}
       {showAddModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Legg til samarbeidspartner</h2>
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Legg til samarbeidspartner</h2>
               <button
                 onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600"
+                className="text-gray-500 hover:text-gray-700"
               >
                 <X className="h-6 w-6" />
               </button>
             </div>
 
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Bedriftsnavn *
                   </label>
                   <input
                     type="text"
+                    required
                     value={formData.name}
                     onChange={(e) => setFormData({...formData, name: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Organisasjonsnummer *
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Organisasjonsnummer
                   </label>
                   <input
                     type="text"
-                    value={formData.orgNumber}
-                    onChange={(e) => setFormData({...formData, orgNumber: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
+                    value={formData.organizationNumber}
+                    onChange={(e) => setFormData({...formData, organizationNumber: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    placeholder="123456789"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Intern navn *
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Intern navn
                   </label>
                   <input
                     type="text"
                     value={formData.internalName}
                     onChange={(e) => setFormData({...formData, internalName: e.target.value})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    required
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Telefon
+                  </label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Kontaktperson
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    E-post
+                  </label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Nettsted
+                  </label>
+                  <input
+                    type="url"
+                    value={formData.website}
+                    onChange={(e) => setFormData({...formData, website: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Bransje
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.industry}
+                    onChange={(e) => setFormData({...formData, industry: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Antall ansatte
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.employees}
+                    onChange={(e) => setFormData({...formData, employees: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Omsetning (NOK)
+                  </label>
+                  <input
+                    type="number"
+                    value={formData.revenue}
+                    onChange={(e) => setFormData({...formData, revenue: parseInt(e.target.value) || 0})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
                     Status
                   </label>
                   <select
                     value={formData.status}
                     onChange={(e) => setFormData({...formData, status: e.target.value as 'active' | 'inactive'})}
-                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   >
                     <option value="active">Aktiv</option>
                     <option value="inactive">Inaktiv</option>
@@ -683,139 +704,70 @@ export default function PartnersPage() {
                 </div>
               </div>
 
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Adresse</h3>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Adresse
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.address}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        address: e.target.value
-                      })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn adresse"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      By
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.address}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        address: e.target.value
-                      })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Postnummer
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.address}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        address: e.target.value
-                      })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Gateadresse
+                </label>
+                <input
+                  type="text"
+                  value={formData.street}
+                  onChange={(e) => setFormData({...formData, street: e.target.value})}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Poststed
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({...formData, city: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Postnummer
+                  </label>
+                  <input
+                    type="text"
+                    value={formData.postalCode}
+                    onChange={(e) => setFormData({...formData, postalCode: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  />
                 </div>
               </div>
 
-              <div className="border-t pt-6">
-                <h3 className="text-lg font-medium text-gray-900 mb-4">Kontaktperson</h3>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Navn
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.contactPerson}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        contactPerson: e.target.value
-                      })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn kontaktperson"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Rolle
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.contactPerson}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        contactPerson: e.target.value
-                      })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Telefon
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        phone: e.target.value
-                      })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn telefonnummer"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      E-post
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({
-                        ...formData, 
-                        email: e.target.value
-                      })}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn e-postadresse"
-                    />
-                  </div>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Beskrivelse
+                </label>
+                <textarea
+                  value={formData.description}
+                  onChange={(e) => setFormData({...formData, description: e.target.value})}
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                />
               </div>
 
-              <div className="flex justify-end space-x-3 pt-6">
+              <div className="flex justify-end space-x-3">
                 <button
                   type="button"
                   onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
                 >
                   Avbryt
                 </button>
                 <button
                   type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
                 >
-                  {saving ? (
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                  ) : (
-                    <Save className="h-4 w-4" />
-                  )}
-                  <span>{saving ? 'Lagrer...' : 'Lagre'}</span>
+                  <Save className="h-4 w-4" />
+                  <span>Lagre partner</span>
                 </button>
               </div>
             </form>
@@ -823,442 +775,175 @@ export default function PartnersPage() {
         </div>
       )}
 
-      {/* Edit Partner Modal */}
-      {showEditModal && selectedPartner && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">Rediger samarbeidspartner</h2>
-                <button
-                  onClick={() => setShowEditModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
-              </div>
-
-              <form onSubmit={handleUpdate} className="space-y-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bedriftsnavn *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.name}
-                      onChange={(e) => setFormData({...formData, name: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn bedriftsnavn"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Organisasjonsnummer *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={formData.orgNumber}
-                      onChange={(e) => setFormData({...formData, orgNumber: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn organisasjonsnummer"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Intern navn
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.internalName}
-                      onChange={(e) => setFormData({...formData, internalName: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn intern navn"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Status
-                    </label>
-                    <select
-                      value={formData.status}
-                      onChange={(e) => setFormData({...formData, status: e.target.value as 'active' | 'inactive'})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                    >
-                      <option value="active">Aktiv</option>
-                      <option value="inactive">Inaktiv</option>
-                    </select>
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Adresse
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.address}
-                      onChange={(e) => setFormData({...formData, address: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn adresse"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Kontaktperson
-                    </label>
-                    <input
-                      type="text"
-                      value={formData.contactPerson}
-                      onChange={(e) => setFormData({...formData, contactPerson: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn kontaktperson"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Telefon
-                    </label>
-                    <input
-                      type="tel"
-                      value={formData.phone}
-                      onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn telefonnummer"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-2">
-                      E-post
-                    </label>
-                    <input
-                      type="email"
-                      value={formData.email}
-                      onChange={(e) => setFormData({...formData, email: e.target.value})}
-                      className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                      placeholder="Fyll inn e-postadresse"
-                    />
-                  </div>
-                </div>
-
-                {/* Vehicle Section */}
-                <div className="border-t pt-6">
-                  <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-medium text-gray-900">Registrerte kjøretøy</h3>
-                    <span className="text-sm text-gray-500">{vehicles.length} kjøretøy</span>
-                  </div>
-
-                  {/* Add Vehicle */}
-                  <div className="bg-gray-50 rounded-lg p-4 mb-4">
-                    <div className="flex items-center space-x-3">
-                      <div className="flex-1">
-                        <input
-                          type="text"
-                          value={newRegNumber}
-                          onChange={(e) => setNewRegNumber(e.target.value.toUpperCase())}
-                          placeholder="Skriv inn registreringsnummer (f.eks. AB12345)"
-                          className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                          disabled={isLoadingVehicle}
-                        />
-                      </div>
-                      <button
-                        type="button"
-                        onClick={addVehicle}
-                        disabled={isLoadingVehicle || !newRegNumber.trim()}
-                        className="px-4 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
-                      >
-                        {isLoadingVehicle ? (
-                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                        ) : (
-                          <Plus className="h-4 w-4" />
-                        )}
-                        <span>{isLoadingVehicle ? 'Henter...' : 'Legg til'}</span>
-                      </button>
-                    </div>
-                    {vehicleError && (
-                      <p className="text-red-600 text-sm mt-2">{vehicleError}</p>
-                    )}
-                  </div>
-
-                  {/* Vehicle List */}
-                  {vehicles.length > 0 && (
-                    <div className="space-y-3">
-                      {vehicles.map((vehicle) => (
-                        <div key={vehicle.id} className="bg-white border border-gray-200 rounded-lg p-4">
-                          <div className="flex items-start justify-between">
-                            <div className="flex-1">
-                              <div className="flex items-center space-x-3 mb-2">
-                                <h4 className="text-lg font-semibold text-gray-900">{vehicle.regNumber}</h4>
-                                <button
-                                  type="button"
-                                  onClick={() => openVehicleModal(vehicle)}
-                                  className="text-blue-600 hover:text-blue-800 text-sm underline"
-                                >
-                                  Se detaljer
-                                </button>
-                              </div>
-                              
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
-                                {vehicle.manufacturer && (
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-gray-600">Produsent:</span>
-                                    <span className="font-medium">{vehicle.manufacturer}</span>
-                                  </div>
-                                )}
-                                {vehicle.brand && (
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-gray-600">Merke:</span>
-                                    <span className="font-medium">{vehicle.brand}</span>
-                                  </div>
-                                )}
-                                {vehicle.model && (
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-gray-600">Modell:</span>
-                                    <span className="font-medium">{vehicle.model}</span>
-                                  </div>
-                                )}
-                                {vehicle.bodyType && (
-                                  <div className="flex items-center space-x-2">
-                                    <span className="text-gray-600">Karosseri:</span>
-                                    <span className="font-medium">{vehicle.bodyType}</span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-                            
-                            <button
-                              type="button"
-                              onClick={() => removeVehicle(vehicle.id)}
-                              className="text-red-600 hover:text-red-800 ml-4"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                  {vehicles.length === 0 && (
-                    <div className="text-center py-8 bg-gray-50 rounded-lg">
-                      <div className="text-gray-400 mb-2">
-                        <svg className="mx-auto h-12 w-12" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                        </svg>
-                      </div>
-                      <p className="text-gray-600">Ingen kjøretøy registrert</p>
-                      <p className="text-sm text-gray-500">Legg til kjøretøy ved å skrive inn registreringsnummer</p>
-                    </div>
-                  )}
-                </div>
-
-                <div className="flex justify-end space-x-3 pt-6">
-                  <button
-                    type="button"
-                    onClick={() => setShowEditModal(false)}
-                    className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                  >
-                    Avbryt
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={saving}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
-                  >
-                    {saving ? (
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
-                    ) : (
-                      <Save className="h-4 w-4" />
-                    )}
-                    <span>{saving ? 'Lagrer...' : 'Oppdater'}</span>
-                  </button>
-                </div>
-              </form>
+      {/* Partner Detail Modal */}
+      {showDetailModal && selectedPartner && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-4xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">{selectedPartner.name}</h2>
+              <button
+                onClick={() => setShowDetailModal(false)}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
             </div>
-          </div>
-        </div>
-      )}
 
-      {/* Delete Confirmation Modal */}
-      {selectedPartner && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-md w-full p-6">
-            <div className="flex items-center space-x-3 mb-4">
-              <div className="w-10 h-10 bg-red-100 rounded-full flex items-center justify-center">
-                <Trash2 className="h-5 w-5 text-red-600" />
-              </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Basic Information */}
               <div>
-                <h3 className="text-lg font-semibold text-gray-900">Slett samarbeidspartner</h3>
-                <p className="text-sm text-gray-600">Denne handlingen kan ikke angres</p>
-              </div>
-            </div>
-            
-            <p className="text-gray-700 mb-6">
-              Er du sikker på at du vil slette <strong>{selectedPartner.name || 'Ukjent navn'}</strong>? 
-              Dette vil permanent fjerne all data knyttet til denne samarbeidspartneren.
-            </p>
-            
-            <div className="flex justify-end space-x-3">
-              <button
-                onClick={() => setSelectedPartner(null)}
-                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
-              >
-                Avbryt
-              </button>
-              <button
-                onClick={handleDelete}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Slett
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Company Detail Modal */}
-      {showDetailModal && selectedPartnerForDetail && (
-        <CompanyDetailModal
-          isOpen={showDetailModal}
-          onClose={() => setShowDetailModal(false)}
-          orgNumber={selectedPartnerForDetail.organizationNumber || ''}
-          companyName={selectedPartnerForDetail.name || 'Ukjent navn'}
-        />
-      )}
-
-      {/* Vehicle Detail Modal */}
-      {showVehicleModal && selectedVehicle && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-2xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center space-x-3">
-                  <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-                    <svg className="h-5 w-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
+                <h3 className="text-lg font-semibold mb-3">Grunnleggende informasjon</h3>
+                <div className="space-y-2">
+                  <div>
+                    <span className="text-sm text-gray-600">Intern navn:</span>
+                    <p className="font-medium">{selectedPartner.internalName}</p>
                   </div>
                   <div>
-                    <h2 className="text-xl font-semibold text-gray-900">Kjøretøydetaljer</h2>
-                    <p className="text-sm text-gray-600">Registreringsnummer: {selectedVehicle.regNumber}</p>
+                    <span className="text-sm text-gray-600">Organisasjonsnummer:</span>
+                    <p className="font-medium">{selectedPartner.organizationNumber}</p>
+                  </div>
+                  <div>
+                    <span className="text-sm text-gray-600">Status:</span>
+                    <span className={`px-2 py-1 text-xs rounded-full ${
+                      selectedPartner.status === 'active' 
+                        ? 'bg-green-100 text-green-800' 
+                        : 'bg-red-100 text-red-800'
+                    }`}>
+                      {selectedPartner.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                    </span>
                   </div>
                 </div>
-                <button
-                  onClick={() => setShowVehicleModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <X className="h-6 w-6" />
-                </button>
               </div>
 
-              <div className="space-y-6">
-                {/* Basic Information */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Grunnleggende informasjon</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedVehicle.manufacturer && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Produsent:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.manufacturer}</p>
-                      </div>
-                    )}
-                    {selectedVehicle.brand && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Merke:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.brand}</p>
-                      </div>
-                    )}
-                    {selectedVehicle.model && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Modellbetegnelse:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.model}</p>
-                      </div>
-                    )}
-                    {selectedVehicle.variant && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Variant:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.variant}</p>
-                      </div>
-                    )}
-                    {selectedVehicle.bodyType && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Ramme/karosseri:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.bodyType}</p>
-                      </div>
-                    )}
-                    {selectedVehicle.vehicleGroup && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Kjøretøygruppe:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.vehicleGroup}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Registration Information */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">Registreringsinformasjon</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    {selectedVehicle.firstRegistered && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Førstegangsregistrert:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.firstRegistered}</p>
-                      </div>
-                    )}
-                    {selectedVehicle.lastEUApproved && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Sist EU-godkjent:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.lastEUApproved}</p>
-                      </div>
-                    )}
-                    {selectedVehicle.nextEUInspection && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Neste EU-kontroll:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.nextEUInspection}</p>
-                      </div>
-                    )}
-                    {selectedVehicle.maxPayload && (
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Maks nyttelast:</span>
-                        <p className="text-sm text-gray-900">{selectedVehicle.maxPayload}</p>
-                      </div>
-                    )}
-                  </div>
-                </div>
-
-                {/* Data Source */}
-                <div className="bg-blue-50 rounded-lg p-4">
-                  <div className="flex items-center space-x-2">
-                    <ExternalLink className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm text-blue-800">Data hentet fra regnr.info</span>
-                  </div>
-                  {selectedVehicle.fetchedAt && (
-                    <p className="text-xs text-blue-600 mt-1">
-                      Hentet: {new Date(selectedVehicle.fetchedAt).toLocaleString('no-NO')}
-                    </p>
+              {/* Contact Information */}
+              <div>
+                <h3 className="text-lg font-semibold mb-3">Kontaktinformasjon</h3>
+                <div className="space-y-2">
+                  {selectedPartner.contactPerson && (
+                    <div>
+                      <span className="text-sm text-gray-600">Kontaktperson:</span>
+                      <p className="font-medium">{selectedPartner.contactPerson}</p>
+                    </div>
+                  )}
+                  {selectedPartner.phone && (
+                    <div>
+                      <span className="text-sm text-gray-600">Telefon:</span>
+                      <p className="font-medium">{selectedPartner.phone}</p>
+                    </div>
+                  )}
+                  {selectedPartner.email && (
+                    <div>
+                      <span className="text-sm text-gray-600">E-post:</span>
+                      <p className="font-medium">{selectedPartner.email}</p>
+                    </div>
+                  )}
+                  {selectedPartner.website && (
+                    <div>
+                      <span className="text-sm text-gray-600">Nettsted:</span>
+                      <p className="font-medium">{selectedPartner.website}</p>
+                    </div>
                   )}
                 </div>
               </div>
 
-              <div className="flex justify-end pt-6">
-                <button
-                  onClick={() => setShowVehicleModal(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                >
-                  Lukk
-                </button>
-              </div>
+              {/* Address */}
+              {(selectedPartner.street || selectedPartner.city || selectedPartner.postalCode) && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Adresse</h3>
+                  <div className="space-y-2">
+                    {selectedPartner.street && (
+                      <div>
+                        <span className="text-sm text-gray-600">Gateadresse:</span>
+                        <p className="font-medium">{selectedPartner.street}</p>
+                      </div>
+                    )}
+                    {(selectedPartner.city || selectedPartner.postalCode) && (
+                      <div>
+                        <span className="text-sm text-gray-600">Poststed:</span>
+                        <p className="font-medium">{selectedPartner.city} {selectedPartner.postalCode}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Brreg Data */}
+              {(selectedPartner.brregAntallAnsatte || selectedPartner.brregDagligLeder || selectedPartner.brregOrganisasjonsform) && (
+                <div>
+                  <h3 className="text-lg font-semibold mb-3">Brreg data</h3>
+                  <div className="space-y-2">
+                    {selectedPartner.brregAntallAnsatte && (
+                      <div>
+                        <span className="text-sm text-gray-600">Antall ansatte:</span>
+                        <p className="font-medium">{selectedPartner.brregAntallAnsatte}</p>
+                      </div>
+                    )}
+                    {selectedPartner.brregDagligLeder && (
+                      <div>
+                        <span className="text-sm text-gray-600">Daglig leder:</span>
+                        <p className="font-medium">{selectedPartner.brregDagligLeder}</p>
+                      </div>
+                    )}
+                    {selectedPartner.brregOrganisasjonsform && (
+                      <div>
+                        <span className="text-sm text-gray-600">Organisasjonsform:</span>
+                        <p className="font-medium">{selectedPartner.brregOrganisasjonsform}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Vehicles */}
+              {selectedPartner.vehicles.length > 0 && (
+                <div className="md:col-span-2">
+                  <h3 className="text-lg font-semibold mb-3">Kjøretøy ({selectedPartner.vehicles.length})</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {selectedPartner.vehicles.map((vehicle) => (
+                      <div key={vehicle.id} className="border rounded-lg p-3">
+                        <div className="flex justify-between items-start mb-2">
+                          <h4 className="font-medium">{vehicle.regNumber}</h4>
+                          <span className="text-sm text-gray-600">{vehicle.brand} {vehicle.model}</span>
+                        </div>
+                        <div className="text-sm text-gray-600 space-y-1">
+                          <p>Type: {vehicle.bodyType}</p>
+                          <p>Først registrert: {vehicle.firstRegistered}</p>
+                          <p>Neste EU-kontroll: {vehicle.nextEUInspection}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Documents and Images */}
+              {(selectedPartner.documents.length > 0 || selectedPartner.images.length > 0) && (
+                <div className="md:col-span-2">
+                  <h3 className="text-lg font-semibold mb-3">Dokumenter og bilder</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {selectedPartner.documents.map((doc) => (
+                      <div key={doc.id} className="border rounded-lg p-3">
+                        <div className="flex items-center space-x-2">
+                          <FileText className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm font-medium">{doc.name}</span>
+                        </div>
+                      </div>
+                    ))}
+                    {selectedPartner.images.map((image, index) => (
+                      <div key={index} className="border rounded-lg p-3">
+                        <div className="flex items-center space-x-2">
+                          <ImageIcon className="h-4 w-4 text-gray-400" />
+                          <span className="text-sm font-medium">Bilde {index + 1}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>
       )}
     </div>
   );
-}
+} 
