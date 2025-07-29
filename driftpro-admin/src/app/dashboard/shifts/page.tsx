@@ -2,17 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import {
-  Clock,
   Plus,
   Calendar,
+  Clock,
   Users,
   Edit,
   Trash2,
-  Eye,
-  CheckCircle,
-  XCircle,
-  AlertTriangle
+  Eye
 } from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 interface Shift {
   id: string;

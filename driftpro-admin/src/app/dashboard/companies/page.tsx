@@ -4,25 +4,21 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Search, 
   Building, 
-  Mail, 
-  Phone, 
-  MapPin, 
-  Users,
-  Plus,
+  Users, 
+  AlertTriangle, 
+  CheckCircle, 
+  Loader2,
   Edit,
-  Trash2,
-  Save,
+  Plus,
   X,
-  AlertTriangle,
-  CheckCircle,
-  Loader2
+  Trash2,
+  Save
 } from 'lucide-react';
-import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch, where, setDoc } from 'firebase/firestore';
-import { createUserWithEmailAndPassword } from 'firebase/auth';
+import { collection, getDocs, setDoc, doc, query, updateDoc, deleteDoc, writeBatch, where, addDoc } from 'firebase/firestore';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import CompanyDetailModal from '@/components/CompanyDetailModal';
-import { emailService } from '@/lib/email-service';
+import { createUserWithEmailAndPassword } from 'firebase/auth';
 
 interface Company {
   id: string;
@@ -135,18 +131,15 @@ export default function CompaniesPage() {
 
   // Debounced function for org number input
   const debouncedFetchBrreg = useCallback(
-    (() => {
-      let timeout: NodeJS.Timeout;
-      return (orgNumber: string) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => {
-          if (orgNumber && orgNumber.length >= 9) {
-            fetchCompanyFromBrreg(orgNumber);
-          }
-        }, 1000);
-      };
-    })(),
-    [fetchCompanyFromBrreg]
+    (orgNumber: string) => {
+      const timeout = setTimeout(() => {
+        if (orgNumber && orgNumber.length >= 9) {
+          fetchCompanyFromBrreg(orgNumber);
+        }
+      }, 1000);
+      return () => clearTimeout(timeout);
+    },
+    []
   );
 
   // Handle org number input change

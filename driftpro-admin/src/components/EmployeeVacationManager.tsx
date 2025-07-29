@@ -1,13 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  Users,
+import {
+  Calendar,
   Plus,
-  X,
-  Download,
-  Edit,
-  RefreshCw
+  Minus,
+  Save,
+  X
 } from 'lucide-react';
 import { updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -129,7 +128,7 @@ export default function EmployeeVacationManager({ employees, onClose, onUpdate }
     }
   };
 
-  const getVacationDaysForYear = (employee: Employee, year: number) => {
+  const getVacationDaysForYear = (employee: Employee, _year: number) => {
     // This would normally come from Firebase with year-specific data
     // For now, using the current vacationDays structure
     return employee.vacationDays;
@@ -199,7 +198,7 @@ export default function EmployeeVacationManager({ employees, onClose, onUpdate }
               onClick={exportVacationData}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
             >
-              <Download className="h-4 w-4" />
+              <Calendar className="h-4 w-4" />
               <span>Eksporter</span>
             </button>
             <button
@@ -301,7 +300,7 @@ export default function EmployeeVacationManager({ employees, onClose, onUpdate }
                             className="text-blue-600 hover:text-blue-900"
                             title="Rediger tildeling"
                           >
-                            <Edit className="h-4 w-4" />
+                            <Save className="h-4 w-4" />
                           </button>
                           <button
                             onClick={() => {
@@ -316,7 +315,7 @@ export default function EmployeeVacationManager({ employees, onClose, onUpdate }
                             className="text-green-600 hover:text-green-900"
                             title="Overfør dager"
                           >
-                            <RefreshCw className="h-4 w-4" />
+                            <Minus className="h-4 w-4" />
                           </button>
                         </div>
                       </td>

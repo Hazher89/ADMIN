@@ -1,24 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { 
   Search, 
   Building, 
-  Mail, 
-  Phone, 
-  MapPin, 
   Users, 
-  Plus, 
-  Edit, 
-  Trash2, 
-  Save, 
-  X 
+  MapPin,
+  Phone,
+  Mail
 } from 'lucide-react';
-import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { emailService } from '@/lib/email-service';
 
 interface Company {
   id: string;
@@ -48,14 +42,13 @@ export default function CompaniesPage() {
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
-  const [hasSearched, setHasSearched] = useState(false);
 
   const loadCompanies = async () => {
     try {
       setLoading(true);
       if (db) {
         // Fetch ALL companies from Firebase (no status filter)
-        const companiesQuery = query(collection(db, 'companies'));
+        const companiesQuery = collection(db, 'companies');
         const snapshot = await getDocs(companiesQuery);
         const companiesData = snapshot.docs.map(doc => ({
           id: doc.id,
@@ -155,15 +148,6 @@ export default function CompaniesPage() {
     loadCompanies();
   }, []);
 
-  useEffect(() => {
-    if (searchTerm.trim()) {
-      handleSearch();
-    } else {
-      setFilteredCompanies(companies);
-      setHasSearched(false);
-    }
-  }, [searchTerm, companies]);
-
   const handleCompanySelect = (company: Company) => {
     // Store selected company in localStorage
     localStorage.setItem('selectedCompany', JSON.stringify(company));
@@ -171,34 +155,31 @@ export default function CompaniesPage() {
     router.push('/login');
   };
 
-  const handleSearch = async () => {
+  const handleSearch = useCallback(async () => {
     if (!searchTerm.trim()) {
       setFilteredCompanies(companies);
-      setHasSearched(false);
       return;
     }
 
     setSearching(true);
-    setHasSearched(true);
 
     try {
-      // Filter companies based on search term
-      const filtered = companies.filter(company =>
+      const filtered = companies.filter(company => 
         company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
         company.orgNumber.includes(searchTerm) ||
-        company.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.address.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.status.toLowerCase().includes(searchTerm.toLowerCase())
+        company.adminEmail.toLowerCase().includes(searchTerm.toLowerCase())
       );
-      
       setFilteredCompanies(filtered);
     } catch (error) {
       console.error('Error searching companies:', error);
-      setFilteredCompanies([]);
     } finally {
       setSearching(false);
     }
-  };
+  }, [searchTerm, companies]);
+
+  useEffect(() => {
+    handleSearch();
+  }, [handleSearch]);
 
   if (loading) {
     return (

@@ -83,6 +83,7 @@ export default function DepartmentsPage() {
 
   const loadData = useCallback(async () => {
     try {
+      setLoading(true);
       if (db) {
         // Load employees
         const employeesSnapshot = await getDocs(collection(db, 'employees'));
@@ -126,11 +127,16 @@ export default function DepartmentsPage() {
         }));
 
         setDepartments(departmentsWithEmployees);
+      } else {
+        // Fallback to mock data
+        loadMockData();
       }
     } catch (error) {
       console.error('Error loading data:', error);
       // Fallback to mock data
       loadMockData();
+    } finally {
+      setLoading(false);
     }
   }, [db]);
 

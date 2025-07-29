@@ -1,20 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  ChevronLeft, 
-  ChevronRight, 
-  Calendar,
-  Users,
-  CheckCircle,
-  Clock,
-  XCircle,
-  X,
+import React, { useState } from 'react';
+import {
+  ChevronLeft,
+  ChevronRight,
   Plus,
   Edit,
   Trash2,
-  User,
-  Filter
+  X
 } from 'lucide-react';
 
 interface VacationRequest {
@@ -67,7 +60,6 @@ export default function VacationCalendar({
   const [selectedEmployee, setSelectedEmployee] = useState<string>('all');
   const [showEmployeeFilter, setShowEmployeeFilter] = useState(false);
   const [showVacationModal, setShowVacationModal] = useState(false);
-  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [editingRequest, setEditingRequest] = useState<VacationRequest | null>(null);
   const [vacationForm, setVacationForm] = useState({
     employeeId: '',
@@ -106,7 +98,6 @@ export default function VacationCalendar({
   };
 
   const handleDateClick = (date: Date, requests: VacationRequest[]) => {
-    setSelectedDate(date);
     
     // If there are existing requests for this date, show them for editing
     if (requests.length > 0) {
@@ -195,7 +186,6 @@ export default function VacationCalendar({
       const requests = getVacationRequestsForDate(date);
       const approvedRequests = requests.filter(r => r.status === 'approved');
       const pendingRequests = requests.filter(r => r.status === 'pending');
-      const rejectedRequests = requests.filter(r => r.status === 'rejected');
 
       days.push(
         <div
@@ -316,7 +306,6 @@ export default function VacationCalendar({
                 onClick={() => setShowEmployeeFilter(!showEmployeeFilter)}
                 className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
               >
-                <Filter className="h-4 w-4" />
                 <span>
                   {selectedEmployee === 'all' 
                     ? 'Alle ansatte' 

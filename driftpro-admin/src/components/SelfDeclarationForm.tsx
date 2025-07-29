@@ -1,23 +1,12 @@
 'use client';
 
 import React, { useState } from 'react';
-import { 
-  User,
+import {
   Calendar,
-  FileText,
   AlertTriangle,
-  CheckCircle,
-  X,
-  Save,
   Upload,
-  Phone,
-  Mail,
-  MapPin,
-  Clock,
-  Building,
-  UserCheck,
-  Shield,
-  Activity
+  X,
+  Check
 } from 'lucide-react';
 
 interface SelfDeclarationFormProps {
@@ -266,7 +255,7 @@ export default function SelfDeclarationForm({ onSubmit, onCancel, employee }: Se
 
             <div className="bg-blue-50 p-4 rounded-lg">
               <div className="flex items-center space-x-2 mb-2">
-                <Clock className="h-4 w-4 text-blue-600" />
+                <Calendar className="h-4 w-4 text-blue-600" />
                 <span className="font-medium text-blue-900">Fraværsperiode</span>
               </div>
               <p className="text-sm text-blue-700">
@@ -543,7 +532,7 @@ export default function SelfDeclarationForm({ onSubmit, onCancel, employee }: Se
           <div className="space-y-6">
             <div className="bg-green-50 p-4 rounded-lg">
               <div className="flex items-center space-x-2 mb-2">
-                <CheckCircle className="h-5 w-5 text-green-600" />
+                <Check className="h-5 w-5 text-green-600" />
                 <span className="font-medium text-green-900">Bekreftelse</span>
               </div>
               <p className="text-sm text-green-700">
@@ -630,7 +619,7 @@ export default function SelfDeclarationForm({ onSubmit, onCancel, employee }: Se
               onClick={handleSubmit}
               className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
             >
-              <Save className="h-4 w-4" />
+              <Check className="h-4 w-4" />
               <span>Send egenmelding</span>
             </button>
           )}

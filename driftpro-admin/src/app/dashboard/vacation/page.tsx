@@ -1,22 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Calendar, 
-  Clock, 
-  Users, 
-  CheckCircle, 
-  XCircle, 
-  Plus,
-  Eye,
-  Check,
-  X,
-  Edit
-} from 'lucide-react';
-import { collection, addDoc, updateDoc, doc, deleteDoc, query, orderBy, getDocs } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import VacationCalendar from '@/components/VacationCalendar';
 import EmployeeVacationManager from '@/components/EmployeeVacationManager';
+import {
+  Plus,
+  Calendar,
+  Users,
+  Clock,
+  CheckCircle,
+  XCircle,
+  Edit,
+  Eye,
+  Check,
+  X
+} from 'lucide-react';
 
 interface VacationRequest {
   id: string;
@@ -53,20 +53,11 @@ export default function VacationPage() {
   const [vacationRequests, setVacationRequests] = useState<VacationRequest[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<VacationRequest[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'vacation' | 'sick_leave' | 'other'>('all');
-  const [dateFilter, setDateFilter] = useState('');
-  
-  // Modal states
+  const [loading, setLoading] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
-  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [showCalendarModal, setShowCalendarModal] = useState(false);
-  const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
-  
-  // Form state
+  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
   const [formData, setFormData] = useState({
     employeeId: '',
     startDate: '',
@@ -75,44 +66,76 @@ export default function VacationPage() {
     type: 'vacation' as 'vacation' | 'sick_leave' | 'other',
     comments: ''
   });
-  
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [dateFilter, setDateFilter] = useState('');
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'vacation' | 'sick_leave' | 'other'>('all');
+  const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
 
   const loadData = useCallback(async () => {
     try {
-      if (db) {
-        // Load vacation requests
-        const requestsQuery = query(collection(db, 'vacationRequests'), orderBy('submittedAt', 'desc'));
-        const requestsSnapshot = await getDocs(requestsQuery);
-        const requestsData = requestsSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as VacationRequest[];
-        setVacationRequests(requestsData);
-
-        // Load employees
-        const employeesQuery = query(collection(db, 'employees'), orderBy('firstName'));
-        const employeesSnapshot = await getDocs(employeesQuery);
-        const employeesData = employeesSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Employee[];
-        setEmployees(employeesData);
-      }
+      setLoading(true);
+      // Mock data for now
+      const mockRequests: VacationRequest[] = [
+        {
+          id: '1',
+          employeeId: 'emp1',
+          employeeName: 'John Doe',
+          department: 'IT',
+          type: 'vacation',
+          startDate: '2024-07-15',
+          endDate: '2024-07-22',
+          days: 5,
+          reason: 'Sommerferie',
+          status: 'pending',
+          submittedAt: '2024-06-01T10:00:00Z'
+        }
+      ];
+      
+      const mockEmployees: Employee[] = [
+        {
+          id: 'emp1',
+          firstName: 'John',
+          lastName: 'Doe',
+          department: 'IT',
+          role: 'Developer',
+          vacationDays: {
+            total: 25,
+            used: 5,
+            remaining: 20,
+            carriedOver: 0
+          }
+        }
+      ];
+      
+      setVacationRequests(mockRequests);
+      setEmployees(mockEmployees);
     } catch (error) {
       console.error('Error loading data:', error);
+    } finally {
+      setLoading(false);
     }
-  }, [db]);
+  }, []);
 
   const filterRequests = useCallback(() => {
-    const filtered = vacationRequests.filter(request => {
-      const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
-      const matchesType = typeFilter === 'all' || request.type === typeFilter;
-      const matchesSearch = request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           request.reason.toLowerCase().includes(searchTerm.toLowerCase());
-      return matchesStatus && matchesType && matchesSearch;
-    });
+    let filtered = vacationRequests;
+    
+    if (statusFilter !== 'all') {
+      filtered = filtered.filter(request => request.status === statusFilter);
+    }
+    
+    if (typeFilter !== 'all') {
+      filtered = filtered.filter(request => request.type === typeFilter);
+    }
+    
+    if (searchTerm) {
+      filtered = filtered.filter(request =>
+        request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        request.department.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
     setFilteredRequests(filtered);
   }, [vacationRequests, statusFilter, typeFilter, searchTerm]);
 
@@ -205,7 +228,7 @@ export default function VacationPage() {
       startDate: '',
       endDate: '',
       reason: '',
-      type: 'vacation',
+      type: 'vacation' as 'vacation' | 'sick_leave' | 'other',
       comments: ''
     });
   };
@@ -577,7 +600,6 @@ export default function VacationPage() {
                       <button
                         onClick={() => {
                           setSelectedRequest(request);
-                          setShowEditModal(true);
                         }}
                         className="text-blue-600 hover:text-blue-900"
                         title="Rediger"

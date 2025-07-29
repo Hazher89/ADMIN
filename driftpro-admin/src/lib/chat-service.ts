@@ -1,36 +1,33 @@
-import { db, storage } from './firebase';
-import { 
-  collection, 
-  query, 
-  orderBy, 
-  onSnapshot, 
-  addDoc, 
-  updateDoc, 
-  doc, 
-  where, 
-  getDocs, 
-  serverTimestamp, 
+import {
+  collection,
+  doc,
+  addDoc,
+  updateDoc,
   deleteDoc,
-  writeBatch 
+  query,
+  where,
+  orderBy,
+  limit,
+  getDocs,
+  writeBatch
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { emailService } from './email-service';
-import { notificationService } from './notification-service';
+import { db, storage } from './firebase';
 
 export interface ChatMessage {
   id: string;
+  chatId: string;
   senderId: string;
   senderName: string;
-  senderAvatar?: string;
   content: string;
   type: 'text' | 'image' | 'file' | 'video' | 'audio';
   fileUrl?: string;
   fileName?: string;
   fileSize?: number;
   thumbnailUrl?: string;
-  timestamp: any;
-  readBy: string[];
-  repliedTo?: {
+  duration?: number;
+  reactions: Record<string, string>;
+  replyTo?: {
     messageId: string;
     content: string;
     senderName: string;
@@ -38,14 +35,12 @@ export interface ChatMessage {
   forwardedFrom?: {
     messageId: string;
     chatId: string;
+    chatName: string;
     senderName: string;
   };
-  edited: boolean;
-  editedAt?: any;
-  deleted: boolean;
-  reactions: {
-    [userId: string]: string; // emoji
-  };
+  readBy: string[];
+  createdAt: string;
+  updatedAt?: string;
 }
 
 export interface Chat {
@@ -53,32 +48,22 @@ export interface Chat {
   name: string;
   type: 'private' | 'group';
   participants: string[];
-  participantNames: { [userId: string]: string };
-  participantAvatars: { [userId: string]: string };
+  participantNames: Record<string, string>;
   lastMessage?: {
     content: string;
+    senderId: string;
     senderName: string;
-    timestamp: any;
+    timestamp: string;
     type: string;
   };
-  unreadCount: { [userId: string]: number };
-  isGroup: boolean;
-  groupInfo?: {
-    description: string;
-    createdBy: string;
-    createdAt: any;
-    admins: string[];
-    pinnedMessages: string[];
-  };
+  unreadCount: Record<string, number>;
   settings: {
     readReceipts: boolean;
+    typingIndicators: boolean;
     notifications: boolean;
-    archived: boolean;
-    pinned: boolean;
-    muted: boolean;
   };
-  createdAt: any;
-  updatedAt: any;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface User {
@@ -86,16 +71,19 @@ export interface User {
   name: string;
   email: string;
   avatar?: string;
-  status: 'online' | 'offline' | 'away' | 'busy';
-  lastSeen?: any;
-  department?: string;
-  role?: string;
+  status: 'online' | 'offline' | 'away';
+  lastSeen?: string;
 }
 
 class ChatService {
-  // Load chats for a user
-  async loadChats(userId: string, callback: (chats: Chat[]) => void) {
-    if (!db) return;
+  // Remove unused emailService property
+  constructor() {
+    // Initialize service
+  }
+
+  // Load user's chats
+  async loadChats(userId: string): Promise<Chat[]> {
+    if (!db) return [];
 
     try {
       const chatsQuery = query(
@@ -104,370 +92,297 @@ class ChatService {
         orderBy('updatedAt', 'desc')
       );
 
-      return onSnapshot(chatsQuery, (snapshot) => {
-        const chats: Chat[] = [];
-        snapshot.forEach((doc) => {
-          chats.push({ id: doc.id, ...doc.data() } as Chat);
-        });
-        callback(chats);
-      });
+      const snapshot = await getDocs(chatsQuery);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Chat[];
     } catch (error) {
       console.error('Error loading chats:', error);
+      return [];
     }
   }
 
-  // Load messages for a chat
-  async loadMessages(chatId: string, callback: (messages: ChatMessage[]) => void) {
-    if (!db) return;
+  // Load messages for a specific chat
+  async loadMessages(chatId: string, limitCount: number = 50): Promise<ChatMessage[]> {
+    if (!db) return [];
 
     try {
       const messagesQuery = query(
         collection(db, `chats/${chatId}/messages`),
-        orderBy('timestamp', 'asc')
+        orderBy('createdAt', 'desc'),
+        limit(limitCount)
       );
 
-      return onSnapshot(messagesQuery, (snapshot) => {
-        const messages: ChatMessage[] = [];
-        snapshot.forEach((doc) => {
-          messages.push({ id: doc.id, ...doc.data() } as ChatMessage);
-        });
-        callback(messages);
-      });
+      const snapshot = await getDocs(messagesQuery);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ChatMessage[];
     } catch (error) {
       console.error('Error loading messages:', error);
+      return [];
     }
   }
 
-  // Load users
-  async loadUsers(callback: (users: User[]) => void) {
-    if (!db) return;
+  // Load users for chat
+  async loadUsers(companyId: string): Promise<User[]> {
+    if (!db) return [];
 
     try {
-      const usersQuery = query(collection(db, 'employees'));
+      const usersQuery = query(
+        collection(db, 'users'),
+        where('companyId', '==', companyId),
+        where('status', '==', 'active')
+      );
+
       const snapshot = await getDocs(usersQuery);
-      const users: User[] = [];
-      snapshot.forEach((doc) => {
-        const userData = doc.data();
-        users.push({
-          id: doc.id,
-          name: `${userData.firstName} ${userData.lastName}`,
-          email: userData.email,
-          avatar: userData.avatar,
-          status: 'online',
-          department: userData.department,
-          role: userData.role
-        });
-      });
-      callback(users);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as User[];
     } catch (error) {
       console.error('Error loading users:', error);
+      return [];
     }
   }
 
-  // Send message
-  async sendMessage(
-    chatId: string, 
-    senderId: string, 
-    senderName: string, 
-    senderAvatar: string | undefined,
-    content: string, 
-    type: 'text' | 'image' | 'file' | 'video' | 'audio' = 'text', 
-    fileUrl?: string, 
-    fileName?: string, 
-    fileSize?: number,
-    repliedTo?: ChatMessage
-  ) {
-    if (!db || !content.trim()) return;
+  // Send a message
+  async sendMessage(chatId: string, message: Omit<ChatMessage, 'id' | 'createdAt'>): Promise<string> {
+    if (!db) throw new Error('Database not initialized');
 
     try {
       const messageData = {
-        senderId,
-        senderName,
-        senderAvatar,
-        content,
-        type,
-        fileUrl,
-        fileName,
-        fileSize,
-        timestamp: serverTimestamp(),
-        readBy: [senderId],
-        edited: false,
-        deleted: false,
-        reactions: {},
-        ...(repliedTo && {
-          repliedTo: {
-            messageId: repliedTo.id,
-            content: repliedTo.content,
-            senderName: repliedTo.senderName
-          }
-        })
+        ...message,
+        createdAt: new Date().toISOString(),
+        readBy: [message.senderId]
       };
 
-      const messageRef = await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
-
+      const docRef = await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
+      
       // Update chat's last message
       await updateDoc(doc(db, 'chats', chatId), {
         lastMessage: {
-          content,
-          senderName,
-          timestamp: serverTimestamp(),
-          type
+          content: message.content,
+          senderId: message.senderId,
+          senderName: message.senderName,
+          timestamp: messageData.createdAt,
+          type: message.type
         },
-        updatedAt: serverTimestamp()
+        updatedAt: messageData.createdAt
       });
 
-      // Send email notifications to other participants
-      await this.sendChatNotifications(chatId, senderId, content, senderName);
+      // Send notifications to other participants
+      await this.sendChatNotifications(chatId, message);
 
-      return messageRef;
+      return docRef.id;
     } catch (error) {
       console.error('Error sending message:', error);
+      throw error;
     }
   }
 
-  // Send chat notifications
-  async sendChatNotifications(chatId: string, senderId: string, content: string, senderName: string) {
-    try {
-      const chatDoc = await getDocs(query(collection(db, 'chats'), where('__name__', '==', chatId)));
-      if (!chatDoc.empty) {
-        const chatData = chatDoc.docs[0].data() as Chat;
-        const participants = chatData.participants.filter(id => id !== senderId);
-        
-        // Send notifications to other participants
-        for (const participantId of participants) {
-          await notificationService.createChatNotification(
-            chatId,
-            chatData.name,
-            senderName,
-            content,
-            participantId
-          );
-        }
-
-        // Get participant emails for email notifications
-        const userEmails: string[] = [];
-        for (const participantId of participants) {
-          const userDoc = await getDocs(query(collection(db, 'employees'), where('__name__', '==', participantId)));
-          if (!userDoc.empty) {
-            const userData = userDoc.docs[0].data();
-            userEmails.push(userData.email);
-          }
-        }
-
-        // Send email notifications
-        if (userEmails.length > 0) {
-          await emailService.sendNotificationEmail(
-            'chat_message',
-            {
-              chatName: chatData.name,
-              senderName,
-              message: content,
-              timestamp: new Date().toLocaleString('no-NO')
-            },
-            userEmails,
-            { chatId, eventType: 'chat_message' }
-          );
-        }
-      }
-    } catch (error) {
-      console.error('Error sending chat notifications:', error);
-    }
-  }
-
-  // Upload file
-  async uploadFile(file: File): Promise<string> {
+  // Upload file to storage
+  async uploadFile(file: File, chatId: string): Promise<{ url: string; fileName: string; fileSize: number }> {
     if (!storage) throw new Error('Storage not initialized');
 
-    const fileRef = ref(storage, `chat-files/${Date.now()}-${file.name}`);
-    const snapshot = await uploadBytes(fileRef, file);
-    return await getDownloadURL(snapshot.ref);
+    try {
+      const fileName = `${Date.now()}_${file.name}`;
+      const fileRef = ref(storage, `chat-files/${chatId}/${fileName}`);
+      
+      const snapshot = await uploadBytes(fileRef, file);
+      const url = await getDownloadURL(snapshot.ref);
+
+      return {
+        url,
+        fileName: file.name,
+        fileSize: file.size
+      };
+    } catch (error) {
+      console.error('Error uploading file:', error);
+      throw error;
+    }
   }
 
-  // Create new chat
-  async createChat(
-    name: string,
-    participants: string[],
-    participantNames: { [userId: string]: string },
-    participantAvatars: { [userId: string]: string },
-    isGroup: boolean = false,
-    groupInfo?: any
-  ) {
-    if (!db) return;
+  // Create a new chat
+  async createChat(chatData: Omit<Chat, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!db) throw new Error('Database not initialized');
 
     try {
-      const chatData = {
-        name,
-        type: isGroup ? 'group' : 'private',
-        participants,
-        participantNames,
-        participantAvatars,
-        unreadCount: {},
-        isGroup,
-        groupInfo,
-        settings: {
-          readReceipts: true,
-          notifications: true,
-          archived: false,
-          pinned: false,
-          muted: false
-        },
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
+      const chatDoc = {
+        ...chatData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        unreadCount: {}
       };
 
-      const docRef = await addDoc(collection(db, 'chats'), chatData);
+      const docRef = await addDoc(collection(db, 'chats'), chatDoc);
       return docRef.id;
     } catch (error) {
       console.error('Error creating chat:', error);
+      throw error;
     }
   }
 
   // Mark messages as read
-  async markMessagesAsRead(chatId: string, userId: string, messages: ChatMessage[]) {
+  async markMessagesAsRead(chatId: string, userId: string, messageIds: string[]): Promise<void> {
     if (!db) return;
 
     try {
-      const unreadMessages = messages.filter(
-        msg => msg.senderId !== userId && !msg.readBy.includes(userId)
-      );
-
       const batch = writeBatch(db);
-      for (const message of unreadMessages) {
-        const messageRef = doc(db, `chats/${chatId}/messages/${message.id}`);
+      
+      messageIds.forEach(messageId => {
+        const messageRef = doc(db, `chats/${chatId}/messages`, messageId);
         batch.update(messageRef, {
-          readBy: [...message.readBy, userId]
+          readBy: [userId]
         });
-      }
+      });
+
       await batch.commit();
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }
   }
 
-  // Delete message
-  async deleteMessage(chatId: string, messageId: string) {
+  // Delete a message
+  async deleteMessage(chatId: string, messageId: string): Promise<void> {
     if (!db) return;
 
     try {
-      await updateDoc(doc(db, `chats/${chatId}/messages/${messageId}`), {
-        deleted: true,
-        content: 'This message was deleted'
-      });
+      await deleteDoc(doc(db, `chats/${chatId}/messages`, messageId));
     } catch (error) {
       console.error('Error deleting message:', error);
     }
   }
 
-  // Edit message
-  async editMessage(chatId: string, messageId: string, newContent: string) {
+  // Edit a message
+  async editMessage(chatId: string, messageId: string, newContent: string): Promise<void> {
     if (!db) return;
 
     try {
-      await updateDoc(doc(db, `chats/${chatId}/messages/${messageId}`), {
+      await updateDoc(doc(db, `chats/${chatId}/messages`, messageId), {
         content: newContent,
-        edited: true,
-        editedAt: serverTimestamp()
+        updatedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Error editing message:', error);
     }
   }
 
-  // Add reaction
-  async addReaction(chatId: string, messageId: string, userId: string, emoji: string) {
+  // Add reaction to message
+  async addReaction(chatId: string, messageId: string, userId: string, reaction: string): Promise<void> {
     if (!db) return;
 
     try {
-      const messageRef = doc(db, `chats/${chatId}/messages/${messageId}`);
-      const messageDoc = await getDocs(query(collection(db, `chats/${chatId}/messages`), where('__name__', '==', messageId)));
-      
-      if (!messageDoc.empty) {
-        const messageData = messageDoc.docs[0].data() as ChatMessage;
-        const reactions = { ...messageData.reactions };
-        
-        if (reactions[userId] === emoji) {
-          delete reactions[userId];
-        } else {
-          reactions[userId] = emoji;
-        }
-
-        await updateDoc(messageRef, { reactions });
-      }
+      const messageRef = doc(db, `chats/${chatId}/messages`, messageId);
+      await updateDoc(messageRef, {
+        [`reactions.${userId}`]: reaction
+      });
     } catch (error) {
       console.error('Error adding reaction:', error);
     }
   }
 
-  // Forward message
-  async forwardMessage(
-    originalChatId: string,
-    targetChatId: string,
-    message: ChatMessage,
-    senderId: string,
-    senderName: string,
-    senderAvatar: string | undefined
-  ) {
+  // Forward message to another chat
+  async forwardMessage(messageId: string, fromChatId: string, toChatId: string, userId: string, userName: string): Promise<void> {
     if (!db) return;
 
     try {
-      const messageData = {
-        senderId,
-        senderName,
-        senderAvatar,
-        content: message.content,
-        type: message.type,
-        fileUrl: message.fileUrl,
-        fileName: message.fileName,
-        fileSize: message.fileSize,
-        timestamp: serverTimestamp(),
-        readBy: [senderId],
-        edited: false,
-        deleted: false,
-        reactions: {},
-        forwardedFrom: {
-          messageId: message.id,
-          chatId: originalChatId,
-          senderName: message.senderName
-        }
-      };
+      // Get the original message
+      const messageDoc = await getDocs(query(
+        collection(db, `chats/${fromChatId}/messages`),
+        where('__name__', '==', messageId)
+      ));
 
-      await addDoc(collection(db, `chats/${targetChatId}/messages`), messageData);
+      if (!messageDoc.empty) {
+        const originalMessage = messageDoc.docs[0].data() as ChatMessage;
+        
+        // Create forwarded message
+        const forwardedMessage: Omit<ChatMessage, 'id' | 'createdAt'> = {
+          chatId: toChatId,
+          senderId: userId,
+          senderName: userName,
+          content: originalMessage.content,
+          type: originalMessage.type,
+          fileUrl: originalMessage.fileUrl,
+          fileName: originalMessage.fileName,
+          fileSize: originalMessage.fileSize,
+          thumbnailUrl: originalMessage.thumbnailUrl,
+          duration: originalMessage.duration,
+          reactions: {},
+          readBy: [userId],
+          forwardedFrom: {
+            messageId: originalMessage.id,
+            chatId: fromChatId,
+            chatName: 'Original Chat', // You might want to get the actual chat name
+            senderName: originalMessage.senderName
+          }
+        };
+
+        await this.sendMessage(toChatId, forwardedMessage);
+      }
     } catch (error) {
       console.error('Error forwarding message:', error);
     }
   }
 
   // Update chat settings
-  async updateChatSettings(chatId: string, settings: Partial<Chat['settings']>) {
+  async updateChatSettings(chatId: string, settings: Partial<Chat['settings']>): Promise<void> {
     if (!db) return;
 
     try {
       await updateDoc(doc(db, 'chats', chatId), {
-        settings: { ...settings },
-        updatedAt: serverTimestamp()
+        settings: settings,
+        updatedAt: new Date().toISOString()
       });
     } catch (error) {
       console.error('Error updating chat settings:', error);
     }
   }
 
-  // Archive chat
-  async archiveChat(chatId: string, userId: string) {
-    await this.updateChatSettings(chatId, { archived: true });
+  // Archive a chat
+  async archiveChat(chatId: string, userId: string): Promise<void> {
+    if (!db) return;
+
+    try {
+      // This could be implemented by adding an archived field to the chat
+      // or by moving the chat to an archived collection
+      await updateDoc(doc(db, 'chats', chatId), {
+        [`archivedBy.${userId}`]: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error archiving chat:', error);
+    }
   }
 
-  // Pin chat
-  async pinChat(chatId: string, userId: string) {
-    await this.updateChatSettings(chatId, { pinned: true });
+  // Pin a chat
+  async pinChat(chatId: string, userId: string): Promise<void> {
+    if (!db) return;
+
+    try {
+      await updateDoc(doc(db, 'chats', chatId), {
+        [`pinnedBy.${userId}`]: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error pinning chat:', error);
+    }
   }
 
-  // Mute chat
-  async muteChat(chatId: string, userId: string) {
-    await this.updateChatSettings(chatId, { muted: true });
+  // Mute a chat
+  async muteChat(chatId: string, userId: string, muted: boolean): Promise<void> {
+    if (!db) return;
+
+    try {
+      await updateDoc(doc(db, 'chats', chatId), {
+        [`mutedBy.${userId}`]: muted ? new Date().toISOString() : null
+      });
+    } catch (error) {
+      console.error('Error muting chat:', error);
+    }
   }
 
-  // Leave group
-  async leaveGroup(chatId: string, userId: string) {
+  // Leave a group chat
+  async leaveGroup(chatId: string, userId: string): Promise<void> {
     if (!db) return;
 
     try {
@@ -475,24 +390,24 @@ class ChatService {
       const chatDoc = await getDocs(query(collection(db, 'chats'), where('__name__', '==', chatId)));
       
       if (!chatDoc.empty) {
-        const chatData = chatDoc.docs[0].data() as Chat;
-        const updatedParticipants = chatData.participants.filter(id => id !== userId);
-        const updatedParticipantNames = { ...chatData.participantNames };
-        const updatedParticipantAvatars = { ...chatData.participantAvatars };
+        const chat = chatDoc.docs[0].data() as Chat;
+        const updatedParticipants = chat.participants.filter(id => id !== userId);
         
-        delete updatedParticipantNames[userId];
-        delete updatedParticipantAvatars[userId];
-
         await updateDoc(chatRef, {
           participants: updatedParticipants,
-          participantNames: updatedParticipantNames,
-          participantAvatars: updatedParticipantAvatars,
-          updatedAt: serverTimestamp()
+          updatedAt: new Date().toISOString()
         });
       }
     } catch (error) {
       console.error('Error leaving group:', error);
     }
+  }
+
+  // Send notifications for chat messages
+  private async sendChatNotifications(chatId: string, message: Omit<ChatMessage, 'id' | 'createdAt'>): Promise<void> {
+    // This would integrate with your notification service
+    // For now, we'll just log it
+    console.log('Sending chat notifications for message:', message);
   }
 }
 

@@ -1,20 +1,18 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { 
-  Mail, 
-  Search, 
-  Filter, 
-  Download, 
-  Eye, 
-  Clock, 
-  User, 
-  Building,
+import React, { useState, useEffect, useCallback } from 'react';
+import {
+  Search,
+  Eye,
+  Download,
+  Calendar,
+  Mail,
+  Clock,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertTriangle
 } from 'lucide-react';
-import { collection, query, orderBy, getDocs, where } from 'firebase/firestore';
+import { collection, query, orderBy, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface EmailLog {
@@ -69,34 +67,31 @@ export default function EmailLogsPage() {
     loadEmailLogs();
   }, []);
 
-  useEffect(() => {
-    filterLogs();
-  }, [emailLogs, searchTerm, statusFilter, eventTypeFilter]);
-
-  const filterLogs = () => {
+  const filterLogs = useCallback(() => {
     let filtered = emailLogs;
-
-    // Search filter
-    if (searchTerm) {
-      filtered = filtered.filter(log =>
-        log.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (Array.isArray(log.to) ? log.to.join(', ') : log.to).toLowerCase().includes(searchTerm.toLowerCase()) ||
-        log.metadata?.eventType?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    // Status filter
+    
     if (statusFilter !== 'all') {
       filtered = filtered.filter(log => log.status === statusFilter);
     }
-
-    // Event type filter
+    
     if (eventTypeFilter !== 'all') {
       filtered = filtered.filter(log => log.metadata?.eventType === eventTypeFilter);
     }
-
+    
+    if (searchTerm) {
+      filtered = filtered.filter(log =>
+        log.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        (Array.isArray(log.to) ? log.to.join(', ').toLowerCase().includes(searchTerm.toLowerCase()) : log.to.toLowerCase().includes(searchTerm.toLowerCase())) ||
+        log.metadata?.eventType?.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+    
     setFilteredLogs(filtered);
-  };
+  }, [emailLogs, statusFilter, eventTypeFilter, searchTerm]);
+
+  useEffect(() => {
+    filterLogs();
+  }, [filterLogs]);
 
   const openEmailModal = (email: EmailLog) => {
     setSelectedEmail(email);
@@ -112,7 +107,7 @@ export default function EmailLogsPage() {
       case 'pending':
         return <Clock className="h-4 w-4 text-yellow-600" />;
       default:
-        return <AlertCircle className="h-4 w-4 text-gray-600" />;
+        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
     }
   };
 
@@ -133,7 +128,7 @@ export default function EmailLogsPage() {
     switch (eventType) {
       case 'employee_added':
       case 'welcome_message':
-        return <User className="h-4 w-4" />;
+        return <Calendar className="h-4 w-4" />;
       default:
         return <Mail className="h-4 w-4" />;
     }

@@ -1,24 +1,22 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  Plus, 
-  Search, 
-  Edit, 
-  Trash2, 
-  Save,
-  X,
-  ExternalLink,
+import {
+  Plus,
+  Search,
+  Trash2,
   Building,
   Users,
+  MapPin,
   Phone,
   Mail,
-  MapPin
+  X,
+  Save,
+  ExternalLink
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import CompanyDetailModal from '@/components/CompanyDetailModal';
-import { emailService } from '@/lib/email-service';
 
 interface Partner {
   id: string;
@@ -67,37 +65,39 @@ interface BrregResult {
   error?: string;
 }
 
+interface PartnerFormData {
+  name: string;
+  orgNumber: string;
+  internalName: string;
+  phone: string;
+  email: string;
+  address: string;
+  contactPerson: string;
+  status: 'active' | 'inactive';
+  vehicles: Vehicle[];
+}
+
 export default function PartnersPage() {
+  const [searchTerm, setSearchTerm] = useState('');
   const [partners, setPartners] = useState<Partner[]>([]);
   const [filteredPartners, setFilteredPartners] = useState<Partner[]>([]);
-  const [searchTerm, setSearchTerm] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [saving, setSaving] = useState(false);
-  
-  // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [selectedPartnerForDetail, setSelectedPartnerForDetail] = useState<Partner | null>(null);
-  
-  // Bulk import states
-  const [orgNumbers, setOrgNumbers] = useState('');
-  const [brregResults, setBrregResults] = useState<BrregResult[]>([]);
-  const [isLoadingBrreg, setIsLoadingBrreg] = useState(false);
-  const [brregError, setBrregError] = useState<string | null>(null);
-  
-  // Form data
-  const [formData, setFormData] = useState({
+  const [formData, setFormData] = useState<PartnerFormData>({
     name: '',
-    orgNumber: '',
     internalName: '',
+    orgNumber: '',
     phone: '',
+    contactPerson: '',
     email: '',
     address: '',
-    contactPerson: '',
-    status: 'active' as 'active' | 'inactive'
+    status: 'active',
+    vehicles: []
   });
 
   // Vehicle states
@@ -216,7 +216,8 @@ export default function PartnersPage() {
       email: '',
       address: '',
       contactPerson: '',
-      status: 'active'
+      status: 'active',
+      vehicles: []
     });
     setVehicles([]);
     setNewRegNumber('');
@@ -233,7 +234,8 @@ export default function PartnersPage() {
       email: partner.email,
       address: partner.address,
       contactPerson: partner.contactPerson,
-      status: partner.status
+      status: partner.status,
+      vehicles: partner.vehicles || []
     });
     setVehicles(partner.vehicles || []);
     setShowEditModal(true);

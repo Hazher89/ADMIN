@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, 
   Search, 
@@ -96,15 +96,7 @@ export default function AbsencePage() {
   
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    loadData();
-  }, []);
-
-  useEffect(() => {
-    filterRequests();
-  }, [absenceRequests, searchTerm, statusFilter, departmentFilter, typeFilter, dateFilter]);
-
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     try {
       setLoading(true);
       
@@ -139,7 +131,7 @@ export default function AbsencePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
   const loadMockData = () => {
     const mockRequests: AbsenceRequest[] = [
@@ -211,7 +203,7 @@ export default function AbsencePage() {
     setEmployees(mockEmployees);
   };
 
-  const filterRequests = () => {
+  const filterRequests = useCallback(() => {
     let filtered = absenceRequests;
     
     if (searchTerm) {
@@ -240,7 +232,15 @@ export default function AbsencePage() {
     }
     
     setFilteredRequests(filtered);
-  };
+  }, [absenceRequests, searchTerm, statusFilter, departmentFilter, typeFilter, dateFilter]);
+
+  useEffect(() => {
+    loadData();
+  }, [loadData]);
+
+  useEffect(() => {
+    filterRequests();
+  }, [filterRequests]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

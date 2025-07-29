@@ -1,28 +1,28 @@
 'use client';
 
 import React, { useState, useEffect, useCallback } from 'react';
+import Image from 'next/image';
 import { 
   X, 
   Copy, 
+  Download, 
+  Upload, 
+  File, 
+  FileText, 
+  Image as ImageIcon, 
+  Trash2, 
   ExternalLink, 
   Building, 
-  MapPin, 
   Users, 
   Calendar, 
-  FileText, 
-  ChevronDown, 
+  MapPin, 
+  Globe, 
+  ChevronDown,
   ChevronRight,
-  Globe,
-  User,
   Shield,
   Activity,
-  TrendingUp,
-  AlertCircle,
-  Upload,
-  Image,
-  File,
-  Trash2,
-  Download
+  User,
+  AlertCircle
 } from 'lucide-react';
 
 interface CompanyDetailModalProps {
@@ -242,7 +242,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
   };
 
   const getFileIcon = (type: 'image' | 'document') => {
-    return type === 'image' ? <Image className="h-4 w-4" /> : <File className="h-4 w-4" />;
+    return type === 'image' ? <ImageIcon className="h-4 w-4" /> : <File className="h-4 w-4" />;
   };
 
   const formatFileSize = (bytes: number) => {
@@ -718,11 +718,13 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                             </div>
                             
                             {file.type === 'image' && (
-                              <div className="mb-3">
-                                <img 
-                                  src={file.url} 
+                              <div className="relative">
+                                <Image
+                                  src={file.url}
                                   alt={file.name}
-                                  className="w-full h-32 object-cover rounded-lg"
+                                  width={200}
+                                  height={200}
+                                  className="w-full h-32 object-cover rounded"
                                 />
                               </div>
                             )}

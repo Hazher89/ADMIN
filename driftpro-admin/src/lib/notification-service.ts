@@ -10,33 +10,23 @@ import {
   where, 
   getDocs, 
   serverTimestamp,
-  writeBatch 
+  writeBatch,
+  getDoc,
+  setDoc
 } from 'firebase/firestore';
 
 export interface Notification {
   id: string;
-  type: 'deviation' | 'vacation' | 'absence' | 'shift' | 'document' | 'chat' | 'employee' | 'system';
+  userId: string;
   title: string;
   message: string;
-  priority: 'low' | 'medium' | 'high' | 'urgent';
+  type: NotificationType;
+  priority: 'low' | 'medium' | 'high';
   status: 'unread' | 'read' | 'archived';
-  recipientId: string;
-  recipientRole?: 'admin' | 'department_leader' | 'employee';
-  senderId?: string;
-  senderName?: string;
-  relatedId?: string; // ID of related item (deviation, vacation request, etc.)
-  relatedType?: string; // Type of related item
-  actionUrl?: string; // URL to navigate to when clicked
-  actionText?: string; // Text for action button
-  metadata?: {
-    department?: string;
-    companyId?: string;
-    timestamp?: any;
-    [key: string]: any;
-  };
-  createdAt: any;
-  readAt?: any;
-  expiresAt?: any;
+  metadata: Record<string, string | number | boolean>;
+  readAt?: string;
+  archivedAt?: string;
+  createdAt: string;
 }
 
 export interface NotificationSettings {
@@ -44,64 +34,70 @@ export interface NotificationSettings {
   email: boolean;
   push: boolean;
   inApp: boolean;
-  types: {
-    deviation: boolean;
-    vacation: boolean;
-    absence: boolean;
-    shift: boolean;
-    document: boolean;
-    chat: boolean;
-    employee: boolean;
-    system: boolean;
-  };
-  quietHours: {
-    enabled: boolean;
-    start: string; // HH:mm format
-    end: string; // HH:mm format
-  };
+  types: Record<NotificationType, boolean>;
+  updatedAt: string;
 }
 
 class NotificationService {
   // Create notification
-  async createNotification(notificationData: Omit<Notification, 'id' | 'createdAt'>): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
-
+  async createNotification(notificationData: {
+    userId: string;
+    title: string;
+    message: string;
+    type: string;
+    priority: 'urgent' | 'high' | 'medium' | 'low';
+    actionUrl?: string;
+    actionText?: string;
+    metadata?: Record<string, unknown>;
+  }): Promise<void> {
+    if (!db) return;
+    
     try {
-      const notification = {
+      await addDoc(collection(db, 'notifications'), {
         ...notificationData,
+        status: 'unread',
         createdAt: serverTimestamp(),
-        status: 'unread'
-      };
-
-      const docRef = await addDoc(collection(db, 'notifications'), notification);
-      return docRef.id;
+        updatedAt: serverTimestamp()
+      });
     } catch (error) {
       console.error('Error creating notification:', error);
-      throw error;
     }
   }
 
   // Load notifications for user
-  async loadNotifications(userId: string, callback: (notifications: Notification[]) => void) {
-    if (!db) return;
-
-    try {
-      const notificationsQuery = query(
+  async loadNotifications(userId: string, callback: (notifications: Notification[]) => void): Promise<() => void> {
+    if (!db) return () => {};
+    
+    const unsubscribe = onSnapshot(
+      query(
         collection(db, 'notifications'),
-        where('recipientId', '==', userId),
+        where('userId', '==', userId),
         orderBy('createdAt', 'desc')
-      );
-
-      return onSnapshot(notificationsQuery, (snapshot) => {
-        const notifications: Notification[] = [];
+      ),
+      (snapshot) => {
+        const notificationsData: Notification[] = [];
         snapshot.forEach((doc) => {
-          notifications.push({ id: doc.id, ...doc.data() } as Notification);
+          const data = doc.data();
+          notificationsData.push({
+            id: doc.id,
+            userId: data.userId || '',
+            title: data.title || '',
+            message: data.message || '',
+            type: data.type || 'system',
+            priority: data.priority || 'medium',
+            status: data.status || 'unread',
+            actionUrl: data.actionUrl || '',
+            actionText: data.actionText || '',
+            metadata: data.metadata || {},
+            createdAt: data.createdAt?.toDate() || new Date(),
+            updatedAt: data.updatedAt?.toDate() || new Date()
+          });
         });
-        callback(notifications);
-      });
-    } catch (error) {
-      console.error('Error loading notifications:', error);
-    }
+        callback(notificationsData);
+      }
+    );
+    
+    return unsubscribe;
   }
 
   // Mark notification as read
@@ -470,74 +466,57 @@ class NotificationService {
   }
 
   // Get notification settings
-  async getNotificationSettings(userId: string): Promise<NotificationSettings | null> {
-    if (!db) return null;
-
+  async getNotificationSettings(userId: string): Promise<NotificationSettings> {
+    if (!db) return this.getDefaultSettings();
+    
     try {
-      const settingsQuery = query(
-        collection(db, 'notificationSettings'),
-        where('userId', '==', userId)
-      );
-
-      const snapshot = await getDocs(settingsQuery);
-      if (!snapshot.empty) {
-        return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as NotificationSettings;
+      const doc = await getDoc(doc(db, 'notificationSettings', userId));
+      if (doc.exists()) {
+        return { ...this.getDefaultSettings(), ...doc.data() };
       }
-
-      // Return default settings if none exist
-      return {
-        userId,
-        email: true,
-        push: true,
-        inApp: true,
-        types: {
-          deviation: true,
-          vacation: true,
-          absence: true,
-          shift: true,
-          document: true,
-          chat: true,
-          employee: true,
-          system: true
-        },
-        quietHours: {
-          enabled: false,
-          start: '22:00',
-          end: '08:00'
-        }
-      };
+      return this.getDefaultSettings();
     } catch (error) {
       console.error('Error getting notification settings:', error);
-      return null;
+      return this.getDefaultSettings();
     }
   }
 
   // Update notification settings
   async updateNotificationSettings(userId: string, settings: Partial<NotificationSettings>): Promise<void> {
     if (!db) return;
-
+    
     try {
-      const settingsQuery = query(
-        collection(db, 'notificationSettings'),
-        where('userId', '==', userId)
-      );
-
-      const snapshot = await getDocs(settingsQuery);
-      if (!snapshot.empty) {
-        await updateDoc(doc(db, 'notificationSettings', snapshot.docs[0].id), {
-          ...settings,
-          updatedAt: serverTimestamp()
-        });
-      } else {
-        await addDoc(collection(db, 'notificationSettings'), {
-          userId,
-          ...settings,
-          createdAt: serverTimestamp()
-        });
-      }
+      await setDoc(doc(db, 'notificationSettings', userId), {
+        ...settings,
+        updatedAt: serverTimestamp()
+      }, { merge: true });
     } catch (error) {
       console.error('Error updating notification settings:', error);
     }
+  }
+
+  private getDefaultSettings(): NotificationSettings {
+    return {
+      userId: '',
+      email: true,
+      push: true,
+      inApp: true,
+      types: {
+        deviation: true,
+        vacation: true,
+        absence: true,
+        shift: true,
+        document: true,
+        chat: true,
+        employee: true,
+        system: true
+      },
+      quietHours: {
+        enabled: false,
+        start: '22:00',
+        end: '08:00'
+      }
+    };
   }
 }
 

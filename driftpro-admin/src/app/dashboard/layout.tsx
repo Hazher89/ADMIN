@@ -2,28 +2,21 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname, useRouter } from 'next/navigation';
+import { usePathname } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
-  Zap, 
+  Home, 
+  Users, 
+  Building, 
+  FileText, 
+  Calendar, 
+  MessageSquare, 
+  AlertTriangle, 
+  LogOut, 
   Menu, 
   X, 
-  Bell, 
-  LogOut,
-  Home,
-  Users,
-  Building,
-  Clock,
-  User,
-  Calendar,
-  AlertTriangle,
-  MessageSquare,
-  FileText,
-  BarChart3,
-  Settings,
-  UserX,
-  MessageCircle,
-  Mail
+  Mail, 
+  Bell 
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import NotificationBell from '@/components/NotificationBell';
@@ -42,10 +35,9 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, logout } = useAuth();
+  const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
-  const pathname = usePathname();
-  const router = useRouter();
 
   // Load unread notification count
   useEffect(() => {
@@ -104,7 +96,7 @@ export default function DashboardLayout({
     {
       name: 'Chat',
       href: '/dashboard/chat',
-      icon: <MessageCircle className="h-5 w-5" />
+      icon: <MessageSquare className="h-5 w-5" />
     },
     {
       name: 'Avvik',
@@ -139,13 +131,10 @@ export default function DashboardLayout({
   const handleLogout = async () => {
     try {
       await logout();
-      router.push('/login');
     } catch (error) {
-      console.error('Logout error:', error);
+      console.error('Error logging out:', error);
     }
   };
-
-  const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   return (
     <div className="flex h-screen bg-gray-100">

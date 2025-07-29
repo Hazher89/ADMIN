@@ -1,100 +1,65 @@
 'use client';
 
-import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Send, 
-  Paperclip, 
-  Camera, 
-  Image, 
-  File, 
-  Video, 
-  Mic, 
-  MoreVertical, 
-  Search, 
-  Plus, 
-  Users, 
-  Settings, 
-  Bell, 
-  BellOff,
-  Check,
-  CheckCheck,
-  Eye,
-  EyeOff,
-  Smile,
-  Phone,
-  PhoneOff,
-  Volume2,
-  VolumeX,
-  Minimize2,
-  Maximize2,
-  X,
-  Edit,
-  Trash2,
-  UserPlus,
-  UserMinus,
-  Shield,
-  Lock,
-  Unlock,
-  Archive,
-  Pin,
-  Star,
-  Download,
-  Share,
-  Copy,
-  Reply,
-  Forward,
-  Block,
-  Report,
-  MessageCircle
-} from 'lucide-react';
-import { collection, query, orderBy, onSnapshot, addDoc, updateDoc, doc, where, getDocs, serverTimestamp, deleteDoc } from 'firebase/firestore';
-import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
-import { db, storage } from '@/lib/firebase';
+import React, { useState, useEffect, useRef } from 'react';
+import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { chatService, Chat, ChatMessage, User } from '@/lib/chat-service';
+import { chatService, userService } from '@/lib/firebase-services';
+import { Chat, Message } from '@/types';
+import {
+  Send,
+  Paperclip,
+  Smile,
+  Mic,
+  Camera,
+  File,
+  Search,
+  Settings,
+  Users,
+  X,
+  Check,
+  Download,
+  MessageSquare,
+  User,
+  Plus,
+  Maximize2,
+  Minimize2,
+  CheckCheck
+} from 'lucide-react';
+import { toast } from 'react-hot-toast';
 
 export default function ChatPage() {
   const { user } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [newMessage, setNewMessage] = useState('');
   const [searchTerm, setSearchTerm] = useState('');
-  const [showNewChatModal, setShowNewChatModal] = useState(false);
-  const [showGroupModal, setShowGroupModal] = useState(false);
-  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
-  const [groupName, setGroupName] = useState('');
-  const [groupDescription, setGroupDescription] = useState('');
-  const [fileInput, setFileInput] = useState<HTMLInputElement | null>(null);
-  const [cameraInput, setCameraInput] = useState<HTMLInputElement | null>(null);
-  const [isRecording, setIsRecording] = useState(false);
-  const [isTyping, setIsTyping] = useState(false);
-  const [typingUsers, setTypingUsers] = useState<string[]>([]);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [replyToMessage, setReplyToMessage] = useState<ChatMessage | null>(null);
-  const [forwardMessage, setForwardMessage] = useState<ChatMessage | null>(null);
-  const [showForwardModal, setShowForwardModal] = useState(false);
-  const [showChatSettings, setShowChatSettings] = useState(false);
-  const [showUserProfile, setShowUserProfile] = useState(false);
-  const [selectedUser, setSelectedUser] = useState<User | null>(null);
-  const [isMinimized, setIsMinimized] = useState(false);
-  const [isFullscreen, setIsFullscreen] = useState(false);
-  const [mediaRecorder, setMediaRecorder] = useState<MediaRecorder | null>(null);
-  const [audioChunks, setAudioChunks] = useState<Blob[]>([]);
-
+  const [replyToMessage, setReplyToMessage] = useState<Message | null>(null);
+  const [isRecording, setIsRecording] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const cameraInputRef = useRef<HTMLInputElement>(null);
-  const audioRef = useRef<HTMLAudioElement>(null);
 
   // Load chats
   useEffect(() => {
     if (!user?.uid) return;
 
-    const unsubscribe = chatService.loadChats(user.uid, (chats) => {
-      setChats(chats);
-    });
+    let unsubscribe: (() => void) | undefined;
+
+    const setupChats = async () => {
+      try {
+        const unsub = await chatService.loadChats(user.uid, (chatsData) => {
+          setChats(chatsData);
+        });
+        unsubscribe = unsub;
+      } catch (error) {
+        console.error('Error loading chats:', error);
+      }
+    };
+
+    setupChats();
 
     return () => {
       if (unsubscribe) unsubscribe();
@@ -103,20 +68,37 @@ export default function ChatPage() {
 
   // Load users
   useEffect(() => {
-    chatService.loadUsers((users) => {
-      setUsers(users);
-    });
+    const loadUsers = async () => {
+      try {
+        await userService.loadUsers((usersData) => {
+          setUsers(usersData);
+        });
+      } catch (error) {
+        console.error('Error loading users:', error);
+      }
+    };
+
+    loadUsers();
   }, []);
 
   // Load messages for selected chat
   useEffect(() => {
     if (!selectedChat?.id || !user?.uid) return;
 
-    const unsubscribe = chatService.loadMessages(selectedChat.id, (messages) => {
-      setMessages(messages);
-      // Mark messages as read
-      chatService.markMessagesAsRead(selectedChat.id, user.uid, messages);
-    });
+    let unsubscribe: (() => void) | undefined;
+
+    const setupMessages = async () => {
+      try {
+        const unsub = await chatService.loadMessages(selectedChat.id, (messagesData) => {
+          setMessages(messagesData);
+        });
+        unsubscribe = unsub;
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      }
+    };
+
+    setupMessages();
 
     return () => {
       if (unsubscribe) unsubscribe();
@@ -175,96 +157,14 @@ export default function ChatPage() {
     }
   };
 
-  // Create new chat
-  const createNewChat = async (participantId: string) => {
-    if (!user?.uid) return;
-
-    const participant = users.find(u => u.id === participantId);
-    if (!participant) return;
-
-    const chatId = await chatService.createChat(
-      participant.name,
-      [user.uid, participantId],
-      {
-        [user.uid]: user.displayName || user.email || 'Unknown',
-        [participantId]: participant.name
-      },
-      {
-        [user.uid]: user.photoURL,
-        [participantId]: participant.avatar
-      }
-    );
-
-    if (chatId) {
-      const newChat = chats.find(c => c.id === chatId);
-      if (newChat) {
-        setSelectedChat(newChat);
-      }
-    }
-    setShowNewChatModal(false);
-  };
-
-  // Create group chat
-  const createGroupChat = async () => {
-    if (!user?.uid || !groupName.trim() || selectedUsers.length === 0) return;
-
-    const groupParticipants = [user.uid, ...selectedUsers];
-    const participantNames: { [key: string]: string } = {};
-    const participantAvatars: { [key: string]: string } = {};
-
-    // Add current user
-    participantNames[user.uid] = user.displayName || user.email || 'Unknown';
-    participantAvatars[user.uid] = user.photoURL;
-
-    // Add selected users
-    selectedUsers.forEach(userId => {
-      const userData = users.find(u => u.id === userId);
-      if (userData) {
-        participantNames[userId] = userData.name;
-        participantAvatars[userId] = userData.avatar || '';
-      }
-    });
-
-    const chatId = await chatService.createChat(
-      groupName,
-      groupParticipants,
-      participantNames,
-      participantAvatars,
-      true,
-      {
-        description: groupDescription,
-        createdBy: user.uid,
-        createdAt: new Date(),
-        admins: [user.uid],
-        pinnedMessages: []
-      }
-    );
-
-    if (chatId) {
-      const newChat = chats.find(c => c.id === chatId);
-      if (newChat) {
-        setSelectedChat(newChat);
-      }
-    }
-    setShowGroupModal(false);
-    setGroupName('');
-    setGroupDescription('');
-    setSelectedUsers([]);
-  };
-
   const filteredChats = chats.filter(chat =>
     chat.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
-
-  const filteredUsers = users.filter(user =>
-    user.name.toLowerCase().includes(searchTerm.toLowerCase()) &&
-    user.id !== user?.uid
   );
 
   return (
     <div className="flex h-screen bg-gray-100">
       {/* Chat List Sidebar */}
-      <div className={`w-80 bg-white border-r border-gray-200 flex flex-col ${isMinimized ? 'hidden' : ''}`}>
+      <div className={`w-80 bg-white border-r border-gray-200 flex flex-col`}>
         {/* Header */}
         <div className="p-4 border-b border-gray-200">
           <div className="flex items-center justify-between mb-4">
@@ -360,7 +260,7 @@ export default function ChatPage() {
             ))
           ) : (
             <div className="p-4 text-center text-gray-500">
-              <MessageCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+              <MessageSquare className="mx-auto h-12 w-12 text-gray-400 mb-4" />
               <p>Ingen chat funnet</p>
               <p className="text-sm">Start en ny chat for å begynne å snakke</p>
             </div>
@@ -456,10 +356,12 @@ export default function ChatPage() {
                         
                         {message.type === 'image' && (
                           <div>
-                            <img 
+                            <Image 
                               src={message.fileUrl} 
                               alt="Shared image"
-                              className="max-w-full rounded-lg"
+                              width={200}
+                              height={200}
+                              className="rounded-lg max-w-xs"
                             />
                             <p className="text-sm mt-1">{message.content}</p>
                           </div>
@@ -726,7 +628,7 @@ export default function ChatPage() {
       ) : (
         <div className="flex-1 flex items-center justify-center">
           <div className="text-center">
-            <MessageCircle className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+            <MessageSquare className="mx-auto h-12 w-12 text-gray-400 mb-4" />
             <h3 className="text-lg font-medium text-gray-900 mb-2">Velg en chat</h3>
             <p className="text-gray-600">Velg en chat fra listen for å starte å snakke</p>
           </div>
