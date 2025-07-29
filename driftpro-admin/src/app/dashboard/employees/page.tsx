@@ -84,6 +84,8 @@ export default function EmployeesPage() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [showImportDropdown, setShowImportDropdown] = useState(false);
+  const [showExportDropdown, setShowExportDropdown] = useState(false);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -163,6 +165,11 @@ export default function EmployeesPage() {
       }
       if (selectedEmployee && !target.closest('.dropdown-container')) {
         setSelectedEmployee(null);
+      }
+      // Close import/export dropdowns if clicking outside
+      if (!target.closest('.import-export-dropdown')) {
+        setShowImportDropdown(false);
+        setShowExportDropdown(false);
       }
     };
 
@@ -938,55 +945,99 @@ export default function EmployeesPage() {
           <p className="text-gray-600">Administrer ansatte og deres tilganger</p>
         </div>
         <div className="flex space-x-2">
-          {/* Import/Export buttons */}
-          <button
-            onClick={downloadTemplate}
-            disabled={saving}
-            className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50"
-          >
-            <FileSpreadsheet className="h-5 w-5" />
-            <span>Last ned Excel-mal</span>
-          </button>
-          
-          <button
-            onClick={downloadCSVTemplate}
-            disabled={saving}
-            className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 flex items-center space-x-2 disabled:opacity-50"
-          >
-            <FileSpreadsheet className="h-5 w-5" />
-            <span>Last ned CSV-mal</span>
-          </button>
-          
-          <label className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2 cursor-pointer disabled:opacity-50">
-            <Upload className="h-5 w-5" />
-            <span>Importer fil</span>
-            <input
-              ref={fileInputRef}
-              type="file"
-              accept=".xlsx,.xls,.csv"
-              onChange={importFromExcel}
-              className="hidden"
+          {/* Import button with dropdown */}
+          <div className="relative import-export-dropdown">
+            <button
+              onClick={() => setShowImportDropdown(!showImportDropdown)}
               disabled={saving}
-            />
-          </label>
+              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2 disabled:opacity-50"
+            >
+              <Upload className="h-5 w-5" />
+              <span>Importer</span>
+              <ChevronDown className="h-4 w-4" />
+            </button>
+            
+            {showImportDropdown && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-48">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      downloadTemplate();
+                      setShowImportDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <span>Last ned Excel-mal</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      downloadCSVTemplate();
+                      setShowImportDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <span>Last ned CSV-mal</span>
+                  </button>
+                  <div className="border-t border-gray-200 my-1"></div>
+                  <label className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 cursor-pointer">
+                    <Upload className="h-4 w-4" />
+                    <span>Importer fil (.xlsx, .xls, .csv)</span>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".xlsx,.xls,.csv"
+                      onChange={importFromExcel}
+                      className="hidden"
+                      disabled={saving}
+                      onClick={() => setShowImportDropdown(false)}
+                    />
+                  </label>
+                </div>
+              </div>
+            )}
+          </div>
           
-          <button
-            onClick={exportToExcel}
-            disabled={saving || employees.length === 0}
-            className="bg-orange-600 text-white px-4 py-2 rounded-lg hover:bg-orange-700 flex items-center space-x-2 disabled:opacity-50"
-          >
-            <Download className="h-5 w-5" />
-            <span>Eksporter Excel</span>
-          </button>
-          
-          <button
-            onClick={exportToCSV}
-            disabled={saving || employees.length === 0}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50"
-          >
-            <Download className="h-5 w-5" />
-            <span>Eksporter CSV</span>
-          </button>
+          {/* Export button with dropdown */}
+          <div className="relative import-export-dropdown">
+            <button
+              onClick={() => setShowExportDropdown(!showExportDropdown)}
+              disabled={saving || employees.length === 0}
+              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50"
+            >
+              <Download className="h-5 w-5" />
+              <span>Eksporter</span>
+              <ChevronDown className="h-4 w-4" />
+            </button>
+            
+            {showExportDropdown && (
+              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-48">
+                <div className="py-1">
+                  <button
+                    onClick={() => {
+                      exportToExcel();
+                      setShowExportDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Eksporter til Excel</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      exportToCSV();
+                      setShowExportDropdown(false);
+                    }}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <Download className="h-4 w-4" />
+                    <span>Eksporter til CSV</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           
           <button
             onClick={() => setShowAddModal(true)}
