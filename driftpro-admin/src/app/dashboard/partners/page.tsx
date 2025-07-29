@@ -1015,7 +1015,7 @@ export default function PartnersPage() {
             </div>
             
             <p className="text-gray-700 mb-6">
-              Er du sikker på at du vil slette <strong>{selectedPartner.name}</strong>? 
+              Er du sikker på at du vil slette <strong>{selectedPartner.name || 'Ukjent navn'}</strong>? 
               Dette vil permanent fjerne all data knyttet til denne samarbeidspartneren.
             </p>
             
@@ -1042,8 +1042,8 @@ export default function PartnersPage() {
         <CompanyDetailModal
           isOpen={showDetailModal}
           onClose={() => setShowDetailModal(false)}
-          orgNumber={selectedPartnerForDetail.organizationNumber}
-          companyName={selectedPartnerForDetail.name}
+          orgNumber={selectedPartnerForDetail.organizationNumber || ''}
+          companyName={selectedPartnerForDetail.name || 'Ukjent navn'}
         />
       )}
 
