@@ -16,7 +16,8 @@ import {
   Menu, 
   X, 
   Mail, 
-  Bell 
+  Bell,
+  Code 
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import NotificationBell from '@/components/NotificationBell';
@@ -124,6 +125,13 @@ export default function DashboardLayout({
       name: 'Varsler',
       href: '/dashboard/notifications',
       icon: <Bell className="h-5 w-5" />
+    },
+    {
+      name: 'Utvikling',
+      href: '/dashboard/development',
+      icon: <Code className="h-5 w-5" />,
+      badge: 'Admin',
+      badgeColor: 'bg-purple-500'
     }
   ];
 
