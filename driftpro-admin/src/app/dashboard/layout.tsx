@@ -59,6 +59,11 @@ export default function DashboardLayout({
       icon: <Building className="h-5 w-5" />
     },
     {
+      name: 'Samarbeidspartnere',
+      href: '/dashboard/partners',
+      icon: <Users className="h-5 w-5" />
+    },
+    {
       name: 'Skiftplan',
       href: '/dashboard/shifts',
       icon: <Clock className="h-5 w-5" />
