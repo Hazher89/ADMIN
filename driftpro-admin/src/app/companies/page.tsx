@@ -16,7 +16,7 @@ import {
   Mail,
   ExternalLink
 } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Company {
@@ -199,6 +199,37 @@ export default function CompaniesPage() {
     }
   };
 
+  const emergencyFixDriftPro = async () => {
+    try {
+      console.log('🚨 Emergency fix: Updating DriftPro AS admin email...');
+      
+      // Find DriftPro AS in the loaded companies
+      const driftPro = companies.find(company => company.name === 'DriftPro AS');
+      
+      if (driftPro && db) {
+        console.log('Found DriftPro AS, updating admin email...');
+        
+        // Update in Firebase
+        await updateDoc(doc(db, 'companies', driftPro.id), {
+          adminEmail: 'baxigshti@hotmail.de',
+          updatedAt: new Date().toISOString()
+        });
+        
+        console.log('✅ DriftPro AS updated successfully!');
+        alert('✅ DriftPro AS admin-e-post oppdatert!\n\nDu kan nå logge inn med baxigshti@hotmail.de');
+        
+        // Reload companies to reflect the change
+        loadCompanies();
+      } else {
+        console.log('❌ DriftPro AS not found or Firebase not available');
+        alert('❌ Kunne ikke finne DriftPro AS i databasen');
+      }
+    } catch (error) {
+      console.error('❌ Error in emergency fix:', error);
+      alert('❌ Feil ved oppdatering: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
@@ -260,6 +291,19 @@ export default function CompaniesPage() {
           <p className="text-xl text-gray-600 max-w-2xl mx-auto">
             Søk etter din bedrift for å få tilgang til DriftPro Admin-panelet
           </p>
+          
+          {/* Emergency Fix Button */}
+          <div className="mt-4">
+            <button
+              onClick={emergencyFixDriftPro}
+              className="inline-flex items-center px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm"
+            >
+              🔧 Nødfiks: Oppdater DriftPro AS
+            </button>
+            <p className="text-xs text-gray-500 mt-1">
+              Klikk hvis du ikke kan logge inn på DriftPro AS
+            </p>
+          </div>
         </div>
 
         {/* Search Section */}
