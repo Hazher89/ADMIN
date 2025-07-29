@@ -141,115 +141,129 @@ export default function PartnersPage() {
       partnersSnapshot.forEach((doc) => {
         const data = doc.data();
         
-        // Handle timestamps
-        let createdAt = new Date().toISOString();
-        if (data.createdAt?.toDate) {
-          createdAt = data.createdAt.toDate().toISOString();
-        } else if (data.createdAt instanceof Date) {
-          createdAt = data.createdAt.toISOString();
-        } else if (typeof data.createdAt === 'string') {
-          createdAt = data.createdAt;
+        try {
+          // Handle timestamps
+          let createdAt = new Date().toISOString();
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate().toISOString();
+          } else if (data.createdAt instanceof Date) {
+            createdAt = data.createdAt.toISOString();
+          } else if (typeof data.createdAt === 'string') {
+            createdAt = data.createdAt;
+          }
+
+          let updatedAt = new Date().toISOString();
+          if (data.updatedAt?.toDate) {
+            updatedAt = data.updatedAt.toDate().toISOString();
+          } else if (data.updatedAt instanceof Date) {
+            updatedAt = data.updatedAt.toISOString();
+          } else if (typeof data.updatedAt === 'string') {
+            updatedAt = data.updatedAt;
+          }
+
+          // Handle address - extract from object or use separate fields
+          let street = '';
+          let city = '';
+          let postalCode = '';
+
+          if (data.address && typeof data.address === 'object') {
+            street = data.address.street || '';
+            city = data.address.city || '';
+            postalCode = data.address.postalCode || '';
+          } else {
+            street = data.street || '';
+            city = data.city || '';
+            postalCode = data.postalCode || '';
+          }
+
+          // Handle brreg data - extract from object or use separate fields
+          let brregAntallAnsatte = '';
+          let brregDagligLeder = '';
+          let brregForretningsadresse = '';
+          let brregNaeringskode = '';
+          let brregOrganisasjonsform = '';
+          let brregPostadresse = '';
+          let brregRegistreringsdato = '';
+          let brregRegnskapsforer = '';
+
+          if (data.brregData && typeof data.brregData === 'object') {
+            brregAntallAnsatte = data.brregData.antallAnsatte || '';
+            brregDagligLeder = data.brregData.dagligLeder || '';
+            brregForretningsadresse = data.brregData.forretningsadresse || '';
+            brregNaeringskode = data.brregData.naeringskode || '';
+            brregOrganisasjonsform = data.brregData.organisasjonsform || '';
+            brregPostadresse = data.brregData.postadresse || '';
+            brregRegistreringsdato = data.brregData.registreringsdato || '';
+            brregRegnskapsforer = data.brregData.regnskapsforer || '';
+          }
+
+          // Handle contactPerson - extract from object or use as string
+          let contactPerson = '';
+          if (data.contactPerson && typeof data.contactPerson === 'object') {
+            contactPerson = data.contactPerson.name || data.contactPerson.email || '';
+          } else {
+            contactPerson = data.contactPerson || '';
+          }
+
+          const partner: Partner = {
+            id: doc.id,
+            name: data.name || '',
+            organizationNumber: data.organizationNumber || '',
+            internalName: data.internalName || '',
+            phone: data.phone || '',
+            contactPerson: contactPerson,
+            email: data.email || '',
+            website: data.website || '',
+            industry: data.industry || '',
+            employees: data.employees || 0,
+            revenue: data.revenue || 0,
+            description: data.description || '',
+            status: data.status || 'active',
+            createdAt,
+            updatedAt,
+            street,
+            city,
+            postalCode,
+            brregAntallAnsatte,
+            brregDagligLeder,
+            brregForretningsadresse,
+            brregNaeringskode,
+            brregOrganisasjonsform,
+            brregPostadresse,
+            brregRegistreringsdato,
+            brregRegnskapsforer,
+            vehicles: Array.isArray(data.vehicles) ? data.vehicles.map((v: Vehicle) => ({
+              id: v.id || '',
+              regNumber: v.regNumber || '',
+              manufacturer: v.manufacturer || '',
+              brand: v.brand || '',
+              model: v.model || '',
+              variant: v.variant || '',
+              bodyType: v.bodyType || '',
+              vehicleGroup: v.vehicleGroup || '',
+              firstRegistered: v.firstRegistered || '',
+              lastEUApproved: v.lastEUApproved || '',
+              nextEUInspection: v.nextEUInspection || '',
+              maxPayload: v.maxPayload || '',
+              fetchedAt: v.fetchedAt || ''
+            })) : [],
+            images: Array.isArray(data.images) ? data.images.filter((img: string) => typeof img === 'string') : [],
+            documents: Array.isArray(data.documents) ? data.documents.map((doc: Document) => ({
+              id: doc.id || '',
+              name: doc.name || '',
+              type: doc.type || 'document',
+              url: doc.url || '',
+              uploadedAt: doc.uploadedAt || new Date().toISOString(),
+              description: doc.description || ''
+            })) : []
+          };
+
+          partnersData.push(partner);
+        } catch (error) {
+          console.error('Error processing partner data:', error);
+          console.error('Partner ID:', doc.id);
+          console.error('Raw data:', data);
         }
-
-        let updatedAt = new Date().toISOString();
-        if (data.updatedAt?.toDate) {
-          updatedAt = data.updatedAt.toDate().toISOString();
-        } else if (data.updatedAt instanceof Date) {
-          updatedAt = data.updatedAt.toISOString();
-        } else if (typeof data.updatedAt === 'string') {
-          updatedAt = data.updatedAt;
-        }
-
-        // Handle address - extract from object or use separate fields
-        let street = '';
-        let city = '';
-        let postalCode = '';
-
-        if (data.address && typeof data.address === 'object') {
-          street = data.address.street || '';
-          city = data.address.city || '';
-          postalCode = data.address.postalCode || '';
-        } else {
-          street = data.street || '';
-          city = data.city || '';
-          postalCode = data.postalCode || '';
-        }
-
-        // Handle brreg data - extract from object or use separate fields
-        let brregAntallAnsatte = '';
-        let brregDagligLeder = '';
-        let brregForretningsadresse = '';
-        let brregNaeringskode = '';
-        let brregOrganisasjonsform = '';
-        let brregPostadresse = '';
-        let brregRegistreringsdato = '';
-        let brregRegnskapsforer = '';
-
-        if (data.brregData && typeof data.brregData === 'object') {
-          brregAntallAnsatte = data.brregData.antallAnsatte || '';
-          brregDagligLeder = data.brregData.dagligLeder || '';
-          brregForretningsadresse = data.brregData.forretningsadresse || '';
-          brregNaeringskode = data.brregData.naeringskode || '';
-          brregOrganisasjonsform = data.brregData.organisasjonsform || '';
-          brregPostadresse = data.brregData.postadresse || '';
-          brregRegistreringsdato = data.brregData.registreringsdato || '';
-          brregRegnskapsforer = data.brregData.regnskapsforer || '';
-        }
-
-        const partner: Partner = {
-          id: doc.id,
-          name: data.name || '',
-          organizationNumber: data.organizationNumber || '',
-          internalName: data.internalName || '',
-          phone: data.phone || '',
-          contactPerson: data.contactPerson || '',
-          email: data.email || '',
-          website: data.website || '',
-          industry: data.industry || '',
-          employees: data.employees || 0,
-          revenue: data.revenue || 0,
-          description: data.description || '',
-          status: data.status || 'active',
-          createdAt,
-          updatedAt,
-          street,
-          city,
-          postalCode,
-          brregAntallAnsatte,
-          brregDagligLeder,
-          brregForretningsadresse,
-          brregNaeringskode,
-          brregOrganisasjonsform,
-          brregPostadresse,
-          brregRegistreringsdato,
-          brregRegnskapsforer,
-          vehicles: Array.isArray(data.vehicles) ? data.vehicles.map((v: Vehicle) => ({
-            id: v.id || '',
-            regNumber: v.regNumber || '',
-            manufacturer: v.manufacturer || '',
-            brand: v.brand || '',
-            model: v.model || '',
-            variant: v.variant || '',
-            bodyType: v.bodyType || '',
-            vehicleGroup: v.vehicleGroup || '',
-            firstRegistered: v.firstRegistered || '',
-            lastEUApproved: v.lastEUApproved || '',
-            nextEUInspection: v.nextEUInspection || '',
-            maxPayload: v.maxPayload || '',
-            fetchedAt: v.fetchedAt || ''
-          })) : [],
-          images: Array.isArray(data.images) ? data.images.filter((img: string) => typeof img === 'string') : [],
-          documents: Array.isArray(data.documents) ? data.documents.map((doc: Document) => ({
-            id: doc.id || '',
-            name: doc.name || '',
-            type: doc.type || 'document',
-            url: doc.url || '',
-            uploadedAt: doc.uploadedAt || new Date().toISOString(),
-            description: doc.description || ''
-          })) : []
-        };
-
-        partnersData.push(partner);
       });
 
       setPartners(partnersData);
@@ -292,32 +306,6 @@ export default function PartnersPage() {
       }
     } catch (error) {
       console.error('Error fetching brreg data:', error);
-    }
-    return null;
-  };
-
-  // Fetch vehicle data from regnr.info
-  const fetchVehicleData = async (regNumber: string) => {
-    try {
-      const response = await fetch(`https://regnr.info/api/v1/vehicle/${regNumber}`);
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          manufacturer: data.manufacturer || '',
-          brand: data.brand || '',
-          model: data.model || '',
-          variant: data.variant || '',
-          bodyType: data.bodyType || '',
-          vehicleGroup: data.vehicleGroup || '',
-          firstRegistered: data.firstRegistered || '',
-          lastEUApproved: data.lastEUApproved || '',
-          nextEUInspection: data.nextEUInspection || '',
-          maxPayload: data.maxPayload || '',
-          fetchedAt: new Date().toISOString()
-        };
-      }
-    } catch (error) {
-      console.error('Error fetching vehicle data:', error);
     }
     return null;
   };
@@ -796,11 +784,11 @@ export default function PartnersPage() {
                 <div className="space-y-2">
                   <div>
                     <span className="text-sm text-gray-600">Intern navn:</span>
-                    <p className="font-medium">{selectedPartner.internalName}</p>
+                    <p className="font-medium">{selectedPartner.internalName || 'Ikke tilgjengelig'}</p>
                   </div>
                   <div>
                     <span className="text-sm text-gray-600">Organisasjonsnummer:</span>
-                    <p className="font-medium">{selectedPartner.organizationNumber}</p>
+                    <p className="font-medium">{selectedPartner.organizationNumber || 'Ikke tilgjengelig'}</p>
                   </div>
                   <div>
                     <span className="text-sm text-gray-600">Status:</span>
@@ -860,7 +848,7 @@ export default function PartnersPage() {
                     {(selectedPartner.city || selectedPartner.postalCode) && (
                       <div>
                         <span className="text-sm text-gray-600">Poststed:</span>
-                        <p className="font-medium">{selectedPartner.city} {selectedPartner.postalCode}</p>
+                        <p className="font-medium">{selectedPartner.city || ''} {selectedPartner.postalCode || ''}</p>
                       </div>
                     )}
                   </div>
@@ -895,20 +883,20 @@ export default function PartnersPage() {
               )}
 
               {/* Vehicles */}
-              {selectedPartner.vehicles.length > 0 && (
+              {selectedPartner.vehicles && selectedPartner.vehicles.length > 0 && (
                 <div className="md:col-span-2">
                   <h3 className="text-lg font-semibold mb-3">Kjøretøy ({selectedPartner.vehicles.length})</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {selectedPartner.vehicles.map((vehicle) => (
                       <div key={vehicle.id} className="border rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
-                          <h4 className="font-medium">{vehicle.regNumber}</h4>
-                          <span className="text-sm text-gray-600">{vehicle.brand} {vehicle.model}</span>
+                          <h4 className="font-medium">{vehicle.regNumber || 'Ukjent'}</h4>
+                          <span className="text-sm text-gray-600">{vehicle.brand || ''} {vehicle.model || ''}</span>
                         </div>
                         <div className="text-sm text-gray-600 space-y-1">
-                          <p>Type: {vehicle.bodyType}</p>
-                          <p>Først registrert: {vehicle.firstRegistered}</p>
-                          <p>Neste EU-kontroll: {vehicle.nextEUInspection}</p>
+                          <p>Type: {vehicle.bodyType || 'Ikke tilgjengelig'}</p>
+                          <p>Først registrert: {vehicle.firstRegistered || 'Ikke tilgjengelig'}</p>
+                          <p>Neste EU-kontroll: {vehicle.nextEUInspection || 'Ikke tilgjengelig'}</p>
                         </div>
                       </div>
                     ))}
@@ -917,19 +905,19 @@ export default function PartnersPage() {
               )}
 
               {/* Documents and Images */}
-              {(selectedPartner.documents.length > 0 || selectedPartner.images.length > 0) && (
+              {((selectedPartner.documents && selectedPartner.documents.length > 0) || (selectedPartner.images && selectedPartner.images.length > 0)) && (
                 <div className="md:col-span-2">
                   <h3 className="text-lg font-semibold mb-3">Dokumenter og bilder</h3>
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {selectedPartner.documents.map((doc) => (
+                    {selectedPartner.documents && selectedPartner.documents.map((doc) => (
                       <div key={doc.id} className="border rounded-lg p-3">
                         <div className="flex items-center space-x-2">
                           <FileText className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm font-medium">{doc.name}</span>
+                          <span className="text-sm font-medium">{doc.name || 'Ukjent dokument'}</span>
                         </div>
                       </div>
                     ))}
-                    {selectedPartner.images.map((image, index) => (
+                    {selectedPartner.images && selectedPartner.images.map((image, index) => (
                       <div key={index} className="border rounded-lg p-3">
                         <div className="flex items-center space-x-2">
                           <ImageIcon className="h-4 w-4 text-gray-400" />
