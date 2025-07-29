@@ -16,11 +16,11 @@ import {
 
 interface RecentActivity {
   id: string;
-  type: 'vacation_request' | 'absence_request' | 'deviation_report' | 'shift_assignment';
+  type: 'vacation_request' | 'absence_request' | 'deviation_report' | 'shift_assignment' | 'document_shared' | 'chat_message';
   title: string;
   description: string;
   timestamp: string;
-  status: 'pending' | 'approved' | 'rejected';
+  status: 'pending' | 'approved' | 'rejected' | 'resolved';
 }
 
 export default function DashboardPage() {
@@ -68,7 +68,7 @@ export default function DashboardPage() {
       },
       {
         id: '4',
-        type: 'document',
+        type: 'document_shared',
         title: 'Nytt dokument delt',
         description: 'Sikkerhetsmanual v2.1 er delt med alle ansatte',
         timestamp: '2024-07-27T08:00:00Z',
@@ -93,8 +93,8 @@ export default function DashboardPage() {
       case 'deviation_report': return <AlertTriangle className="h-5 w-5" />;
       case 'vacation_request': return <Calendar className="h-5 w-5" />;
       case 'absence_request': return <Users className="h-5 w-5" />; // Changed from User to Users
-      case 'document': return <FileText className="h-5 w-5" />;
-      case 'chat': return <MessageSquare className="h-5 w-5" />;
+      case 'document_shared': return <FileText className="h-5 w-5" />;
+      case 'chat_message': return <MessageSquare className="h-5 w-5" />;
       default: return <Activity className="h-5 w-5" />;
     }
   };
@@ -333,7 +333,6 @@ export default function DashboardPage() {
                   </div>
                   <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
                   <div className="flex items-center space-x-4 mt-2">
-                    <span className="text-xs text-gray-500">{activity.user}</span>
                     <span className="text-xs text-gray-500">
                       {new Date(activity.timestamp).toLocaleString('no-NO')}
                     </span>
