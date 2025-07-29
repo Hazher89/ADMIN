@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -20,15 +20,20 @@ import {
   MessageSquare,
   FileText,
   BarChart3,
-  Settings
+  Settings,
+  UserX,
+  MessageCircle,
+  Mail
 } from 'lucide-react';
+import { notificationService } from '@/lib/notification-service';
+import NotificationBell from '@/components/NotificationBell';
 
 interface SidebarItem {
   name: string;
   href: string;
   icon: React.ReactNode;
   badge?: string;
-  children?: SidebarItem[];
+  badgeColor?: string;
 }
 
 export default function DashboardLayout({
@@ -36,10 +41,39 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { userProfile, logout } = useAuth();
+  const { user, logout } = useAuth();
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
   const pathname = usePathname();
   const router = useRouter();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
+
+  // Load unread notification count
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const loadUnreadCount = async () => {
+      const count = await notificationService.getUnreadCount(user.uid);
+      setUnreadCount(count);
+    };
+
+    loadUnreadCount();
+    
+    // Set up real-time listener for unread count
+    const setupNotifications = async () => {
+      const unsubscribe = await notificationService.loadNotifications(user.uid, (notifications) => {
+        const unread = notifications.filter(n => n.status === 'unread').length;
+        setUnreadCount(unread);
+      });
+
+      return unsubscribe;
+    };
+
+    setupNotifications();
+
+    return () => {
+      // Cleanup will be handled by the service
+    };
+  }, [user]);
 
   const sidebarItems: SidebarItem[] = [
     {
@@ -58,35 +92,9 @@ export default function DashboardLayout({
       icon: <Building className="h-5 w-5" />
     },
     {
-      name: 'Samarbeidspartnere',
-      href: '/dashboard/partners',
-      icon: <Users className="h-5 w-5" />
-    },
-    {
-      name: 'Skiftplan',
-      href: '/dashboard/shifts',
-      icon: <Clock className="h-5 w-5" />
-    },
-    {
-      name: 'Fravær',
-      href: '/dashboard/absence',
-      icon: <User className="h-5 w-5" />
-    },
-    {
       name: 'Ferie',
       href: '/dashboard/vacation',
       icon: <Calendar className="h-5 w-5" />
-    },
-    {
-      name: 'Avvik',
-      href: '/dashboard/deviations',
-      icon: <AlertTriangle className="h-5 w-5" />
-    },
-    {
-      name: 'Chat',
-      href: '/dashboard/chat',
-      icon: <MessageSquare className="h-5 w-5" />,
-      badge: '3'
     },
     {
       name: 'Dokumenter',
@@ -94,72 +102,86 @@ export default function DashboardLayout({
       icon: <FileText className="h-5 w-5" />
     },
     {
-      name: 'Rapporter',
-      href: '/dashboard/reports',
-      icon: <BarChart3 className="h-5 w-5" />
+      name: 'Chat',
+      href: '/dashboard/chat',
+      icon: <MessageCircle className="h-5 w-5" />
     },
     {
-      name: 'Innstillinger',
-      href: '/dashboard/settings',
-      icon: <Settings className="h-5 w-5" />
+      name: 'Avvik',
+      href: '/dashboard/deviations',
+      icon: <AlertTriangle className="h-5 w-5" />
     },
     {
       name: 'Bedrifter',
       href: '/dashboard/companies',
       icon: <Building className="h-5 w-5" />,
       badge: 'Admin'
+    },
+    {
+      name: 'Samarbeidspartnere',
+      href: '/dashboard/partners',
+      icon: <Users className="h-5 w-5" />
+    },
+    {
+      name: 'E-postlogger',
+      href: '/dashboard/email-logs',
+      icon: <Mail className="h-5 w-5" />
+    },
+    {
+      name: 'Varsler',
+      href: '/dashboard/notifications',
+      icon: <Bell className="h-5 w-5" />,
+      badge: unreadCount > 0 ? unreadCount.toString() : undefined,
+      badgeColor: 'bg-red-500'
     }
   ];
 
   const handleLogout = async () => {
     try {
       await logout();
-      // Redirect to login page after successful logout
       router.push('/login');
     } catch (error) {
-      console.error('Error logging out:', error);
-      // Still redirect even if there's an error
-      router.push('/login');
+      console.error('Logout error:', error);
     }
   };
 
   const toggleSidebar = () => setSidebarOpen(!sidebarOpen);
 
   return (
-    <div className="min-h-screen bg-gray-100 flex">
+    <div className="flex h-screen bg-gray-100">
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'} lg:relative lg:translate-x-0`}>
-        <div className="flex items-center justify-between h-16 px-4 bg-gray-800">
+      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
+        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
+      }`}>
+        <div className="flex items-center justify-between h-16 px-6 bg-gray-800">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-              <Zap className="h-5 w-5 text-white" />
+            <div className="w-8 h-8 bg-blue-500 rounded-lg flex items-center justify-center">
+              <span className="text-white font-bold text-sm">DP</span>
             </div>
-            <span className="text-white font-bold text-lg">DriftPro</span>
+            <span className="text-white font-semibold text-lg">DriftPro</span>
           </div>
           <button
-            onClick={toggleSidebar}
+            onClick={() => setSidebarOpen(false)}
             className="lg:hidden text-gray-400 hover:text-white"
           >
-            <X className="h-5 w-5" />
+            <X className="h-6 w-6" />
           </button>
         </div>
 
         {/* User Profile */}
-        <div className="px-4 py-6 border-b border-gray-700">
+        <div className="p-6 border-b border-gray-700">
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-lg">
-                {userProfile?.displayName?.charAt(0) || 'U'}
+                {user?.displayName?.charAt(0) || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="text-white font-medium truncate">
-                {userProfile?.displayName || userProfile?.email || 'Bruker'}
+                {user?.displayName || user?.email || 'Bruker'}
               </p>
               <p className="text-gray-400 text-sm truncate">
-                {userProfile?.role === 'admin' && 'Administrator'}
-                {userProfile?.role === 'department_leader' && 'Avdelingsleder'}
-                {userProfile?.role === 'employee' && 'Ansatt'}
+                Administrator
               </p>
             </div>
           </div>
@@ -219,29 +241,31 @@ export default function DashboardLayout({
       </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-0">
+      <div className="flex-1 flex flex-col lg:ml-64">
         {/* Top Header */}
-        <header className="bg-white shadow-sm border-b border-gray-200 lg:hidden">
-          <div className="flex items-center justify-between px-4 py-3">
-            <div className="flex items-center space-x-3">
-              <div className="w-8 h-8 bg-gradient-to-r from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Zap className="h-5 w-5 text-white" />
-              </div>
-              <span className="text-gray-900 font-bold text-lg">DriftPro</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <button className="text-gray-400 hover:text-gray-600">
-                <Bell className="h-5 w-5" />
-              </button>
+        <div className="sticky top-0 z-40 bg-white border-b border-gray-200">
+          <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
+            <div className="flex items-center">
               <button
-                onClick={toggleSidebar}
-                className="text-gray-400 hover:text-gray-600"
+                onClick={() => setSidebarOpen(true)}
+                className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
               >
-                <Menu className="h-5 w-5" />
+                <Menu className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="flex items-center space-x-4">
+              <NotificationBell />
+              <button
+                onClick={handleLogout}
+                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                title="Logg ut"
+              >
+                <LogOut className="h-5 w-5" />
               </button>
             </div>
           </div>
-        </header>
+        </div>
 
         {/* Page Content */}
         <main className="flex-1 p-6">

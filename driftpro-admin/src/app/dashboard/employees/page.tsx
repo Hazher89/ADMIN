@@ -19,6 +19,7 @@ import {
 import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import * as XLSX from 'xlsx';
+import { emailService } from '@/lib/email-service';
 
 interface Employee {
   id: string;
@@ -392,6 +393,17 @@ export default function EmployeesPage() {
       
       const newEmployee = { id: docRef.id, ...employeeData };
       setEmployees(prev => [...prev, newEmployee]);
+      
+      // Send welcome email to new employee
+      const companyData = { name: 'DriftPro AS', id: 'company-1' }; // In real app, get from context
+      await emailService.sendWelcomeEmail(
+        {
+          name: `${formData.firstName} ${formData.lastName}`,
+          email: formData.email,
+          temporaryPassword: 'TemporaryPassword123!'
+        },
+        companyData
+      );
       
       setShowAddModal(false);
       resetForm();

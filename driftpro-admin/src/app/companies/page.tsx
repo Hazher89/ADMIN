@@ -16,8 +16,9 @@ import {
   Save, 
   X 
 } from 'lucide-react';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, where, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { emailService } from '@/lib/email-service';
 
 interface Company {
   id: string;

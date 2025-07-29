@@ -17,7 +17,12 @@ import {
   Shield,
   Activity,
   TrendingUp,
-  AlertCircle
+  AlertCircle,
+  Upload,
+  Image,
+  File,
+  Trash2,
+  Download
 } from 'lucide-react';
 
 interface CompanyDetailModalProps {
@@ -25,6 +30,15 @@ interface CompanyDetailModalProps {
   onClose: () => void;
   orgNumber: string;
   companyName: string;
+}
+
+interface CompanyFile {
+  id: string;
+  name: string;
+  type: 'image' | 'document';
+  url: string;
+  uploadedAt: string;
+  description?: string;
 }
 
 interface BrregData {
@@ -95,13 +109,22 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
   const [brregData, setBrregData] = useState<BrregData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [expandedSections, setExpandedSections] = useState<string[]>(['basic', 'roles']);
+  const [expandedSections, setExpandedSections] = useState<string[]>(['basic', 'roles', 'files']);
+
+  // File management states
+  const [files, setFiles] = useState<CompanyFile[]>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const [showUploadModal, setShowUploadModal] = useState(false);
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [fileDescription, setFileDescription] = useState('');
 
   const fetchBrregData = useCallback(async () => {
     setLoading(true);
     setError(null);
     
     try {
+      console.log('Fetching Brreg data for org number:', orgNumber);
       const response = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${orgNumber}`);
       
       if (!response.ok) {
@@ -109,6 +132,7 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
       }
 
       const data = await response.json();
+      console.log('Brreg data received:', data);
       setBrregData(data);
     } catch (error) {
       console.error('Error fetching Brreg data:', error);
@@ -162,6 +186,71 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
       address.land
     ].filter(Boolean);
     return parts.join(', ');
+  };
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      setFileDescription('');
+      setUploadError(null);
+    }
+  };
+
+  const uploadFile = async () => {
+    if (!selectedFile) return;
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      // Simulate file upload - in real implementation, upload to Firebase Storage
+      const fileType = selectedFile.type.startsWith('image/') ? 'image' : 'document';
+      const newFile: CompanyFile = {
+        id: Date.now().toString(),
+        name: selectedFile.name,
+        type: fileType,
+        url: URL.createObjectURL(selectedFile), // Temporary URL for demo
+        uploadedAt: new Date().toISOString(),
+        description: fileDescription
+      };
+
+      setFiles(prev => [...prev, newFile]);
+      setSelectedFile(null);
+      setFileDescription('');
+      setShowUploadModal(false);
+    } catch (error) {
+      setUploadError('Kunne ikke laste opp filen');
+      console.error('Upload error:', error);
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const deleteFile = (fileId: string) => {
+    setFiles(prev => prev.filter(file => file.id !== fileId));
+  };
+
+  const downloadFile = (file: CompanyFile) => {
+    // In real implementation, download from Firebase Storage
+    const link = document.createElement('a');
+    link.href = file.url;
+    link.download = file.name;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const getFileIcon = (type: 'image' | 'document') => {
+    return type === 'image' ? <Image className="h-4 w-4" /> : <File className="h-4 w-4" />;
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes === 0) return '0 Bytes';
+    const k = 1024;
+    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
   if (!isOpen) return null;
@@ -307,24 +396,6 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                 
                 {expandedSections.includes('business') && (
                   <div className="space-y-3">
-                    {brregData.vedtektsdato && (
-                      <div className="flex items-center space-x-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700">Vedtektsdato:</span>
-                        <span className="text-sm text-gray-900">{formatDate(brregData.vedtektsdato)}</span>
-                      </div>
-                    )}
-
-                    {brregData.vedtektsfestet_formaal && (
-                      <div className="flex items-start space-x-2">
-                        <FileText className="h-4 w-4 text-gray-400 mt-0.5" />
-                        <div className="flex-1">
-                          <span className="text-sm font-medium text-gray-700">Vedtektsfestet formål:</span>
-                          <p className="text-sm text-gray-900">{brregData.vedtektsfestet_formaal}</p>
-                        </div>
-                      </div>
-                    )}
-
                     {brregData.aktivitet && (
                       <div className="flex items-start space-x-2">
                         <Activity className="h-4 w-4 text-gray-400 mt-0.5" />
@@ -335,29 +406,37 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                       </div>
                     )}
 
-                    {brregData.institusjonell_sektorkode && (
-                      <div className="flex items-center space-x-2">
-                        <TrendingUp className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700">Institusjonell sektorkode:</span>
-                        <span className="text-sm text-gray-900">
-                          {brregData.institusjonell_sektorkode.kode} {brregData.institusjonell_sektorkode.beskrivelse}
-                        </span>
-                      </div>
-                    )}
-
-                    {brregData.sist_innsendt_aarsregnskap && (
-                      <div className="flex items-center space-x-2">
-                        <FileText className="h-4 w-4 text-gray-400" />
-                        <span className="text-sm font-medium text-gray-700">Sist innsendt årsregnskap:</span>
-                        <span className="text-sm text-gray-900">{brregData.sist_innsendt_aarsregnskap}</span>
-                      </div>
-                    )}
-
                     {brregData.maalform && (
                       <div className="flex items-center space-x-2">
                         <Globe className="h-4 w-4 text-gray-400" />
                         <span className="text-sm font-medium text-gray-700">Målform:</span>
                         <span className="text-sm text-gray-900">{brregData.maalform}</span>
+                      </div>
+                    )}
+
+                    {brregData.postadresse && (
+                      <div className="flex items-start space-x-2">
+                        <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-700">Postadresse:</span>
+                          <p className="text-sm text-gray-900">{formatAddress(brregData.postadresse)}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {brregData.naeringskoder && brregData.naeringskoder.length > 1 && (
+                      <div className="flex items-start space-x-2">
+                        <Activity className="h-4 w-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-700">Alle næringskoder:</span>
+                          <div className="space-y-1 mt-1">
+                            {brregData.naeringskoder.map((kode, index) => (
+                              <p key={index} className="text-sm text-gray-900">
+                                {kode.kode} - {kode.beskrivelse}
+                              </p>
+                            ))}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -499,14 +578,65 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                 
                 {expandedSections.includes('registrations') && (
                   <div className="space-y-3">
-                    <span className="text-sm font-medium text-gray-700">Registrert i:</span>
-                    {brregData.registreringer && brregData.registreringer.map((reg, index) => (
-                      <div key={index} className="ml-4">
-                        <p className="text-sm text-gray-900">
-                          {reg.register} ({formatDate(reg.registreringsdato || '')})
-                        </p>
+                    <div className="flex items-center space-x-2">
+                      <Shield className="h-4 w-4 text-gray-400" />
+                      <span className="text-sm font-medium text-gray-700">Registrert i:</span>
+                    </div>
+                    
+                    {brregData.registreringer && brregData.registreringer.length > 0 ? (
+                      <div className="ml-6 space-y-2">
+                        {brregData.registreringer.map((reg, index) => (
+                          <div key={index} className="flex items-center space-x-2">
+                            <span className="text-sm text-gray-900 font-medium">{reg.register}</span>
+                            {reg.registreringsdato && (
+                              <span className="text-sm text-gray-600">
+                                ({formatDate(reg.registreringsdato)})
+                              </span>
+                            )}
+                          </div>
+                        ))}
                       </div>
-                    ))}
+                    ) : (
+                      <div className="ml-6">
+                        <p className="text-sm text-gray-600">Ingen registreringer funnet</p>
+                      </div>
+                    )}
+
+                    {brregData.stiftelsesdato && (
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-700">Stiftelsesdato:</span>
+                        <span className="text-sm text-gray-900">{formatDate(brregData.stiftelsesdato)}</span>
+                      </div>
+                    )}
+
+                    {brregData.vedtektsdato && (
+                      <div className="flex items-center space-x-2">
+                        <FileText className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-700">Vedtektsdato:</span>
+                        <span className="text-sm text-gray-900">{formatDate(brregData.vedtektsdato)}</span>
+                      </div>
+                    )}
+
+                    {brregData.vedtektsfestet_formaal && (
+                      <div className="flex items-start space-x-2">
+                        <Activity className="h-4 w-4 text-gray-400 mt-0.5" />
+                        <div className="flex-1">
+                          <span className="text-sm font-medium text-gray-700">Vedtektsfestet formål:</span>
+                          <p className="text-sm text-gray-900">{brregData.vedtektsfestet_formaal}</p>
+                        </div>
+                      </div>
+                    )}
+
+                    {brregData.institusjonell_sektorkode && (
+                      <div className="flex items-center space-x-2">
+                        <Building className="h-4 w-4 text-gray-400" />
+                        <span className="text-sm font-medium text-gray-700">Institusjonell sektorkode:</span>
+                        <span className="text-sm text-gray-900">
+                          {brregData.institusjonell_sektorkode.kode} - {brregData.institusjonell_sektorkode.beskrivelse}
+                        </span>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
@@ -542,6 +672,95 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
                   )}
                 </div>
               )}
+
+              {/* Files Section */}
+              <div className="bg-gray-50 rounded-lg p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-semibold text-gray-900">Bilder og dokumenter</h3>
+                  <div className="flex items-center space-x-2">
+                    <button
+                      onClick={() => setShowUploadModal(true)}
+                      className="px-3 py-1 bg-blue-600 text-white text-sm rounded-lg hover:bg-blue-700 flex items-center space-x-1"
+                    >
+                      <Upload className="h-4 w-4" />
+                      <span>Last opp</span>
+                    </button>
+                    <button
+                      onClick={() => toggleSection('files')}
+                      className="text-gray-500 hover:text-gray-700"
+                    >
+                      {expandedSections.includes('files') ? (
+                        <ChevronDown className="h-5 w-5" />
+                      ) : (
+                        <ChevronRight className="h-5 w-5" />
+                      )}
+                    </button>
+                  </div>
+                </div>
+                
+                {expandedSections.includes('files') && (
+                  <div className="space-y-4">
+                    {files.length > 0 ? (
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        {files.map((file) => (
+                          <div key={file.id} className="bg-white border border-gray-200 rounded-lg p-4">
+                            <div className="flex items-start justify-between mb-3">
+                              <div className="flex items-center space-x-2">
+                                {getFileIcon(file.type)}
+                                <span className="text-sm font-medium text-gray-900 truncate">{file.name}</span>
+                              </div>
+                              <button
+                                onClick={() => deleteFile(file.id)}
+                                className="text-red-600 hover:text-red-800"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </div>
+                            
+                            {file.type === 'image' && (
+                              <div className="mb-3">
+                                <img 
+                                  src={file.url} 
+                                  alt={file.name}
+                                  className="w-full h-32 object-cover rounded-lg"
+                                />
+                              </div>
+                            )}
+                            
+                            {file.description && (
+                              <p className="text-sm text-gray-600 mb-3">{file.description}</p>
+                            )}
+                            
+                            <div className="flex items-center justify-between text-xs text-gray-500 mb-3">
+                              <span>Opplastet: {new Date(file.uploadedAt).toLocaleDateString('no-NO')}</span>
+                            </div>
+                            
+                            <button
+                              onClick={() => downloadFile(file)}
+                              className="w-full px-3 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 flex items-center justify-center space-x-2"
+                            >
+                              <Download className="h-4 w-4" />
+                              <span>Last ned</span>
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="text-center py-8 bg-white rounded-lg border-2 border-dashed border-gray-300">
+                        <Upload className="mx-auto h-12 w-12 text-gray-400 mb-4" />
+                        <p className="text-gray-600 mb-2">Ingen filer lastet opp</p>
+                        <p className="text-sm text-gray-500 mb-4">Last opp bilder og dokumenter for denne bedriften</p>
+                        <button
+                          onClick={() => setShowUploadModal(true)}
+                          className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
+                        >
+                          Last opp fil
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
             </>
           )}
         </div>
@@ -560,6 +779,116 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
           </button>
         </div>
       </div>
+
+      {/* Upload Modal */}
+      {showUploadModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-[60] p-4">
+          <div className="bg-white rounded-lg max-w-md w-full">
+            <div className="p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-gray-900">Last opp fil</h3>
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setSelectedFile(null);
+                    setFileDescription('');
+                    setUploadError(null);
+                  }}
+                  className="text-gray-400 hover:text-gray-600"
+                >
+                  <X className="h-6 w-6" />
+                </button>
+              </div>
+
+              <div className="space-y-4">
+                {/* File Selection */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Velg fil
+                  </label>
+                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 text-center hover:border-gray-400 transition-colors">
+                    <input
+                      type="file"
+                      onChange={handleFileSelect}
+                      accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                      className="hidden"
+                      id="file-upload"
+                    />
+                    <label htmlFor="file-upload" className="cursor-pointer">
+                      <Upload className="mx-auto h-8 w-8 text-gray-400 mb-2" />
+                      <p className="text-sm text-gray-600">
+                        Klikk for å velge fil eller dra og slipp
+                      </p>
+                      <p className="text-xs text-gray-500 mt-1">
+                        Støtter: Bilder, PDF, Word, Excel, tekstfiler
+                      </p>
+                    </label>
+                  </div>
+                  {selectedFile && (
+                    <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+                      <div className="flex items-center space-x-2">
+                        {getFileIcon(selectedFile.type.startsWith('image/') ? 'image' : 'document')}
+                        <span className="text-sm font-medium text-gray-900">{selectedFile.name}</span>
+                      </div>
+                      <p className="text-xs text-gray-600 mt-1">
+                        Størrelse: {formatFileSize(selectedFile.size)}
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-2">
+                    Beskrivelse (valgfritt)
+                  </label>
+                  <textarea
+                    value={fileDescription}
+                    onChange={(e) => setFileDescription(e.target.value)}
+                    placeholder="Beskriv filen eller legg til merknader..."
+                    className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+                    rows={3}
+                  />
+                </div>
+
+                {/* Error Message */}
+                {uploadError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <p className="text-sm text-red-800">{uploadError}</p>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="flex space-x-3 pt-4">
+                  <button
+                    onClick={() => {
+                      setShowUploadModal(false);
+                      setSelectedFile(null);
+                      setFileDescription('');
+                      setUploadError(null);
+                    }}
+                    className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                  >
+                    Avbryt
+                  </button>
+                  <button
+                    onClick={uploadFile}
+                    disabled={!selectedFile || uploading}
+                    className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center justify-center space-x-2"
+                  >
+                    {uploading ? (
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                    ) : (
+                      <Upload className="h-4 w-4" />
+                    )}
+                    <span>{uploading ? 'Laster opp...' : 'Last opp'}</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

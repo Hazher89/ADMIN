@@ -22,6 +22,7 @@ import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import CompanyDetailModal from '@/components/CompanyDetailModal';
+import { emailService } from '@/lib/email-service';
 
 interface Company {
   id: string;
