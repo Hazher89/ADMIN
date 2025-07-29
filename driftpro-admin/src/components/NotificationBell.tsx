@@ -42,7 +42,7 @@ export default function NotificationBell() {
   const [loading, setLoading] = useState(false);
 
   const loadNotifications = useCallback(async () => {
-    if (!user || !db) return;
+    if (!user?.uid || !db) return;
 
     try {
       setLoading(true);
@@ -56,6 +56,43 @@ export default function NotificationBell() {
       const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
         const notificationsData = snapshot.docs.map(doc => {
           const data = doc.data();
+          
+          // Handle createdAt properly
+          let createdAt: string;
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate().toISOString();
+          } else if (data.createdAt instanceof Date) {
+            createdAt = data.createdAt.toISOString();
+          } else if (typeof data.createdAt === 'string') {
+            createdAt = data.createdAt;
+          } else {
+            createdAt = new Date().toISOString();
+          }
+          
+          // Handle readAt properly
+          let readAt: string | undefined;
+          if (data.readAt?.toDate) {
+            readAt = data.readAt.toDate().toISOString();
+          } else if (data.readAt instanceof Date) {
+            readAt = data.readAt.toISOString();
+          } else if (typeof data.readAt === 'string') {
+            readAt = data.readAt;
+          } else {
+            readAt = undefined;
+          }
+          
+          // Handle archivedAt properly
+          let archivedAt: string | undefined;
+          if (data.archivedAt?.toDate) {
+            archivedAt = data.archivedAt.toDate().toISOString();
+          } else if (data.archivedAt instanceof Date) {
+            archivedAt = data.archivedAt.toISOString();
+          } else if (typeof data.archivedAt === 'string') {
+            archivedAt = data.archivedAt;
+          } else {
+            archivedAt = undefined;
+          }
+          
           return {
             id: doc.id,
             userId: data.userId || '',
@@ -65,9 +102,9 @@ export default function NotificationBell() {
             priority: data.priority || 'medium',
             status: data.status || 'unread',
             metadata: data.metadata || {},
-            createdAt: data.createdAt || new Date().toISOString(),
-            readAt: data.readAt,
-            archivedAt: data.archivedAt
+            createdAt: createdAt,
+            readAt: readAt,
+            archivedAt: archivedAt
           } as Notification;
         });
         // Sort by createdAt in descending order in memory
@@ -82,7 +119,7 @@ export default function NotificationBell() {
     } finally {
       setLoading(false);
     }
-  }, [user]);
+  }, [user?.uid]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!db) return;

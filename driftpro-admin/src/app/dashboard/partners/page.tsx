@@ -18,6 +18,23 @@ import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc } from 'firebase
 import { db } from '@/lib/firebase';
 import CompanyDetailModal from '@/components/CompanyDetailModal';
 
+interface Address {
+  city?: string;
+  postalCode?: string;
+  street?: string;
+}
+
+interface BrregData {
+  antallAnsatte?: string;
+  dagligLeder?: string;
+  forretningsadresse?: string;
+  naeringskode?: string;
+  organisasjonsform?: string;
+  postadresse?: string;
+  registreringsdato?: string;
+  regnskapsforer?: string;
+}
+
 interface Partner {
   id: string;
   name: string;
@@ -25,9 +42,7 @@ interface Partner {
   internalName: string;
   phone: string;
   contactPerson: string;
-  address: string;
-  city: string;
-  postalCode: string;
+  address?: Address;
   email: string;
   website: string;
   industry: string;
@@ -40,6 +55,7 @@ interface Partner {
   documents: Document[];
   createdAt: string;
   updatedAt: string;
+  brregData?: BrregData;
 }
 
 interface Vehicle {
@@ -149,9 +165,11 @@ export default function PartnersPage() {
             internalName: data.internalName || '',
             phone: data.phone || '',
             contactPerson: data.contactPerson || '',
-            address: data.address || '',
-            city: data.city || '',
-            postalCode: data.postalCode || '',
+            address: typeof data.address === 'object' && data.address !== null ? {
+              city: data.address.city || '',
+              postalCode: data.address.postalCode || '',
+              street: data.address.street || ''
+            } : undefined,
             email: data.email || '',
             website: data.website || '',
             industry: data.industry || '',
@@ -184,7 +202,17 @@ export default function PartnersPage() {
               description: doc.description || ''
             })) : [],
             createdAt: createdAt,
-            updatedAt: updatedAt
+            updatedAt: updatedAt,
+            brregData: typeof data.brregData === 'object' && data.brregData !== null ? {
+              antallAnsatte: data.brregData.antallAnsatte || '',
+              dagligLeder: data.brregData.dagligLeder || '',
+              forretningsadresse: data.brregData.forretningsadresse || '',
+              naeringskode: data.brregData.naeringskode || '',
+              organisasjonsform: data.brregData.organisasjonsform || '',
+              postadresse: data.brregData.postadresse || '',
+              registreringsdato: data.brregData.registreringsdato || '',
+              regnskapsforer: data.brregData.regnskapsforer || ''
+            } : undefined
           } as Partner;
         });
         setPartners(partnersData);
@@ -301,7 +329,7 @@ export default function PartnersPage() {
       internalName: partner.internalName,
       phone: partner.phone,
       email: partner.email,
-      address: partner.address,
+      address: partner.address?.street || '',
       contactPerson: partner.contactPerson,
       status: partner.status,
       vehicles: partner.vehicles || []
@@ -511,7 +539,19 @@ export default function PartnersPage() {
                   <div className="flex items-start space-x-2">
                     <MapPin className="h-4 w-4 text-gray-400 mt-0.5" />
                     <span className="text-sm text-gray-600">Adresse:</span>
-                    <span className="text-sm font-medium text-gray-900">{partner.address}</span>
+                    <span className="text-sm font-medium text-gray-900">{partner.address.street || 'Ikke tilgjengelig'}</span>
+                    <span className="text-sm font-medium text-gray-900">{partner.address.city || 'Ikke tilgjengelig'}</span>
+                    <span className="text-sm font-medium text-gray-900">{partner.address.postalCode || 'Ikke tilgjengelig'}</span>
+                  </div>
+                )}
+
+                {partner.brregData && (
+                  <div className="flex items-center space-x-2">
+                    <ExternalLink className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">Brreg data:</span>
+                    <span className="text-sm font-medium text-gray-900">
+                      {partner.brregData.antallAnsatte || 'Ikke tilgjengelig'} ansatte
+                    </span>
                   </div>
                 )}
 
