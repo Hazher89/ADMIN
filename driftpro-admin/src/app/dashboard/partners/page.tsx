@@ -58,6 +58,15 @@ interface Vehicle {
   fetchedAt?: string;
 }
 
+interface Document {
+  id: string;
+  name: string;
+  type: 'image' | 'document';
+  url: string;
+  uploadedAt: string;
+  description?: string;
+}
+
 interface PartnerFormData {
   name: string;
   orgNumber: string;
@@ -106,10 +115,32 @@ export default function PartnersPage() {
       setLoading(true);
       if (db) {
         const partnersSnapshot = await getDocs(collection(db, 'partners'));
-        const partnersData = partnersSnapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Partner[];
+        const partnersData = partnersSnapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            name: data.name || '',
+            organizationNumber: data.organizationNumber || '',
+            internalName: data.internalName || '',
+            phone: data.phone || '',
+            contactPerson: data.contactPerson || '',
+            address: data.address || '',
+            city: data.city || '',
+            postalCode: data.postalCode || '',
+            email: data.email || '',
+            website: data.website || '',
+            industry: data.industry || '',
+            employees: data.employees || 0,
+            revenue: data.revenue || 0,
+            description: data.description || '',
+            status: data.status || 'active',
+            vehicles: data.vehicles || [],
+            images: data.images || [],
+            documents: data.documents || [],
+            createdAt: data.createdAt || new Date().toISOString(),
+            updatedAt: data.updatedAt || new Date().toISOString()
+          } as Partner;
+        });
         setPartners(partnersData);
       }
     } catch (error) {
@@ -121,10 +152,10 @@ export default function PartnersPage() {
 
   const filterPartners = useCallback(() => {
     const filtered = partners.filter(partner =>
-      partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      partner.internalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      partner.organizationNumber.includes(searchTerm) ||
-      partner.contactPerson.toLowerCase().includes(searchTerm.toLowerCase())
+      (partner.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (partner.internalName?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+      (partner.organizationNumber || '').includes(searchTerm) ||
+      (partner.contactPerson?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     );
     setFilteredPartners(filtered);
   }, [partners, searchTerm]);
@@ -386,14 +417,14 @@ export default function PartnersPage() {
                       onClick={() => openPartnerDetail(partner)}
                       className="text-left hover:text-blue-600 transition-colors"
                     >
-                      {partner.name}
+                      {partner.name || 'Ukjent navn'}
                     </button>
                   </h3>
                   {partner.internalName && (
                     <p className="text-sm text-gray-600 mb-2">({partner.internalName})</p>
                   )}
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(partner.status)}`}>
-                    {getStatusText(partner.status)}
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(partner.status || 'active')}`}>
+                    {getStatusText(partner.status || 'active')}
                   </span>
                 </div>
               </div>
@@ -403,7 +434,7 @@ export default function PartnersPage() {
                 <div className="flex items-center space-x-2">
                   <Building className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-600">Org.nr:</span>
-                  <span className="text-sm font-medium text-gray-900">{partner.organizationNumber}</span>
+                  <span className="text-sm font-medium text-gray-900">{partner.organizationNumber || 'Ikke tilgjengelig'}</span>
                 </div>
 
                 {partner.contactPerson && (
