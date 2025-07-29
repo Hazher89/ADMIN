@@ -76,6 +76,19 @@ class NotificationService {
         const notificationsData: Notification[] = [];
         snapshot.forEach((doc) => {
           const data = doc.data();
+          let createdAt: string;
+          
+          // Handle different createdAt formats
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate().toISOString();
+          } else if (data.createdAt instanceof Date) {
+            createdAt = data.createdAt.toISOString();
+          } else if (typeof data.createdAt === 'string') {
+            createdAt = data.createdAt;
+          } else {
+            createdAt = new Date().toISOString();
+          }
+          
           notificationsData.push({
             id: doc.id,
             userId: data.userId || '',
@@ -85,7 +98,9 @@ class NotificationService {
             priority: data.priority || 'medium',
             status: data.status || 'unread',
             metadata: data.metadata || {},
-            createdAt: data.createdAt?.toDate() || new Date()
+            createdAt: createdAt,
+            readAt: data.readAt,
+            archivedAt: data.archivedAt
           });
         });
         // Sort by createdAt in descending order in memory
