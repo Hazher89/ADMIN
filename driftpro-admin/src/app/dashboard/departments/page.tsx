@@ -420,22 +420,20 @@ export default function DepartmentsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Avdelinger</h1>
-            <p className="text-gray-600">Administrer bedriftens avdelinger og ledere</p>
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Legg til avdeling</span>
-          </button>
+      <div className="flex justify-between items-center mb-6 p-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Avdelinger</h1>
+          <p className="text-gray-600">Administrer avdelinger og deres ansatte</p>
         </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Legg til avdeling</span>
+        </button>
       </div>
 
       {/* Search */}
@@ -453,7 +451,7 @@ export default function DepartmentsPage() {
       </div>
 
       {/* Departments Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 px-6">
         {filteredDepartments.map((department) => (
           <div key={department.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-lg transition-all duration-200 cursor-pointer group">
             <div className="p-6">

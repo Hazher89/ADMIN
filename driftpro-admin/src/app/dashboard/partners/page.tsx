@@ -4,19 +4,33 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { 
   Plus, 
   Search, 
-  MapPin, 
-  Phone, 
-  Mail, 
-  Building, 
-  Users, 
-  Trash2,
-  Eye,
-  FileText,
+  Edit, 
+  Trash2, 
+  Eye, 
+  X, 
+  Save, 
+  ExternalLink,
+  Upload,
   Image as ImageIcon,
+  FileText,
   Car,
-  X,
-  Save
+  Building,
+  MapPin,
+  Phone,
+  Mail,
+  Users
 } from 'lucide-react';
+import { 
+  collection, 
+  getDocs, 
+  addDoc, 
+  updateDoc, 
+  deleteDoc, 
+  doc, 
+  serverTimestamp 
+} from 'firebase/firestore';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { db, storage } from '@/lib/firebase';
 
 // Clean interfaces
 interface Partner {
@@ -68,6 +82,7 @@ interface Vehicle {
   nextEUInspection: string;
   maxPayload: string;
   fetchedAt: string;
+  description?: string;
 }
 
 interface Document {
@@ -97,14 +112,32 @@ interface PartnerFormData {
   postalCode: string;
 }
 
+interface VehicleFormData {
+  regNumber: string;
+  description?: string;
+}
+
 export default function PartnersPage() {
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showDetailModal, setShowDetailModal] = useState(false);
-  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'active' | 'inactive'>('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [showVehicleModal, setShowVehicleModal] = useState(false);
+  const [showFileUploadModal, setShowFileUploadModal] = useState(false);
+  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [selectedPartnerForVehicle, setSelectedPartnerForVehicle] = useState<Partner | null>(null);
+  const [selectedPartnerForFiles, setSelectedPartnerForFiles] = useState<Partner | null>(null);
+  const [uploadingVehicle, setUploadingVehicle] = useState(false);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  const [vehicleFormData, setVehicleFormData] = useState<VehicleFormData>({
+    regNumber: '',
+    description: ''
+  });
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [fileDescriptions, setFileDescriptions] = useState<Record<string, string>>({});
+
   const [formData, setFormData] = useState<PartnerFormData>({
     name: '',
     organizationNumber: '',
@@ -127,9 +160,6 @@ export default function PartnersPage() {
   const loadPartners = useCallback(async () => {
     setLoading(true);
     try {
-      const { collection, getDocs } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
-      
       if (!db) {
         console.error('Firebase not initialized');
         return;
@@ -245,7 +275,8 @@ export default function PartnersPage() {
               lastEUApproved: v.lastEUApproved || '',
               nextEUInspection: v.nextEUInspection || '',
               maxPayload: v.maxPayload || '',
-              fetchedAt: v.fetchedAt || ''
+              fetchedAt: v.fetchedAt || '',
+              description: v.description || ''
             })) : [],
             images: Array.isArray(data.images) ? data.images.filter((img: string) => typeof img === 'string') : [],
             documents: Array.isArray(data.documents) ? data.documents.map((doc: Document) => ({
@@ -315,9 +346,6 @@ export default function PartnersPage() {
     e.preventDefault();
     
     try {
-      const { addDoc, collection, serverTimestamp } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
-      
       if (!db) {
         console.error('Firebase not initialized');
         return;
@@ -380,15 +408,201 @@ export default function PartnersPage() {
     if (!confirm('Er du sikker på at du vil slette denne samarbeidspartneren?')) return;
     
     try {
-      const { deleteDoc, doc } = await import('firebase/firestore');
-      const { db } = await import('@/lib/firebase');
-      
       if (!db) return;
 
       await deleteDoc(doc(db, 'partners', partnerId));
       loadPartners();
     } catch (error) {
       console.error('Error deleting partner:', error);
+    }
+  };
+
+  // Fetch vehicle data from regnr.info
+  const fetchVehicleData = async (regNumber: string) => {
+    try {
+      const response = await fetch(`https://regnr.info/api/v1/vehicle/${regNumber}`);
+      if (response.ok) {
+        const data = await response.json();
+        return {
+          manufacturer: data.manufacturer || '',
+          brand: data.brand || '',
+          model: data.model || '',
+          variant: data.variant || '',
+          bodyType: data.bodyType || '',
+          vehicleGroup: data.vehicleGroup || '',
+          firstRegistered: data.firstRegistered || '',
+          lastEUApproved: data.lastEUApproved || '',
+          nextEUInspection: data.nextEUInspection || '',
+          maxPayload: data.maxPayload || '',
+          fetchedAt: new Date().toISOString()
+        };
+      }
+    } catch (error) {
+      console.error('Error fetching vehicle data:', error);
+    }
+    return null;
+  };
+
+  // Add vehicle to partner
+  const addVehicleToPartner = async (partnerId: string, vehicleData: VehicleFormData) => {
+    setUploadingVehicle(true);
+    try {
+      if (!db) return;
+
+      // Fetch vehicle data from regnr.info
+      const regnrData = await fetchVehicleData(vehicleData.regNumber);
+      if (!regnrData) {
+        throw new Error('Kunne ikke hente kjøretøydata fra regnr.info');
+      }
+
+      const newVehicle: Vehicle = {
+        id: Date.now().toString(),
+        regNumber: vehicleData.regNumber.toUpperCase(),
+        ...regnrData,
+        description: vehicleData.description || ''
+      };
+
+      // Update partner with new vehicle
+      const partnerRef = doc(db, 'partners', partnerId);
+      await updateDoc(partnerRef, {
+        vehicles: [...(selectedPartnerForVehicle?.vehicles || []), newVehicle],
+        updatedAt: serverTimestamp()
+      });
+
+      // Refresh partners data
+      await loadPartners();
+      setShowVehicleModal(false);
+      setVehicleFormData({ regNumber: '', description: '' });
+      setSelectedPartnerForVehicle(null);
+    } catch (error) {
+      console.error('Error adding vehicle:', error);
+      alert('Feil ved registrering av kjøretøy: ' + (error as Error).message);
+    } finally {
+      setUploadingVehicle(false);
+    }
+  };
+
+  // Handle file upload
+  const handleFileUpload = async () => {
+    setUploadingFiles(true);
+    try {
+      if (!db || !storage || !selectedPartnerForFiles) return;
+
+      const uploadedFiles: Document[] = [];
+
+      for (const file of selectedFiles) {
+        const fileName = `${selectedPartnerForFiles.id}/${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `partner-files/${fileName}`);
+        
+        await uploadBytes(storageRef, file);
+        const downloadURL = await getDownloadURL(storageRef);
+
+        const document: Document = {
+          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+          name: file.name,
+          type: file.type.startsWith('image/') ? 'image' : 'document',
+          url: downloadURL,
+          uploadedAt: new Date().toISOString(),
+          description: fileDescriptions[file.name] || ''
+        };
+
+        uploadedFiles.push(document);
+      }
+
+      // Update partner with new files
+      const partnerRef = doc(db, 'partners', selectedPartnerForFiles.id);
+      const currentImages = selectedPartnerForFiles.images || [];
+      const currentDocuments = selectedPartnerForFiles.documents || [];
+
+      const newImages = uploadedFiles.filter(f => f.type === 'image').map(f => f.url);
+      const newDocuments = uploadedFiles.filter(f => f.type === 'document');
+
+      await updateDoc(partnerRef, {
+        images: [...currentImages, ...newImages],
+        documents: [...currentDocuments, ...newDocuments],
+        updatedAt: serverTimestamp()
+      });
+
+      // Refresh partners data
+      await loadPartners();
+      setShowFileUploadModal(false);
+      setSelectedFiles([]);
+      setFileDescriptions({});
+      setSelectedPartnerForFiles(null);
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      alert('Feil ved opplasting av filer: ' + (error as Error).message);
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setSelectedFiles(files);
+    
+    // Initialize descriptions for new files
+    const newDescriptions: Record<string, string> = {};
+    files.forEach(file => {
+      if (!fileDescriptions[file.name]) {
+        newDescriptions[file.name] = '';
+      }
+    });
+    setFileDescriptions(prev => ({ ...prev, ...newDescriptions }));
+  };
+
+  // Remove vehicle from partner
+  const removeVehicleFromPartner = async (partnerId: string, vehicleId: string) => {
+    try {
+      if (!db) return;
+
+      const partner = partners.find(p => p.id === partnerId);
+      if (!partner) return;
+
+      const updatedVehicles = partner.vehicles.filter(v => v.id !== vehicleId);
+      
+      const partnerRef = doc(db, 'partners', partnerId);
+      await updateDoc(partnerRef, {
+        vehicles: updatedVehicles,
+        updatedAt: serverTimestamp()
+      });
+
+      await loadPartners();
+    } catch (error) {
+      console.error('Error removing vehicle:', error);
+      alert('Feil ved sletting av kjøretøy');
+    }
+  };
+
+  // Remove file from partner
+  const removeFileFromPartner = async (partnerId: string, fileId: string, fileType: 'image' | 'document') => {
+    try {
+      if (!db) return;
+
+      const partner = partners.find(p => p.id === partnerId);
+      if (!partner) return;
+
+      if (fileType === 'image') {
+        const updatedImages = partner.images.filter((_, index) => index.toString() !== fileId);
+        const partnerRef = doc(db, 'partners', partnerId);
+        await updateDoc(partnerRef, {
+          images: updatedImages,
+          updatedAt: serverTimestamp()
+        });
+      } else {
+        const updatedDocuments = partner.documents.filter(d => d.id !== fileId);
+        const partnerRef = doc(db, 'partners', partnerId);
+        await updateDoc(partnerRef, {
+          documents: updatedDocuments,
+          updatedAt: serverTimestamp()
+        });
+      }
+
+      await loadPartners();
+    } catch (error) {
+      console.error('Error removing file:', error);
+      alert('Feil ved sletting av fil');
     }
   };
 
@@ -406,13 +620,13 @@ export default function PartnersPage() {
       <div className="flex justify-between items-center mb-6 p-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Samarbeidspartnere</h1>
-          <p className="text-gray-600">Administrer samarbeidspartnere og deres informasjon</p>
+          <p className="text-gray-600">Administrer samarbeidspartnere og deres kjøretøy</p>
         </div>
         <button
           onClick={() => setShowAddModal(true)}
           className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
         >
-          <Plus className="h-5 w-5" />
+          <Plus className="h-4 w-4" />
           <span>Legg til partner</span>
         </button>
       </div>
@@ -421,22 +635,19 @@ export default function PartnersPage() {
       <div className="bg-white p-4 rounded-lg shadow mb-6 mx-6">
         <div className="flex flex-col md:flex-row gap-4">
           <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              <input
-                type="text"
-                placeholder="Søk etter navn, organisasjonsnummer eller intern navn..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900 placeholder-gray-500"
-              />
-            </div>
+            <input
+              type="text"
+              placeholder="Søk etter navn, organisasjonsnummer..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            />
           </div>
-          <div className="flex gap-2">
+          <div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as 'all' | 'active' | 'inactive')}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             >
               <option value="all">Alle statuser</option>
               <option value="active">Aktive</option>
@@ -527,6 +738,26 @@ export default function PartnersPage() {
               </button>
               
               <div className="flex space-x-2">
+                <button
+                  onClick={() => {
+                    setSelectedPartnerForVehicle(partner);
+                    setShowVehicleModal(true);
+                  }}
+                  className="text-green-600 hover:text-green-800 flex items-center space-x-1"
+                >
+                  <Car className="h-4 w-4" />
+                  <span>Legg til kjøretøy</span>
+                </button>
+                <button
+                  onClick={() => {
+                    setSelectedPartnerForFiles(partner);
+                    setShowFileUploadModal(true);
+                  }}
+                  className="text-purple-600 hover:text-purple-800 flex items-center space-x-1"
+                >
+                  <Upload className="h-4 w-4" />
+                  <span>Last opp filer</span>
+                </button>
                 <button
                   onClick={() => deletePartner(partner.id)}
                   className="text-red-600 hover:text-red-800"
@@ -891,12 +1122,22 @@ export default function PartnersPage() {
                       <div key={vehicle.id} className="border rounded-lg p-3">
                         <div className="flex justify-between items-start mb-2">
                           <h4 className="font-medium">{vehicle.regNumber || 'Ukjent'}</h4>
-                          <span className="text-sm text-gray-600">{vehicle.brand || ''} {vehicle.model || ''}</span>
+                          <button
+                            onClick={() => removeVehicleFromPartner(selectedPartner.id, vehicle.id)}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
                         <div className="text-sm text-gray-600 space-y-1">
+                          <p>Merke: {vehicle.brand || 'Ikke tilgjengelig'}</p>
+                          <p>Modell: {vehicle.model || 'Ikke tilgjengelig'}</p>
                           <p>Type: {vehicle.bodyType || 'Ikke tilgjengelig'}</p>
                           <p>Først registrert: {vehicle.firstRegistered || 'Ikke tilgjengelig'}</p>
                           <p>Neste EU-kontroll: {vehicle.nextEUInspection || 'Ikke tilgjengelig'}</p>
+                          {vehicle.description && (
+                            <p className="text-xs text-gray-500 mt-2">Beskrivelse: {vehicle.description}</p>
+                          )}
                         </div>
                       </div>
                     ))}
@@ -911,23 +1152,256 @@ export default function PartnersPage() {
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                     {selectedPartner.documents && selectedPartner.documents.map((doc) => (
                       <div key={doc.id} className="border rounded-lg p-3">
-                        <div className="flex items-center space-x-2">
-                          <FileText className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm font-medium">{doc.name || 'Ukjent dokument'}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <FileText className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm font-medium">{doc.name || 'Ukjent dokument'}</span>
+                          </div>
+                          <button
+                            onClick={() => removeFileFromPartner(selectedPartner.id, doc.id, 'document')}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
                         </div>
+                        {doc.description && (
+                          <p className="text-xs text-gray-500 mt-1">{doc.description}</p>
+                        )}
+                        <a
+                          href={doc.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block"
+                        >
+                          Åpne fil
+                        </a>
                       </div>
                     ))}
                     {selectedPartner.images && selectedPartner.images.map((image, index) => (
                       <div key={index} className="border rounded-lg p-3">
-                        <div className="flex items-center space-x-2">
-                          <ImageIcon className="h-4 w-4 text-gray-400" />
-                          <span className="text-sm font-medium">Bilde {index + 1}</span>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <ImageIcon className="h-4 w-4 text-gray-400" />
+                            <span className="text-sm font-medium">Bilde {index + 1}</span>
+                          </div>
+                          <button
+                            onClick={() => removeFileFromPartner(selectedPartner.id, index.toString(), 'image')}
+                            className="text-red-600 hover:text-red-800"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        </div>
+                        <a
+                          href={image}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-xs text-blue-600 hover:text-blue-800 mt-2 inline-block"
+                        >
+                          Åpne bilde
+                        </a>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Vehicle Registration Modal */}
+      {showVehicleModal && selectedPartnerForVehicle && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-md">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Registrer kjøretøy</h2>
+              <button
+                onClick={() => {
+                  setShowVehicleModal(false);
+                  setSelectedPartnerForVehicle(null);
+                  setVehicleFormData({ regNumber: '', description: '' });
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <form onSubmit={(e) => {
+              e.preventDefault();
+              addVehicleToPartner(selectedPartnerForVehicle.id, vehicleFormData);
+            }}>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Registreringsnummer *
+                  </label>
+                  <input
+                    type="text"
+                    value={vehicleFormData.regNumber}
+                    onChange={(e) => setVehicleFormData({...vehicleFormData, regNumber: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    placeholder="AB12345"
+                    required
+                  />
+                  <p className="text-xs text-gray-500 mt-1">
+                    Data vil automatisk hentes fra regnr.info
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Beskrivelse (valgfritt)
+                  </label>
+                  <textarea
+                    value={vehicleFormData.description}
+                    onChange={(e) => setVehicleFormData({...vehicleFormData, description: e.target.value})}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    rows={3}
+                    placeholder="Ekstra informasjon om kjøretøyet..."
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowVehicleModal(false);
+                    setSelectedPartnerForVehicle(null);
+                    setVehicleFormData({ regNumber: '', description: '' });
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  Avbryt
+                </button>
+                <button
+                  type="submit"
+                  disabled={uploadingVehicle}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
+                >
+                  {uploadingVehicle ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Registrerer...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Car className="h-4 w-4" />
+                      <span>Registrer kjøretøy</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* File Upload Modal */}
+      {showFileUploadModal && selectedPartnerForFiles && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex justify-between items-center mb-4">
+              <h2 className="text-xl font-semibold">Last opp filer</h2>
+              <button
+                onClick={() => {
+                  setShowFileUploadModal(false);
+                  setSelectedPartnerForFiles(null);
+                  setSelectedFiles([]);
+                  setFileDescriptions({});
+                }}
+                className="text-gray-500 hover:text-gray-700"
+              >
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Velg filer
+                </label>
+                <input
+                  type="file"
+                  multiple
+                  onChange={handleFileSelect}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt"
+                />
+                <p className="text-xs text-gray-500 mt-1">
+                  Støttede formater: Bilder, PDF, Word, Excel, tekstfiler
+                </p>
+              </div>
+
+              {selectedFiles.length > 0 && (
+                <div>
+                  <h3 className="text-lg font-medium mb-3">Valgte filer</h3>
+                  <div className="space-y-3">
+                    {selectedFiles.map((file, index) => (
+                      <div key={index} className="flex items-center space-x-3 p-3 border rounded-lg">
+                        <div className="flex-shrink-0">
+                          {file.type.startsWith('image/') ? (
+                            <ImageIcon className="h-6 w-6 text-blue-600" />
+                          ) : (
+                            <FileText className="h-6 w-6 text-gray-600" />
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-sm font-medium text-gray-900 truncate">{file.name}</p>
+                          <p className="text-xs text-gray-500">
+                            {(file.size / 1024 / 1024).toFixed(2)} MB
+                          </p>
+                        </div>
+                        <div className="flex-shrink-0">
+                          <input
+                            type="text"
+                            placeholder="Beskrivelse (valgfritt)"
+                            value={fileDescriptions[file.name] || ''}
+                            onChange={(e) => setFileDescriptions(prev => ({
+                              ...prev,
+                              [file.name]: e.target.value
+                            }))}
+                            className="px-2 py-1 text-sm border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                          />
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
               )}
+
+              <div className="flex justify-end space-x-3 mt-6">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowFileUploadModal(false);
+                    setSelectedPartnerForFiles(null);
+                    setSelectedFiles([]);
+                    setFileDescriptions({});
+                  }}
+                  className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={handleFileUpload}
+                  disabled={uploadingFiles || selectedFiles.length === 0}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50 flex items-center space-x-2"
+                >
+                  {uploadingFiles ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+                      <span>Laster opp...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Upload className="h-4 w-4" />
+                      <span>Last opp filer</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

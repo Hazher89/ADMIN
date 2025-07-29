@@ -163,9 +163,9 @@ export default function EmailLogsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="flex justify-between items-center mb-6 p-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">E-postlogger</h1>
           <p className="text-gray-600">Oversikt over alle sendte e-poster</p>
@@ -247,7 +247,7 @@ export default function EmailLogsPage() {
       </div>
 
       {/* Email Logs Table */}
-      <div className="bg-white rounded-lg shadow-sm overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden mx-6">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">

@@ -495,47 +495,52 @@ export default function AbsencePage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6 p-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Fraværsadministrasjon</h1>
-          <p className="text-gray-600">Administrer fraværsmeldinger og egenmeldinger</p>
+          <p className="text-gray-600">Administrer fravær og egenmeldinger</p>
         </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => setShowAnalyticsModal(true)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2"
-          >
-            <PieChart className="h-4 w-4" />
-            <span>Analyser</span>
-          </button>
-          <button
-            onClick={() => setShowExportModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            <span>Eksporter</span>
-          </button>
-          <button
-            onClick={() => setShowSelfDeclarationModal(true)}
-            className="px-4 py-2 bg-orange-600 text-white rounded-lg hover:bg-orange-700 flex items-center space-x-2"
-          >
-            <AlertTriangle className="h-4 w-4" />
-            <span>Egenmelding</span>
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Ny fraværsmelding</span>
-          </button>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Ny egenmelding</span>
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg shadow mb-6 mx-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Søk etter ansatt..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            />
+          </div>
+          <div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            >
+              <option value="all">Alle statuser</option>
+              <option value="pending">Venter</option>
+              <option value="approved">Godkjent</option>
+              <option value="rejected">Avvist</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6">
+        {/* Stats Cards */}
         <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
             <div>
@@ -591,68 +596,9 @@ export default function AbsencePage() {
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Søk etter ansatt eller grunn..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-              />
-            </div>
-          </div>
-          
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          >
-            <option value="">Alle statuser</option>
-            <option value="pending">Venter</option>
-            <option value="approved">Godkjent</option>
-            <option value="rejected">Avvist</option>
-          </select>
-          
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          >
-            <option value="">Alle typer</option>
-            <option value="sick_leave">Sykemelding</option>
-            <option value="personal_leave">Personlig fravær</option>
-            <option value="self_declaration">Egenmelding</option>
-            <option value="other">Annet</option>
-          </select>
-          
-          <select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          >
-            <option value="">Alle avdelinger</option>
-            {Array.from(new Set(absenceRequests.map(r => r.department))).map(dept => (
-              <option key={dept} value={dept}>{dept}</option>
-            ))}
-          </select>
-          
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          />
-        </div>
-      </div>
-
       {/* Bulk Actions */}
       {selectedRequests.length > 0 && (
-        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6">
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-6 mx-6">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
               <span className="text-sm font-medium text-blue-900">

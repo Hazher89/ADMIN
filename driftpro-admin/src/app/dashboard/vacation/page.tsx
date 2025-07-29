@@ -371,40 +371,64 @@ export default function VacationPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6 p-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ferieadministrasjon</h1>
-          <p className="text-gray-600">Administrer ferieforespørsler og ferieplaner</p>
+          <p className="text-gray-600">Administrer ferie og permisjoner</p>
         </div>
-        <div className="flex space-x-3">
-          <button
-            onClick={() => setShowCalendarModal(true)}
-            className="px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 flex items-center space-x-2"
-          >
-            <Calendar className="h-4 w-4" />
-            <span>Kalender</span>
-          </button>
-          <button
-            onClick={() => setShowEmployeeModal(true)}
-            className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 flex items-center space-x-2"
-          >
-            <Users className="h-4 w-4" />
-            <span>Ansatte</span>
-          </button>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Ny forespørsel</span>
-          </button>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Ny feriesøknad</span>
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="bg-white p-4 rounded-lg shadow mb-6 mx-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
+            <input
+              type="text"
+              placeholder="Søk etter ansatt..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            />
+          </div>
+          <div>
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            >
+              <option value="all">Alle statuser</option>
+              <option value="pending">Venter</option>
+              <option value="approved">Godkjent</option>
+              <option value="rejected">Avvist</option>
+            </select>
+          </div>
+          <div>
+            <select
+              value={typeFilter}
+              onChange={(e) => setTypeFilter(e.target.value as 'all' | 'vacation' | 'sick_leave' | 'other')}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            >
+              <option value="all">Alle typer</option>
+              <option value="vacation">Ferie</option>
+              <option value="sick_leave">Sykefravær</option>
+              <option value="other">Andre</option>
+            </select>
+          </div>
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+      {/* Content */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6">
+        {/* Stats Cards */}
         <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
           <div className="flex items-center justify-between">
             <div>
@@ -457,52 +481,6 @@ export default function VacationPage() {
               <XCircle className="h-6 w-6 text-red-600" />
             </div>
           </div>
-        </div>
-      </div>
-
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <div className="relative">
-              <input
-                type="text"
-                placeholder="Søk etter ansatt eller grunn..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-              />
-            </div>
-          </div>
-          
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          >
-            <option value="all">Alle statuser</option>
-            <option value="pending">Venter</option>
-            <option value="approved">Godkjent</option>
-            <option value="rejected">Avvist</option>
-          </select>
-          
-          <select
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value as 'all' | 'vacation' | 'sick_leave' | 'other')}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          >
-            <option value="all">Alle typer</option>
-            <option value="vacation">Ferie</option>
-            <option value="sick_leave">Sykemelding</option>
-            <option value="other">Annet</option>
-          </select>
-          
-          <input
-            type="date"
-            value={dateFilter}
-            onChange={(e) => setDateFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          />
         </div>
       </div>
 

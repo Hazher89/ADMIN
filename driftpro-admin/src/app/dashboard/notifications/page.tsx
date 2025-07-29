@@ -16,7 +16,8 @@ import {
   FileText,
   Users,
   Clock,
-  MessageSquare
+  MessageSquare,
+  CheckCircle
 } from 'lucide-react';
 import { 
   collection, 
@@ -252,27 +253,19 @@ export default function NotificationsPage() {
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-6">
+    <div>
+      {/* Header */}
+      <div className="flex justify-between items-center mb-6 p-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Varsler</h1>
-          <p className="text-gray-600 mt-1">
-            {notifications.filter(n => n.status === 'unread').length} uleste varsler
-          </p>
+          <h1 className="text-2xl font-bold text-gray-900">Varsler</h1>
+          <p className="text-gray-600">Administrer dine varsler og meldinger</p>
         </div>
-        <div className="flex items-center space-x-3">
+        <div className="flex space-x-2">
           <button
-            onClick={() => setShowSettings(!showSettings)}
-            className="flex items-center space-x-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200"
+            onClick={() => markAllAsRead()}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
           >
-            <Settings className="h-5 w-5" />
-            <span>Innstillinger</span>
-          </button>
-          <button
-            onClick={markAllAsRead}
-            className="flex items-center space-x-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
-          >
-            <Check className="h-5 w-5" />
+            <CheckCircle className="h-4 w-4" />
             <span>Merk alle som lest</span>
           </button>
         </div>
@@ -374,7 +367,7 @@ export default function NotificationsPage() {
       )}
 
       {/* Notifications List */}
-      <div className="space-y-4">
+      <div className="space-y-4 px-6">
         {filteredNotifications.length === 0 ? (
           <div className="text-center py-12 bg-white rounded-lg border-2 border-dashed border-gray-300">
             <Bell className="mx-auto h-12 w-12 text-gray-400 mb-4" />

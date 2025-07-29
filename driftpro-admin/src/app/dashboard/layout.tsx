@@ -17,7 +17,8 @@ import {
   X, 
   Mail, 
   Bell,
-  Code 
+  Code,
+  Search 
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import NotificationBell from '@/components/NotificationBell';
@@ -144,97 +145,80 @@ export default function DashboardLayout({
   };
 
   return (
-    <div className="flex h-screen bg-gray-50">
-      {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-gray-900 transform transition-transform duration-300 ease-in-out lg:translate-x-0 lg:static lg:inset-0 ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full'
-      }`}>
-        {/* Header */}
-        <div className="flex items-center justify-between p-6 border-b border-gray-700">
+    <div className="flex h-screen bg-gray-100">
+      {/* Fixed Sidebar */}
+      <div className="fixed left-0 top-0 h-full w-64 bg-blue-900 text-white flex flex-col z-50">
+        {/* Logo */}
+        <div className="p-6 border-b border-blue-800">
           <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-sm">D</span>
+            <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
+              <span className="text-blue-900 font-bold text-lg">D</span>
             </div>
-            <span className="text-white font-semibold text-lg">DriftPro</span>
+            <span className="text-xl font-bold">DriftPro</span>
           </div>
-          <button
-            onClick={() => setSidebarOpen(false)}
-            className="lg:hidden text-gray-400 hover:text-white"
-          >
-            <X className="h-6 w-6" />
-          </button>
         </div>
 
         {/* User Profile */}
-        <div className="p-6 border-b border-gray-700">
+        <div className="p-4 border-b border-blue-800">
           <div className="flex items-center space-x-3">
-            <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-medium text-lg">
-                {user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+            <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center">
+              <span className="text-white font-medium">
+                {user?.email?.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
-              <p className="text-white font-medium truncate">
-                {user?.displayName || user?.email || 'Bruker'}
-              </p>
-              <p className="text-gray-400 text-sm truncate">
-                Administrator
-              </p>
+              <p className="text-sm font-medium truncate">{user?.email}</p>
+              <p className="text-xs text-blue-300">Administrator</p>
             </div>
           </div>
         </div>
 
         {/* Search */}
-        <div className="px-4 py-4">
+        <div className="p-4">
           <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 h-4 w-4" />
             <input
               type="text"
               placeholder="Søk..."
-              className="w-full pl-10 pr-4 py-2 bg-gray-800 border border-gray-700 rounded-lg text-gray-200 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 bg-blue-800 border border-blue-700 rounded-lg text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             />
-            <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-              <svg className="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-              </svg>
-            </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 py-4 space-y-2 overflow-y-auto">
-          {sidebarItems.map((item) => {
-            const isActive = pathname === item.href;
-
-            return (
-              <div key={item.name}>
-                <Link
-                  href={item.href}
-                  className={`flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                    isActive
-                      ? 'bg-blue-600 text-white'
-                      : 'text-gray-300 hover:bg-gray-800 hover:text-white'
-                  }`}
-                >
-                  <div className="flex items-center space-x-3">
+        <nav className="flex-1 overflow-y-auto">
+          <ul className="space-y-1 p-4">
+            {sidebarItems.map((item) => {
+              const isActive = pathname === item.href;
+              return (
+                <li key={item.href}>
+                  <Link
+                    href={item.href}
+                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors relative ${
+                      isActive
+                        ? 'bg-blue-700 text-white'
+                        : 'text-blue-200 hover:bg-blue-800 hover:text-white'
+                    }`}
+                  >
                     {item.icon}
-                    <span>{item.name}</span>
-                  </div>
-                  {item.badge && (
-                    <span className="bg-red-500 text-white text-xs px-2 py-1 rounded-full">
-                      {item.badge}
-                    </span>
-                  )}
-                </Link>
-              </div>
-            );
-          })}
+                    <span className="flex-1">{item.name}</span>
+                    {item.badge && (
+                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.badgeColor}`}>
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
+          </ul>
         </nav>
 
-        {/* Logout Button */}
-        <div className="px-4 py-4 border-t border-gray-700">
+        {/* Logout */}
+        <div className="p-4 border-t border-blue-800">
           <button
             onClick={handleLogout}
-            className="w-full flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-gray-800 hover:text-white rounded-lg transition-colors"
+            className="flex items-center space-x-3 w-full px-3 py-2 text-blue-200 hover:bg-blue-800 hover:text-white rounded-lg transition-colors"
           >
             <LogOut className="h-5 w-5" />
             <span>Logg ut</span>
@@ -242,35 +226,34 @@ export default function DashboardLayout({
         </div>
       </div>
 
-      {/* Main Content */}
-      <div className="flex-1 flex flex-col lg:ml-64 bg-white">
+      {/* Main Content - with left margin to account for fixed sidebar */}
+      <div className="flex-1 ml-64 bg-white">
         {/* Top Header */}
-        <div className="sticky top-0 z-40 bg-white border-b border-gray-200">
-          <div className="flex items-center justify-between h-16 px-4 sm:px-6 lg:px-8">
-            <div className="flex items-center">
-              <button
-                onClick={() => setSidebarOpen(true)}
-                className="lg:hidden p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
-              >
-                <Menu className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="flex items-center space-x-4">
-              <NotificationBell />
-              <button
-                onClick={handleLogout}
-                className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
-                title="Logg ut"
-              >
-                <LogOut className="h-5 w-5" />
-              </button>
-            </div>
+        <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-600">Velkommen tilbake</p>
           </div>
-        </div>
+          <div className="flex items-center space-x-4">
+            <button className="relative p-2 text-gray-600 hover:text-gray-900">
+              <Bell className="h-6 w-6" />
+              {unreadCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+                  {unreadCount}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={handleLogout}
+              className="p-2 text-gray-600 hover:text-gray-900"
+            >
+              <LogOut className="h-6 w-6" />
+            </button>
+          </div>
+        </header>
 
         {/* Page Content */}
-        <main className="flex-1 bg-white">
+        <main className="bg-white">
           {children}
         </main>
       </div>

@@ -87,90 +87,91 @@ export default function ShiftsPage() {
   };
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Skiftplan</h1>
-            <p className="text-gray-600">Administrer skiftplaner og arbeidstider</p>
-          </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2"
-          >
-            <Plus className="h-4 w-4" />
-            <span>Opprett skift</span>
-          </button>
+      <div className="flex justify-between items-center mb-6 p-6">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Vakter</h1>
+          <p className="text-gray-600">Administrer vakter og arbeidstider</p>
         </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
+        >
+          <Plus className="h-4 w-4" />
+          <span>Legg til vakt</span>
+        </button>
       </div>
 
-      {/* Shifts Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {shifts.map((shift) => (
-          <div key={shift.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-4">
-                <div className="flex items-center space-x-3">
-                  <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
-                    <Clock className="h-6 w-6 text-white" />
+      {/* Shifts Content */}
+      <div className="px-6">
+        {/* Shifts Grid */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {shifts.map((shift) => (
+            <div key={shift.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-3">
+                    <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
+                      <Clock className="h-6 w-6 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">{shift.title}</h3>
+                      <p className="text-sm text-gray-500">{shift.department}</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="text-lg font-semibold text-gray-900">{shift.title}</h3>
-                    <p className="text-sm text-gray-500">{shift.department}</p>
+                  <div className="flex items-center space-x-2">
+                    <button className="text-blue-600 hover:text-blue-900 p-1" title="Rediger">
+                      <Edit className="h-4 w-4" />
+                    </button>
+                    <button className="text-gray-600 hover:text-gray-900 p-1" title="Se detaljer">
+                      <Eye className="h-4 w-4" />
+                    </button>
+                    <button className="text-red-600 hover:text-red-900 p-1" title="Slett">
+                      <Trash2 className="h-4 w-4" />
+                    </button>
                   </div>
                 </div>
-                <div className="flex items-center space-x-2">
-                  <button className="text-blue-600 hover:text-blue-900 p-1" title="Rediger">
-                    <Edit className="h-4 w-4" />
-                  </button>
-                  <button className="text-gray-600 hover:text-gray-900 p-1" title="Se detaljer">
-                    <Eye className="h-4 w-4" />
-                  </button>
-                  <button className="text-red-600 hover:text-red-900 p-1" title="Slett">
-                    <Trash2 className="h-4 w-4" />
-                  </button>
-                </div>
-              </div>
 
-              <div className="space-y-3">
-                <div className="flex items-center space-x-2">
-                  <Calendar className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-900">
-                    {new Date(shift.date).toLocaleDateString('no-NO')}
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Clock className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-900">
-                    {shift.startTime} - {shift.endTime}
-                  </span>
-                </div>
-
-                <div className="flex items-center space-x-2">
-                  <Users className="h-4 w-4 text-gray-400" />
-                  <span className="text-sm text-gray-600">
-                    {shift.assignedEmployees.length} ansatte tildelt
-                  </span>
-                </div>
-
-                {shift.notes && (
-                  <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                    {shift.notes}
+                <div className="space-y-3">
+                  <div className="flex items-center space-x-2">
+                    <Calendar className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">
+                      {new Date(shift.date).toLocaleDateString('no-NO')}
+                    </span>
                   </div>
-                )}
-              </div>
 
-              <div className="mt-4 pt-4 border-t border-gray-200">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-gray-500">Status</span>
-                  {getStatusBadge(shift.status)}
+                  <div className="flex items-center space-x-2">
+                    <Clock className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-900">
+                      {shift.startTime} - {shift.endTime}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    <Users className="h-4 w-4 text-gray-400" />
+                    <span className="text-sm text-gray-600">
+                      {shift.assignedEmployees.length} ansatte tildelt
+                    </span>
+                  </div>
+
+                  {shift.notes && (
+                    <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
+                      {shift.notes}
+                    </div>
+                  )}
+                </div>
+
+                <div className="mt-4 pt-4 border-t border-gray-200">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-gray-500">Status</span>
+                    {getStatusBadge(shift.status)}
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
 
       {/* Add Shift Modal */}

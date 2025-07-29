@@ -946,162 +946,146 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div>
       {/* Header */}
-      <div className="flex justify-between items-center">
+      <div className="flex justify-between items-center mb-6 p-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Ansatte</h1>
-          <p className="text-gray-600">Administrer ansatte og deres tilganger</p>
+          <p className="text-gray-600">Administrer alle ansatte i systemet</p>
         </div>
         <div className="flex space-x-2">
-          {/* Import button with dropdown */}
-          <div className="relative import-export-dropdown">
-            <button
-              onClick={() => setShowImportDropdown(!showImportDropdown)}
-              disabled={saving}
-              className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2 disabled:opacity-50"
-            >
-              <Upload className="h-5 w-5" />
-              <span>Importer</span>
-              <ChevronDown className="h-4 w-4" />
-            </button>
-            
-            {showImportDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-48">
-                <div className="py-1">
-                  <button
-                    onClick={() => {
-                      downloadTemplate();
-                      setShowImportDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    <span>Last ned Excel-mal</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      downloadCSVTemplate();
-                      setShowImportDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                  >
-                    <FileSpreadsheet className="h-4 w-4" />
-                    <span>Last ned CSV-mal</span>
-                  </button>
-                  <div className="border-t border-gray-200 my-1"></div>
-                  <label className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 cursor-pointer">
-                    <Upload className="h-4 w-4" />
-                    <span>Importer fil (.xlsx, .xls, .csv)</span>
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx,.xls,.csv"
-                      onChange={importFromExcel}
-                      className="hidden"
-                      disabled={saving}
-                      onClick={() => setShowImportDropdown(false)}
-                    />
-                  </label>
-                </div>
-              </div>
-            )}
-          </div>
-          
-          {/* Export button with dropdown */}
-          <div className="relative import-export-dropdown">
-            <button
-              onClick={() => setShowExportDropdown(!showExportDropdown)}
-              disabled={saving || employees.length === 0}
-              className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50"
-            >
-              <Download className="h-5 w-5" />
-              <span>Eksporter</span>
-              <ChevronDown className="h-4 w-4" />
-            </button>
-            
-            {showExportDropdown && (
-              <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-48">
-                <div className="py-1">
-                  <button
-                    onClick={() => {
-                      exportToExcel();
-                      setShowExportDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Eksporter til Excel</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      exportToCSV();
-                      setShowExportDropdown(false);
-                    }}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                  >
-                    <Download className="h-4 w-4" />
-                    <span>Eksporter til CSV</span>
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
-          
           <button
-            onClick={() => setShowAddModal(true)}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center space-x-2"
+            onClick={() => setShowImportDropdown(!showImportDropdown)}
+            disabled={saving}
+            className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2 disabled:opacity-50"
           >
-            <Plus className="h-5 w-5" />
-            <span>Legg til ansatt</span>
+            <Upload className="h-5 w-5" />
+            <span>Importer</span>
+            <ChevronDown className="h-4 w-4" />
           </button>
+          
+          {showImportDropdown && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-48">
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    downloadTemplate();
+                    setShowImportDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Last ned Excel-mal</span>
+                </button>
+                <button
+                  onClick={() => {
+                    downloadCSVTemplate();
+                    setShowImportDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                >
+                  <FileSpreadsheet className="h-4 w-4" />
+                  <span>Last ned CSV-mal</span>
+                </button>
+                <div className="border-t border-gray-200 my-1"></div>
+                <label className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2 cursor-pointer">
+                  <Upload className="h-4 w-4" />
+                  <span>Importer fil (.xlsx, .xls, .csv)</span>
+                  <input
+                    ref={fileInputRef}
+                    type="file"
+                    accept=".xlsx,.xls,.csv"
+                    onChange={importFromExcel}
+                    className="hidden"
+                    disabled={saving}
+                    onClick={() => setShowImportDropdown(false)}
+                  />
+                </label>
+              </div>
+            </div>
+          )}
         </div>
+        
+        {/* Export button with dropdown */}
+        <div className="relative import-export-dropdown">
+          <button
+            onClick={() => setShowExportDropdown(!showExportDropdown)}
+            disabled={saving || employees.length === 0}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50"
+          >
+            <Download className="h-5 w-5" />
+            <span>Eksporter</span>
+            <ChevronDown className="h-4 w-4" />
+          </button>
+          
+          {showExportDropdown && (
+            <div className="absolute top-full left-0 mt-1 bg-white border border-gray-300 rounded-lg shadow-lg z-50 min-w-48">
+              <div className="py-1">
+                <button
+                  onClick={() => {
+                    exportToExcel();
+                    setShowExportDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Eksporter til Excel</span>
+                </button>
+                <button
+                  onClick={() => {
+                    exportToCSV();
+                    setShowExportDropdown(false);
+                  }}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                >
+                  <Download className="h-4 w-4" />
+                  <span>Eksporter til CSV</span>
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+        
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center space-x-2"
+        >
+          <Plus className="h-5 w-5" />
+          <span>Legg til ansatt</span>
+        </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-6 rounded-lg shadow-sm border">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
+      <div className="bg-white p-4 rounded-lg shadow mb-6 mx-6">
+        <div className="flex flex-col md:flex-row gap-4">
+          <div className="flex-1">
             <input
               type="text"
-              placeholder="Søk etter ansatte..."
+              placeholder="Søk etter navn, e-post..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
             />
           </div>
-          
-          <select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          >
-            <option value="">Alle avdelinger</option>
-            {departments.map(dept => (
-              <option key={dept.id} value={dept.name}>{dept.name}</option>
-            ))}
-          </select>
-          
-          <select
-            value={roleFilter}
-            onChange={(e) => setRoleFilter(e.target.value)}
-            className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-          >
-            <option value="">Alle roller</option>
-            <option value="admin">Administrator</option>
-            <option value="department_leader">Avdelingsleder</option>
-            <option value="employee">Ansatt</option>
-          </select>
-          
-          <div className="text-sm text-gray-500 flex items-center">
-            {filteredEmployees.length} av {employees.length} ansatte
+          <div>
+            <select
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+            >
+              <option value="all">Alle avdelinger</option>
+              {departments.map((dept) => (
+                <option key={dept.id} value={dept.id}>
+                  {dept.name}
+                </option>
+              ))}
+            </select>
           </div>
         </div>
       </div>
 
       {/* Employees Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
+      <div className="bg-white rounded-lg shadow overflow-hidden mx-6">
         <div className="overflow-x-auto">
           <table className="min-w-full divide-y divide-gray-200">
             <thead className="bg-gray-50">
