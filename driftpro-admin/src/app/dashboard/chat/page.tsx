@@ -20,7 +20,6 @@ import {
   MessageSquare,
   User,
   Plus,
-  Maximize2,
   Minimize2,
   CheckCheck
 } from 'lucide-react';

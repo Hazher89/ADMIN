@@ -16,7 +16,7 @@ import {
   MessageSquare,
   Building
 } from 'lucide-react';
-import { collection, query, orderBy, limit, onSnapshot, where, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, limit, onSnapshot, where, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 
@@ -50,7 +50,6 @@ export default function NotificationBell() {
         collection(db, 'notifications'),
         where('userId', '==', user.uid),
         where('status', '==', 'unread'),
-        orderBy('createdAt', 'desc'),
         limit(10)
       );
 
@@ -59,6 +58,8 @@ export default function NotificationBell() {
           id: doc.id,
           ...doc.data()
         })) as Notification[];
+        // Sort by createdAt in descending order in memory
+        notificationsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setNotifications(notificationsData);
         setUnreadCount(notificationsData.length);
       });

@@ -2,7 +2,6 @@ import { db } from './firebase';
 import { 
   collection, 
   query, 
-  orderBy, 
   onSnapshot, 
   addDoc, 
   updateDoc, 
@@ -71,8 +70,7 @@ class NotificationService {
     const unsubscribe = onSnapshot(
       query(
         collection(db, 'notifications'),
-        where('userId', '==', userId),
-        orderBy('createdAt', 'desc')
+        where('userId', '==', userId)
       ),
       (snapshot) => {
         const notificationsData: Notification[] = [];
@@ -90,6 +88,8 @@ class NotificationService {
             createdAt: data.createdAt?.toDate() || new Date()
           });
         });
+        // Sort by createdAt in descending order in memory
+        notificationsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         callback(notificationsData);
       }
     );
@@ -118,7 +118,7 @@ class NotificationService {
     try {
       const notificationsQuery = query(
         collection(db, 'notifications'),
-        where('recipientId', '==', userId),
+        where('userId', '==', userId),
         where('status', '==', 'unread')
       );
 
@@ -171,7 +171,7 @@ class NotificationService {
     try {
       const notificationsQuery = query(
         collection(db, 'notifications'),
-        where('recipientId', '==', userId),
+        where('userId', '==', userId),
         where('status', '==', 'unread')
       );
 

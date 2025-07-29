@@ -21,14 +21,23 @@ import CompanyDetailModal from '@/components/CompanyDetailModal';
 interface Partner {
   id: string;
   name: string;
-  orgNumber: string;
+  organizationNumber: string;
   internalName: string;
   phone: string;
-  email: string;
-  address: string;
   contactPerson: string;
+  address: string;
+  city: string;
+  postalCode: string;
+  email: string;
+  website: string;
+  industry: string;
+  employees: number;
+  revenue: number;
+  description: string;
   status: 'active' | 'inactive';
-  vehicles?: Vehicle[];
+  vehicles: Vehicle[];
+  images: string[];
+  documents: Document[];
   createdAt: string;
   updatedAt: string;
 }
@@ -47,22 +56,6 @@ interface Vehicle {
   nextEUInspection?: string;
   maxPayload?: string;
   fetchedAt?: string;
-}
-
-interface BrregResult {
-  orgNumber: string;
-  data: {
-    name: string;
-    orgNumber: string;
-    address: {
-      street: string;
-      city: string;
-      postalCode: string;
-    };
-    brregData: Record<string, string | undefined>;
-  } | null;
-  success: boolean;
-  error?: string;
 }
 
 interface PartnerFormData {
@@ -130,7 +123,7 @@ export default function PartnersPage() {
     const filtered = partners.filter(partner =>
       partner.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
       partner.internalName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      partner.orgNumber.includes(searchTerm) ||
+      partner.organizationNumber.includes(searchTerm) ||
       partner.contactPerson.toLowerCase().includes(searchTerm.toLowerCase())
     );
     setFilteredPartners(filtered);
@@ -227,7 +220,7 @@ export default function PartnersPage() {
     setSelectedPartner(partner);
     setFormData({
       name: partner.name,
-      orgNumber: partner.orgNumber,
+      orgNumber: partner.organizationNumber,
       internalName: partner.internalName,
       phone: partner.phone,
       email: partner.email,
@@ -410,7 +403,7 @@ export default function PartnersPage() {
                 <div className="flex items-center space-x-2">
                   <Building className="h-4 w-4 text-gray-400" />
                   <span className="text-sm text-gray-600">Org.nr:</span>
-                  <span className="text-sm font-medium text-gray-900">{partner.orgNumber}</span>
+                  <span className="text-sm font-medium text-gray-900">{partner.organizationNumber}</span>
                 </div>
 
                 {partner.contactPerson && (
@@ -1018,7 +1011,7 @@ export default function PartnersPage() {
         <CompanyDetailModal
           isOpen={showDetailModal}
           onClose={() => setShowDetailModal(false)}
-          orgNumber={selectedPartnerForDetail.orgNumber}
+          orgNumber={selectedPartnerForDetail.organizationNumber}
           companyName={selectedPartnerForDetail.name}
         />
       )}

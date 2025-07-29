@@ -28,7 +28,6 @@ import {
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { notificationService } from '@/lib/notification-service';
-import { toast } from 'react-hot-toast';
 
 interface Notification {
   id: string;
@@ -38,7 +37,7 @@ interface Notification {
   type: 'deviation' | 'vacation' | 'absence' | 'shift' | 'document' | 'chat' | 'employee' | 'system';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'unread' | 'read' | 'archived';
-  metadata: Record<string, string | number | boolean>;
+  metadata: Record<string, string | number | boolean | undefined>;
   createdAt: string;
   readAt?: string;
   archivedAt?: string;
@@ -48,11 +47,6 @@ interface NotificationSettings {
   email: boolean;
   push: boolean;
   inApp: boolean;
-  quietHours: {
-    enabled: boolean;
-    start: string;
-    end: string;
-  };
   types: {
     deviation: boolean;
     vacation: boolean;
@@ -79,11 +73,6 @@ export default function NotificationsPage() {
     email: true,
     push: true,
     inApp: true,
-    quietHours: {
-      enabled: false,
-      start: '22:00',
-      end: '08:00'
-    },
     types: {
       deviation: true,
       vacation: true,
@@ -524,53 +513,6 @@ export default function NotificationsPage() {
                     />
                     <span className="text-gray-700">In-app varsler</span>
                   </label>
-                </div>
-              </div>
-
-              {/* Quiet Hours */}
-              <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-4">Stille timer</h3>
-                <div className="space-y-3">
-                  <label className="flex items-center space-x-3">
-                    <input
-                      type="checkbox"
-                      checked={settings.quietHours.enabled}
-                      onChange={(e) => setSettings(prev => ({
-                        ...prev,
-                        quietHours: { ...prev.quietHours, enabled: e.target.checked }
-                      }))}
-                      className="h-4 w-4 text-blue-600 focus:ring-blue-500 border-gray-300 rounded"
-                    />
-                    <span className="text-gray-700">Aktiver stille timer</span>
-                  </label>
-                  {settings.quietHours.enabled && (
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Start</label>
-                        <input
-                          type="time"
-                          value={settings.quietHours.start}
-                          onChange={(e) => setSettings(prev => ({
-                            ...prev,
-                            quietHours: { ...prev.quietHours, start: e.target.value }
-                          }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">Slutt</label>
-                        <input
-                          type="time"
-                          value={settings.quietHours.end}
-                          onChange={(e) => setSettings(prev => ({
-                            ...prev,
-                            quietHours: { ...prev.quietHours, end: e.target.value }
-                          }))}
-                          className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                        />
-                      </div>
-                    </div>
-                  )}
                 </div>
               </div>
 

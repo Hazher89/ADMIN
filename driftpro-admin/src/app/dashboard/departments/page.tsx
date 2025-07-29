@@ -82,54 +82,31 @@ export default function DepartmentsPage() {
   });
 
   const loadData = useCallback(async () => {
+    setLoading(true);
     try {
-      setLoading(true);
       if (db) {
-        // Load employees
-        const employeesSnapshot = await getDocs(collection(db, 'employees'));
-        const employeesData = employeesSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            firstName: data.firstName || '',
-            lastName: data.lastName || '',
-            email: data.email || '',
-            department: data.department || '',
-            role: data.role || 'employee',
-            status: data.status || 'active'
-          };
-        });
-        setAllEmployees(employeesData);
-
         // Load departments
         const departmentsSnapshot = await getDocs(collection(db, 'departments'));
-        const departmentsData = departmentsSnapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name || '',
-            description: data.description || '',
-            leaders: data.leaders || [],
-            employeeCount: data.employeeCount || 0,
-            location: data.location || '',
-            phone: data.phone || '',
-            email: data.email || '',
-            status: data.status || 'active',
-            createdAt: data.createdAt || new Date().toISOString(),
-            employees: [] // Will be populated below
-          };
-        });
+        const departmentsData = departmentsSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Department[];
 
-        // Combine departments with their employees
-        const departmentsWithEmployees = departmentsData.map(dept => ({
+        // Load employees
+        const employeesSnapshot = await getDocs(collection(db, 'users'));
+        const employeesData = employeesSnapshot.docs.map(doc => ({
+          id: doc.id,
+          ...doc.data()
+        })) as Employee[];
+
+        // Combine data
+        const departmentsWithEmployees: DepartmentWithEmployees[] = departmentsData.map(dept => ({
           ...dept,
           employees: employeesData.filter(emp => emp.department === dept.name)
         }));
 
         setDepartments(departmentsWithEmployees);
-      } else {
-        // Fallback to mock data
-        loadMockData();
+        setAllEmployees(employeesData);
       }
     } catch (error) {
       console.error('Error loading data:', error);
@@ -138,7 +115,7 @@ export default function DepartmentsPage() {
     } finally {
       setLoading(false);
     }
-  }, [db]);
+  }, []);
 
   const filterDepartments = useCallback(() => {
     const filtered = departments.filter(dept =>

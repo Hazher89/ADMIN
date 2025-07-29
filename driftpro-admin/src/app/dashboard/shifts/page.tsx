@@ -5,12 +5,11 @@ import {
   Plus,
   Calendar,
   Clock,
-  Users,
+  Eye,
   Edit,
   Trash2,
-  Eye
+  Users
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
 
 interface Shift {
   id: string;

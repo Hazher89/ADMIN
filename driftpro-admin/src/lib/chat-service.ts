@@ -6,7 +6,6 @@ import {
   deleteDoc,
   query,
   where,
-  orderBy,
   limit,
   getDocs,
   writeBatch
@@ -88,15 +87,18 @@ class ChatService {
     try {
       const chatsQuery = query(
         collection(db, 'chats'),
-        where('participants', 'array-contains', userId),
-        orderBy('updatedAt', 'desc')
+        where('participants', 'array-contains', userId)
       );
 
       const snapshot = await getDocs(chatsQuery);
-      return snapshot.docs.map(doc => ({
+      const chats = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Chat[];
+      
+      // Sort by updatedAt in descending order in memory
+      chats.sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+      return chats;
     } catch (error) {
       console.error('Error loading chats:', error);
       return [];
@@ -110,15 +112,18 @@ class ChatService {
     try {
       const messagesQuery = query(
         collection(db, `chats/${chatId}/messages`),
-        orderBy('createdAt', 'desc'),
         limit(limitCount)
       );
 
       const snapshot = await getDocs(messagesQuery);
-      return snapshot.docs.map(doc => ({
+      const messages = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as ChatMessage[];
+      
+      // Sort by createdAt in descending order in memory
+      messages.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return messages;
     } catch (error) {
       console.error('Error loading messages:', error);
       return [];

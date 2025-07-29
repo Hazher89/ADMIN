@@ -128,7 +128,7 @@ export default function EmployeeVacationManager({ employees, onClose, onUpdate }
     }
   };
 
-  const getVacationDaysForYear = (employee: Employee, _year: number) => {
+  const getVacationDaysForYear = (employee: Employee, year: number) => {
     // This would normally come from Firebase with year-specific data
     // For now, using the current vacationDays structure
     return employee.vacationDays;
