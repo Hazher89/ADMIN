@@ -161,13 +161,18 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
   };
 
   const formatDate = (dateString: string) => {
-    if (!dateString) return '';
-    const date = new Date(dateString);
-    return date.toLocaleDateString('nb-NO', {
-      day: 'numeric',
-      month: 'long',
-      year: 'numeric'
-    });
+    if (!dateString || typeof dateString !== 'string') return '';
+    try {
+      const date = new Date(dateString);
+      if (isNaN(date.getTime())) return '';
+      return date.toLocaleDateString('nb-NO', {
+        day: 'numeric',
+        month: 'long',
+        year: 'numeric'
+      });
+    } catch {
+      return '';
+    }
   };
 
   const formatAddress = (address: {
@@ -179,12 +184,12 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
   }) => {
     if (!address) return '';
     const parts = [
-      address.adresse?.join(', '),
-      address.postnummer,
-      address.poststed,
-      address.kommune,
-      address.land
-    ].filter(Boolean);
+      Array.isArray(address.adresse) ? address.adresse.join(', ') : '',
+      address.postnummer || '',
+      address.poststed || '',
+      address.kommune || '',
+      address.land || ''
+    ].filter(part => part && part.trim() !== '');
     return parts.join(', ');
   };
 

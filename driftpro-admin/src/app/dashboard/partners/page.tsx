@@ -117,6 +117,31 @@ export default function PartnersPage() {
         const partnersSnapshot = await getDocs(collection(db, 'partners'));
         const partnersData = partnersSnapshot.docs.map(doc => {
           const data = doc.data();
+          
+          // Handle createdAt
+          let createdAt: string;
+          if (data.createdAt?.toDate) {
+            createdAt = data.createdAt.toDate().toISOString();
+          } else if (data.createdAt instanceof Date) {
+            createdAt = data.createdAt.toISOString();
+          } else if (typeof data.createdAt === 'string') {
+            createdAt = data.createdAt;
+          } else {
+            createdAt = new Date().toISOString();
+          }
+          
+          // Handle updatedAt
+          let updatedAt: string;
+          if (data.updatedAt?.toDate) {
+            updatedAt = data.updatedAt.toDate().toISOString();
+          } else if (data.updatedAt instanceof Date) {
+            updatedAt = data.updatedAt.toISOString();
+          } else if (typeof data.updatedAt === 'string') {
+            updatedAt = data.updatedAt;
+          } else {
+            updatedAt = new Date().toISOString();
+          }
+          
           return {
             id: doc.id,
             name: data.name || '',
@@ -134,11 +159,32 @@ export default function PartnersPage() {
             revenue: data.revenue || 0,
             description: data.description || '',
             status: data.status || 'active',
-            vehicles: data.vehicles || [],
-            images: data.images || [],
-            documents: data.documents || [],
-            createdAt: data.createdAt || new Date().toISOString(),
-            updatedAt: data.updatedAt || new Date().toISOString()
+            vehicles: Array.isArray(data.vehicles) ? data.vehicles.map((vehicle: Vehicle) => ({
+              id: vehicle.id || '',
+              regNumber: vehicle.regNumber || '',
+              manufacturer: vehicle.manufacturer || '',
+              brand: vehicle.brand || '',
+              model: vehicle.model || '',
+              variant: vehicle.variant || '',
+              bodyType: vehicle.bodyType || '',
+              vehicleGroup: vehicle.vehicleGroup || '',
+              firstRegistered: vehicle.firstRegistered || '',
+              lastEUApproved: vehicle.lastEUApproved || '',
+              nextEUInspection: vehicle.nextEUInspection || '',
+              maxPayload: vehicle.maxPayload || '',
+              fetchedAt: vehicle.fetchedAt || ''
+            })) : [],
+            images: Array.isArray(data.images) ? data.images.filter((img: string) => typeof img === 'string') : [],
+            documents: Array.isArray(data.documents) ? data.documents.map((doc: Document) => ({
+              id: doc.id || '',
+              name: doc.name || '',
+              type: doc.type || 'document',
+              url: doc.url || '',
+              uploadedAt: doc.uploadedAt || new Date().toISOString(),
+              description: doc.description || ''
+            })) : [],
+            createdAt: createdAt,
+            updatedAt: updatedAt
           } as Partner;
         });
         setPartners(partnersData);
