@@ -28,7 +28,6 @@ import {
 import { db } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
 import { notificationService } from '@/lib/notification-service';
-import { Notification, NotificationSettings } from '@/lib/notification-service';
 import { toast } from 'react-hot-toast';
 
 interface Notification {
@@ -39,7 +38,7 @@ interface Notification {
   type: 'deviation' | 'vacation' | 'absence' | 'shift' | 'document' | 'chat' | 'employee' | 'system';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'unread' | 'read' | 'archived';
-  metadata: Record<string, unknown>;
+  metadata: Record<string, string | number | boolean>;
   createdAt: string;
   readAt?: string;
   archivedAt?: string;
@@ -128,10 +127,7 @@ export default function NotificationsPage() {
     if (!db) return;
 
     try {
-      await notificationService.updateNotification(notificationId, {
-        status: 'read',
-        readAt: new Date().toISOString()
-      });
+      await notificationService.markAsRead(notificationId);
     } catch (error) {
       console.error('Error marking notification as read:', error);
     }
@@ -143,10 +139,7 @@ export default function NotificationsPage() {
     try {
       const batch = notifications
         .filter(n => n.status === 'unread')
-        .map(n => notificationService.updateNotification(n.id, {
-          status: 'read',
-          readAt: new Date().toISOString()
-        }));
+        .map(n => notificationService.markAsRead(n.id));
 
       await Promise.all(batch);
     } catch (error) {
@@ -158,10 +151,7 @@ export default function NotificationsPage() {
     if (!db) return;
 
     try {
-      await notificationService.updateNotification(notificationId, {
-        status: 'archived',
-        archivedAt: new Date().toISOString()
-      });
+      await notificationService.archiveNotification(notificationId);
     } catch (error) {
       console.error('Error archiving notification:', error);
     }
@@ -185,11 +175,7 @@ export default function NotificationsPage() {
         if (action === 'delete') {
           return notificationService.deleteNotification(id);
         } else {
-          return notificationService.updateNotification(id, {
-            status: action === 'read' ? 'read' : 'archived',
-            ...(action === 'read' ? { readAt: new Date().toISOString() } : {}),
-            ...(action === 'archive' ? { archivedAt: new Date().toISOString() } : {})
-          });
+          return notificationService.markAsRead(id);
         }
       });
 
@@ -250,10 +236,20 @@ export default function NotificationsPage() {
   };
 
   useEffect(() => {
-    const unsubscribe = loadNotifications();
+    const setupNotifications = async () => {
+      const unsubscribe = await loadNotifications();
+      return unsubscribe;
+    };
+
+    let unsubscribe: (() => void) | undefined;
+    
+    setupNotifications().then(unsub => {
+      unsubscribe = unsub;
+    });
+
     return () => {
       if (unsubscribe) {
-        unsubscribe.then(unsub => unsub());
+        unsubscribe();
       }
     };
   }, [loadNotifications]);
@@ -438,7 +434,7 @@ export default function NotificationsPage() {
                       <p className="text-gray-600 mb-2">{notification.message}</p>
                       <div className="flex items-center space-x-4 text-sm text-gray-500">
                         <span>{new Date(notification.createdAt).toLocaleString('no-NO')}</span>
-                        {notification.metadata?.link && (
+                        {notification.metadata?.link && typeof notification.metadata.link === 'string' && (
                           <button
                             onClick={() => window.open(notification.metadata.link as string, '_blank')}
                             className="flex items-center space-x-1 text-blue-600 hover:text-blue-800"

@@ -232,7 +232,7 @@ class ChatService {
       const batch = writeBatch(db);
       
       messageIds.forEach(messageId => {
-        const messageRef = doc(db, `chats/${chatId}/messages`, messageId);
+        const messageRef = doc(db!, `chats/${chatId}/messages`, messageId);
         batch.update(messageRef, {
           readBy: [userId]
         });

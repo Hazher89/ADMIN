@@ -2,7 +2,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Notification } from '@/lib/notification-service';
 import {
   Bell,
   Check,
@@ -17,7 +16,7 @@ import {
   MessageSquare,
   Building
 } from 'lucide-react';
-import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { collection, query, orderBy, limit, onSnapshot, where, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 
@@ -147,10 +146,20 @@ export default function NotificationBell() {
   };
 
   useEffect(() => {
-    const unsubscribe = loadNotifications();
+    const setupNotifications = async () => {
+      const unsubscribe = await loadNotifications();
+      return unsubscribe;
+    };
+
+    let unsubscribe: (() => void) | undefined;
+    
+    setupNotifications().then(unsub => {
+      unsubscribe = unsub;
+    });
+
     return () => {
       if (unsubscribe) {
-        unsubscribe.then(unsub => unsub());
+        unsubscribe();
       }
     };
   }, [loadNotifications]);

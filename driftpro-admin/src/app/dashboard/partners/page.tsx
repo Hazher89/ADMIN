@@ -197,7 +197,6 @@ export default function PartnersPage() {
       setSaving(true);
       if (db) {
         await deleteDoc(doc(db, 'partners', selectedPartner.id));
-        setShowDeleteModal(false);
         loadPartners();
       }
     } catch (error) {
@@ -248,7 +247,6 @@ export default function PartnersPage() {
 
   const openDeleteModal = (partner: Partner) => {
     setSelectedPartner(partner);
-    setShowDeleteModal(true);
   };
 
   const getStatusColor = (status: string) => {
@@ -979,7 +977,7 @@ export default function PartnersPage() {
       )}
 
       {/* Delete Confirmation Modal */}
-      {showDeleteModal && selectedPartner && (
+      {selectedPartner && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
           <div className="bg-white rounded-lg max-w-md w-full p-6">
             <div className="flex items-center space-x-3 mb-4">
@@ -994,22 +992,21 @@ export default function PartnersPage() {
             
             <p className="text-gray-700 mb-6">
               Er du sikker på at du vil slette <strong>{selectedPartner.name}</strong>? 
-              Dette vil permanent fjerne all informasjon om denne samarbeidspartneren.
+              Dette vil permanent fjerne all data knyttet til denne samarbeidspartneren.
             </p>
             
-            <div className="flex space-x-3">
+            <div className="flex justify-end space-x-3">
               <button
-                onClick={() => setShowDeleteModal(false)}
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
+                onClick={() => setSelectedPartner(null)}
+                className="px-4 py-2 text-gray-700 bg-gray-100 rounded-lg hover:bg-gray-200"
               >
                 Avbryt
               </button>
               <button
                 onClick={handleDelete}
-                disabled={saving}
-                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 disabled:opacity-50"
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
               >
-                {saving ? 'Sletter...' : 'Slett'}
+                Slett
               </button>
             </div>
           </div>

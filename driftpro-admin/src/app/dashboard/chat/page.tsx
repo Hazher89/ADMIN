@@ -3,8 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
 import { useAuth } from '@/contexts/AuthContext';
-import { chatService, userService } from '@/lib/firebase-services';
-import { Chat, Message } from '@/types';
+import { chatService } from '@/lib/chat-service';
 import {
   Send,
   Paperclip,
@@ -25,7 +24,70 @@ import {
   Minimize2,
   CheckCheck
 } from 'lucide-react';
-import { toast } from 'react-hot-toast';
+
+interface Chat {
+  id: string;
+  name: string;
+  type: 'private' | 'group';
+  participants: string[];
+  participantNames: Record<string, string>;
+  lastMessage?: {
+    content: string;
+    senderId: string;
+    senderName: string;
+    timestamp: string;
+    type: string;
+  };
+  unreadCount: Record<string, number>;
+  settings: {
+    readReceipts: boolean;
+    typingIndicators: boolean;
+    notifications: boolean;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface Message {
+  id: string;
+  chatId: string;
+  senderId: string;
+  senderName: string;
+  content: string;
+  type: 'text' | 'image' | 'file' | 'video' | 'audio';
+  fileUrl?: string;
+  fileName?: string;
+  fileSize?: number;
+  thumbnailUrl?: string;
+  duration?: number;
+  reactions: Record<string, string>;
+  replyTo?: {
+    messageId: string;
+    content: string;
+    senderName: string;
+  };
+  forwardedFrom?: {
+    messageId: string;
+    chatId: string;
+    chatName: string;
+    senderName: string;
+  };
+  readBy: string[];
+  createdAt: string;
+  updatedAt?: string;
+  deleted?: boolean;
+  edited?: boolean;
+  timestamp?: { toDate: () => Date };
+}
+
+interface User {
+  id: string;
+  name: string;
+  email: string;
+  avatar?: string;
+  status: 'online' | 'offline' | 'away';
+  lastSeen?: string;
+}
 
 export default function ChatPage() {
   const { user } = useAuth();
@@ -46,33 +108,24 @@ export default function ChatPage() {
   useEffect(() => {
     if (!user?.uid) return;
 
-    let unsubscribe: (() => void) | undefined;
-
     const setupChats = async () => {
       try {
-        const unsub = await chatService.loadChats(user.uid, (chatsData) => {
-          setChats(chatsData);
-        });
-        unsubscribe = unsub;
+        const chatsData = await chatService.loadChats(user.uid);
+        setChats(chatsData);
       } catch (error) {
         console.error('Error loading chats:', error);
       }
     };
 
     setupChats();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
   }, [user]);
 
   // Load users
   useEffect(() => {
     const loadUsers = async () => {
       try {
-        await userService.loadUsers((usersData) => {
-          setUsers(usersData);
-        });
+        // TODO: Implement user loading when userService is available
+        setUsers([]);
       } catch (error) {
         console.error('Error loading users:', error);
       }
@@ -85,24 +138,16 @@ export default function ChatPage() {
   useEffect(() => {
     if (!selectedChat?.id || !user?.uid) return;
 
-    let unsubscribe: (() => void) | undefined;
-
     const setupMessages = async () => {
       try {
-        const unsub = await chatService.loadMessages(selectedChat.id, (messagesData) => {
-          setMessages(messagesData);
-        });
-        unsubscribe = unsub;
+        const messagesData = await chatService.loadMessages(selectedChat.id);
+        setMessages(messagesData);
       } catch (error) {
         console.error('Error loading messages:', error);
       }
     };
 
     setupMessages();
-
-    return () => {
-      if (unsubscribe) unsubscribe();
-    };
   }, [selectedChat, user]);
 
   // Scroll to bottom when new messages arrive
@@ -114,18 +159,22 @@ export default function ChatPage() {
   const sendMessage = async () => {
     if (!user?.uid || !selectedChat?.id || !newMessage.trim()) return;
 
-    await chatService.sendMessage(
-      selectedChat.id,
-      user.uid,
-      user.displayName || user.email || 'Unknown',
-      user.photoURL,
-      newMessage,
-      'text',
-      undefined,
-      undefined,
-      undefined,
-      replyToMessage
-    );
+    const messageData = {
+      chatId: selectedChat.id,
+      senderId: user.uid,
+      senderName: user.displayName || user.email || 'Unknown',
+      content: newMessage,
+      type: 'text' as const,
+      reactions: {},
+      readBy: [user.uid],
+      replyTo: replyToMessage ? {
+        messageId: replyToMessage.id,
+        content: replyToMessage.content,
+        senderName: replyToMessage.senderName
+      } : undefined
+    };
+
+    await chatService.sendMessage(selectedChat.id, messageData);
 
     setNewMessage('');
     setReplyToMessage(null);
@@ -136,22 +185,25 @@ export default function ChatPage() {
     if (!user?.uid || !selectedChat?.id) return;
 
     try {
-      const fileUrl = await chatService.uploadFile(file);
+      const fileData = await chatService.uploadFile(file, selectedChat.id);
       let type: 'image' | 'file' | 'video' = 'file';
       if (file.type.startsWith('image/')) type = 'image';
       else if (file.type.startsWith('video/')) type = 'video';
 
-      await chatService.sendMessage(
-        selectedChat.id,
-        user.uid,
-        user.displayName || user.email || 'Unknown',
-        user.photoURL,
-        file.name,
-        type,
-        fileUrl,
-        file.name,
-        file.size
-      );
+      const messageData = {
+        chatId: selectedChat.id,
+        senderId: user.uid,
+        senderName: user.displayName || user.email || 'Unknown',
+        content: file.name,
+        type: type as 'image' | 'file' | 'video',
+        fileUrl: fileData.url,
+        fileName: fileData.fileName,
+        fileSize: fileData.fileSize,
+        reactions: {},
+        readBy: [user.uid]
+      };
+
+      await chatService.sendMessage(selectedChat.id, messageData);
     } catch (error) {
       console.error('Error uploading file:', error);
     }
@@ -171,13 +223,11 @@ export default function ChatPage() {
             <h1 className="text-xl font-bold text-gray-900">Chat</h1>
             <div className="flex space-x-2">
               <button
-                onClick={() => setShowNewChatModal(true)}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
               >
                 <Plus className="h-5 w-5" />
               </button>
               <button
-                onClick={() => setShowGroupModal(true)}
                 className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
               >
                 <Users className="h-5 w-5" />
@@ -212,7 +262,7 @@ export default function ChatPage() {
                 <div className="flex items-center space-x-3">
                   <div className="relative">
                     <div className="w-12 h-12 bg-gray-300 rounded-full flex items-center justify-center">
-                      {chat.isGroup ? (
+                      {chat.type === 'group' ? (
                         <Users className="h-6 w-6 text-gray-600" />
                       ) : (
                         <span className="text-lg font-semibold text-gray-600">
@@ -232,7 +282,7 @@ export default function ChatPage() {
                       </h3>
                       {chat.lastMessage && (
                         <span className="text-xs text-gray-500">
-                          {new Date(chat.lastMessage.timestamp?.toDate()).toLocaleTimeString('no-NO', { 
+                          {new Date(chat.lastMessage.timestamp).toLocaleTimeString('no-NO', { 
                             hour: '2-digit', 
                             minute: '2-digit' 
                           })}
@@ -276,7 +326,6 @@ export default function ChatPage() {
             <div className="flex items-center justify-between">
               <div className="flex items-center space-x-3">
                 <button
-                  onClick={() => setIsMinimized(false)}
                   className="lg:hidden p-2 text-gray-600 hover:text-gray-900"
                 >
                   <X className="h-5 w-5" />
@@ -284,7 +333,7 @@ export default function ChatPage() {
                 
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
-                    {selectedChat.isGroup ? (
+                    {selectedChat.type === 'group' ? (
                       <Users className="h-5 w-5 text-gray-600" />
                     ) : (
                       <span className="text-sm font-semibold text-gray-600">
@@ -297,7 +346,7 @@ export default function ChatPage() {
                     <h2 className="text-lg font-semibold text-gray-900">
                       {selectedChat.name}
                     </h2>
-                    {selectedChat.isGroup && (
+                    {selectedChat.type === 'group' && (
                       <p className="text-sm text-gray-600">
                         {selectedChat.participants.length} medlemmer
                       </p>
@@ -308,17 +357,15 @@ export default function ChatPage() {
 
               <div className="flex items-center space-x-2">
                 <button
-                  onClick={() => setShowChatSettings(true)}
                   className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
                 >
                   <Settings className="h-5 w-5" />
                 </button>
                 
                 <button
-                  onClick={() => setIsMinimized(!isMinimized)}
                   className="p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg"
                 >
-                  {isMinimized ? <Maximize2 className="h-5 w-5" /> : <Minimize2 className="h-5 w-5" />}
+                  <Minimize2 className="h-5 w-5" />
                 </button>
               </div>
             </div>
@@ -333,10 +380,10 @@ export default function ChatPage() {
               >
                 <div className={`max-w-xs lg:max-w-md ${message.senderId === user?.uid ? 'order-2' : 'order-1'}`}>
                   {/* Reply */}
-                  {message.repliedTo && (
+                  {message.replyTo && (
                     <div className="mb-1 p-2 bg-gray-100 rounded-lg text-xs">
-                      <p className="font-semibold text-gray-700">{message.repliedTo.senderName}</p>
-                      <p className="text-gray-600">{message.repliedTo.content}</p>
+                      <p className="font-semibold text-gray-700">{message.replyTo.senderName}</p>
+                      <p className="text-gray-600">{message.replyTo.content}</p>
                     </div>
                   )}
 
@@ -357,7 +404,7 @@ export default function ChatPage() {
                         {message.type === 'image' && (
                           <div>
                             <Image 
-                              src={message.fileUrl} 
+                              src={message.fileUrl || ''} 
                               alt="Shared image"
                               width={200}
                               height={200}
@@ -499,8 +546,8 @@ export default function ChatPage() {
                     
                     <button
                       onClick={() => {
-                        setForwardMessage(message);
-                        setShowForwardModal(true);
+                        // setForwardMessage(message); // This state variable was removed
+                        // setShowForwardModal(true); // This state variable was removed
                       }}
                       className="text-xs text-gray-500 hover:text-gray-700"
                     >

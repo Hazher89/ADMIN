@@ -20,7 +20,7 @@ export interface Notification {
   userId: string;
   title: string;
   message: string;
-  type: NotificationType;
+  type: 'deviation' | 'vacation' | 'absence' | 'shift' | 'document' | 'chat' | 'employee' | 'system';
   priority: 'low' | 'medium' | 'high';
   status: 'unread' | 'read' | 'archived';
   metadata: Record<string, string | number | boolean>;
@@ -34,7 +34,7 @@ export interface NotificationSettings {
   email: boolean;
   push: boolean;
   inApp: boolean;
-  types: Record<NotificationType, boolean>;
+  types: Record<'deviation' | 'vacation' | 'absence' | 'shift' | 'document' | 'chat' | 'employee' | 'system', boolean>;
   updatedAt: string;
 }
 
@@ -86,11 +86,8 @@ class NotificationService {
             type: data.type || 'system',
             priority: data.priority || 'medium',
             status: data.status || 'unread',
-            actionUrl: data.actionUrl || '',
-            actionText: data.actionText || '',
             metadata: data.metadata || {},
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date()
+            createdAt: data.createdAt?.toDate() || new Date()
           });
         });
         callback(notificationsData);
@@ -217,8 +214,14 @@ class NotificationService {
     // Create notification for each recipient
     for (const recipientId of recipientIds) {
       await this.createNotification({
-        ...notificationData,
-        recipientId
+        userId: recipientId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        priority: notificationData.priority,
+        actionUrl: notificationData.actionUrl,
+        actionText: notificationData.actionText,
+        metadata: notificationData.metadata
       });
     }
   }
@@ -255,8 +258,14 @@ class NotificationService {
 
     for (const recipientId of recipientIds) {
       await this.createNotification({
-        ...notificationData,
-        recipientId
+        userId: recipientId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        priority: notificationData.priority,
+        actionUrl: notificationData.actionUrl,
+        actionText: notificationData.actionText,
+        metadata: notificationData.metadata
       });
     }
   }
@@ -293,8 +302,14 @@ class NotificationService {
 
     for (const recipientId of recipientIds) {
       await this.createNotification({
-        ...notificationData,
-        recipientId
+        userId: recipientId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        priority: notificationData.priority,
+        actionUrl: notificationData.actionUrl,
+        actionText: notificationData.actionText,
+        metadata: notificationData.metadata
       });
     }
   }
@@ -310,24 +325,29 @@ class NotificationService {
     companyId: string,
     recipientId: string
   ): Promise<void> {
-    await this.createNotification({
-      type: 'shift',
+    const notificationData = {
       title: 'Ny vakt tildelt',
       message: `${assignedBy} har tildelt deg en vakt: ${shiftDate} ${shiftTime}`,
-      priority: 'medium',
-      recipientId,
-      recipientRole: 'employee',
-      senderName: assignedBy,
-      relatedId: shiftId,
-      relatedType: 'shift',
-      actionUrl: `/dashboard/shifts?id=${shiftId}`,
-      actionText: 'Godkjenn/Avvis',
+      priority: 'medium' as const,
+      type: 'shift' as const,
       metadata: {
-        department,
-        companyId,
+        shiftId,
+        employeeName,
         shiftDate,
-        shiftTime
+        shiftTime,
+        assignedBy,
+        department,
+        companyId
       }
+    };
+
+    await this.createNotification({
+      userId: recipientId,
+      title: notificationData.title,
+      message: notificationData.message,
+      type: notificationData.type,
+      priority: notificationData.priority,
+      metadata: notificationData.metadata
     });
   }
 
@@ -361,8 +381,14 @@ class NotificationService {
 
     for (const recipientId of recipientIds) {
       await this.createNotification({
-        ...notificationData,
-        recipientId
+        userId: recipientId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        priority: notificationData.priority,
+        actionUrl: notificationData.actionUrl,
+        actionText: notificationData.actionText,
+        metadata: notificationData.metadata
       });
     }
   }
@@ -375,22 +401,26 @@ class NotificationService {
     message: string,
     recipientId: string
   ): Promise<void> {
-    await this.createNotification({
-      type: 'chat',
+    const notificationData = {
       title: `Ny melding i ${chatName}`,
       message: `${senderName}: ${message}`,
-      priority: 'low',
-      recipientId,
-      recipientRole: 'employee',
-      senderName,
-      relatedId: chatId,
-      relatedType: 'chat',
-      actionUrl: `/dashboard/chat?id=${chatId}`,
-      actionText: 'Svar',
+      priority: 'low' as const,
+      type: 'chat' as const,
       metadata: {
+        chatId,
         chatName,
+        senderName,
         message
       }
+    };
+
+    await this.createNotification({
+      userId: recipientId,
+      title: notificationData.title,
+      message: notificationData.message,
+      type: notificationData.type,
+      priority: notificationData.priority,
+      metadata: notificationData.metadata
     });
   }
 
@@ -430,8 +460,14 @@ class NotificationService {
 
     for (const recipientId of recipientIds) {
       await this.createNotification({
-        ...notificationData,
-        recipientId
+        userId: recipientId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        priority: notificationData.priority,
+        actionUrl: notificationData.actionUrl,
+        actionText: notificationData.actionText,
+        metadata: notificationData.metadata
       });
     }
   }
@@ -446,21 +482,24 @@ class NotificationService {
     actionText?: string
   ): Promise<void> {
     const notificationData = {
-      type: 'system' as const,
       title,
       message,
       priority,
-      recipientId: '',
-      recipientRole: 'admin' as const,
-      relatedType: 'system',
-      actionUrl,
-      actionText
+      type: 'system' as const,
+      metadata: {
+        actionUrl,
+        actionText
+      }
     };
 
     for (const recipientId of recipientIds) {
       await this.createNotification({
-        ...notificationData,
-        recipientId
+        userId: recipientId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        priority: notificationData.priority,
+        metadata: notificationData.metadata
       });
     }
   }
@@ -470,9 +509,9 @@ class NotificationService {
     if (!db) return this.getDefaultSettings();
     
     try {
-      const doc = await getDoc(doc(db, 'notificationSettings', userId));
-      if (doc.exists()) {
-        return { ...this.getDefaultSettings(), ...doc.data() };
+      const docSnapshot = await getDoc(doc(db, 'notificationSettings', userId));
+      if (docSnapshot.exists()) {
+        return { ...this.getDefaultSettings(), ...docSnapshot.data() };
       }
       return this.getDefaultSettings();
     } catch (error) {
@@ -511,11 +550,7 @@ class NotificationService {
         employee: true,
         system: true
       },
-      quietHours: {
-        enabled: false,
-        start: '22:00',
-        end: '08:00'
-      }
+      updatedAt: new Date().toISOString()
     };
   }
 }

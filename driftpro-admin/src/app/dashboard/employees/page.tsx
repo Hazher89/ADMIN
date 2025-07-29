@@ -397,12 +397,12 @@ export default function EmployeesPage() {
       // Send welcome email to new employee
       const companyData = { name: 'DriftPro AS', id: 'company-1' }; // In real app, get from context
       await emailService.sendWelcomeEmail(
-        {
-          name: `${formData.firstName} ${formData.lastName}`,
-          email: formData.email,
-          temporaryPassword: 'TemporaryPassword123!'
-        },
-        companyData
+        formData.email,
+        `${formData.firstName} ${formData.lastName}`,
+        'Admin', // TODO: Get actual admin name
+        companyData.name,
+        formData.department,
+        formData.position
       );
       
       setShowAddModal(false);
