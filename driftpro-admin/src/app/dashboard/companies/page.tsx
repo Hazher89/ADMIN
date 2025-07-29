@@ -18,6 +18,7 @@ import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy,
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { db, auth } from '@/lib/firebase';
 import { useAuth } from '@/contexts/AuthContext';
+import CompanyDetailModal from '@/components/CompanyDetailModal';
 
 interface Company {
   id: string;
@@ -47,6 +48,9 @@ export default function CompaniesPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedCompanyForDetail, setSelectedCompanyForDetail] = useState<Company | null>(null);
   
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
@@ -409,24 +413,25 @@ export default function CompaniesPage() {
   const openEditModal = (company: Company) => {
     setSelectedCompany(company);
     setFormData({
-      name: company.name || '',
-      orgNumber: company.orgNumber || '',
-      phone: company.phone || '',
-      email: company.email || '',
-      adminEmail: company.adminEmail || '',
-      adminPassword: '', // Clear password for edit
-      address: company.address || '',
-      industry: company.industry || '',
-      employeeCount: company.employeeCount || 0,
-      status: company.status || 'active',
-      subscriptionPlan: company.subscriptionPlan || 'basic',
-      contactPerson: {
-        name: company.contactPerson?.name || '',
-        phone: company.contactPerson?.phone || '',
-        email: company.contactPerson?.email || ''
-      }
+      name: company.name,
+      orgNumber: company.orgNumber,
+      adminEmail: company.adminEmail,
+      adminPassword: '',
+      phone: company.phone,
+      email: company.email,
+      address: company.address,
+      industry: company.industry,
+      employeeCount: company.employeeCount,
+      status: company.status,
+      subscriptionPlan: company.subscriptionPlan,
+      contactPerson: company.contactPerson
     });
     setShowEditModal(true);
+  };
+
+  const openCompanyDetail = (company: Company) => {
+    setSelectedCompanyForDetail(company);
+    setShowDetailModal(true);
   };
 
   const openDeleteModal = (company: Company) => {
@@ -679,11 +684,15 @@ export default function CompaniesPage() {
                 {filteredCompanies.map((company) => (
                   <tr key={company.id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">{company.name || 'Ukjent navn'}</div>
-                        <div className="text-sm text-gray-500">{company.industry || 'Ikke spesifisert'}</div>
-                        <div className="text-xs text-gray-400">Org.nr: {company.orgNumber || 'Ikke registrert'}</div>
+                      <div className="text-sm font-medium text-gray-900">
+                        <button
+                          onClick={() => openCompanyDetail(company)}
+                          className="text-blue-600 hover:text-blue-900 underline"
+                        >
+                          {company.name}
+                        </button>
                       </div>
+                      <div className="text-sm text-gray-500">{company.email}</div>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="text-sm text-gray-900">{company.contactPerson?.name || 'Ikke spesifisert'}</div>
@@ -871,7 +880,7 @@ export default function CompaniesPage() {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bedriftens telefon
+                      Bedriftsens telefon
                     </label>
                     <input
                       type="tel"
@@ -883,7 +892,7 @@ export default function CompaniesPage() {
 
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-2">
-                      Bedriftens e-post
+                      Bedriftsens e-post
                     </label>
                     <input
                       type="email"
@@ -1095,6 +1104,16 @@ export default function CompaniesPage() {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Company Detail Modal */}
+      {showDetailModal && selectedCompanyForDetail && (
+        <CompanyDetailModal
+          isOpen={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          orgNumber={selectedCompanyForDetail.orgNumber}
+          companyName={selectedCompanyForDetail.name}
+        />
       )}
     </div>
   );

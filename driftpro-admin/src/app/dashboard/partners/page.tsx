@@ -12,6 +12,7 @@ import {
 } from 'lucide-react';
 import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import CompanyDetailModal from '@/components/CompanyDetailModal';
 
 interface Partner {
   id: string;
@@ -70,6 +71,8 @@ export default function PartnersPage() {
   const [brregLoading, setBrregLoading] = useState(false);
   const [orgNumbers, setOrgNumbers] = useState('');
   const [brregResults, setBrregResults] = useState<BrregResult[]>([]);
+  const [showDetailModal, setShowDetailModal] = useState(false);
+  const [selectedPartnerForDetail, setSelectedPartnerForDetail] = useState<Partner | null>(null);
 
   // Form state
   const [formData, setFormData] = useState({
@@ -379,6 +382,11 @@ export default function PartnersPage() {
     setShowEditModal(true);
   };
 
+  const openPartnerDetail = (partner: Partner) => {
+    setSelectedPartnerForDetail(partner);
+    setShowDetailModal(true);
+  };
+
   if (loading) {
     return (
       <div className="flex items-center justify-center h-64">
@@ -513,7 +521,14 @@ export default function PartnersPage() {
               {filteredPartners.map((partner) => (
                 <tr key={partner.id} className="hover:bg-gray-50">
                   <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm font-medium text-gray-900">{partner.name}</div>
+                    <div className="text-sm font-medium text-gray-900">
+                      <button
+                        onClick={() => openPartnerDetail(partner)}
+                        className="text-blue-600 hover:text-blue-900 underline"
+                      >
+                        {partner.name}
+                      </button>
+                    </div>
                     <div className="text-sm text-gray-500">{partner.email}</div>
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
@@ -1017,6 +1032,16 @@ export default function PartnersPage() {
             </form>
           </div>
         </div>
+      )}
+
+      {/* Partner Detail Modal */}
+      {showDetailModal && selectedPartnerForDetail && (
+        <CompanyDetailModal
+          isOpen={showDetailModal}
+          onClose={() => setShowDetailModal(false)}
+          orgNumber={selectedPartnerForDetail.orgNumber}
+          companyName={selectedPartnerForDetail.name}
+        />
       )}
     </div>
   );
