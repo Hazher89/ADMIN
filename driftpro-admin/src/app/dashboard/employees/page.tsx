@@ -1,21 +1,13 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { 
   Plus, 
   Search, 
-  Filter, 
   Edit, 
   Trash2, 
-  MoreHorizontal,
-  User,
   Building,
   Shield,
-  Calendar,
-  Phone,
-  Mail,
-  MapPin,
-  Users,
   Download,
   Upload,
   FileSpreadsheet,
@@ -25,15 +17,9 @@ import {
   Eye,
   Save,
   X,
-  Check,
-  Clock,
-  FileText,
-  AlertTriangle,
-  MessageSquare,
-  BarChart3,
-  Settings
+  Check
 } from 'lucide-react';
-import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs, query, orderBy } from 'firebase/firestore';
+import { collection, addDoc, updateDoc, deleteDoc, doc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import * as XLSX from 'xlsx';
 
@@ -135,6 +121,29 @@ export default function EmployeesPage() {
     }
   });
 
+  const filterEmployees = useCallback(() => {
+    let filtered = employees;
+
+    if (searchTerm) {
+      filtered = filtered.filter(emp => 
+        emp.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        emp.position.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+    }
+
+    if (departmentFilter) {
+      filtered = filtered.filter(emp => emp.department === departmentFilter);
+    }
+
+    if (roleFilter) {
+      filtered = filtered.filter(emp => emp.role === roleFilter);
+    }
+
+    setFilteredEmployees(filtered);
+  }, [employees, searchTerm, departmentFilter, roleFilter]);
+
   useEffect(() => {
     loadEmployees();
     loadDepartments();
@@ -142,7 +151,7 @@ export default function EmployeesPage() {
 
   useEffect(() => {
     filterEmployees();
-  }, [employees, searchTerm, departmentFilter, roleFilter]);
+  }, [filterEmployees]);
 
   // Handle click outside dropdown
   useEffect(() => {
@@ -302,29 +311,6 @@ export default function EmployeesPage() {
     } catch (error) {
       console.error('Error loading departments:', error);
     }
-  };
-
-  const filterEmployees = () => {
-    let filtered = employees;
-
-    if (searchTerm) {
-      filtered = filtered.filter(emp => 
-        emp.firstName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.lastName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        emp.position.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-
-    if (departmentFilter) {
-      filtered = filtered.filter(emp => emp.department === departmentFilter);
-    }
-
-    if (roleFilter) {
-      filtered = filtered.filter(emp => emp.role === roleFilter);
-    }
-
-    setFilteredEmployees(filtered);
   };
 
   const handleRoleChange = (role: 'admin' | 'department_leader' | 'employee') => {
@@ -649,6 +635,37 @@ export default function EmployeesPage() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
+  // Interface for Excel row data
+  interface ExcelRow {
+    'Fornavn'?: string;
+    'Etternavn'?: string;
+    'E-post'?: string;
+    'Telefon'?: string;
+    'Avdeling'?: string;
+    'Stilling'?: string;
+    'Rolle'?: string;
+    'Status'?: string;
+    'Startdato'?: string;
+    'Nødkontakt - Navn'?: string;
+    'Nødkontakt - Telefon'?: string;
+    'Nødkontakt - Forhold'?: string;
+    'Adresse - Gate'?: string;
+    'Adresse - By'?: string;
+    'Adresse - Postnummer'?: string;
+    'Tillatelser - Full tilgang'?: string;
+    'Tillatelser - Administrer egen avdeling'?: string;
+    'Tillatelser - Godkjenn ferie'?: string;
+    'Tillatelser - Godkjenn fravær'?: string;
+    'Tillatelser - Administrer skift'?: string;
+    'Tillatelser - Håndter avvik'?: string;
+    'Tillatelser - Send avvik'?: string;
+    'Tillatelser - Send fravær'?: string;
+    'Tillatelser - Send ferie'?: string;
+    'Tillatelser - Bruk chat'?: string;
+    'Tillatelser - Les dokumenter'?: string;
+    'Tillatelser - Rediger egne forespørsler'?: string;
+  }
+
   const importFromExcel = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
@@ -657,7 +674,7 @@ export default function EmployeesPage() {
       const data = await file.arrayBuffer();
       const workbook = XLSX.read(data, { type: 'buffer' });
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet);
+      const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
 
       if (jsonData.length === 0) {
         alert('❌ Excel-filen er tom');
@@ -667,7 +684,7 @@ export default function EmployeesPage() {
       const importedEmployees: Omit<Employee, 'id' | 'createdAt'>[] = [];
       const errors: string[] = [];
 
-      jsonData.forEach((row: any, index: number) => {
+      jsonData.forEach((row: ExcelRow, index: number) => {
         try {
           // Map Excel columns to Employee fields
           const employee: Omit<Employee, 'id' | 'createdAt'> = {
@@ -741,7 +758,7 @@ export default function EmployeesPage() {
       for (const employee of importedEmployees) {
         try {
           if (db) {
-            const docRef = await addDoc(collection(db, 'employees'), {
+            await addDoc(collection(db, 'employees'), {
               ...employee,
               createdAt: new Date().toISOString()
             });
