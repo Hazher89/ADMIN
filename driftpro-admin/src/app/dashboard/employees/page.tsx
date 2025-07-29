@@ -577,6 +577,69 @@ export default function EmployeesPage() {
     }
   };
 
+  const exportToCSV = () => {
+    try {
+      // Prepare data for export (same as Excel)
+      const exportData = employees.map(emp => ({
+        'Fornavn': emp.firstName,
+        'Etternavn': emp.lastName,
+        'E-post': emp.email,
+        'Telefon': emp.phone,
+        'Avdeling': emp.department,
+        'Stilling': emp.position,
+        'Rolle': emp.role === 'admin' ? 'Administrator' : 
+                emp.role === 'department_leader' ? 'Avdelingsleder' : 'Ansatt',
+        'Status': emp.status === 'active' ? 'Aktiv' : 'Inaktiv',
+        'Startdato': emp.startDate,
+        'Nødkontakt - Navn': emp.emergencyContact.name,
+        'Nødkontakt - Telefon': emp.emergencyContact.phone,
+        'Nødkontakt - Forhold': emp.emergencyContact.relationship,
+        'Adresse - Gate': emp.address.street,
+        'Adresse - By': emp.address.city,
+        'Adresse - Postnummer': emp.address.postalCode,
+        'Tillatelser - Full tilgang': emp.permissions.fullAccess ? 'Ja' : 'Nei',
+        'Tillatelser - Administrer egen avdeling': emp.permissions.manageOwnDepartment ? 'Ja' : 'Nei',
+        'Tillatelser - Godkjenn ferie': emp.permissions.approveVacation ? 'Ja' : 'Nei',
+        'Tillatelser - Godkjenn fravær': emp.permissions.approveAbsence ? 'Ja' : 'Nei',
+        'Tillatelser - Administrer skift': emp.permissions.manageShifts ? 'Ja' : 'Nei',
+        'Tillatelser - Håndter avvik': emp.permissions.handleDeviations ? 'Ja' : 'Nei',
+        'Tillatelser - Send avvik': emp.permissions.submitDeviations ? 'Ja' : 'Nei',
+        'Tillatelser - Send fravær': emp.permissions.submitAbsence ? 'Ja' : 'Nei',
+        'Tillatelser - Send ferie': emp.permissions.submitVacation ? 'Ja' : 'Nei',
+        'Tillatelser - Bruk chat': emp.permissions.useChat ? 'Ja' : 'Nei',
+        'Tillatelser - Les dokumenter': emp.permissions.readDocuments ? 'Ja' : 'Nei',
+        'Tillatelser - Rediger egne forespørsler': emp.permissions.editOwnRequests ? 'Ja' : 'Nei'
+      }));
+
+      // Convert to CSV
+      const csvContent = XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(exportData), {
+        FS: ',', // Field separator
+        RS: '\n', // Record separator
+        forceQuotes: true // Force quotes around all fields
+      });
+
+      // Generate filename with current date
+      const date = new Date().toISOString().split('T')[0];
+      const filename = `ansatte_export_${date}.csv`;
+
+      // Create and download file
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', filename);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert(`✅ ${employees.length} ansatte eksportert til ${filename}`);
+    } catch (error) {
+      console.error('Error exporting to CSV:', error);
+      alert('❌ Feil ved eksport: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
   const downloadTemplate = () => {
     try {
       // Create template with headers only
@@ -633,6 +696,64 @@ export default function EmployeesPage() {
     }
   };
 
+  const downloadCSVTemplate = () => {
+    try {
+      // Create CSV template with headers only
+      const templateData = [{
+        'Fornavn': '',
+        'Etternavn': '',
+        'E-post': '',
+        'Telefon': '',
+        'Avdeling': '',
+        'Stilling': '',
+        'Rolle': 'Ansatt',
+        'Status': 'Aktiv',
+        'Startdato': '',
+        'Nødkontakt - Navn': '',
+        'Nødkontakt - Telefon': '',
+        'Nødkontakt - Forhold': '',
+        'Adresse - Gate': '',
+        'Adresse - By': '',
+        'Adresse - Postnummer': '',
+        'Tillatelser - Full tilgang': 'Nei',
+        'Tillatelser - Administrer egen avdeling': 'Nei',
+        'Tillatelser - Godkjenn ferie': 'Nei',
+        'Tillatelser - Godkjenn fravær': 'Nei',
+        'Tillatelser - Administrer skift': 'Nei',
+        'Tillatelser - Håndter avvik': 'Nei',
+        'Tillatelser - Send avvik': 'Ja',
+        'Tillatelser - Send fravær': 'Ja',
+        'Tillatelser - Send ferie': 'Ja',
+        'Tillatelser - Bruk chat': 'Ja',
+        'Tillatelser - Les dokumenter': 'Ja',
+        'Tillatelser - Rediger egne forespørsler': 'Ja'
+      }];
+
+      // Convert to CSV
+      const csvContent = XLSX.utils.sheet_to_csv(XLSX.utils.json_to_sheet(templateData), {
+        FS: ',',
+        RS: '\n',
+        forceQuotes: true
+      });
+
+      // Create and download file
+      const blob = new Blob(['\ufeff' + csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', 'ansatte_import_mal.csv');
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('✅ CSV-mal lastet ned: ansatte_import_mal.csv');
+    } catch (error) {
+      console.error('Error downloading CSV template:', error);
+      alert('❌ Feil ved nedlasting av CSV-mal: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Interface for Excel row data
@@ -672,12 +793,24 @@ export default function EmployeesPage() {
 
     try {
       const data = await file.arrayBuffer();
-      const workbook = XLSX.read(data, { type: 'buffer' });
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
+      let jsonData: ExcelRow[];
+
+      // Check file extension to determine format
+      const fileName = file.name.toLowerCase();
+      if (fileName.endsWith('.csv')) {
+        // Handle CSV file
+        const csvText = new TextDecoder('utf-8').decode(data);
+        const worksheet = XLSX.utils.aoa_to_sheet([csvText.split('\n').map(row => row.split(','))]);
+        jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
+      } else {
+        // Handle Excel file (.xlsx, .xls)
+        const workbook = XLSX.read(data, { type: 'buffer' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        jsonData = XLSX.utils.sheet_to_json(worksheet) as ExcelRow[];
+      }
 
       if (jsonData.length === 0) {
-        alert('❌ Excel-filen er tom');
+        alert('❌ Filen er tom');
         return;
       }
 
@@ -781,7 +914,7 @@ export default function EmployeesPage() {
       alert(`✅ Import fullført!\n\n✅ ${successCount} ansatte importert\n❌ ${errorCount} feil`);
 
     } catch (error) {
-      console.error('Error importing from Excel:', error);
+      console.error('Error importing from file:', error);
       alert('❌ Feil ved import: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     } finally {
       setSaving(false);
@@ -812,16 +945,25 @@ export default function EmployeesPage() {
             className="bg-green-600 text-white px-4 py-2 rounded-lg hover:bg-green-700 flex items-center space-x-2 disabled:opacity-50"
           >
             <FileSpreadsheet className="h-5 w-5" />
-            <span>Last ned mal</span>
+            <span>Last ned Excel-mal</span>
+          </button>
+          
+          <button
+            onClick={downloadCSVTemplate}
+            disabled={saving}
+            className="bg-teal-600 text-white px-4 py-2 rounded-lg hover:bg-teal-700 flex items-center space-x-2 disabled:opacity-50"
+          >
+            <FileSpreadsheet className="h-5 w-5" />
+            <span>Last ned CSV-mal</span>
           </button>
           
           <label className="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 flex items-center space-x-2 cursor-pointer disabled:opacity-50">
             <Upload className="h-5 w-5" />
-            <span>Importer Excel</span>
+            <span>Importer fil</span>
             <input
               ref={fileInputRef}
               type="file"
-              accept=".xlsx,.xls"
+              accept=".xlsx,.xls,.csv"
               onChange={importFromExcel}
               className="hidden"
               disabled={saving}
@@ -838,8 +980,17 @@ export default function EmployeesPage() {
           </button>
           
           <button
+            onClick={exportToCSV}
+            disabled={saving || employees.length === 0}
+            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2 disabled:opacity-50"
+          >
+            <Download className="h-5 w-5" />
+            <span>Eksporter CSV</span>
+          </button>
+          
+          <button
             onClick={() => setShowAddModal(true)}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 flex items-center space-x-2"
           >
             <Plus className="h-5 w-5" />
             <span>Legg til ansatt</span>
