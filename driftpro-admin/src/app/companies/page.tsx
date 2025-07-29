@@ -81,8 +81,20 @@ export default function CompaniesPage() {
         console.log('Loaded companies from Firebase:', companiesData);
         console.log('Total companies loaded:', companiesData.length);
         companiesData.forEach(company => {
-          console.log(`Company: ${company.name} (${company.status})`);
+          console.log(`Company: ${company.name} (${company.status}) - Admin: ${company.adminEmail}`);
         });
+        
+        // Check specifically for DriftPro AS
+        const driftPro = companiesData.find(company => company.name === 'DriftPro AS');
+        if (driftPro) {
+          console.log('🚨 DriftPro AS found in Firebase:');
+          console.log('   Name:', driftPro.name);
+          console.log('   Admin Email:', driftPro.adminEmail);
+          console.log('   Expected Admin Email: baxigshti@hotmail.de');
+          console.log('   Match:', driftPro.adminEmail === 'baxigshti@hotmail.de');
+        } else {
+          console.log('❌ DriftPro AS not found in Firebase');
+        }
       } else {
         // Fallback to mock data if Firebase is not available
         setCompanies([

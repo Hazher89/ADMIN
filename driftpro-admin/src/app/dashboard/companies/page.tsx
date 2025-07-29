@@ -490,29 +490,43 @@ export default function CompaniesPage() {
       // Find DriftPro AS in companies
       const driftProCompany = companies.find(company => company.name === 'DriftPro AS');
       
-      if (driftProCompany && db) {
-        // Update DriftPro AS admin email
-        await updateDoc(doc(db, 'companies', driftProCompany.id), {
-          adminEmail: 'baxigshti@hotmail.de',
-          updatedAt: new Date().toISOString()
-        });
+      console.log('🔍 Searching for DriftPro AS...');
+      console.log('All companies:', companies.map(c => ({ name: c.name, adminEmail: c.adminEmail })));
+      
+      if (driftProCompany) {
+        console.log('✅ Found DriftPro AS:', driftProCompany);
+        console.log('Current admin email:', driftProCompany.adminEmail);
+        console.log('Will update to: baxigshti@hotmail.de');
         
-        // Update local state
-        setCompanies(prev =>
-          prev.map(company =>
-            company.name === 'DriftPro AS'
-              ? { ...company, adminEmail: 'baxigshti@hotmail.de', updatedAt: new Date().toISOString() }
-              : company
-          )
-        );
-        
-        alert('DriftPro AS admin-e-post oppdatert til baxigshti@hotmail.de');
+        if (db) {
+          // Update DriftPro AS admin email
+          await updateDoc(doc(db, 'companies', driftProCompany.id), {
+            adminEmail: 'baxigshti@hotmail.de',
+            updatedAt: new Date().toISOString()
+          });
+          
+          console.log('✅ Successfully updated DriftPro AS in Firebase');
+          
+          // Update local state
+          setCompanies(prev =>
+            prev.map(company =>
+              company.name === 'DriftPro AS'
+                ? { ...company, adminEmail: 'baxigshti@hotmail.de', updatedAt: new Date().toISOString() }
+                : company
+            )
+          );
+          
+          alert('✅ DriftPro AS admin-e-post oppdatert til baxigshti@hotmail.de\n\nDu kan nå logge inn med baxigshti@hotmail.de');
+        } else {
+          alert('❌ Firebase ikke tilgjengelig');
+        }
       } else {
-        alert('DriftPro AS ikke funnet i databasen');
+        console.log('❌ DriftPro AS not found in companies list');
+        alert('❌ DriftPro AS ikke funnet i databasen\n\nSjekk at DriftPro AS eksisterer i Firebase');
       }
     } catch (error) {
-      console.error('Error updating DriftPro AS:', error);
-      alert('Feil ved oppdatering av DriftPro AS: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+      console.error('❌ Error updating DriftPro AS:', error);
+      alert('❌ Feil ved oppdatering av DriftPro AS: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     } finally {
       setSaving(false);
     }
