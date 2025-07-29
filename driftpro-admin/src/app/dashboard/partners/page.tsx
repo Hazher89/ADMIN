@@ -114,6 +114,16 @@ interface PartnerFormData {
 
 interface VehicleFormData {
   regNumber: string;
+  manufacturer: string;
+  brand: string;
+  model: string;
+  variant: string;
+  bodyType: string;
+  vehicleGroup: string;
+  firstRegistered: string;
+  lastEUApproved: string;
+  nextEUInspection: string;
+  maxPayload: string;
   description?: string;
 }
 
@@ -133,6 +143,16 @@ export default function PartnersPage() {
   const [uploadingFiles, setUploadingFiles] = useState(false);
   const [vehicleFormData, setVehicleFormData] = useState<VehicleFormData>({
     regNumber: '',
+    manufacturer: '',
+    brand: '',
+    model: '',
+    variant: '',
+    bodyType: '',
+    vehicleGroup: '',
+    firstRegistered: '',
+    lastEUApproved: '',
+    nextEUInspection: '',
+    maxPayload: '',
     description: ''
   });
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -417,30 +437,22 @@ export default function PartnersPage() {
     }
   };
 
-  // Fetch vehicle data from regnr.info
-  const fetchVehicleData = async (regNumber: string) => {
-    try {
-      const response = await fetch(`https://regnr.info/api/v1/vehicle/${regNumber}`);
-      if (response.ok) {
-        const data = await response.json();
-        return {
-          manufacturer: data.manufacturer || '',
-          brand: data.brand || '',
-          model: data.model || '',
-          variant: data.variant || '',
-          bodyType: data.bodyType || '',
-          vehicleGroup: data.vehicleGroup || '',
-          firstRegistered: data.firstRegistered || '',
-          lastEUApproved: data.lastEUApproved || '',
-          nextEUInspection: data.nextEUInspection || '',
-          maxPayload: data.maxPayload || '',
-          fetchedAt: new Date().toISOString()
-        };
-      }
-    } catch (error) {
-      console.error('Error fetching vehicle data:', error);
-    }
-    return null;
+  // Manual vehicle registration (since regnr.info doesn't have a public API)
+  const createVehicleData = async (vehicleData: VehicleFormData) => {
+    // Return vehicle data from form inputs
+    return {
+      manufacturer: vehicleData.manufacturer || '',
+      brand: vehicleData.brand || '',
+      model: vehicleData.model || '',
+      variant: vehicleData.variant || '',
+      bodyType: vehicleData.bodyType || '',
+      vehicleGroup: vehicleData.vehicleGroup || '',
+      firstRegistered: vehicleData.firstRegistered || '',
+      lastEUApproved: vehicleData.lastEUApproved || '',
+      nextEUInspection: vehicleData.nextEUInspection || '',
+      maxPayload: vehicleData.maxPayload || '',
+      fetchedAt: new Date().toISOString()
+    };
   };
 
   // Add vehicle to partner
@@ -449,16 +461,13 @@ export default function PartnersPage() {
     try {
       if (!db) return;
 
-      // Fetch vehicle data from regnr.info
-      const regnrData = await fetchVehicleData(vehicleData.regNumber);
-      if (!regnrData) {
-        throw new Error('Kunne ikke hente kjøretøydata fra regnr.info');
-      }
+      // Create vehicle data from form inputs
+      const vehicleInfo = await createVehicleData(vehicleData);
 
       const newVehicle: Vehicle = {
         id: Date.now().toString(),
         regNumber: vehicleData.regNumber.toUpperCase(),
-        ...regnrData,
+        ...vehicleInfo,
         description: vehicleData.description || ''
       };
 
@@ -472,7 +481,20 @@ export default function PartnersPage() {
       // Refresh partners data
       await loadPartners();
       setShowVehicleModal(false);
-      setVehicleFormData({ regNumber: '', description: '' });
+      setVehicleFormData({
+        regNumber: '',
+        manufacturer: '',
+        brand: '',
+        model: '',
+        variant: '',
+        bodyType: '',
+        vehicleGroup: '',
+        firstRegistered: '',
+        lastEUApproved: '',
+        nextEUInspection: '',
+        maxPayload: '',
+        description: ''
+      });
       setSelectedPartnerForVehicle(null);
     } catch (error) {
       console.error('Error adding vehicle:', error);
@@ -1219,7 +1241,20 @@ export default function PartnersPage() {
                 onClick={() => {
                   setShowVehicleModal(false);
                   setSelectedPartnerForVehicle(null);
-                  setVehicleFormData({ regNumber: '', description: '' });
+                  setVehicleFormData({
+                    regNumber: '',
+                    manufacturer: '',
+                    brand: '',
+                    model: '',
+                    variant: '',
+                    bodyType: '',
+                    vehicleGroup: '',
+                    firstRegistered: '',
+                    lastEUApproved: '',
+                    nextEUInspection: '',
+                    maxPayload: '',
+                    description: ''
+                  });
                 }}
                 className="text-gray-500 hover:text-gray-700"
               >
@@ -1244,9 +1279,135 @@ export default function PartnersPage() {
                     placeholder="AB12345"
                     required
                   />
-                  <p className="text-xs text-gray-500 mt-1">
-                    Data vil automatisk hentes fra regnr.info
-                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Produsent
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleFormData.manufacturer}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, manufacturer: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      placeholder="f.eks. Volvo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Merke
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleFormData.brand}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, brand: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      placeholder="f.eks. Volvo"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Modell
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleFormData.model}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, model: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      placeholder="f.eks. FH16"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Variant
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleFormData.variant}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, variant: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      placeholder="f.eks. 750"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Karosseritype
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleFormData.bodyType}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, bodyType: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      placeholder="f.eks. Tractor"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Kjøretøygruppe
+                    </label>
+                    <input
+                      type="text"
+                      value={vehicleFormData.vehicleGroup}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, vehicleGroup: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      placeholder="f.eks. N3"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Første registrering
+                    </label>
+                    <input
+                      type="date"
+                      value={vehicleFormData.firstRegistered}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, firstRegistered: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Siste EU-godkjenning
+                    </label>
+                    <input
+                      type="date"
+                      value={vehicleFormData.lastEUApproved}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, lastEUApproved: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Neste EU-kontroll
+                    </label>
+                    <input
+                      type="date"
+                      value={vehicleFormData.nextEUInspection}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, nextEUInspection: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Maksimal nyttelast (kg)
+                    </label>
+                    <input
+                      type="number"
+                      value={vehicleFormData.maxPayload}
+                      onChange={(e) => setVehicleFormData({...vehicleFormData, maxPayload: e.target.value})}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+                      placeholder="f.eks. 26000"
+                    />
+                  </div>
                 </div>
 
                 <div>
@@ -1269,7 +1430,20 @@ export default function PartnersPage() {
                   onClick={() => {
                     setShowVehicleModal(false);
                     setSelectedPartnerForVehicle(null);
-                    setVehicleFormData({ regNumber: '', description: '' });
+                    setVehicleFormData({
+                      regNumber: '',
+                      manufacturer: '',
+                      brand: '',
+                      model: '',
+                      variant: '',
+                      bodyType: '',
+                      vehicleGroup: '',
+                      firstRegistered: '',
+                      lastEUApproved: '',
+                      nextEUInspection: '',
+                      maxPayload: '',
+                      description: ''
+                    });
                   }}
                   className="px-4 py-2 text-gray-700 bg-gray-200 rounded-lg hover:bg-gray-300"
                 >
