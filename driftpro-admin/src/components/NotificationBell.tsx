@@ -28,7 +28,7 @@ interface Notification {
   type: 'deviation' | 'vacation' | 'absence' | 'shift' | 'document' | 'chat' | 'employee' | 'system';
   priority: 'low' | 'medium' | 'high' | 'urgent';
   status: 'unread' | 'read' | 'archived';
-  metadata: Record<string, unknown>;
+  metadata: Record<string, string | number | boolean | undefined>;
   createdAt: string;
   readAt?: string;
   archivedAt?: string;
@@ -54,10 +54,22 @@ export default function NotificationBell() {
       );
 
       const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-        const notificationsData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as Notification[];
+        const notificationsData = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            userId: data.userId || '',
+            title: data.title || '',
+            message: data.message || '',
+            type: data.type || 'system',
+            priority: data.priority || 'medium',
+            status: data.status || 'unread',
+            metadata: data.metadata || {},
+            createdAt: data.createdAt || new Date().toISOString(),
+            readAt: data.readAt,
+            archivedAt: data.archivedAt
+          } as Notification;
+        });
         // Sort by createdAt in descending order in memory
         notificationsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
         setNotifications(notificationsData);

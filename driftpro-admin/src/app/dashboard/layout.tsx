@@ -162,7 +162,7 @@ export default function DashboardLayout({
           <div className="flex items-center space-x-3">
             <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
               <span className="text-white font-medium text-lg">
-                {user?.displayName?.charAt(0) || 'U'}
+                {user?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
