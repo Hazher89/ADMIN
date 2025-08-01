@@ -3,13 +3,29 @@ import * as nodemailer from 'nodemailer';
 import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+interface EmailData {
+  to: string | string[];
+  subject: string;
+  body: string;
+  metadata?: Record<string, unknown>;
+}
+
+interface EmailConfig {
+  senderName: string;
+  senderEmail: string;
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpPass: string;
+}
+
 export async function POST(request: NextRequest) {
-  let emailData: Record<string, unknown> | null = null;
+  let emailData: EmailData | null = null;
   
   try {
     const requestData = await request.json();
-    emailData = requestData.emailData;
-    const config = requestData.config;
+    emailData = requestData.emailData as EmailData;
+    const config = requestData.config as EmailConfig;
 
     if (!emailData) {
       throw new Error('emailData is null');

@@ -503,7 +503,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               >
                 <div className="card-header">
                   <div className="card-icon">
-                    <IconComponent />
+                    {React.createElement(tool.icon as React.ComponentType)}
                   </div>
                   <h3 className="card-title">{tool.name}</h3>
                 </div>

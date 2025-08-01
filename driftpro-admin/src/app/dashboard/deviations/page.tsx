@@ -524,13 +524,13 @@ export default function DeviationsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Type</label>
                   <select
                     value={newDeviation.type}
-                    onChange={(e) => setNewDeviation({ ...newDeviation, type: e.target.value as 'safety' | 'quality' | 'maintenance' | 'environmental' | 'other' })}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, type: e.target.value as 'safety' | 'quality' | 'security' | 'process' | 'other' })}
                     style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
                   >
                     <option value="safety">Sikkerhet</option>
                     <option value="quality">Kvalitet</option>
-                    <option value="maintenance">Vedlikehold</option>
-                    <option value="environmental">Miljø</option>
+                    <option value="security">Sikkerhet</option>
+                    <option value="process">Prosess</option>
                     <option value="other">Annet</option>
                   </select>
                 </div>
