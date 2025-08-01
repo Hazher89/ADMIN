@@ -99,6 +99,7 @@ export default function NotificationBell() {
 
           const notification: Notification = {
             id: doc.id,
+            userId: data.userId || user?.uid || '',
             title: data.title || '',
             message: data.message || '',
             type: data.type || 'info',

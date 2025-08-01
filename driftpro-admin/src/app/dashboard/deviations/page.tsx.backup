@@ -43,13 +43,14 @@ export default function DeviationsPage() {
   const [newDeviation, setNewDeviation] = useState({
     title: '',
     description: '',
-    type: 'safety' as 'safety' | 'quality' | 'security' | 'process' | 'other',
-    severity: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    type: 'safety' as const,
+    severity: 'medium' as const,
     departmentId: '',
     location: ''
   });
 
   useEffect(() => {
+    // Check if mobile on mount and resize
     const checkMobile = () => {
       setIsMobile(window.innerWidth < 768);
     };
@@ -103,20 +104,25 @@ export default function DeviationsPage() {
     }
   };
 
+  const filteredDeviations = deviations.filter(deviation => {
+    const matchesSearch = deviation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         deviation.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || deviation.status === selectedStatus;
+    const matchesType = selectedType === 'all' || deviation.type === selectedType;
+    const matchesSeverity = selectedSeverity === 'all' || deviation.severity === selectedSeverity;
+    return matchesSearch && matchesStatus && matchesType && matchesSeverity;
+  });
+
   const handleAddDeviation = async () => {
     if (!userProfile?.companyId) return;
 
     try {
-      const deviationData = {
+      await firebaseService.createDeviation({
         ...newDeviation,
-        companyId: userProfile.companyId,
         reportedBy: userProfile.id,
-        status: 'reported' as const,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
+        companyId: userProfile.companyId
+      });
 
-      await firebaseService.createDeviation(deviationData);
       setShowAddModal(false);
       setNewDeviation({
         title: '',
@@ -129,6 +135,7 @@ export default function DeviationsPage() {
       loadDeviations();
     } catch (error) {
       console.error('Error adding deviation:', error);
+      alert('Failed to add deviation');
     }
   };
 
@@ -137,82 +144,112 @@ export default function DeviationsPage() {
 
     try {
       await firebaseService.updateDeviation(selectedDeviation.id, {
-        ...selectedDeviation,
-        updatedAt: new Date().toISOString()
+        title: selectedDeviation.title,
+        description: selectedDeviation.description,
+        type: selectedDeviation.type,
+        severity: selectedDeviation.severity,
+        status: selectedDeviation.status,
+        assignedTo: selectedDeviation.assignedTo,
+        departmentId: selectedDeviation.departmentId,
+        location: selectedDeviation.location
       });
+
       setShowEditModal(false);
       setSelectedDeviation(null);
       loadDeviations();
     } catch (error) {
       console.error('Error updating deviation:', error);
+      alert('Failed to update deviation');
     }
   };
 
   const handleDeleteDeviation = async (deviationId: string) => {
-    if (!confirm('Er du sikker på at du vil slette dette avviket?')) return;
+    if (!confirm('Are you sure you want to delete this deviation?')) return;
 
     try {
       await firebaseService.updateDeviation(deviationId, { status: 'closed' });
       loadDeviations();
     } catch (error) {
       console.error('Error deleting deviation:', error);
+      alert('Failed to delete deviation');
     }
   };
 
   const getDepartmentName = (departmentId: string) => {
-    const dept = departments.find(d => d.id === departmentId);
-    return dept?.name || 'Ukjent avdeling';
+    const department = departments.find(d => d.id === departmentId);
+    return department?.name || 'Unknown Department';
   };
 
   const getReporterName = (reporterId: string) => {
-    const emp = employees.find(e => e.id === reporterId);
-    return emp?.displayName || 'Ukjent bruker';
+    const employee = employees.find(e => e.id === reporterId);
+    return employee?.displayName || 'Unknown User';
   };
 
   const getAssignedName = (assignedId?: string) => {
-    if (!assignedId) return 'Ikke tildelt';
-    const emp = employees.find(e => e.id === assignedId);
-    return emp?.displayName || 'Ukjent bruker';
+    if (!assignedId) return 'Unassigned';
+    const employee = employees.find(e => e.id === assignedId);
+    return employee?.displayName || 'Unknown User';
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'reported': return 'bg-yellow-100 text-yellow-800';
-      case 'investigating': return 'bg-blue-100 text-blue-800';
-      case 'resolved': return 'bg-green-100 text-green-800';
-      case 'closed': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'reported':
+        return '#f59e0b';
+      case 'investigating':
+        return '#3b82f6';
+      case 'resolved':
+        return '#10b981';
+      case 'closed':
+        return '#6b7280';
+      default:
+        return '#6b7280';
     }
   };
 
   const getStatusIcon = (status: string) => {
     switch (status) {
-      case 'reported': return <AlertCircle className="h-4 w-4" />;
-      case 'investigating': return <Clock className="h-4 w-4" />;
-      case 'resolved': return <CheckCircle className="h-4 w-4" />;
-      case 'closed': return <CheckCircle className="h-4 w-4" />;
-      default: return <AlertCircle className="h-4 w-4" />;
+      case 'reported':
+        return <AlertCircle style={{ width: '16px', height: '16px' }} />;
+      case 'investigating':
+        return <Clock style={{ width: '16px', height: '16px' }} />;
+      case 'resolved':
+        return <CheckCircle style={{ width: '16px', height: '16px' }} />;
+      case 'closed':
+        return <CheckCircle style={{ width: '16px', height: '16px' }} />;
+      default:
+        return <AlertCircle style={{ width: '16px', height: '16px' }} />;
     }
   };
 
   const getSeverityColor = (severity: string) => {
     switch (severity) {
-      case 'low': return 'bg-green-100 text-green-800';
-      case 'medium': return 'bg-yellow-100 text-yellow-800';
-      case 'high': return 'bg-red-100 text-red-800';
-      case 'critical': return 'bg-red-200 text-red-900';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'low':
+        return '#10b981';
+      case 'medium':
+        return '#f59e0b';
+      case 'high':
+        return '#ef4444';
+      case 'critical':
+        return '#dc2626';
+      default:
+        return '#6b7280';
     }
   };
 
   const getTypeColor = (type: string) => {
     switch (type) {
-      case 'safety': return 'bg-red-100 text-red-800';
-      case 'quality': return 'bg-blue-100 text-blue-800';
-      case 'maintenance': return 'bg-purple-100 text-purple-800';
-      case 'environmental': return 'bg-green-100 text-green-800';
-      case 'other': return 'bg-gray-100 text-gray-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'safety':
+        return '#ef4444';
+      case 'quality':
+        return '#f59e0b';
+      case 'security':
+        return '#8b5cf6';
+      case 'process':
+        return '#3b82f6';
+      case 'other':
+        return '#6b7280';
+      default:
+        return '#6b7280';
     }
   };
 
@@ -221,7 +258,7 @@ export default function DeviationsPage() {
   const getResolvedDeviations = () => deviations.filter(d => d.status === 'resolved').length;
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('nb-NO', {
+    return new Date(dateString).toLocaleDateString('no-NO', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -230,19 +267,9 @@ export default function DeviationsPage() {
     });
   };
 
-  const filteredDeviations = deviations.filter(deviation => {
-    const matchesSearch = deviation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         deviation.description.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || deviation.status === selectedStatus;
-    const matchesType = selectedType === 'all' || deviation.type === selectedType;
-    const matchesSeverity = selectedSeverity === 'all' || deviation.severity === selectedSeverity;
-    
-    return matchesSearch && matchesStatus && matchesType && matchesSeverity;
-  });
-
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
+      <div className="flex items-center justify-center min-h-screen p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">Laster avvik...</p>
@@ -252,17 +279,20 @@ export default function DeviationsPage() {
   }
 
   return (
-    <div className="deviations-page">
+    <div className="min-h-screen bg-gray-50">
       {/* Mobile Header */}
       {isMobile && (
-        <div className="mobile-header bg-white shadow-sm border-b px-4 py-3">
+        <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
           <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-gray-900">Avvik</h1>
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">Avvik</h1>
+              <p className="text-sm text-gray-600">{filteredDeviations.length} avvik</p>
+            </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white p-2 rounded-lg"
+              className="p-2 rounded-lg bg-red-600 text-white"
             >
-              <Plus className="h-5 w-5" />
+              <Plus className="w-5 h-5" />
             </button>
           </div>
         </div>
@@ -271,225 +301,226 @@ export default function DeviationsPage() {
       {/* Desktop Header */}
       {!isMobile && (
         <div className="page-header">
-          <h1 className="page-title">Avvik</h1>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn btn-primary"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Rapporter avvik
-          </button>
+          <h1 className="page-title">⚠️ Avvik</h1>
+          <p className="page-subtitle">
+            Administrer og følg opp avvik i bedriften
+          </p>
         </div>
       )}
 
       <div className="px-4 py-6 max-w-7xl mx-auto">
         {/* Stats Overview */}
         <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-          <div className="stat-card">
-            <div className="stat-number">{getTotalDeviations()}</div>
-            <div className="stat-label">Totalt avvik</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{getOpenDeviations()}</div>
-            <div className="stat-label">Åpne avvik</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{getResolvedDeviations()}</div>
-            <div className="stat-label">Løste avvik</div>
+        <div className="stat-card">
+          <div className="stat-number">{getTotalDeviations()}</div>
+          <div className="stat-label">Totalt Avvik</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <AlertTriangle style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
+            <span style={{ fontSize: '0.875rem', color: '#f59e0b' }}>Alle avvik</span>
           </div>
         </div>
 
-        {/* Mobile Controls */}
-        {isMobile && (
-          <div className="mobile-controls mb-4">
-            <div className="flex gap-2 mb-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                <input
-                  type="text"
-                  placeholder="Søk i avvik..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
-                />
-              </div>
-              <button
-                onClick={() => setShowFilters(!showFilters)}
-                className="p-2 border border-gray-300 rounded-lg"
-              >
-                <Filter className="h-4 w-4" />
-              </button>
-            </div>
-            
-            {showFilters && (
-              <div className="filter-section bg-gray-50 p-3 rounded-lg space-y-3">
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="all">Alle statuser</option>
-                  <option value="reported">Rapportert</option>
-                  <option value="investigating">Undersøkes</option>
-                  <option value="resolved">Løst</option>
-                  <option value="closed">Lukket</option>
-                </select>
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="all">Alle typer</option>
-                  <option value="safety">Sikkerhet</option>
-                  <option value="quality">Kvalitet</option>
-                  <option value="maintenance">Vedlikehold</option>
-                  <option value="environmental">Miljø</option>
-                  <option value="other">Annet</option>
-                </select>
-                <select
-                  value={selectedSeverity}
-                  onChange={(e) => setSelectedSeverity(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="all">Alle alvorlighetsgrader</option>
-                  <option value="low">Lav</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">Høy</option>
-                  <option value="critical">Kritisk</option>
-                </select>
-              </div>
-            )}
+        <div className="stat-card">
+          <div className="stat-number">{getOpenDeviations()}</div>
+          <div className="stat-label">Åpne Avvik</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <Clock style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
+            <span style={{ fontSize: '0.875rem', color: '#3b82f6' }}>Krever oppfølging</span>
           </div>
-        )}
-
-        {/* Desktop Controls */}
-        {!isMobile && (
-          <div className="controls-section">
-            <div className="search-filter-row">
-              <div className="search-box">
-                <Search className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Søk i avvik..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
-              <div className="filter-controls">
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                >
-                  <option value="all">Alle statuser</option>
-                  <option value="reported">Rapportert</option>
-                  <option value="investigating">Undersøkes</option>
-                  <option value="resolved">Løst</option>
-                  <option value="closed">Lukket</option>
-                </select>
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                >
-                  <option value="all">Alle typer</option>
-                  <option value="safety">Sikkerhet</option>
-                  <option value="quality">Kvalitet</option>
-                  <option value="maintenance">Vedlikehold</option>
-                  <option value="environmental">Miljø</option>
-                  <option value="other">Annet</option>
-                </select>
-                <select
-                  value={selectedSeverity}
-                  onChange={(e) => setSelectedSeverity(e.target.value)}
-                >
-                  <option value="all">Alle alvorlighetsgrader</option>
-                  <option value="low">Lav</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">Høy</option>
-                  <option value="critical">Kritisk</option>
-                </select>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Deviations List */}
-        <div className="deviations-list">
-          {filteredDeviations.length === 0 ? (
-            <div className="empty-state">
-              <AlertTriangle className="empty-icon" />
-              <h3>Ingen avvik funnet</h3>
-              <p>Det er ingen avvik som matcher søkekriteriene dine.</p>
-            </div>
-          ) : (
-            filteredDeviations.map(deviation => (
-              <div key={deviation.id} className="deviation-card">
-                <div className="deviation-header">
-                  <div className="deviation-title">
-                    <h3>{deviation.title}</h3>
-                    <div className="deviation-badges">
-                      <span className={`badge ${getStatusColor(deviation.status)}`}>
-                        {getStatusIcon(deviation.status)}
-                        {deviation.status}
-                      </span>
-                      <span className={`badge ${getTypeColor(deviation.type)}`}>
-                        {deviation.type}
-                      </span>
-                      <span className={`badge ${getSeverityColor(deviation.severity)}`}>
-                        {deviation.severity}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="deviation-actions">
-                    <button
-                      onClick={() => {
-                        setSelectedDeviation(deviation);
-                        setShowEditModal(true);
-                      }}
-                      className="action-btn"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDeviation(deviation.id)}
-                      className="action-btn delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="deviation-content">
-                  <p>{deviation.description}</p>
-                  <div className="deviation-meta">
-                    <div className="meta-item">
-                      <User className="h-4 w-4" />
-                                             <span>Rapportert av: {getReporterName(deviation.reportedBy)}</span>
-                    </div>
-                    {deviation.assignedTo && (
-                      <div className="meta-item">
-                        <User className="h-4 w-4" />
-                        <span>Tildelt til: {getAssignedName(deviation.assignedTo)}</span>
-                      </div>
-                    )}
-                    <div className="meta-item">
-                      <MapPin className="h-4 w-4" />
-                      <span>Avdeling: {getDepartmentName(deviation.departmentId)}</span>
-                    </div>
-                    {deviation.location && (
-                      <div className="meta-item">
-                        <MapPin className="h-4 w-4" />
-                        <span>Lokasjon: {deviation.location}</span>
-                      </div>
-                    )}
-                    <div className="meta-item">
-                      <Calendar className="h-4 w-4" />
-                      <span>Rapportert: {formatDate(deviation.createdAt)}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            ))
-          )}
         </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{getResolvedDeviations()}</div>
+          <div className="stat-label">Løste Avvik</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
+            <span style={{ fontSize: '0.875rem', color: '#10b981' }}>Løst</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{deviations.filter(d => d.severity === 'critical').length}</div>
+          <div className="stat-label">Kritiske Avvik</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <AlertTriangle style={{ width: '16px', height: '16px', color: '#ef4444' }} />
+            <span style={{ fontSize: '0.875rem', color: '#ef4444' }}>Kritisk</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Controls */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280', width: '16px', height: '16px' }} />
+            <input
+              type="text"
+              placeholder="Søk etter avvik..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: '0.75rem 1rem 0.75rem 2.5rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                width: '300px',
+                fontSize: '0.875rem'
+              }}
+            />
+          </div>
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="all">Alle statuser</option>
+            <option value="reported">Rapportert</option>
+            <option value="investigating">Undersøkes</option>
+            <option value="resolved">Løst</option>
+            <option value="closed">Lukket</option>
+          </select>
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="all">Alle typer</option>
+            <option value="safety">Sikkerhet</option>
+            <option value="quality">Kvalitet</option>
+            <option value="security">Sikkerhet</option>
+            <option value="process">Prosess</option>
+            <option value="other">Annet</option>
+          </select>
+          <select
+            value={selectedSeverity}
+            onChange={(e) => setSelectedSeverity(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="all">Alle alvorlighetsgrader</option>
+            <option value="low">Lav</option>
+            <option value="medium">Medium</option>
+            <option value="high">Høy</option>
+            <option value="critical">Kritisk</option>
+          </select>
+        </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="btn btn-primary"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <Plus style={{ width: '16px', height: '16px' }} />
+          Rapporter avvik
+        </button>
+      </div>
+
+      {/* Deviations Grid */}
+      <div className="grid grid-cols-2">
+        {filteredDeviations.map((deviation) => (
+          <div key={deviation.id} className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontWeight: '600', color: '#333', margin: '0 0 0.5rem 0' }}>{deviation.title}</h3>
+                <p style={{ color: '#666', fontSize: '0.875rem', margin: 0, lineHeight: '1.4' }}>
+                  {deviation.description.length > 100 
+                    ? `${deviation.description.substring(0, 100)}...` 
+                    : deviation.description}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    setSelectedDeviation(deviation);
+                    setShowEditModal(true);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.5rem', fontSize: '0.75rem' }}
+                >
+                  <Edit style={{ width: '14px', height: '14px' }} />
+                </button>
+                <button
+                  onClick={() => handleDeleteDeviation(deviation.id)}
+                  className="btn btn-danger"
+                  style={{ padding: '0.5rem', fontSize: '0.75rem' }}
+                >
+                  <Trash2 style={{ width: '14px', height: '14px' }} />
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <User style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {getReporterName(deviation.reportedBy)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <MapPin style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {deviation.location || 'Ikke spesifisert'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Calendar style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {formatDate(deviation.createdAt)}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <span style={{ 
+                  padding: '0.25rem 0.75rem', 
+                  borderRadius: '12px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: '500',
+                  backgroundColor: `${getTypeColor(deviation.type)}20`,
+                  color: getTypeColor(deviation.type)
+                }}>
+                  {deviation.type}
+                </span>
+                <span style={{ 
+                  padding: '0.25rem 0.75rem', 
+                  borderRadius: '12px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: '500',
+                  backgroundColor: `${getSeverityColor(deviation.severity)}20`,
+                  color: getSeverityColor(deviation.severity)
+                }}>
+                  {deviation.severity}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {getStatusIcon(deviation.status)}
+                <span style={{ 
+                  fontSize: '0.875rem', 
+                  color: getStatusColor(deviation.status),
+                  fontWeight: '500'
+                }}>
+                  {deviation.status}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
       </div>
 
       {/* Add Deviation Modal */}
@@ -524,13 +555,13 @@ export default function DeviationsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Type</label>
                   <select
                     value={newDeviation.type}
-                    onChange={(e) => setNewDeviation({ ...newDeviation, type: e.target.value as 'safety' | 'quality' | 'maintenance' | 'environmental' | 'other' })}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, type: e.target.value as any })}
                     style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
                   >
                     <option value="safety">Sikkerhet</option>
                     <option value="quality">Kvalitet</option>
-                    <option value="maintenance">Vedlikehold</option>
-                    <option value="environmental">Miljø</option>
+                    <option value="security">Sikkerhet</option>
+                    <option value="process">Prosess</option>
                     <option value="other">Annet</option>
                   </select>
                 </div>
@@ -538,7 +569,7 @@ export default function DeviationsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Alvorlighetsgrad</label>
                   <select
                     value={newDeviation.severity}
-                    onChange={(e) => setNewDeviation({ ...newDeviation, severity: e.target.value as 'low' | 'medium' | 'high' | 'critical' })}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, severity: e.target.value as any })}
                     style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
                   >
                     <option value="low">Lav</option>
@@ -611,7 +642,7 @@ export default function DeviationsPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Status</label>
                   <select
                     value={selectedDeviation.status}
-                    onChange={(e) => setSelectedDeviation({ ...selectedDeviation, status: e.target.value as 'reported' | 'investigating' | 'resolved' | 'closed' })}
+                    onChange={(e) => setSelectedDeviation({ ...selectedDeviation, status: e.target.value as any })}
                     style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
                   >
                     <option value="reported">Rapportert</option>

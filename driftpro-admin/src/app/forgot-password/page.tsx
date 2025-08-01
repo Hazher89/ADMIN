@@ -7,13 +7,13 @@ import { Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import emailService from '@/lib/emailService';
+import { emailService } from '@/lib/email-service';
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [success, setSuccess] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -40,7 +40,7 @@ export default function ForgotPasswordPage() {
       }
 
       // Send password reset email using our custom service
-      const success = await emailService.sendPasswordResetEmail(email, resetToken, 'DriftPro');
+      const success = await emailService.sendPasswordResetEmail(email, resetToken);
       
       if (success) {
         setSuccess('E-post for tilbakestilling av passord er sendt! Sjekk innboksen din.');

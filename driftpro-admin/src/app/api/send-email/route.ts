@@ -4,7 +4,7 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 export async function POST(request: NextRequest) {
-  let emailData: any = null;
+  let emailData: Record<string, unknown> | null = null;
   
   try {
     const requestData = await request.json();

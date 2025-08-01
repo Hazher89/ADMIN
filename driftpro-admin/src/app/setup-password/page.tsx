@@ -6,7 +6,7 @@ import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Eye, EyeOff, Lock, User, Building } from 'lucide-react';
-import emailService from '@/lib/emailService';
+import { emailService } from '@/lib/email-service';
 
 export default function SetupPasswordPage() {
   const router = useRouter();
@@ -91,7 +91,7 @@ export default function SetupPasswordPage() {
         email,
         fullName || 'Administrator',
         'DriftPro System',
-        company,
+        company || 'Unknown Company',
         'Admin',
         'Administrator'
       );

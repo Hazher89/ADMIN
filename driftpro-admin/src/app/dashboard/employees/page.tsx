@@ -665,7 +665,7 @@ export default function EmployeesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Rolle</label>
                   <select
                     value={newEmployee.role}
-                    onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value as any })}
+                    onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value as 'admin' | 'department_leader' | 'employee' })}
                     style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
                   >
                     <option value="employee">Ansatt</option>
@@ -850,7 +850,7 @@ export default function EmployeesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Rolle</label>
                   <select
                     value={selectedEmployee.role}
-                    onChange={(e) => setSelectedEmployee({ ...selectedEmployee, role: e.target.value as any })}
+                    onChange={(e) => setSelectedEmployee({ ...selectedEmployee, role: e.target.value as 'admin' | 'department_leader' | 'employee' })}
                     style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
                   >
                     <option value="employee">Ansatt</option>
