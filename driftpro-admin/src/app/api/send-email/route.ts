@@ -11,6 +11,10 @@ export async function POST(request: NextRequest) {
     emailData = requestData.emailData;
     const config = requestData.config;
 
+    if (!emailData) {
+      throw new Error('emailData is null');
+    }
+
     // Create transporter
     const transporter = nodemailer.createTransport({
       host: config.smtpHost,
