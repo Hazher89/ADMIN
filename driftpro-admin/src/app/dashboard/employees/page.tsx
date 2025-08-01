@@ -575,7 +575,7 @@ export default function EmployeesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Rolle</label>
                 <select
                   value={newEmployee.role}
-                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value as any })}
+                  onChange={(e) => setNewEmployee({ ...newEmployee, role: e.target.value as 'admin' | 'department_leader' | 'employee' })}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="employee">Ansatt</option>
@@ -749,7 +749,7 @@ export default function EmployeesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Rolle</label>
                 <select
                   value={selectedEmployee.role}
-                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, role: e.target.value as any })}
+                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, role: e.target.value as 'admin' | 'department_leader' | 'employee' })}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="employee">Ansatt</option>
@@ -761,7 +761,7 @@ export default function EmployeesPage() {
                 <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
                 <select
                   value={selectedEmployee.status}
-                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, status: e.target.value as any })}
+                  onChange={(e) => setSelectedEmployee({ ...selectedEmployee, status: e.target.value as 'active' | 'inactive' | 'on_leave' })}
                   className="w-full p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                 >
                   <option value="active">Aktiv</option>
@@ -862,7 +862,7 @@ export default function EmployeesPage() {
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Status</label>
                   <select
                     value={selectedEmployee.status}
-                    onChange={(e) => setSelectedEmployee({ ...selectedEmployee, status: e.target.value as any })}
+                    onChange={(e) => setSelectedEmployee({ ...selectedEmployee, status: e.target.value as 'active' | 'inactive' | 'on_leave' })}
                     style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
                   >
                     <option value="active">Aktiv</option>

@@ -566,7 +566,7 @@ export default function AbsencePage() {
                     <select
                       required
                       value={formData.type}
-                      onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                      onChange={(e) => setFormData({...formData, type: e.target.value as 'sick_leave' | 'personal_leave' | 'other'})}
                       className="form-input"
                     >
                       <option value="sick_leave">Sykefravær</option>

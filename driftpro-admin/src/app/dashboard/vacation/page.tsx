@@ -566,7 +566,7 @@ export default function VacationPage() {
                     <select
                       required
                       value={formData.type}
-                      onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                      onChange={(e) => setFormData({...formData, type: e.target.value as 'vacation' | 'sick_leave' | 'other'})}
                       className="form-input"
                     >
                       <option value="vacation">Ferie</option>

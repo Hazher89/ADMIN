@@ -23,9 +23,9 @@ interface AITool {
   name: string;
   description: string;
   category: string;
-  icon: any;
+  icon: unknown;
   status: 'available' | 'processing' | 'completed' | 'error';
-  result?: any;
+  result?: unknown;
   progress?: number;
   estimatedTime?: number;
 }

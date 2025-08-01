@@ -103,7 +103,7 @@ export default function SetupPasswordPage() {
         router.push('/dashboard');
       }, 3000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error setting up password:', error);
       
       if (error.code === 'auth/email-already-in-use') {

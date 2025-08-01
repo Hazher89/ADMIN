@@ -168,7 +168,7 @@ export interface Activity {
   userName: string;
   companyId: string;
   createdAt: string;
-  metadata?: any;
+  metadata?: Record<string, unknown>;
 }
 
 class FirebaseService {
