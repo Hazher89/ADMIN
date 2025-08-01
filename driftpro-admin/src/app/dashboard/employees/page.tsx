@@ -41,7 +41,7 @@ export default function EmployeesPage() {
     phone: '',
     departmentId: '',
     position: '',
-    role: 'employee' as const,
+    role: 'employee' as 'admin' | 'department_leader' | 'employee',
     status: 'active' as const
   });
 
