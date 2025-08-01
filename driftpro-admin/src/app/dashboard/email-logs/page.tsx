@@ -1,61 +1,114 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import {
-  Search,
-  Eye,
-  Download,
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  Mail, 
+  Search, 
+  Filter,
   Calendar,
-  Mail,
-  Clock,
+  User,
   CheckCircle,
   XCircle,
-  AlertTriangle
+  Clock,
+  Eye,
+  RefreshCw,
+  Download,
+  AlertTriangle,
+  Send,
+  Inbox,
+  Archive
 } from 'lucide-react';
-import { collection, query, orderBy, getDocs } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
 
 interface EmailLog {
   id: string;
-  to: string | string[];
+  recipient: string;
   subject: string;
-  body: string;
+  status: 'sent' | 'delivered' | 'failed' | 'pending';
   sentAt: string;
-  status: 'sent' | 'failed' | 'pending';
+  deliveredAt?: string;
   sender: string;
-  metadata?: {
-    eventType: string;
-    timestamp: string;
-    companyId?: string;
-    userId?: string;
-  };
+  template: string;
+  attachments: number;
+  priority: 'low' | 'medium' | 'high';
 }
 
 export default function EmailLogsPage() {
+  const { userProfile } = useAuth();
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
-  const [filteredLogs, setFilteredLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<string>('all');
-  const [eventTypeFilter, setEventTypeFilter] = useState<string>('all');
-  const [showEmailModal, setShowEmailModal] = useState(false);
-  const [selectedEmail, setSelectedEmail] = useState<EmailLog | null>(null);
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedPriority, setSelectedPriority] = useState('all');
+
+  useEffect(() => {
+    loadEmailLogs();
+  }, []);
 
   const loadEmailLogs = async () => {
     try {
-      setLoading(true);
-      if (db) {
-        const q = query(
-          collection(db, 'emailLogs'),
-          orderBy('sentAt', 'desc')
-        );
-        const snapshot = await getDocs(q);
-        const logs = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as EmailLog[];
-        setEmailLogs(logs);
-      }
+      // Mock data for demonstration
+      const mockEmailLogs: EmailLog[] = [
+        {
+          id: '1',
+          recipient: 'john.doe@company.com',
+          subject: 'Velkommen til DriftPro',
+          status: 'delivered',
+          sentAt: '2024-07-27T10:30:00Z',
+          deliveredAt: '2024-07-27T10:31:15Z',
+          sender: 'system@driftpro.no',
+          template: 'welcome_email',
+          attachments: 0,
+          priority: 'medium'
+        },
+        {
+          id: '2',
+          recipient: 'jane.smith@company.com',
+          subject: 'Ferieforespørsel godkjent',
+          status: 'sent',
+          sentAt: '2024-07-27T09:15:00Z',
+          sender: 'hr@driftpro.no',
+          template: 'vacation_approved',
+          attachments: 1,
+          priority: 'high'
+        },
+        {
+          id: '3',
+          recipient: 'mike.johnson@company.com',
+          subject: 'Månedlig rapport',
+          status: 'failed',
+          sentAt: '2024-07-27T08:45:00Z',
+          sender: 'reports@driftpro.no',
+          template: 'monthly_report',
+          attachments: 2,
+          priority: 'low'
+        },
+        {
+          id: '4',
+          recipient: 'sarah.wilson@company.com',
+          subject: 'Passord tilbakestilling',
+          status: 'delivered',
+          sentAt: '2024-07-27T08:00:00Z',
+          deliveredAt: '2024-07-27T08:00:45Z',
+          sender: 'security@driftpro.no',
+          template: 'password_reset',
+          attachments: 0,
+          priority: 'high'
+        },
+        {
+          id: '5',
+          recipient: 'admin@company.com',
+          subject: 'System vedlikehold',
+          status: 'pending',
+          sentAt: '2024-07-27T07:30:00Z',
+          sender: 'system@driftpro.no',
+          template: 'maintenance_notice',
+          attachments: 0,
+          priority: 'medium'
+        }
+      ];
+
+      setEmailLogs(mockEmailLogs);
     } catch (error) {
       console.error('Error loading email logs:', error);
     } finally {
@@ -63,380 +116,231 @@ export default function EmailLogsPage() {
     }
   };
 
-  useEffect(() => {
-    loadEmailLogs();
-  }, []);
+  const filteredEmailLogs = emailLogs.filter(log => {
+    const matchesSearch = log.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         log.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         log.sender.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || log.status === selectedStatus;
+    const matchesPriority = selectedPriority === 'all' || log.priority === selectedPriority;
+    return matchesSearch && matchesStatus && matchesPriority;
+  });
 
-  const filterLogs = useCallback(() => {
-    let filtered = emailLogs;
-    
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(log => log.status === statusFilter);
-    }
-    
-    if (eventTypeFilter !== 'all') {
-      filtered = filtered.filter(log => log.metadata?.eventType === eventTypeFilter);
-    }
-    
-    if (searchTerm) {
-      filtered = filtered.filter(log =>
-        log.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        (Array.isArray(log.to) ? log.to.join(', ').toLowerCase().includes(searchTerm.toLowerCase()) : log.to.toLowerCase().includes(searchTerm.toLowerCase())) ||
-        log.metadata?.eventType?.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
-    setFilteredLogs(filtered);
-  }, [emailLogs, statusFilter, eventTypeFilter, searchTerm]);
+  const statuses = ['all', ...Array.from(new Set(emailLogs.map(log => log.status)))];
+  const priorities = ['all', ...Array.from(new Set(emailLogs.map(log => log.priority)))];
 
-  useEffect(() => {
-    filterLogs();
-  }, [filterLogs]);
-
-  const openEmailModal = (email: EmailLog) => {
-    setSelectedEmail(email);
-    setShowEmailModal(true);
-  };
-
-  const getStatusIcon = (status: string) => {
+  const getStatusColor = (status: EmailLog['status']) => {
     switch (status) {
-      case 'sent':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'failed':
-        return <XCircle className="h-4 w-4 text-red-600" />;
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      default:
-        return <AlertTriangle className="h-4 w-4 text-gray-600" />;
+      case 'delivered': return '#10b981';
+      case 'sent': return '#3b82f6';
+      case 'failed': return '#ef4444';
+      case 'pending': return '#f59e0b';
     }
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusIcon = (status: EmailLog['status']) => {
     switch (status) {
-      case 'sent':
-        return 'bg-green-100 text-green-800';
-      case 'failed':
-        return 'bg-red-100 text-red-800';
-      case 'pending':
-        return 'bg-yellow-100 text-yellow-800';
-      default:
-        return 'bg-gray-100 text-gray-800';
+      case 'delivered': return <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />;
+      case 'sent': return <Send style={{ width: '16px', height: '16px', color: '#3b82f6' }} />;
+      case 'failed': return <XCircle style={{ width: '16px', height: '16px', color: '#ef4444' }} />;
+      case 'pending': return <Clock style={{ width: '16px', height: '16px', color: '#f59e0b' }} />;
     }
   };
 
-  const getEventTypeIcon = (eventType: string) => {
-    switch (eventType) {
-      case 'employee_added':
-      case 'welcome_message':
-        return <Calendar className="h-4 w-4" />;
-      default:
-        return <Mail className="h-4 w-4" />;
+  const getPriorityColor = (priority: EmailLog['priority']) => {
+    switch (priority) {
+      case 'high': return '#ef4444';
+      case 'medium': return '#f59e0b';
+      case 'low': return '#10b981';
     }
   };
-
-  const formatEventType = (eventType: string) => {
-    const eventTypes: Record<string, string> = {
-      'employee_added': 'Ansatt tilføyd',
-      'deviation_reported': 'Avvik rapportert',
-      'deviation_updated': 'Avvik oppdatert',
-      'vacation_request': 'Ferieforespørsel',
-      'vacation_approved': 'Ferie godkjent',
-      'vacation_rejected': 'Ferie avvist',
-      'absence_request': 'Fraværsmelding',
-      'absence_approved': 'Fravær godkjent',
-      'absence_rejected': 'Fravær avvist',
-      'shift_assigned': 'Vakt tildelt',
-      'shift_updated': 'Vakt oppdatert',
-      'password_reset': 'Passord tilbakestilt',
-      'welcome_message': 'Velkomstmelding',
-      'chat_message': 'Chat melding'
-    };
-    return eventTypes[eventType] || eventType;
-  };
-
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-      </div>
-    );
-  }
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">E-postlogger</h1>
-          <p className="text-gray-600">Oversikt over alle sendte e-poster</p>
+      {/* Page Header */}
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card-icon">
+            <Mail />
+          </div>
+          <div>
+            <h1 className="page-title">📧 E-post Logger</h1>
+            <p className="page-subtitle">
+              Oversikt over alle sendte e-poster og deres status
+            </p>
+          </div>
         </div>
         
-        <div className="flex space-x-2">
-          <button
-            onClick={loadEmailLogs}
-            className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 flex items-center space-x-2"
-          >
-            <Download className="h-5 w-5" />
-            <span>Eksporter</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <span className="badge badge-primary">
+            {emailLogs.length} e-poster
+          </span>
+          <button className="btn btn-secondary">
+            <RefreshCw style={{ width: '16px', height: '16px' }} />
+            Oppdater
+          </button>
+          <button className="btn btn-secondary">
+            <Download style={{ width: '16px', height: '16px' }} />
+            Eksporter
           </button>
         </div>
       </div>
 
-      {/* Filters */}
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Søk</label>
-            <div className="relative">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <input
-                type="text"
-                placeholder="Søk i emne, mottaker eller hendelse..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
+      {/* Search and Filters */}
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
+            <Search className="search-icon" />
+            <input
+              type="text"
+              placeholder="Søk i e-post logger..."
+              className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
           </div>
+          
+          <select
+            className="form-input"
+            style={{ width: '150px' }}
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+          >
+            {statuses.map(status => (
+              <option key={status} value={status}>
+                {status === 'all' ? 'Alle statuser' : 
+                 status === 'delivered' ? 'Levert' :
+                 status === 'sent' ? 'Sendt' :
+                 status === 'failed' ? 'Feilet' : 'Venter'}
+              </option>
+            ))}
+          </select>
 
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Status</label>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">Alle statuser</option>
-              <option value="sent">Sendt</option>
-              <option value="failed">Feilet</option>
-              <option value="pending">Venter</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Hendelsestype</label>
-            <select
-              value={eventTypeFilter}
-              onChange={(e) => setEventTypeFilter(e.target.value)}
-              className="w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-            >
-              <option value="all">Alle hendelser</option>
-              <option value="employee_added">Ansatt tilføyd</option>
-              <option value="deviation_reported">Avvik rapportert</option>
-              <option value="vacation_request">Ferieforespørsel</option>
-              <option value="absence_request">Fraværsmelding</option>
-              <option value="welcome_message">Velkomstmelding</option>
-              <option value="password_reset">Passord tilbakestilt</option>
-              <option value="chat_message">Chat melding</option>
-            </select>
-          </div>
-
-          <div className="flex items-end">
-            <button
-              onClick={() => {
-                setSearchTerm('');
-                setStatusFilter('all');
-                setEventTypeFilter('all');
-              }}
-              className="w-full px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-            >
-              Nullstill filtre
-            </button>
-          </div>
+          <select
+            className="form-input"
+            style={{ width: '150px' }}
+            value={selectedPriority}
+            onChange={(e) => setSelectedPriority(e.target.value)}
+          >
+            {priorities.map(priority => (
+              <option key={priority} value={priority}>
+                {priority === 'all' ? 'Alle prioriteter' : 
+                 priority === 'high' ? 'Høy' :
+                 priority === 'medium' ? 'Medium' : 'Lav'}
+              </option>
+            ))}
+          </select>
         </div>
       </div>
 
-      {/* Email Logs Table */}
-      <div className="bg-white rounded-lg shadow overflow-hidden mx-6">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Hendelse
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Emne
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Mottaker
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Status
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Dato
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Handlinger
-                </th>
-              </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-              {filteredLogs.map((log) => (
-                <tr key={log.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      {getEventTypeIcon(log.metadata?.eventType || '')}
-                      <span className="text-sm text-gray-900">
-                        {formatEventType(log.metadata?.eventType || '')}
-                      </span>
+      {/* Email Logs List */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+        {filteredEmailLogs.map((log) => (
+          <div key={log.id} className="card">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+              <div style={{ marginTop: '0.25rem' }}>
+                {getStatusIcon(log.status)}
+              </div>
+              
+              <div style={{ flex: '1' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                  <h3 style={{ 
+                    fontWeight: '600', 
+                    color: '#333',
+                    fontSize: '1rem'
+                  }}>
+                    {log.subject}
+                  </h3>
+                  
+                  <span 
+                    className="badge"
+                    style={{ 
+                      backgroundColor: getPriorityColor(log.priority),
+                      fontSize: '0.625rem',
+                      padding: '0.125rem 0.5rem'
+                    }}
+                  >
+                    {log.priority === 'high' ? 'Høy' : 
+                     log.priority === 'medium' ? 'Medium' : 'Lav'}
+                  </span>
+                  
+                  {log.attachments > 0 && (
+                    <span className="badge badge-secondary" style={{ fontSize: '0.625rem' }}>
+                      📎 {log.attachments}
+                    </span>
+                  )}
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <User style={{ width: '14px', height: '14px', color: '#666' }} />
+                    <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                      <strong>Til:</strong> {log.recipient}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <Send style={{ width: '14px', height: '14px', color: '#666' }} />
+                    <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                      <strong>Fra:</strong> {log.sender}
+                    </span>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Inbox style={{ width: '14px', height: '14px', color: '#666' }} />
+                    <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                      <strong>Malen:</strong> {log.template}
+                    </span>
+                  </div>
+                </div>
+                
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#666' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                    <Calendar style={{ width: '14px', height: '14px' }} />
+                    <span>Sendt: {new Date(log.sentAt).toLocaleString('no-NO')}</span>
+                  </div>
+                  
+                  {log.deliveredAt && (
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                      <CheckCircle style={{ width: '14px', height: '14px' }} />
+                      <span>Levert: {new Date(log.deliveredAt).toLocaleString('no-NO')}</span>
                     </div>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 max-w-xs truncate">
-                      {log.subject}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {Array.isArray(log.to) ? log.to.join(', ') : log.to}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center space-x-2">
-                      {getStatusIcon(log.status)}
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(log.status)}`}>
-                        {log.status === 'sent' ? 'Sendt' : log.status === 'failed' ? 'Feilet' : 'Venter'}
-                      </span>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                    {new Date(log.sentAt).toLocaleString('no-NO')}
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                    <button
-                      onClick={() => openEmailModal(log)}
-                      className="text-blue-600 hover:text-blue-900 flex items-center space-x-1"
-                    >
-                      <Eye className="h-4 w-4" />
-                      <span>Se detaljer</span>
-                    </button>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        {filteredLogs.length === 0 && (
-          <div className="text-center py-12">
-            <Mail className="mx-auto h-12 w-12 text-gray-400" />
-            <h3 className="mt-2 text-sm font-medium text-gray-900">Ingen e-poster funnet</h3>
-            <p className="mt-1 text-sm text-gray-500">
-              {searchTerm || statusFilter !== 'all' || eventTypeFilter !== 'all' 
-                ? 'Ingen e-poster matcher filtrene dine.' 
-                : 'Ingen e-poster er sendt ennå.'}
-            </p>
-          </div>
-        )}
-      </div>
-
-      {/* Email Detail Modal */}
-      {showEmailModal && selectedEmail && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-lg max-w-4xl w-full max-h-[90vh] overflow-y-auto">
-            <div className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold text-gray-900">E-postdetaljer</h2>
-                <button
-                  onClick={() => setShowEmailModal(false)}
-                  className="text-gray-400 hover:text-gray-600"
-                >
-                  <XCircle className="h-6 w-6" />
+                  )}
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>
+                  <Eye style={{ width: '14px', height: '14px' }} />
                 </button>
-              </div>
-
-              <div className="space-y-6">
-                {/* Email Info */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">E-postinformasjon</h3>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Fra:</span>
-                      <p className="text-sm text-gray-900">{selectedEmail.sender}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Til:</span>
-                      <p className="text-sm text-gray-900">
-                        {Array.isArray(selectedEmail.to) ? selectedEmail.to.join(', ') : selectedEmail.to}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Emne:</span>
-                      <p className="text-sm text-gray-900">{selectedEmail.subject}</p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Sendt:</span>
-                      <p className="text-sm text-gray-900">
-                        {new Date(selectedEmail.sentAt).toLocaleString('no-NO')}
-                      </p>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Status:</span>
-                      <div className="flex items-center space-x-2">
-                        {getStatusIcon(selectedEmail.status)}
-                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(selectedEmail.status)}`}>
-                          {selectedEmail.status === 'sent' ? 'Sendt' : selectedEmail.status === 'failed' ? 'Feilet' : 'Venter'}
-                        </span>
-                      </div>
-                    </div>
-                    <div>
-                      <span className="text-sm font-medium text-gray-700">Hendelsestype:</span>
-                      <p className="text-sm text-gray-900">
-                        {formatEventType(selectedEmail.metadata?.eventType || '')}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Email Content */}
-                <div className="bg-gray-50 rounded-lg p-4">
-                  <h3 className="text-lg font-medium text-gray-900 mb-4">E-postinnhold</h3>
-                  <div 
-                    className="prose max-w-none"
-                    dangerouslySetInnerHTML={{ __html: selectedEmail.body }}
-                  />
-                </div>
-
-                {/* Metadata */}
-                {selectedEmail.metadata && (
-                  <div className="bg-gray-50 rounded-lg p-4">
-                    <h3 className="text-lg font-medium text-gray-900 mb-4">Metadata</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      {selectedEmail.metadata.companyId && (
-                        <div>
-                          <span className="text-sm font-medium text-gray-700">Bedrift ID:</span>
-                          <p className="text-sm text-gray-900">{selectedEmail.metadata.companyId}</p>
-                        </div>
-                      )}
-                      {selectedEmail.metadata.userId && (
-                        <div>
-                          <span className="text-sm font-medium text-gray-700">Bruker ID:</span>
-                          <p className="text-sm text-gray-900">{selectedEmail.metadata.userId}</p>
-                        </div>
-                      )}
-                      <div>
-                        <span className="text-sm font-medium text-gray-700">Hendelsestidspunkt:</span>
-                        <p className="text-sm text-gray-900">
-                          {new Date(selectedEmail.metadata.timestamp).toLocaleString('no-NO')}
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              <div className="flex justify-end pt-6">
-                <button
-                  onClick={() => setShowEmailModal(false)}
-                  className="px-4 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700"
-                >
-                  Lukk
+                <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>
+                  <Archive style={{ width: '14px', height: '14px' }} />
                 </button>
               </div>
             </div>
           </div>
+        ))}
+      </div>
+
+      {/* Empty State */}
+      {filteredEmailLogs.length === 0 && !loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <Mail style={{ width: '64px', height: '64px', color: '#ccc', margin: '0 auto 1rem' }} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
+            Ingen e-post logger funnet
+          </h3>
+          <p style={{ color: '#666' }}>
+            {searchTerm || selectedStatus !== 'all' || selectedPriority !== 'all' 
+              ? 'Prøv å endre søkekriteriene' 
+              : 'Du har ingen e-post logger ennå'}
+          </p>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
+          <p style={{ color: '#666' }}>Laster e-post logger...</p>
         </div>
       )}
     </div>

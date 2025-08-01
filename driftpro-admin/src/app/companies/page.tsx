@@ -9,7 +9,8 @@ import {
   Users, 
   MapPin,
   Phone,
-  Mail
+  Mail,
+  ArrowRight
 } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -149,7 +150,7 @@ export default function CompaniesPage() {
   }, []);
 
   const handleCompanySelect = (company: Company) => {
-    // Store selected company in localStorage
+    // Store selected company in localStorage for login page
     localStorage.setItem('selectedCompany', JSON.stringify(company));
     // Redirect to login page
     router.push('/login');
@@ -183,93 +184,179 @@ export default function CompaniesPage() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="relative">
-            <div className="w-16 h-16 bg-gradient-to-r from-blue-600 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-4 animate-pulse">
-              <Building className="h-8 w-8 text-white" />
-            </div>
-            <div className="absolute inset-0 w-16 h-16 border-4 border-blue-200 border-t-blue-600 rounded-2xl animate-spin mx-auto"></div>
-          </div>
-          <h3 className="text-lg font-semibold text-gray-900 mb-2">Laster bedrifter...</h3>
-          <p className="text-gray-600">Henter bedriftsinformasjon fra databasen</p>
+      <div style={{
+        minHeight: '100vh',
+        background: 'var(--gray-50)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="loading" style={{ margin: '0 auto 2rem' }}></div>
+          <h3 style={{ 
+            fontSize: 'var(--font-size-xl)', 
+            fontWeight: '600', 
+            color: 'var(--gray-900)', 
+            marginBottom: '0.5rem' 
+          }}>
+            Laster bedrifter...
+          </h3>
+          <p style={{ 
+            color: 'var(--gray-600)',
+            fontSize: 'var(--font-size-base)'
+          }}>
+            Henter bedriftsinformasjon fra databasen
+          </p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--gray-50)'
+    }}>
       {/* Navigation */}
-      <nav className="bg-white/80 backdrop-blur-lg border-b border-gray-200 sticky top-0 z-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-purple-600 rounded-xl flex items-center justify-center">
-                {/* Zap icon removed */}
+      <nav style={{
+        background: 'var(--white)',
+        borderBottom: '1px solid var(--gray-200)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 50,
+        boxShadow: 'var(--shadow-sm)'
+      }}>
+        <div style={{
+          maxWidth: '1280px',
+          margin: '0 auto',
+          padding: '0 var(--space-6)'
+        }}>
+          <div style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'center',
+            height: '4rem'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{
+                width: '40px',
+                height: '40px',
+                background: 'var(--gradient-primary)',
+                borderRadius: 'var(--radius-lg)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}>
+                <Building style={{ width: '20px', height: '20px', color: 'var(--white)' }} />
               </div>
               <div>
-                <h1 className="text-xl font-bold text-gray-900">DriftPro</h1>
-                <p className="text-sm text-gray-500">Admin Panel</p>
+                <h1 style={{ 
+                  fontSize: 'var(--font-size-xl)', 
+                  fontWeight: '700', 
+                  color: 'var(--gray-900)'
+                }}>
+                  DriftPro
+                </h1>
+                <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                  Admin Panel
+                </p>
               </div>
             </div>
             
-                         <div className="flex items-center space-x-4">
-               <Link
-                 href="/"
-                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-               >
-                 Hjem
-               </Link>
-               <Link
-                 href="/help"
-                 className="text-gray-600 hover:text-gray-900 px-3 py-2 rounded-lg text-sm font-medium transition-colors"
-               >
-                 Hjelp
-               </Link>
-             </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <Link
+                href="/"
+                style={{
+                  color: 'var(--gray-600)',
+                  padding: 'var(--space-2) var(--space-4)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '500',
+                  textDecoration: 'none',
+                  transition: 'all var(--transition-normal)'
+                }}
+              >
+                Hjem
+              </Link>
+              <Link
+                href="/help"
+                style={{
+                  color: 'var(--gray-600)',
+                  padding: 'var(--space-2) var(--space-4)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '500',
+                  textDecoration: 'none',
+                  transition: 'all var(--transition-normal)'
+                }}
+              >
+                Hjelp
+              </Link>
+            </div>
           </div>
         </div>
       </nav>
 
       {/* Main Content */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+      <div style={{
+        maxWidth: '1280px',
+        margin: '0 auto',
+        padding: '3rem 1.5rem'
+      }}>
         {/* Header */}
-        <div className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-gray-900 mb-4">
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <h1 style={{
+            fontSize: 'var(--font-size-5xl)',
+            fontWeight: '700',
+            color: 'var(--gray-900)',
+            marginBottom: '1rem',
+            lineHeight: '1.2'
+          }}>
             Finn din bedrift
           </h1>
-          <p className="text-xl text-gray-600 max-w-2xl mx-auto">
+          <p style={{
+            fontSize: 'var(--font-size-xl)',
+            color: 'var(--gray-600)',
+            maxWidth: '600px',
+            margin: '0 auto',
+            lineHeight: '1.6'
+          }}>
             Søk etter din bedrift for å få tilgang til DriftPro Admin-panelet
           </p>
         </div>
 
         {/* Search Section */}
-        <div className="max-w-2xl mx-auto mb-12">
-          <div className="bg-white rounded-2xl shadow-xl p-8">
-            <div className="flex space-x-4">
-              <div className="flex-1">
-                <div className="relative">
+        <div style={{ maxWidth: '600px', margin: '0 auto 3rem' }}>
+          <div className="card">
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+              <div style={{ flex: '1' }}>
+                <div style={{ position: 'relative' }}>
                   <input
                     type="text"
                     value={searchTerm}
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Søk etter bedriftsnavn, domene eller bransje..."
-                    className="w-full pl-12 pr-4 py-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm text-gray-900"
+                    className="search-input"
                     onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   />
-                  <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-gray-400" />
+                  <Search className="search-icon" />
                 </div>
               </div>
               <button
                 onClick={handleSearch}
                 disabled={searching}
-                className="px-6 py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 transition-colors"
+                className="btn btn-primary"
               >
                 {searching ? (
-                  'Søk'
+                  <>
+                    <div className="loading" style={{ width: '16px', height: '16px' }}></div>
+                    Søker...
+                  </>
                 ) : (
-                  'Søk'
+                  <>
+                    <Search style={{ width: '16px', height: '16px' }} />
+                    Søk
+                  </>
                 )}
               </button>
             </div>
@@ -277,80 +364,110 @@ export default function CompaniesPage() {
         </div>
 
         {/* Companies List */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-3" style={{ gap: '1.5rem' }}>
           {filteredCompanies.map((company) => (
             <div
               key={company.id}
-              className="bg-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-200 cursor-pointer group"
+              className="card"
+              style={{ 
+                cursor: 'pointer',
+                transition: 'all var(--transition-normal)'
+              }}
               onClick={() => handleCompanySelect(company)}
             >
-              <div className="p-6">
-                {/* Company Header */}
-                <div className="flex items-center space-x-4 mb-4">
-                  <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-purple-500 rounded-xl flex items-center justify-center">
-                    <Building className="h-6 w-6 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold text-gray-900 group-hover:text-blue-600 transition-colors">
-                      {company.name}
-                    </h3>
-                    <div className="flex items-center space-x-2">
-                      <p className="text-sm text-gray-500">Org.nr: {company.orgNumber}</p>
-                      <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${
-                        company.status === 'active' ? 'bg-green-100 text-green-800' :
-                        company.status === 'inactive' ? 'bg-red-100 text-red-800' :
-                        'bg-yellow-100 text-yellow-800'
-                      }`}>
-                        {company.status === 'active' ? 'Aktiv' :
-                         company.status === 'inactive' ? 'Inaktiv' : 'Venter'}
-                      </span>
-                    </div>
-                  </div>
-                  {/* ArrowRight icon removed */}
+              {/* Company Header */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                <div className="card-icon">
+                  <Building />
                 </div>
+                <div style={{ flex: '1' }}>
+                  <h3 style={{
+                    fontSize: 'var(--font-size-lg)',
+                    fontWeight: '600',
+                    color: 'var(--gray-900)',
+                    marginBottom: '0.25rem'
+                  }}>
+                    {company.name}
+                  </h3>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                      Org.nr: {company.orgNumber}
+                    </span>
+                    <span className={`badge ${
+                      company.status === 'active' ? 'badge-success' :
+                      company.status === 'inactive' ? 'badge-danger' :
+                      'badge-warning'
+                    }`}>
+                      {company.status === 'active' ? 'Aktiv' :
+                       company.status === 'inactive' ? 'Inaktiv' : 'Venter'}
+                    </span>
+                  </div>
+                </div>
+                <ArrowRight style={{ 
+                  width: '20px', 
+                  height: '20px', 
+                  color: 'var(--gray-400)',
+                  transition: 'transform var(--transition-normal)'
+                }} />
+              </div>
 
-                {/* Company Details */}
-                <div className="space-y-2 mb-4">
-                  {company.address && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <MapPin className="h-4 w-4 mr-2" />
+              {/* Company Details */}
+              <div style={{ marginBottom: '1rem' }}>
+                {company.address && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <MapPin style={{ width: '16px', height: '16px', color: 'var(--gray-400)' }} />
+                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
                       {company.address}
-                    </div>
-                  )}
-                  {company.employeeCount && (
-                    <div className="flex items-center text-sm text-gray-600">
-                      <Users className="h-4 w-4 mr-2" />
+                    </span>
+                  </div>
+                )}
+                {company.employeeCount && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <Users style={{ width: '16px', height: '16px', color: 'var(--gray-400)' }} />
+                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
                       {company.employeeCount} ansatte
-                    </div>
-                  )}
-                  {company.industry && (
-                    <div className="text-sm text-gray-600">
-                      {company.industry}
-                    </div>
-                  )}
-                </div>
+                    </span>
+                  </div>
+                )}
+                {company.industry && (
+                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>
+                    {company.industry}
+                  </div>
+                )}
+              </div>
 
-                {/* Contact Info */}
-                <div className="space-y-1">
-                  {company.phone && (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Phone className="h-4 w-4 mr-2" />
+              {/* Contact Info */}
+              <div style={{ 
+                marginBottom: '1rem',
+                padding: '1rem',
+                background: 'var(--gray-50)',
+                borderRadius: 'var(--radius-lg)',
+                border: '1px solid var(--gray-200)'
+              }}>
+                {company.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <Phone style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
+                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
                       {company.phone}
-                    </div>
-                  )}
-                  {company.email && (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Mail className="h-4 w-4 mr-2" />
+                    </span>
+                  </div>
+                )}
+                {company.email && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <Mail style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
+                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
                       {company.email}
-                    </div>
-                  )}
-                  {company.contactPerson?.name && (
-                    <div className="flex items-center text-sm text-gray-500">
-                      <Users className="h-4 w-4 mr-2" />
+                    </span>
+                  </div>
+                )}
+                {company.contactPerson?.name && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <Users style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
+                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
                       Kontakt: {company.contactPerson.name}
-                    </div>
-                  )}
-                </div>
+                    </span>
+                  </div>
+                )}
               </div>
             </div>
           ))}
@@ -358,25 +475,57 @@ export default function CompaniesPage() {
 
         {/* No Results */}
         {filteredCompanies.length === 0 && searchTerm && (
-          <div className="text-center py-12">
-            <Building className="h-16 w-16 text-gray-300 mx-auto mb-4" />
-            <h3 className="text-lg font-medium text-gray-900 mb-2">
+          <div style={{ textAlign: 'center', padding: '3rem' }}>
+            <Building style={{ 
+              width: '64px', 
+              height: '64px', 
+              color: 'var(--gray-300)', 
+              margin: '0 auto 1rem' 
+            }} />
+            <h3 style={{ 
+              fontSize: 'var(--font-size-lg)', 
+              fontWeight: '600', 
+              color: 'var(--gray-900)', 
+              marginBottom: '0.5rem' 
+            }}>
               Ingen bedrifter funnet
             </h3>
-            <p className="text-gray-600">
+            <p style={{ 
+              color: 'var(--gray-600)',
+              fontSize: 'var(--font-size-base)'
+            }}>
               Prøv å søke med et annet navn eller kontakt oss for hjelp.
             </p>
           </div>
         )}
 
         {/* Footer */}
-        <div className="text-center mt-12 pt-8 border-t border-gray-200">
-          <p className="text-sm text-gray-500">
-            Kan du ikke finne din bedrift?{' '}
-            <a href="/contact" className="text-blue-600 hover:text-blue-700 font-medium">
-              Kontakt oss
-            </a>
+        <div style={{ 
+          textAlign: 'center', 
+          marginTop: '3rem', 
+          paddingTop: '2rem', 
+          borderTop: '1px solid var(--gray-200)' 
+        }}>
+          <p style={{ 
+            fontSize: 'var(--font-size-base)', 
+            color: 'var(--gray-600)',
+            marginBottom: '1rem'
+          }}>
+            Kan du ikke finne din bedrift?
           </p>
+          <a href="/contact" style={{
+            color: 'var(--primary)',
+            fontWeight: '600',
+            textDecoration: 'none',
+            padding: 'var(--space-3) var(--space-6)',
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-lg)',
+            border: '1px solid var(--gray-300)',
+            transition: 'all var(--transition-normal)',
+            display: 'inline-block'
+          }}>
+            Kontakt oss
+          </a>
         </div>
       </div>
     </div>

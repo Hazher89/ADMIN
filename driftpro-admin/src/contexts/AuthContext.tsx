@@ -26,6 +26,8 @@ interface UserProfile {
   bio?: string;
   address?: string;
   emergencyContact?: string;
+  companyName?: string; // Add company information
+  companyId?: string; // Add company ID for isolation
 }
 
 interface AuthContextType {
@@ -77,7 +79,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               createdAt: data.createdAt || new Date().toISOString(),
               bio: data.bio || undefined,
               address: data.address || undefined,
-              emergencyContact: data.emergencyContact || undefined
+              emergencyContact: data.emergencyContact || undefined,
+              companyName: data.companyName || undefined, // Add company information
+              companyId: data.companyName || undefined // Use companyName as companyId for isolation
             };
             setUserProfile(userProfile);
           } else {
@@ -125,12 +129,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
-    if (!auth) throw new Error('Firebase not initialized');
-    
     try {
-      await signOut(auth);
-    } catch (error: unknown) {
-      throw new Error(error instanceof Error ? error.message : 'En feil oppstod');
+      if (auth) {
+        await signOut(auth);
+      }
+      setUser(null);
+      setUserProfile(null);
+    } catch (error) {
+      console.error('Error logging out:', error);
     }
   };
 

@@ -16,7 +16,7 @@ import {
   MessageSquare,
   Building
 } from 'lucide-react';
-import { collection, query, limit, onSnapshot, where, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { collection, query, limit, onSnapshot, where, updateDoc, doc, deleteDoc, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import Link from 'next/link';
 
@@ -32,94 +32,96 @@ interface Notification {
   createdAt: string;
   readAt?: string;
   archivedAt?: string;
+  companyId: string; // Added for company isolation
 }
 
 export default function NotificationBell() {
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
 
   const loadNotifications = useCallback(async () => {
-    if (!user?.uid || !db) return;
-
     try {
-      setLoading(true);
+      if (!db) {
+        console.error('Firebase not initialized');
+        return;
+      }
+
+      if (!user?.uid || !userProfile?.companyName) {
+        console.error('User or company not found');
+        setNotifications([]);
+        return;
+      }
+
+      // Filter notifications by user and company
       const notificationsQuery = query(
         collection(db, 'notifications'),
         where('userId', '==', user.uid),
-        where('status', '==', 'unread'),
-        limit(10)
+        where('companyId', '==', userProfile.companyName)
       );
+      
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const notificationsData: Notification[] = [];
 
-      const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
-        const notificationsData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          
-          // Handle createdAt properly
-          let createdAt: string;
+      notificationsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        
+        try {
+          // Handle timestamps
+          let createdAt = new Date().toISOString();
           if (data.createdAt?.toDate) {
             createdAt = data.createdAt.toDate().toISOString();
           } else if (data.createdAt instanceof Date) {
             createdAt = data.createdAt.toISOString();
           } else if (typeof data.createdAt === 'string') {
             createdAt = data.createdAt;
-          } else {
-            createdAt = new Date().toISOString();
           }
-          
-          // Handle readAt properly
-          let readAt: string | undefined;
+
+          let readAt = '';
           if (data.readAt?.toDate) {
             readAt = data.readAt.toDate().toISOString();
           } else if (data.readAt instanceof Date) {
             readAt = data.readAt.toISOString();
           } else if (typeof data.readAt === 'string') {
             readAt = data.readAt;
-          } else {
-            readAt = undefined;
           }
-          
-          // Handle archivedAt properly
-          let archivedAt: string | undefined;
+
+          let archivedAt = '';
           if (data.archivedAt?.toDate) {
             archivedAt = data.archivedAt.toDate().toISOString();
           } else if (data.archivedAt instanceof Date) {
             archivedAt = data.archivedAt.toISOString();
           } else if (typeof data.archivedAt === 'string') {
             archivedAt = data.archivedAt;
-          } else {
-            archivedAt = undefined;
           }
-          
-          return {
+
+          const notification: Notification = {
             id: doc.id,
-            userId: data.userId || '',
             title: data.title || '',
             message: data.message || '',
-            type: data.type || 'system',
-            priority: data.priority || 'medium',
+            type: data.type || 'info',
             status: data.status || 'unread',
+            priority: data.priority || 'normal',
+            createdAt,
+            readAt,
+            archivedAt,
             metadata: data.metadata || {},
-            createdAt: createdAt,
-            readAt: readAt,
-            archivedAt: archivedAt
-          } as Notification;
-        });
-        // Sort by createdAt in descending order in memory
-        notificationsData.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-        setNotifications(notificationsData);
-        setUnreadCount(notificationsData.length);
+            companyId: userProfile.companyName || '' // Add company isolation
+          };
+          
+          notificationsData.push(notification);
+        } catch (error) {
+          console.error('Error parsing notification data:', error);
+        }
       });
-
-      return unsubscribe;
+      
+      setNotifications(notificationsData);
     } catch (error) {
       console.error('Error loading notifications:', error);
-    } finally {
-      setLoading(false);
     }
-  }, [user?.uid]);
+  }, [user?.uid, userProfile?.companyName]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!db) return;

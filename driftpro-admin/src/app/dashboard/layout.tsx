@@ -18,7 +18,24 @@ import {
   Mail, 
   Bell,
   Code,
-  Search 
+  Search,
+  Clock,
+  BarChart3,
+  Settings,
+  FolderOpen,
+  TrendingUp,
+  Shield,
+  Zap,
+  Heart,
+  Star,
+  BookOpen,
+  Target,
+  Activity,
+  Database,
+  Globe,
+  Key,
+  Palette,
+  Terminal
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import NotificationBell from '@/components/NotificationBell';
@@ -29,6 +46,8 @@ interface SidebarItem {
   icon: React.ReactNode;
   badge?: string;
   badgeColor?: string;
+  category?: string;
+  isAdmin?: boolean;
 }
 
 export default function DashboardLayout({
@@ -36,10 +55,34 @@ export default function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const { user, logout } = useAuth();
+  const { user, logout, userProfile } = useAuth();
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
+
+  // Check if user is from DriftPro AS (has access to admin pages)
+  const isDriftProAdmin = userProfile?.companyName === 'DriftPro AS';
+
+  // Function to calculate tooltip position
+  const calculateTooltipPosition = (event: React.MouseEvent, itemHref: string) => {
+    const rect = event.currentTarget.getBoundingClientRect();
+    const sidebarWidth = 80;
+    const tooltipOffset = 10;
+    
+    setTooltipPosition({
+      top: rect.top + rect.height / 2,
+      left: sidebarWidth + tooltipOffset
+    });
+    setHoveredItem(itemHref);
+  };
+
+  // Function to handle mouse leave
+  const handleMouseLeave = () => {
+    setHoveredItem(null);
+  };
 
   // Load unread notification count
   useEffect(() => {
@@ -70,193 +113,472 @@ export default function DashboardLayout({
   }, [user]);
 
   const sidebarItems: SidebarItem[] = [
+    // Main Navigation
     {
       name: 'Dashboard',
       href: '/dashboard',
-      icon: <Home className="h-5 w-5" />
+      icon: <Home size={20} />,
+      category: 'main'
     },
     {
       name: 'Ansatte',
       href: '/dashboard/employees',
-      icon: <Users className="h-5 w-5" />
+      icon: <Users size={20} />,
+      category: 'main'
     },
     {
       name: 'Avdelinger',
       href: '/dashboard/departments',
-      icon: <Building className="h-5 w-5" />
+      icon: <Building size={20} />,
+      category: 'main'
     },
+    
+    // Time Management
     {
       name: 'Ferie',
       href: '/dashboard/vacation',
-      icon: <Calendar className="h-5 w-5" />
+      icon: <Calendar size={20} />,
+      category: 'time'
+    },
+    {
+      name: 'Fravær',
+      href: '/dashboard/absence',
+      icon: <AlertTriangle size={20} />,
+      category: 'time'
+    },
+    {
+      name: 'Stemple-system',
+      href: '/dashboard/timeclock',
+      icon: <Clock size={20} />,
+      category: 'time'
+    },
+    {
+      name: 'Skiftplan',
+      href: '/dashboard/shifts',
+      icon: <Calendar size={20} />,
+      category: 'time'
+    },
+    
+    // Communication & Documents
+    {
+      name: 'Chat',
+      href: '/dashboard/chat',
+      icon: <MessageSquare size={20} />,
+      category: 'communication'
     },
     {
       name: 'Dokumenter',
       href: '/dashboard/documents',
-      icon: <FileText className="h-5 w-5" />
-    },
-    {
-      name: 'Chat',
-      href: '/dashboard/chat',
-      icon: <MessageSquare className="h-5 w-5" />
-    },
-    {
-      name: 'Avvik',
-      href: '/dashboard/deviations',
-      icon: <AlertTriangle className="h-5 w-5" />
-    },
-    {
-      name: 'Bedrifter',
-      href: '/dashboard/companies',
-      icon: <Building className="h-5 w-5" />,
-      badge: 'Admin',
-      badgeColor: 'bg-red-500'
-    },
-    {
-      name: 'Samarbeidspartnere',
-      href: '/dashboard/partners',
-      icon: <Users className="h-5 w-5" />
-    },
-    {
-      name: 'E-postlogger',
-      href: '/dashboard/email-logs',
-      icon: <Mail className="h-5 w-5" />
+      icon: <FileText size={20} />,
+      category: 'communication'
     },
     {
       name: 'Varsler',
       href: '/dashboard/notifications',
-      icon: <Bell className="h-5 w-5" />
+      icon: <Bell size={20} />,
+      category: 'communication'
+    },
+    
+    // Management
+    {
+      name: 'Avvik',
+      href: '/dashboard/deviations',
+      icon: <AlertTriangle size={20} />,
+      category: 'management'
     },
     {
-      name: 'Utvikling',
-      href: '/dashboard/development',
-      icon: <Code className="h-5 w-5" />,
-      badge: 'Admin',
-      badgeColor: 'bg-purple-500'
-    }
+      name: 'Undersøkelser',
+      href: '/dashboard/surveys',
+      icon: <Target size={20} />,
+      category: 'management'
+    },
+    {
+      name: 'Rapporter',
+      href: '/dashboard/reports',
+      icon: <BarChart3 size={20} />,
+      category: 'management'
+    },
+    
+    // Admin-only pages (only visible for DriftPro AS)
+    ...(isDriftProAdmin ? [
+      {
+        name: 'Development',
+        href: '/dashboard/development',
+        icon: <Terminal size={20} />,
+        badge: 'DEV',
+        badgeColor: 'badge-primary',
+        category: 'admin',
+        isAdmin: true
+      },
+      {
+        name: 'Bedrifter',
+        href: '/dashboard/companies',
+        icon: <Globe size={20} />,
+        category: 'admin',
+        isAdmin: true
+      },
+      {
+        name: 'E-postlogger',
+        href: '/dashboard/email-logs',
+        icon: <Mail size={20} />,
+        category: 'admin',
+        isAdmin: true
+      },
+      {
+        name: 'Innstillinger',
+        href: '/dashboard/settings',
+        icon: <Settings size={20} />,
+        category: 'admin',
+        isAdmin: true
+      }
+    ] : [])
   ];
 
   const handleLogout = async () => {
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
     try {
       await logout();
+      setShowLogoutModal(false);
+      window.location.href = '/login';
     } catch (error) {
-      console.error('Error logging out:', error);
+      console.error('Error during logout:', error);
     }
   };
 
+  const groupedItems = sidebarItems.reduce((acc, item) => {
+    if (!acc[item.category!]) {
+      acc[item.category!] = [];
+    }
+    acc[item.category!].push(item);
+    return acc;
+  }, {} as Record<string, SidebarItem[]>);
+
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Fixed Sidebar */}
-      <div className="fixed left-0 top-0 h-full w-64 bg-blue-900 text-white flex flex-col z-50">
+    <div style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Mobile Overlay */}
+      {sidebarOpen && (
+        <div 
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.5)',
+            zIndex: 999,
+            display: 'none'
+          }}
+          className="mobile-overlay"
+          onClick={() => setSidebarOpen(false)}
+        />
+      )}
+      
+      {/* Opera-Inspired Sidebar */}
+      <div 
+        className={`sidebar ${sidebarOpen ? 'open' : ''}`}
+        style={{
+          width: '80px',
+          background: 'var(--gray-900)',
+          borderRight: '1px solid var(--gray-800)',
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          padding: '1rem 0',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          height: '100vh',
+          zIndex: 1000,
+          transition: 'all var(--transition-normal)',
+          overflowY: 'auto',
+          overflowX: 'hidden'
+        }}
+      >
         {/* Logo */}
-        <div className="p-6 border-b border-blue-800">
-          <div className="flex items-center space-x-3">
-            <div className="w-8 h-8 bg-white rounded flex items-center justify-center">
-              <span className="text-blue-900 font-bold text-lg">D</span>
-            </div>
-            <span className="text-xl font-bold">DriftPro</span>
-          </div>
+        <div style={{
+          width: '48px',
+          height: '48px',
+          background: 'var(--gradient-primary)',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          marginBottom: '2rem',
+          boxShadow: 'var(--shadow-md)',
+          flexShrink: 0
+        }}>
+          <Zap size={24} color="white" />
         </div>
 
-        {/* User Profile */}
-        <div className="p-4 border-b border-blue-800">
-          <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-700 rounded-full flex items-center justify-center">
-              <span className="text-white font-medium">
-                {user?.email?.charAt(0).toUpperCase() || 'U'}
-              </span>
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium truncate">{user?.email}</p>
-              <p className="text-xs text-blue-300">Administrator</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Search */}
-        <div className="p-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-blue-300 h-4 w-4" />
-            <input
-              type="text"
-              placeholder="Søk..."
-              className="w-full pl-10 pr-4 py-2 bg-blue-800 border border-blue-700 rounded-lg text-white placeholder-blue-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
-        </div>
-
-        {/* Navigation */}
-        <nav className="flex-1 overflow-y-auto">
-          <ul className="space-y-1 p-4">
-            {sidebarItems.map((item) => {
-              const isActive = pathname === item.href;
-              return (
-                <li key={item.href}>
-                  <Link
-                    href={item.href}
-                    className={`flex items-center space-x-3 px-3 py-2 rounded-lg transition-colors relative ${
-                      isActive
-                        ? 'bg-blue-700 text-white'
-                        : 'text-blue-200 hover:bg-blue-800 hover:text-white'
-                    }`}
+        {/* Navigation Icons */}
+        <div style={{ 
+          flex: 1, 
+          display: 'flex', 
+          flexDirection: 'column', 
+          gap: '0.5rem', 
+          width: '100%',
+          minHeight: 0
+        }}>
+          {Object.entries(groupedItems).map(([category, items]) => (
+            <div key={category} style={{ width: '100%' }}>
+              {items.map((item) => {
+                const isActive = pathname === item.href;
+                return (
+                  <div
+                    key={item.href}
+                    style={{
+                      position: 'relative',
+                      width: '100%',
+                      display: 'flex',
+                      justifyContent: 'center',
+                      marginBottom: '0.5rem'
+                    }}
+                    onMouseEnter={(e) => calculateTooltipPosition(e, item.href)}
+                    onMouseLeave={handleMouseLeave}
                   >
-                    {item.icon}
-                    <span className="flex-1">{item.name}</span>
-                    {item.badge && (
-                      <span className={`px-2 py-1 text-xs font-semibold rounded-full ${item.badgeColor}`}>
-                        {item.badge}
-                      </span>
-                    )}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
+                    <Link
+                      href={item.href}
+                      style={{
+                        width: '48px',
+                        height: '48px',
+                        borderRadius: '12px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        background: isActive ? 'var(--primary)' : 'transparent',
+                        color: isActive ? 'white' : 'var(--gray-400)',
+                        textDecoration: 'none',
+                        transition: 'all var(--transition-normal)',
+                        position: 'relative',
+                        border: isActive ? 'none' : '1px solid transparent'
+                      }}
+                      onClick={() => setSidebarOpen(false)}
+                    >
+                      {item.icon}
+                      
+                      {/* Admin Star */}
+                      {item.isAdmin && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '-2px',
+                          right: '-2px',
+                          color: '#ef4444',
+                          fontSize: '12px'
+                        }}>
+                          <Star size={12} fill="#ef4444" />
+                        </div>
+                      )}
+                      
+                      {/* Badge (only for non-admin items) */}
+                      {item.badge && !item.isAdmin && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '-4px',
+                          right: '-4px',
+                          background: item.badgeColor === 'badge-danger' ? 'var(--danger)' : 'var(--primary)',
+                          color: 'white',
+                          fontSize: '10px',
+                          fontWeight: '600',
+                          padding: '2px 6px',
+                          borderRadius: '8px',
+                          border: '2px solid var(--gray-900)',
+                          minWidth: '16px',
+                          height: '16px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}>
+                          {item.badge}
+                        </div>
+                      )}
+                    </Link>
 
-        {/* Logout */}
-        <div className="p-4 border-t border-blue-800">
-          <button
-            onClick={handleLogout}
-            className="flex items-center space-x-3 w-full px-3 py-2 text-blue-200 hover:bg-blue-800 hover:text-white rounded-lg transition-colors"
-          >
-            <LogOut className="h-5 w-5" />
-            <span>Logg ut</span>
-          </button>
+
+                  </div>
+                );
+              })}
+              
+              {/* Category Separator */}
+              {category !== Object.keys(groupedItems)[Object.keys(groupedItems).length - 1] && (
+                <div style={{
+                  width: '32px',
+                  height: '1px',
+                  background: 'var(--gray-700)',
+                  margin: '1rem auto',
+                  opacity: 0.5
+                }}></div>
+              )}
+            </div>
+          ))}
+        </div>
+
+        {/* Logout Button */}
+        <div style={{
+          width: '48px',
+          height: '48px',
+          borderRadius: '12px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          color: 'var(--gray-400)',
+          cursor: 'pointer',
+          transition: 'all var(--transition-normal)',
+          marginTop: 'auto',
+          flexShrink: 0
+        }}
+        onMouseEnter={(e) => {
+          const rect = e.currentTarget.getBoundingClientRect();
+          setTooltipPosition({
+            top: rect.top + rect.height / 2,
+            left: 90
+          });
+          setHoveredItem('logout');
+        }}
+        onMouseLeave={handleMouseLeave}
+        onClick={handleLogout}
+        >
+          <LogOut size={20} />
         </div>
       </div>
 
-      {/* Main Content - with left margin to account for fixed sidebar */}
-      <div className="flex-1 ml-64 bg-white">
-        {/* Top Header */}
-        <header className="bg-white border-b border-gray-200 px-6 py-4 flex justify-between items-center">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-600">Velkommen tilbake</p>
-          </div>
-          <div className="flex items-center space-x-4">
-            <button className="relative p-2 text-gray-600 hover:text-gray-900">
-              <Bell className="h-6 w-6" />
-              {unreadCount > 0 && (
-                <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
-                  {unreadCount}
-                </span>
-              )}
-            </button>
-            <button
-              onClick={handleLogout}
-              className="p-2 text-gray-600 hover:text-gray-900"
-            >
-              <LogOut className="h-6 w-6" />
-            </button>
-          </div>
-        </header>
+      {/* Main Content */}
+      <div 
+        className="main-content"
+        style={{
+          marginLeft: '80px',
+          flex: 1,
+          background: 'var(--gray-50)',
+          minHeight: '100vh',
+          transition: 'margin-left var(--transition-normal)'
+        }}
+      >
+        {/* Mobile Menu Button */}
+        <button
+          onClick={() => setSidebarOpen(!sidebarOpen)}
+          className="mobile-menu-btn"
+        >
+          {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
+        </button>
 
         {/* Page Content */}
-        <main className="bg-white">
-          {children}
-        </main>
+        {children}
       </div>
+
+      {/* Global Tooltip */}
+      {hoveredItem && (
+        <div style={{
+          position: 'fixed',
+          left: `${tooltipPosition.left}px`,
+          top: `${tooltipPosition.top}px`,
+          transform: 'translateY(-50%)',
+          background: 'var(--gray-800)',
+          color: 'white',
+          padding: '0.5rem 0.75rem',
+          borderRadius: '8px',
+          fontSize: 'var(--font-size-sm)',
+          fontWeight: '500',
+          whiteSpace: 'nowrap',
+          zIndex: 1001,
+          boxShadow: 'var(--shadow-lg)',
+          border: '1px solid var(--gray-700)',
+          animation: 'fadeIn 0.2s ease',
+          pointerEvents: 'none'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+            <span>
+              {hoveredItem === 'logout' ? 'Logg ut' : 
+               sidebarItems.find(item => item.href === hoveredItem)?.name || ''}
+            </span>
+            {hoveredItem !== 'logout' && sidebarItems.find(item => item.href === hoveredItem)?.isAdmin && (
+              <Star size={12} fill="#ef4444" color="#ef4444" />
+            )}
+          </div>
+          <div style={{
+            position: 'absolute',
+            left: '-4px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            width: '0',
+            height: '0',
+            borderTop: '4px solid transparent',
+            borderBottom: '4px solid transparent',
+            borderRight: '4px solid var(--gray-800)'
+          }}></div>
+        </div>
+      )}
+
+      {/* Logout Confirmation Modal */}
+      {showLogoutModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid var(--gray-200)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <h3 style={{
+                fontSize: 'var(--font-size-lg)',
+                fontWeight: '600',
+                color: 'var(--gray-900)'
+              }}>
+                Bekreft utlogging
+              </h3>
+              <button
+                onClick={() => setShowLogoutModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  color: 'var(--gray-400)',
+                  cursor: 'pointer',
+                  padding: '0.25rem'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            <div style={{ padding: '1.5rem' }}>
+              <p style={{ 
+                marginBottom: '1.5rem', 
+                color: 'var(--gray-600)',
+                lineHeight: '1.6'
+              }}>
+                Er du sikker på at du vil logge ut? Du må logge inn på nytt for å få tilgang til systemet.
+              </p>
+              <div style={{ 
+                display: 'flex', 
+                gap: '1rem', 
+                justifyContent: 'flex-end' 
+              }}>
+                <button
+                  onClick={() => setShowLogoutModal(false)}
+                  className="btn btn-secondary"
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={confirmLogout}
+                  className="btn btn-danger"
+                >
+                  Logg ut
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx>{`
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateX(-10px); }
+          to { opacity: 1; transform: translateX(0); }
+        }
+      `}</style>
     </div>
   );
 } 

@@ -1,22 +1,23 @@
 'use client';
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { collection, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-import VacationCalendar from '@/components/VacationCalendar';
-import EmployeeVacationManager from '@/components/EmployeeVacationManager';
-import {
-  Plus,
-  Calendar,
-  Users,
-  Clock,
+import React, { useState, useEffect } from 'react';
+import { 
+  Calendar, 
+  Plus, 
+  Search, 
+  Edit, 
+  Trash2, 
+  User, 
   CheckCircle,
   XCircle,
-  Edit,
-  Eye,
-  Check,
-  X
+  Clock,
+  Download,
+  Filter,
+  RefreshCw
 } from 'lucide-react';
+import { collection, addDoc, updateDoc, doc, deleteDoc, getDocs, serverTimestamp } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface VacationRequest {
   id: string;
@@ -25,14 +26,12 @@ interface VacationRequest {
   department: string;
   startDate: string;
   endDate: string;
-  days: number;
   reason: string;
-  status: 'pending' | 'approved' | 'rejected';
-  submittedAt: string;
-  reviewedBy?: string;
-  reviewedAt?: string;
-  comments?: string;
   type: 'vacation' | 'sick_leave' | 'other';
+  status: 'pending' | 'approved' | 'rejected';
+  days: number;
+  submittedAt: string;
+  companyId: string;
 }
 
 interface Employee {
@@ -41,184 +40,213 @@ interface Employee {
   lastName: string;
   department: string;
   role: string;
-  vacationDays: {
-    total: number;
-    used: number;
-    remaining: number;
-    carriedOver: number;
-  };
+  phone: string;
 }
 
 export default function VacationPage() {
+  const { user, userProfile } = useAuth();
   const [vacationRequests, setVacationRequests] = useState<VacationRequest[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [filteredRequests, setFilteredRequests] = useState<VacationRequest[]>([]);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  
+  // Filters
+  const [searchTerm, setSearchTerm] = useState('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  
+  // Modals
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showReviewModal, setShowReviewModal] = useState(false);
-  const [showCalendarModal, setShowCalendarModal] = useState(false);
-  const [showEmployeeModal, setShowEmployeeModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
+  
+  // Form data
   const [formData, setFormData] = useState({
     employeeId: '',
     startDate: '',
     endDate: '',
     reason: '',
-    type: 'vacation' as 'vacation' | 'sick_leave' | 'other',
-    comments: ''
+    type: 'vacation' as 'vacation' | 'sick_leave' | 'other'
   });
-  const [saving, setSaving] = useState(false);
-  const [dateFilter, setDateFilter] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
-  const [typeFilter, setTypeFilter] = useState<'all' | 'vacation' | 'sick_leave' | 'other'>('all');
-  const [selectedRequest, setSelectedRequest] = useState<VacationRequest | null>(null);
 
-  const loadData = useCallback(async () => {
+  // Load data
+  useEffect(() => {
+    if (!userProfile?.companyName) {
+      setLoading(false);
+      setVacationRequests([]);
+      return;
+    }
+
+    const timeoutId = setTimeout(() => {
+      if (loading) {
+        console.log('Loading timeout - setting loading to false');
+        setLoading(false);
+        setVacationRequests([]);
+      }
+    }, 3000);
+
+    loadData();
+
+    return () => clearTimeout(timeoutId);
+  }, [userProfile?.companyName]);
+
+  const loadData = async () => {
     try {
-      setLoading(true);
-      // Mock data for now
-      const mockRequests: VacationRequest[] = [
-        {
-          id: '1',
-          employeeId: 'emp1',
-          employeeName: 'John Doe',
-          department: 'IT',
-          type: 'vacation',
-          startDate: '2024-07-15',
-          endDate: '2024-07-22',
-          days: 5,
-          reason: 'Sommerferie',
-          status: 'pending',
-          submittedAt: '2024-06-01T10:00:00Z'
+      if (!db || !userProfile?.companyName) return;
+
+      // Load vacation requests
+      const requestsSnapshot = await getDocs(collection(db, 'vacationRequests'));
+      const requestsData: VacationRequest[] = [];
+
+      requestsSnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.companyId === userProfile.companyName) {
+          const request: VacationRequest = {
+            id: doc.id,
+            employeeId: data.employeeId || '',
+            employeeName: data.employeeName || '',
+            department: data.department || '',
+            startDate: data.startDate || '',
+            endDate: data.endDate || '',
+            reason: data.reason || '',
+            type: data.type || 'vacation',
+            status: data.status || 'pending',
+            days: data.days || 0,
+            submittedAt: data.submittedAt || new Date().toISOString(),
+            companyId: userProfile.companyName || ''
+          };
+          requestsData.push(request);
         }
-      ];
-      
-      const mockEmployees: Employee[] = [
-        {
-          id: 'emp1',
-          firstName: 'John',
-          lastName: 'Doe',
-          department: 'IT',
-          role: 'Developer',
-          vacationDays: {
-            total: 25,
-            used: 5,
-            remaining: 20,
-            carriedOver: 0
-          }
+      });
+
+      // Load employees
+      const employeesSnapshot = await getDocs(collection(db, 'users'));
+      const employeesData: Employee[] = [];
+
+      employeesSnapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.companyId === userProfile.companyName && data.status === 'active') {
+          const employee: Employee = {
+            id: doc.id,
+            firstName: data.firstName || '',
+            lastName: data.lastName || '',
+            department: data.department || '',
+            role: data.role || 'employee',
+            phone: data.phone || ''
+          };
+          employeesData.push(employee);
         }
-      ];
-      
-      setVacationRequests(mockRequests);
-      setEmployees(mockEmployees);
+      });
+
+      // Sort by submittedAt descending
+      requestsData.sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
+
+      setVacationRequests(requestsData);
+      setEmployees(employeesData);
     } catch (error) {
       console.error('Error loading data:', error);
     } finally {
       setLoading(false);
     }
-  }, []);
+  };
 
-  const filterRequests = useCallback(() => {
-    let filtered = vacationRequests;
-    
-    if (statusFilter !== 'all') {
-      filtered = filtered.filter(request => request.status === statusFilter);
-    }
-    
-    if (typeFilter !== 'all') {
-      filtered = filtered.filter(request => request.type === typeFilter);
-    }
-    
-    if (searchTerm) {
-      filtered = filtered.filter(request =>
-        request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        request.department.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-    }
-    
+  // Filter requests
+  useEffect(() => {
+    const filtered = vacationRequests.filter(request => {
+      const matchesSearch = request.employeeName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           request.department.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesStatus = statusFilter === 'all' || request.status === statusFilter;
+      const matchesType = typeFilter === 'all' || request.type === typeFilter;
+
+      return matchesSearch && matchesStatus && matchesType;
+    });
+
     setFilteredRequests(filtered);
-  }, [vacationRequests, statusFilter, typeFilter, searchTerm]);
-
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  useEffect(() => {
-    filterRequests();
-  }, [filterRequests]);
+  }, [vacationRequests, searchTerm, statusFilter, typeFilter]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSaving(true);
+
     try {
-      setSaving(true);
-      
+      if (!userProfile?.companyName) {
+        throw new Error('Company not found');
+      }
+
       const employee = employees.find(emp => emp.id === formData.employeeId);
-      if (!employee) return;
-      
+      if (!employee) {
+        throw new Error('Employee not found');
+      }
+
       const startDate = new Date(formData.startDate);
       const endDate = new Date(formData.endDate);
       const days = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-      
-      const newRequest: Omit<VacationRequest, 'id'> = {
+
+      const requestData = {
         employeeId: formData.employeeId,
         employeeName: `${employee.firstName} ${employee.lastName}`,
         department: employee.department,
         startDate: formData.startDate,
         endDate: formData.endDate,
-        days,
         reason: formData.reason,
-        status: 'pending',
+        type: formData.type,
+        status: 'pending' as const,
+        days,
         submittedAt: new Date().toISOString(),
-        type: formData.type
+        companyId: userProfile.companyName,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       };
+
+      if (!db) throw new Error('Firebase not initialized');
+      const docRef = await addDoc(collection(db, 'vacationRequests'), requestData);
       
-      if (db) {
-        const docRef = await addDoc(collection(db, 'vacationRequests'), newRequest);
-        setVacationRequests(prev => [...prev, { ...newRequest, id: docRef.id }]);
-      } else {
-        // Fallback to local state
-        const mockId = Date.now().toString();
-        setVacationRequests(prev => [...prev, { ...newRequest, id: mockId }]);
-      }
+      const newRequest: VacationRequest = { 
+        id: docRef.id, 
+        ...requestData,
+        status: 'pending'
+      };
+      setVacationRequests(prev => [newRequest, ...prev]);
       
       setShowAddModal(false);
       resetForm();
     } catch (error) {
-      console.error('Error submitting request:', error);
+      console.error('Error adding vacation request:', error);
     } finally {
       setSaving(false);
     }
   };
 
-  const handleReview = async (requestId: string, status: 'approved' | 'rejected', comments?: string) => {
+  const handleStatusUpdate = async (requestId: string, newStatus: 'approved' | 'rejected') => {
     try {
-      if (db) {
-        await updateDoc(doc(db, 'vacationRequests', requestId), {
-          status,
-          reviewedBy: 'Admin', // TODO: Get current user
-          reviewedAt: new Date().toISOString(),
-          comments
-        });
-      }
+      if (!db) throw new Error('Firebase not initialized');
+
+      await updateDoc(doc(db, 'vacationRequests', requestId), {
+        status: newStatus,
+        updatedAt: serverTimestamp()
+      });
       
-      setVacationRequests(prev =>
-        prev.map(request =>
-          request.id === requestId
-            ? {
-                ...request,
-                status,
-                reviewedBy: 'Admin',
-                reviewedAt: new Date().toISOString(),
-                comments
-              }
-            : request
-        )
-      );
-      
-      setShowReviewModal(false);
-      setSelectedRequest(null);
+      setVacationRequests(prev => prev.map(request => 
+        request.id === requestId 
+          ? { ...request, status: newStatus }
+          : request
+      ));
     } catch (error) {
-      console.error('Error reviewing request:', error);
+      console.error('Error updating vacation request:', error);
+    }
+  };
+
+  const handleDelete = async (requestId: string) => {
+    if (!confirm('Er du sikker på at du vil slette denne ferieforespørselen?')) return;
+
+    try {
+      if (!db) throw new Error('Firebase not initialized');
+      await deleteDoc(doc(db, 'vacationRequests', requestId));
+      
+      setVacationRequests(prev => prev.filter(request => request.id !== requestId));
+    } catch (error) {
+      console.error('Error deleting vacation request:', error);
     }
   };
 
@@ -228,370 +256,233 @@ export default function VacationPage() {
       startDate: '',
       endDate: '',
       reason: '',
-      type: 'vacation' as 'vacation' | 'sick_leave' | 'other',
-      comments: ''
+      type: 'vacation'
     });
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'approved': return 'bg-green-100 text-green-800';
-      case 'rejected': return 'bg-red-100 text-red-800';
-      case 'pending': return 'bg-yellow-100 text-yellow-800';
-      default: return 'bg-gray-100 text-gray-800';
+      case 'pending': return 'badge-warning';
+      case 'approved': return 'badge-success';
+      case 'rejected': return 'badge-danger';
+      default: return 'badge-secondary';
     }
   };
 
-  const getStatusText = (status: string) => {
-    switch (status) {
-      case 'approved': return 'Godkjent';
-      case 'rejected': return 'Avvist';
-      case 'pending': return 'Venter';
-      default: return status;
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'vacation': return 'badge-primary';
+      case 'sick_leave': return 'badge-danger';
+      case 'other': return 'badge-secondary';
+      default: return 'badge-secondary';
     }
-  };
-
-  const handleDateClick = (date: Date, requests: VacationRequest[]) => {
-    console.log('Clicked date:', date, 'Requests:', requests);
-  };
-
-  const handleAddVacation = async (employeeId: string, startDate: string, endDate: string, reason: string) => {
-    try {
-      const employee = employees.find(emp => emp.id === employeeId);
-      if (!employee) return;
-
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-      const newRequest: Omit<VacationRequest, 'id'> = {
-        employeeId,
-        employeeName: `${employee.firstName} ${employee.lastName}`,
-        department: employee.department,
-        startDate,
-        endDate,
-        days,
-        reason,
-        type: 'vacation',
-        status: 'approved', // Auto-approve when added by admin
-        submittedAt: new Date().toISOString(),
-        reviewedBy: 'Admin',
-        reviewedAt: new Date().toISOString()
-      };
-
-      if (db) {
-        const docRef = await addDoc(collection(db, 'vacationRequests'), newRequest);
-        setVacationRequests(prev => [...prev, { ...newRequest, id: docRef.id }]);
-      } else {
-        // Fallback to local state
-        const mockId = Date.now().toString();
-        setVacationRequests(prev => [...prev, { ...newRequest, id: mockId }]);
-      }
-    } catch (error) {
-      console.error('Error adding vacation:', error);
-    }
-  };
-
-  const handleEditVacation = async (requestId: string, startDate: string, endDate: string, reason: string) => {
-    try {
-      const start = new Date(startDate);
-      const end = new Date(endDate);
-      const days = Math.ceil((end.getTime() - start.getTime()) / (1000 * 60 * 60 * 24)) + 1;
-
-      const updateData = {
-        startDate,
-        endDate,
-        days,
-        reason,
-        reviewedAt: new Date().toISOString()
-      };
-
-      if (db) {
-        await updateDoc(doc(db, 'vacationRequests', requestId), updateData);
-        setVacationRequests(prev =>
-          prev.map(req =>
-            req.id === requestId
-              ? { ...req, ...updateData }
-              : req
-          )
-        );
-      } else {
-        // Fallback to local state
-        setVacationRequests(prev =>
-          prev.map(req =>
-            req.id === requestId
-              ? { ...req, ...updateData }
-              : req
-          )
-        );
-      }
-    } catch (error) {
-      console.error('Error editing vacation:', error);
-    }
-  };
-
-  const handleDeleteVacation = async (requestId: string) => {
-    try {
-      if (db) {
-        await deleteDoc(doc(db, 'vacationRequests', requestId));
-        setVacationRequests(prev => prev.filter(req => req.id !== requestId));
-      } else {
-        // Fallback to local state
-        setVacationRequests(prev => prev.filter(req => req.id !== requestId));
-      }
-    } catch (error) {
-      console.error('Error deleting vacation:', error);
-    }
-  };
-
-  const handleEmployeeUpdate = (employeeId: string, vacationDays: { total: number; used: number; remaining: number; carriedOver: number }) => {
-    setEmployees(prev =>
-      prev.map(emp =>
-        emp.id === employeeId
-          ? { ...emp, vacationDays }
-          : emp
-      )
-    );
-  };
-
-  const handleCalendarClose = () => {
-    setShowCalendarModal(false);
-  };
-
-  const handleEmployeeManagerClose = () => {
-    setShowEmployeeModal(false);
   };
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      <div style={{
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        minHeight: '100vh',
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
+          <p style={{ color: '#666' }}>Laster feriesystem...</p>
+          <p style={{ fontSize: '0.875rem', color: '#999', marginTop: '0.5rem' }}>
+            Hvis dette tar for lang tid, prøv å oppdatere siden
+          </p>
+        </div>
       </div>
     );
   }
 
   return (
-    <div>
+    <div style={{ padding: '2rem' }}>
       {/* Header */}
-      <div className="flex justify-between items-center mb-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Ferieadministrasjon</h1>
-          <p className="text-gray-600">Administrer ferie og permisjoner</p>
+      <div className="page-header">
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div>
+            <h1 className="page-title">Ferie</h1>
+            <p className="page-subtitle">Administrer ferieforespørsler</p>
+          </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary"
+          >
+            <Plus style={{ width: '16px', height: '16px' }} />
+            <span>Legg til forespørsel</span>
+          </button>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Ny feriesøknad</span>
-        </button>
       </div>
 
       {/* Filters */}
-      <div className="bg-white p-4 rounded-lg shadow mb-6 mx-6">
-        <div className="flex flex-col md:flex-row gap-4">
-          <div className="flex-1">
-            <input
-              type="text"
-              placeholder="Søk etter ansatt..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
-            />
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div className="grid grid-cols-4" style={{ gap: '1rem' }}>
+          <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
+              Søk
+            </label>
+            <div style={{ position: 'relative' }}>
+              <Search style={{
+                position: 'absolute',
+                left: '0.75rem',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                width: '16px',
+                height: '16px',
+                color: '#666'
+              }} />
+              <input
+                type="text"
+                placeholder="Søk ansatte..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="search-input"
+                style={{ paddingLeft: '2.5rem' }}
+              />
+            </div>
           </div>
           <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
+              Status
+            </label>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as 'all' | 'pending' | 'approved' | 'rejected')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              className="form-input"
             >
-              <option value="all">Alle statuser</option>
+              <option value="all">Alle</option>
               <option value="pending">Venter</option>
               <option value="approved">Godkjent</option>
               <option value="rejected">Avvist</option>
             </select>
           </div>
           <div>
+            <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
+              Type
+            </label>
             <select
               value={typeFilter}
-              onChange={(e) => setTypeFilter(e.target.value as 'all' | 'vacation' | 'sick_leave' | 'other')}
-              className="px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent text-gray-900"
+              onChange={(e) => setTypeFilter(e.target.value)}
+              className="form-input"
             >
               <option value="all">Alle typer</option>
               <option value="vacation">Ferie</option>
               <option value="sick_leave">Sykefravær</option>
-              <option value="other">Andre</option>
+              <option value="other">Annet</option>
             </select>
           </div>
-        </div>
-      </div>
-
-      {/* Content */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 px-6">
-        {/* Stats Cards */}
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-blue-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">TOTALT FORESPØRSLER</p>
-              <p className="text-3xl font-bold text-gray-900">{vacationRequests.length}</p>
-            </div>
-            <div className="w-12 h-12 bg-blue-100 rounded-lg flex items-center justify-center">
-              <Calendar className="h-6 w-6 text-blue-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-yellow-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">VENTENDE</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {vacationRequests.filter(r => r.status === 'pending').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-yellow-100 rounded-lg flex items-center justify-center">
-              <Clock className="h-6 w-6 text-yellow-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-green-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">GODKJENTE</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {vacationRequests.filter(r => r.status === 'approved').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-green-100 rounded-lg flex items-center justify-center">
-              <CheckCircle className="h-6 w-6 text-green-600" />
-            </div>
-          </div>
-        </div>
-
-        <div className="bg-white rounded-lg shadow-sm p-6 border-l-4 border-red-500">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">AVVISTE</p>
-              <p className="text-3xl font-bold text-gray-900">
-                {vacationRequests.filter(r => r.status === 'rejected').length}
-              </p>
-            </div>
-            <div className="w-12 h-12 bg-red-100 rounded-lg flex items-center justify-center">
-              <XCircle className="h-6 w-6 text-red-600" />
-            </div>
+          <div style={{ display: 'flex', alignItems: 'end' }}>
+            <button
+              onClick={() => {
+                setSearchTerm('');
+                setStatusFilter('all');
+                setTypeFilter('all');
+              }}
+              className="btn btn-secondary"
+              style={{ width: '100%' }}
+            >
+              <RefreshCw style={{ width: '16px', height: '16px' }} />
+              <span>Nullstill</span>
+            </button>
           </div>
         </div>
       </div>
 
       {/* Vacation Requests Table */}
-      <div className="bg-white rounded-lg shadow-sm border overflow-hidden">
-        <div className="overflow-x-auto">
-          <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+      <div className="card">
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid rgba(0, 0, 0, 0.1)' }}>
+                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase' }}>
                   Ansatt
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Ferieperiode
+                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase' }}>
+                  Periode
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase' }}>
+                  Type
+                </th>
+                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase' }}>
                   Dager
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Grunn
-                </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase' }}>
                   Status
                 </th>
-                <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                  Innsendt
-                </th>
-                <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                <th style={{ padding: '1rem', textAlign: 'left', fontSize: '0.75rem', fontWeight: '600', color: '#666', textTransform: 'uppercase' }}>
                   Handlinger
                 </th>
               </tr>
             </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
+            <tbody>
               {filteredRequests.map((request) => (
-                <tr key={request.id} className="hover:bg-gray-50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-medium text-sm">
-                          {request.employeeName.split(' ').map(n => n[0]).join('')}
-                        </span>
+                <tr key={request.id} style={{ borderBottom: '1px solid rgba(0, 0, 0, 0.05)' }}>
+                  <td style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center' }}>
+                      <div className="user-avatar" style={{ width: '40px', height: '40px', marginRight: '1rem' }}>
+                        <User style={{ width: '20px', height: '20px' }} />
                       </div>
-                      <div className="ml-4">
-                        <div className="text-sm font-medium text-gray-900">
+                      <div>
+                        <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#333' }}>
                           {request.employeeName}
                         </div>
-                        <div className="text-sm text-gray-500">{request.department}</div>
+                        <div style={{ fontSize: '0.875rem', color: '#666' }}>
+                          {request.department}
+                        </div>
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="text-sm text-gray-900">
-                      {new Date(request.startDate).toLocaleDateString('nb-NO')} - {new Date(request.endDate).toLocaleDateString('nb-NO')}
+                  <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#333' }}>
+                    <div>
+                      <div>{new Date(request.startDate).toLocaleDateString('nb-NO')}</div>
+                      <div style={{ color: '#666' }}>til</div>
+                      <div>{new Date(request.endDate).toLocaleDateString('nb-NO')}</div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className="text-sm text-gray-900">{request.days} dager</span>
-                  </td>
-                  <td className="px-6 py-4">
-                    <div className="text-sm text-gray-900 max-w-xs truncate">
-                      {request.reason}
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getStatusColor(request.status)}`}>
-                      {getStatusText(request.status)}
+                  <td style={{ padding: '1rem' }}>
+                    <span className={`badge ${getTypeColor(request.type)}`}>
+                      {request.type === 'vacation' ? 'Ferie' : 
+                       request.type === 'sick_leave' ? 'Sykefravær' : 'Annet'}
                     </span>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                    {new Date(request.submittedAt).toLocaleDateString('nb-NO')}
+                  <td style={{ padding: '1rem', fontSize: '0.875rem', color: '#333' }}>
+                    {request.days} dager
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                    <div className="flex items-center justify-end space-x-2">
+                  <td style={{ padding: '1rem' }}>
+                    <span className={`badge ${getStatusColor(request.status)}`}>
+                      {request.status === 'pending' ? 'Venter' : 
+                       request.status === 'approved' ? 'Godkjent' : 'Avvist'}
+                    </span>
+                  </td>
+                  <td style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
                       {request.status === 'pending' && (
                         <>
                           <button
-                            onClick={() => {
-                              setSelectedRequest(request);
-                              setShowReviewModal(true);
-                            }}
-                            className="text-green-600 hover:text-green-900"
+                            onClick={() => handleStatusUpdate(request.id, 'approved')}
+                            style={{ color: '#10b981', cursor: 'pointer' }}
                             title="Godkjenn"
                           >
-                            <Check className="h-4 w-4" />
+                            <CheckCircle style={{ width: '16px', height: '16px' }} />
                           </button>
                           <button
-                            onClick={() => handleReview(request.id, 'rejected')}
-                            className="text-red-600 hover:text-red-900"
+                            onClick={() => handleStatusUpdate(request.id, 'rejected')}
+                            style={{ color: '#ef4444', cursor: 'pointer' }}
                             title="Avvis"
                           >
-                            <X className="h-4 w-4" />
+                            <XCircle style={{ width: '16px', height: '16px' }} />
                           </button>
                         </>
                       )}
                       <button
-                        onClick={() => {
-                          setSelectedRequest(request);
-                        }}
-                        className="text-blue-600 hover:text-blue-900"
-                        title="Rediger"
+                        onClick={() => handleDelete(request.id)}
+                        style={{ color: '#ef4444', cursor: 'pointer' }}
+                        title="Slett"
                       >
-                        <Edit className="h-4 w-4" />
-                      </button>
-                      <button
-                        onClick={() => {
-                          setSelectedRequest(request);
-                        }}
-                        className="text-gray-600 hover:text-gray-900"
-                        title="Se detaljer"
-                      >
-                        <Eye className="h-4 w-4" />
+                        <Trash2 style={{ width: '16px', height: '16px' }} />
                       </button>
                     </div>
                   </td>
@@ -600,217 +491,123 @@ export default function VacationPage() {
             </tbody>
           </table>
         </div>
+        
+        {filteredRequests.length === 0 && (
+          <div style={{ textAlign: 'center', padding: '3rem' }}>
+            <Calendar style={{ width: '48px', height: '48px', color: '#ccc', margin: '0 auto 1rem' }} />
+            <h3 style={{ fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
+              Ingen ferieforespørsler
+            </h3>
+            <p style={{ fontSize: '0.875rem', color: '#666' }}>
+              {searchTerm || statusFilter !== 'all' || typeFilter !== 'all'
+                ? 'Ingen forespørsler matcher filterkriteriene.'
+                : 'Ingen ferieforespørsler funnet. Legg til en ny forespørsel for å komme i gang.'}
+            </p>
+          </div>
+        )}
       </div>
 
-      {/* Add Vacation Request Modal */}
+      {/* Add Modal */}
       {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal">
-          <div className="bg-white rounded-lg p-6 w-full max-w-2xl max-h-[90vh] overflow-y-auto modal-content">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">Ny ferieforespørsel</h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <form onSubmit={handleSubmit} className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Ansatt *
-                  </label>
-                  <select
-                    required
-                    value={formData.employeeId}
-                    onChange={(e) => setFormData(prev => ({ ...prev, employeeId: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div style={{ padding: '2rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#333', marginBottom: '1rem' }}>
+                Legg til ferieforespørsel
+              </h3>
+              <form onSubmit={handleSubmit}>
+                <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
+                      Ansatt
+                    </label>
+                    <select
+                      required
+                      value={formData.employeeId}
+                      onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
+                      className="form-input"
+                    >
+                      <option value="">Velg ansatt</option>
+                      {employees.map(employee => (
+                        <option key={employee.id} value={employee.id}>
+                          {employee.firstName} {employee.lastName} - {employee.department}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
+                      Startdato
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.startDate}
+                      onChange={(e) => setFormData({...formData, startDate: e.target.value})}
+                      className="form-input"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
+                      Sluttdato
+                    </label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.endDate}
+                      onChange={(e) => setFormData({...formData, endDate: e.target.value})}
+                      className="form-input"
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
+                      Type
+                    </label>
+                    <select
+                      required
+                      value={formData.type}
+                      onChange={(e) => setFormData({...formData, type: e.target.value as any})}
+                      className="form-input"
+                    >
+                      <option value="vacation">Ferie</option>
+                      <option value="sick_leave">Sykefravær</option>
+                      <option value="other">Annet</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
+                      Årsak
+                    </label>
+                    <textarea
+                      required
+                      value={formData.reason}
+                      onChange={(e) => setFormData({...formData, reason: e.target.value})}
+                      rows={3}
+                      placeholder="Beskriv årsaken til ferien..."
+                      className="form-input"
+                    />
+                  </div>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'end', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => setShowAddModal(false)}
+                    className="btn btn-secondary"
                   >
-                    <option value="">Velg ansatt</option>
-                    {employees.map(emp => (
-                      <option key={emp.id} value={emp.id}>
-                        {emp.firstName} {emp.lastName} ({emp.department})
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Type *
-                  </label>
-                  <select
-                    required
-                    value={formData.type}
-                    onChange={(e) => setFormData(prev => ({ ...prev, type: e.target.value as 'vacation' | 'sick_leave' | 'other' }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
+                    Avbryt
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="btn btn-primary"
                   >
-                    <option value="vacation">Ferie</option>
-                    <option value="sick_leave">Sykemelding</option>
-                    <option value="other">Annet</option>
-                  </select>
+                    {saving ? 'Lagrer...' : 'Legg til'}
+                  </button>
                 </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Startdato *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.startDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  />
-                </div>
-                
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Sluttdato *
-                  </label>
-                  <input
-                    type="date"
-                    required
-                    value={formData.endDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  />
-                </div>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Grunn *
-                </label>
-                <textarea
-                  required
-                  value={formData.reason}
-                  onChange={(e) => setFormData(prev => ({ ...prev, reason: e.target.value }))}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  placeholder="Beskriv grunnen til ferieforespørselen..."
-                />
-              </div>
-              
-              <div className="flex justify-end space-x-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-                >
-                  Avbryt
-                </button>
-                <button
-                  type="submit"
-                  disabled={saving}
-                  className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                >
-                  {saving ? 'Lagrer...' : 'Send forespørsel'}
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* Review Modal */}
-      {showReviewModal && selectedRequest && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 modal">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md modal-content">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold">Gjennomgå forespørsel</h2>
-              <button
-                onClick={() => setShowReviewModal(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-6 w-6" />
-              </button>
-            </div>
-            
-            <div className="space-y-4 mb-6">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ansatt
-                </label>
-                <p className="text-sm text-gray-900">{selectedRequest.employeeName}</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Ferieperiode
-                </label>
-                <p className="text-sm text-gray-900">
-                  {new Date(selectedRequest.startDate).toLocaleDateString('nb-NO')} - {new Date(selectedRequest.endDate).toLocaleDateString('nb-NO')}
-                </p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Grunn
-                </label>
-                <p className="text-sm text-gray-900">{selectedRequest.reason}</p>
-              </div>
-              
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Kommentar (valgfritt)
-                </label>
-                <textarea
-                  value={formData.comments}
-                  onChange={(e) => setFormData(prev => ({ ...prev, comments: e.target.value }))}
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900"
-                  placeholder="Legg til kommentar..."
-                />
-              </div>
-            </div>
-            
-            <div className="flex justify-end space-x-4">
-              <button
-                onClick={() => setShowReviewModal(false)}
-                className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 hover:bg-gray-50"
-              >
-                Avbryt
-              </button>
-              <button
-                onClick={() => handleReview(selectedRequest.id, 'rejected', formData.comments)}
-                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700"
-              >
-                Avvis
-              </button>
-              <button
-                onClick={() => handleReview(selectedRequest.id, 'approved', formData.comments)}
-                className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700"
-              >
-                Godkjenn
-              </button>
+              </form>
             </div>
           </div>
         </div>
-      )}
-
-      {/* Calendar Modal */}
-      {showCalendarModal && (
-        <VacationCalendar
-          vacationRequests={vacationRequests}
-          onDateClick={handleDateClick}
-          onClose={handleCalendarClose}
-          onAddVacation={handleAddVacation}
-          onEditVacation={handleEditVacation}
-          onDeleteVacation={handleDeleteVacation}
-          employees={employees}
-        />
-      )}
-
-      {/* Employee Manager Modal */}
-      {showEmployeeModal && (
-        <EmployeeVacationManager
-          employees={employees}
-          onClose={handleEmployeeManagerClose}
-          onUpdate={handleEmployeeUpdate}
-        />
       )}
     </div>
   );

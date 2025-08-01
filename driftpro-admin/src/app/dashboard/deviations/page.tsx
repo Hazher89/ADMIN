@@ -1,31 +1,678 @@
 'use client';
 
-import React from 'react';
-import { AlertTriangle, Plus } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { firebaseService, Deviation as FirestoreDeviation, Employee, Department } from '@/lib/firebase-services';
+import { 
+  AlertTriangle, 
+  Plus, 
+  Search, 
+  Calendar, 
+  User, 
+  MapPin,
+  Edit,
+  Trash2,
+  MoreHorizontal,
+  CheckCircle,
+  Clock,
+  AlertCircle,
+  Eye,
+  Download,
+  Filter,
+  TrendingUp,
+  TrendingDown,
+  FileText,
+  MessageSquare
+} from 'lucide-react';
 
 export default function DeviationsPage() {
+  const { userProfile } = useAuth();
+  const [deviations, setDeviations] = useState<FirestoreDeviation[]>([]);
+  const [employees, setEmployees] = useState<Employee[]>([]);
+  const [departments, setDepartments] = useState<Department[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedType, setSelectedType] = useState('all');
+  const [selectedSeverity, setSelectedSeverity] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [selectedDeviation, setSelectedDeviation] = useState<FirestoreDeviation | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showFilters, setShowFilters] = useState(false);
+  const [newDeviation, setNewDeviation] = useState({
+    title: '',
+    description: '',
+    type: 'safety' as const,
+    severity: 'medium' as const,
+    departmentId: '',
+    location: ''
+  });
+
+  useEffect(() => {
+    // Check if mobile on mount and resize
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
+    if (userProfile?.companyId) {
+      loadDeviations();
+      loadEmployees();
+      loadDepartments();
+    }
+  }, [userProfile?.companyId]);
+
+  const loadDeviations = async () => {
+    if (!userProfile?.companyId) return;
+
+    try {
+      const data = await firebaseService.getDeviations(userProfile.companyId);
+      setDeviations(data);
+    } catch (error) {
+      console.error('Error loading deviations:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEmployees = async () => {
+    if (!userProfile?.companyId) return;
+
+    try {
+      const data = await firebaseService.getEmployees(userProfile.companyId);
+      setEmployees(data);
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    }
+  };
+
+  const loadDepartments = async () => {
+    if (!userProfile?.companyId) return;
+
+    try {
+      const data = await firebaseService.getDepartments(userProfile.companyId);
+      setDepartments(data);
+    } catch (error) {
+      console.error('Error loading departments:', error);
+    }
+  };
+
+  const filteredDeviations = deviations.filter(deviation => {
+    const matchesSearch = deviation.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         deviation.description.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = selectedStatus === 'all' || deviation.status === selectedStatus;
+    const matchesType = selectedType === 'all' || deviation.type === selectedType;
+    const matchesSeverity = selectedSeverity === 'all' || deviation.severity === selectedSeverity;
+    return matchesSearch && matchesStatus && matchesType && matchesSeverity;
+  });
+
+  const handleAddDeviation = async () => {
+    if (!userProfile?.companyId) return;
+
+    try {
+      await firebaseService.createDeviation({
+        ...newDeviation,
+        reportedBy: userProfile.id,
+        companyId: userProfile.companyId
+      });
+
+      setShowAddModal(false);
+      setNewDeviation({
+        title: '',
+        description: '',
+        type: 'safety',
+        severity: 'medium',
+        departmentId: '',
+        location: ''
+      });
+      loadDeviations();
+    } catch (error) {
+      console.error('Error adding deviation:', error);
+      alert('Failed to add deviation');
+    }
+  };
+
+  const handleEditDeviation = async () => {
+    if (!selectedDeviation) return;
+
+    try {
+      await firebaseService.updateDeviation(selectedDeviation.id, {
+        title: selectedDeviation.title,
+        description: selectedDeviation.description,
+        type: selectedDeviation.type,
+        severity: selectedDeviation.severity,
+        status: selectedDeviation.status,
+        assignedTo: selectedDeviation.assignedTo,
+        departmentId: selectedDeviation.departmentId,
+        location: selectedDeviation.location
+      });
+
+      setShowEditModal(false);
+      setSelectedDeviation(null);
+      loadDeviations();
+    } catch (error) {
+      console.error('Error updating deviation:', error);
+      alert('Failed to update deviation');
+    }
+  };
+
+  const handleDeleteDeviation = async (deviationId: string) => {
+    if (!confirm('Are you sure you want to delete this deviation?')) return;
+
+    try {
+      await firebaseService.updateDeviation(deviationId, { status: 'closed' });
+      loadDeviations();
+    } catch (error) {
+      console.error('Error deleting deviation:', error);
+      alert('Failed to delete deviation');
+    }
+  };
+
+  const getDepartmentName = (departmentId: string) => {
+    const department = departments.find(d => d.id === departmentId);
+    return department?.name || 'Unknown Department';
+  };
+
+  const getReporterName = (reporterId: string) => {
+    const employee = employees.find(e => e.id === reporterId);
+    return employee?.displayName || 'Unknown User';
+  };
+
+  const getAssignedName = (assignedId?: string) => {
+    if (!assignedId) return 'Unassigned';
+    const employee = employees.find(e => e.id === assignedId);
+    return employee?.displayName || 'Unknown User';
+  };
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'reported':
+        return '#f59e0b';
+      case 'investigating':
+        return '#3b82f6';
+      case 'resolved':
+        return '#10b981';
+      case 'closed':
+        return '#6b7280';
+      default:
+        return '#6b7280';
+    }
+  };
+
+  const getStatusIcon = (status: string) => {
+    switch (status) {
+      case 'reported':
+        return <AlertCircle style={{ width: '16px', height: '16px' }} />;
+      case 'investigating':
+        return <Clock style={{ width: '16px', height: '16px' }} />;
+      case 'resolved':
+        return <CheckCircle style={{ width: '16px', height: '16px' }} />;
+      case 'closed':
+        return <CheckCircle style={{ width: '16px', height: '16px' }} />;
+      default:
+        return <AlertCircle style={{ width: '16px', height: '16px' }} />;
+    }
+  };
+
+  const getSeverityColor = (severity: string) => {
+    switch (severity) {
+      case 'low':
+        return '#10b981';
+      case 'medium':
+        return '#f59e0b';
+      case 'high':
+        return '#ef4444';
+      case 'critical':
+        return '#dc2626';
+      default:
+        return '#6b7280';
+    }
+  };
+
+  const getTypeColor = (type: string) => {
+    switch (type) {
+      case 'safety':
+        return '#ef4444';
+      case 'quality':
+        return '#f59e0b';
+      case 'security':
+        return '#8b5cf6';
+      case 'process':
+        return '#3b82f6';
+      case 'other':
+        return '#6b7280';
+      default:
+        return '#6b7280';
+    }
+  };
+
+  const getTotalDeviations = () => deviations.length;
+  const getOpenDeviations = () => deviations.filter(d => d.status === 'reported' || d.status === 'investigating').length;
+  const getResolvedDeviations = () => deviations.filter(d => d.status === 'resolved').length;
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('no-NO', {
+      year: 'numeric',
+      month: 'short',
+      day: 'numeric',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen p-4">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Laster avvik...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="space-y-6">
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-2xl font-bold text-gray-900">Avvik</h1>
-            <p className="text-gray-600">Administrer avviksrapporter og håndtering</p>
+    <div className="min-h-screen bg-gray-50">
+      {/* Mobile Header */}
+      {isMobile && (
+        <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-lg font-semibold text-gray-900">Avvik</h1>
+              <p className="text-sm text-gray-600">{filteredDeviations.length} avvik</p>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="p-2 rounded-lg bg-red-600 text-white"
+            >
+              <Plus className="w-5 h-5" />
+            </button>
           </div>
-          <button className="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors flex items-center space-x-2">
-            <Plus className="h-4 w-4" />
-            <span>Rapporter avvik</span>
-          </button>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <h1 className="page-title">⚠️ Avvik</h1>
+          <p className="page-subtitle">
+            Administrer og følg opp avvik i bedriften
+          </p>
+        </div>
+      )}
+
+      <div className="px-4 py-6 max-w-7xl mx-auto">
+        {/* Stats Overview */}
+        <div className="stats-grid" style={{ marginBottom: '2rem' }}>
+        <div className="stat-card">
+          <div className="stat-number">{getTotalDeviations()}</div>
+          <div className="stat-label">Totalt Avvik</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <AlertTriangle style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
+            <span style={{ fontSize: '0.875rem', color: '#f59e0b' }}>Alle avvik</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{getOpenDeviations()}</div>
+          <div className="stat-label">Åpne Avvik</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <Clock style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
+            <span style={{ fontSize: '0.875rem', color: '#3b82f6' }}>Krever oppfølging</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{getResolvedDeviations()}</div>
+          <div className="stat-label">Løste Avvik</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />
+            <span style={{ fontSize: '0.875rem', color: '#10b981' }}>Løst</span>
+          </div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-number">{deviations.filter(d => d.severity === 'critical').length}</div>
+          <div className="stat-label">Kritiske Avvik</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
+            <AlertTriangle style={{ width: '16px', height: '16px', color: '#ef4444' }} />
+            <span style={{ fontSize: '0.875rem', color: '#ef4444' }}>Kritisk</span>
+          </div>
         </div>
       </div>
-      
-      <div className="bg-white rounded-lg shadow-sm p-6">
-        <div className="text-center py-12">
-          <AlertTriangle className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900 mb-2">Avvikshåndtering</h3>
-          <p className="text-gray-600">Kommer snart - avansert avvikshåndtering med unike ID-er</p>
+
+      {/* Controls */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          <div style={{ position: 'relative' }}>
+            <Search style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#6b7280', width: '16px', height: '16px' }} />
+            <input
+              type="text"
+              placeholder="Søk etter avvik..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                padding: '0.75rem 1rem 0.75rem 2.5rem',
+                border: '1px solid #d1d5db',
+                borderRadius: '8px',
+                width: '300px',
+                fontSize: '0.875rem'
+              }}
+            />
+          </div>
+          <select
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="all">Alle statuser</option>
+            <option value="reported">Rapportert</option>
+            <option value="investigating">Undersøkes</option>
+            <option value="resolved">Løst</option>
+            <option value="closed">Lukket</option>
+          </select>
+          <select
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="all">Alle typer</option>
+            <option value="safety">Sikkerhet</option>
+            <option value="quality">Kvalitet</option>
+            <option value="security">Sikkerhet</option>
+            <option value="process">Prosess</option>
+            <option value="other">Annet</option>
+          </select>
+          <select
+            value={selectedSeverity}
+            onChange={(e) => setSelectedSeverity(e.target.value)}
+            style={{
+              padding: '0.75rem 1rem',
+              border: '1px solid #d1d5db',
+              borderRadius: '8px',
+              fontSize: '0.875rem',
+              backgroundColor: 'white'
+            }}
+          >
+            <option value="all">Alle alvorlighetsgrader</option>
+            <option value="low">Lav</option>
+            <option value="medium">Medium</option>
+            <option value="high">Høy</option>
+            <option value="critical">Kritisk</option>
+          </select>
         </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="btn btn-primary"
+          style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+        >
+          <Plus style={{ width: '16px', height: '16px' }} />
+          Rapporter avvik
+        </button>
       </div>
+
+      {/* Deviations Grid */}
+      <div className="grid grid-cols-2">
+        {filteredDeviations.map((deviation) => (
+          <div key={deviation.id} className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontWeight: '600', color: '#333', margin: '0 0 0.5rem 0' }}>{deviation.title}</h3>
+                <p style={{ color: '#666', fontSize: '0.875rem', margin: 0, lineHeight: '1.4' }}>
+                  {deviation.description.length > 100 
+                    ? `${deviation.description.substring(0, 100)}...` 
+                    : deviation.description}
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => {
+                    setSelectedDeviation(deviation);
+                    setShowEditModal(true);
+                  }}
+                  className="btn btn-secondary"
+                  style={{ padding: '0.5rem', fontSize: '0.75rem' }}
+                >
+                  <Edit style={{ width: '14px', height: '14px' }} />
+                </button>
+                <button
+                  onClick={() => handleDeleteDeviation(deviation.id)}
+                  className="btn btn-danger"
+                  style={{ padding: '0.5rem', fontSize: '0.75rem' }}
+                >
+                  <Trash2 style={{ width: '14px', height: '14px' }} />
+                </button>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <User style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {getReporterName(deviation.reportedBy)}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <MapPin style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {deviation.location || 'Ikke spesifisert'}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Calendar style={{ width: '14px', height: '14px', color: '#6b7280' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {formatDate(deviation.createdAt)}
+                </span>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <span style={{ 
+                  padding: '0.25rem 0.75rem', 
+                  borderRadius: '12px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: '500',
+                  backgroundColor: `${getTypeColor(deviation.type)}20`,
+                  color: getTypeColor(deviation.type)
+                }}>
+                  {deviation.type}
+                </span>
+                <span style={{ 
+                  padding: '0.25rem 0.75rem', 
+                  borderRadius: '12px', 
+                  fontSize: '0.75rem', 
+                  fontWeight: '500',
+                  backgroundColor: `${getSeverityColor(deviation.severity)}20`,
+                  color: getSeverityColor(deviation.severity)
+                }}>
+                  {deviation.severity}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                {getStatusIcon(deviation.status)}
+                <span style={{ 
+                  fontSize: '0.875rem', 
+                  color: getStatusColor(deviation.status),
+                  fontWeight: '500'
+                }}>
+                  {deviation.status}
+                </span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Add Deviation Modal */}
+      {showAddModal && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title">Rapporter nytt avvik</h2>
+              <button onClick={() => setShowAddModal(false)} className="modal-close">×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Tittel</label>
+                  <input
+                    type="text"
+                    value={newDeviation.title}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, title: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Beskrivelse</label>
+                  <textarea
+                    value={newDeviation.description}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, description: e.target.value })}
+                    rows={4}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', resize: 'vertical' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Type</label>
+                  <select
+                    value={newDeviation.type}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, type: e.target.value as any })}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  >
+                    <option value="safety">Sikkerhet</option>
+                    <option value="quality">Kvalitet</option>
+                    <option value="security">Sikkerhet</option>
+                    <option value="process">Prosess</option>
+                    <option value="other">Annet</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Alvorlighetsgrad</label>
+                  <select
+                    value={newDeviation.severity}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, severity: e.target.value as any })}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  >
+                    <option value="low">Lav</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">Høy</option>
+                    <option value="critical">Kritisk</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Avdeling</label>
+                  <select
+                    value={newDeviation.departmentId}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, departmentId: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  >
+                    <option value="">Velg avdeling</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>{dept.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Lokasjon</label>
+                  <input
+                    type="text"
+                    value={newDeviation.location}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, location: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  />
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowAddModal(false)} className="btn btn-secondary">Avbryt</button>
+              <button onClick={handleAddDeviation} className="btn btn-primary">Rapporter avvik</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Deviation Modal */}
+      {showEditModal && selectedDeviation && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2 className="modal-title">Rediger avvik</h2>
+              <button onClick={() => setShowEditModal(false)} className="modal-close">×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Tittel</label>
+                  <input
+                    type="text"
+                    value={selectedDeviation.title}
+                    onChange={(e) => setSelectedDeviation({ ...selectedDeviation, title: e.target.value })}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Beskrivelse</label>
+                  <textarea
+                    value={selectedDeviation.description}
+                    onChange={(e) => setSelectedDeviation({ ...selectedDeviation, description: e.target.value })}
+                    rows={4}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', resize: 'vertical' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Status</label>
+                  <select
+                    value={selectedDeviation.status}
+                    onChange={(e) => setSelectedDeviation({ ...selectedDeviation, status: e.target.value as any })}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  >
+                    <option value="reported">Rapportert</option>
+                    <option value="investigating">Undersøkes</option>
+                    <option value="resolved">Løst</option>
+                    <option value="closed">Lukket</option>
+                  </select>
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Tildelt til</label>
+                  <select
+                    value={selectedDeviation.assignedTo || ''}
+                    onChange={(e) => setSelectedDeviation({ ...selectedDeviation, assignedTo: e.target.value || undefined })}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                  >
+                    <option value="">Ikke tildelt</option>
+                    {employees.map(emp => (
+                      <option key={emp.id} value={emp.id}>{emp.displayName}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowEditModal(false)} className="btn btn-secondary">Avbryt</button>
+              <button onClick={handleEditDeviation} className="btn btn-primary">Lagre endringer</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

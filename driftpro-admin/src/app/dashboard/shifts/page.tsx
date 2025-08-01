@@ -1,14 +1,23 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import {
-  Plus,
-  Calendar,
-  Clock,
-  Eye,
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  Clock, 
+  Plus, 
+  Search, 
+  Calendar, 
+  Users, 
+  Settings,
   Edit,
   Trash2,
-  Users
+  MoreHorizontal,
+  CheckCircle,
+  AlertTriangle,
+  Eye,
+  Copy,
+  Download,
+  Filter
 } from 'lucide-react';
 
 interface Shift {
@@ -17,238 +26,426 @@ interface Shift {
   date: string;
   startTime: string;
   endTime: string;
+  employees: string[];
   department: string;
-  assignedEmployees: string[];
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled';
+  status: 'scheduled' | 'in-progress' | 'completed' | 'cancelled';
   notes?: string;
+  createdBy: string;
+  createdAt: string;
 }
 
 export default function ShiftsPage() {
+  const { userProfile } = useAuth();
   const [shifts, setShifts] = useState<Shift[]>([]);
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [showSettings, setShowSettings] = useState(false);
 
   useEffect(() => {
     loadShifts();
   }, []);
 
   const loadShifts = async () => {
-    const mockShifts: Shift[] = [
-      {
-        id: '1',
-        title: 'Morgenskift IT',
-        date: '2024-07-28',
-        startTime: '08:00',
-        endTime: '16:00',
-        department: 'IT',
-        assignedEmployees: ['John Doe', 'Jane Smith'],
-        status: 'scheduled',
-        notes: 'Vanlig morgenskift for IT-avdelingen'
-      },
-      {
-        id: '2',
-        title: 'Kveldsvakt Salg',
-        date: '2024-07-28',
-        startTime: '16:00',
-        endTime: '00:00',
-        department: 'Sales',
-        assignedEmployees: ['Mike Johnson', 'Sarah Wilson'],
-        status: 'in_progress',
-        notes: 'Kveldsvakt for salgsavdelingen'
-      },
-      {
-        id: '3',
-        title: 'Weekendvakt HR',
-        date: '2024-07-29',
-        startTime: '10:00',
-        endTime: '18:00',
-        department: 'HR',
-        assignedEmployees: ['David Brown'],
-        status: 'scheduled',
-        notes: 'Weekendvakt for HR-avdelingen'
-      }
-    ];
+    try {
+      // Mock data for demonstration
+      const mockShifts: Shift[] = [
+        {
+          id: '1',
+          title: 'Morgenskift',
+          date: '2024-07-28',
+          startTime: '06:00',
+          endTime: '14:00',
+          employees: ['John Doe', 'Jane Smith', 'Mike Johnson'],
+          department: 'Produksjon',
+          status: 'scheduled',
+          notes: 'Vanlig morgenskift med fokus på kvalitetskontroll',
+          createdBy: 'Shift Manager',
+          createdAt: '2024-07-25T10:00:00Z'
+        },
+        {
+          id: '2',
+          title: 'Kveldsvakt',
+          date: '2024-07-28',
+          startTime: '14:00',
+          endTime: '22:00',
+          employees: ['Sarah Wilson', 'Tom Brown', 'Lisa Davis'],
+          department: 'Produksjon',
+          status: 'scheduled',
+          notes: 'Kveldsvakt med vedlikeholdsarbeid',
+          createdBy: 'Shift Manager',
+          createdAt: '2024-07-25T10:00:00Z'
+        },
+        {
+          id: '3',
+          title: 'Natteskift',
+          date: '2024-07-28',
+          startTime: '22:00',
+          endTime: '06:00',
+          employees: ['Alex Turner', 'Emma White'],
+          department: 'Sikkerhet',
+          status: 'in-progress',
+          notes: 'Natteskift med sikkerhetsoppgaver',
+          createdBy: 'Security Manager',
+          createdAt: '2024-07-25T10:00:00Z'
+        },
+        {
+          id: '4',
+          title: 'Weekend Vakt',
+          date: '2024-07-27',
+          startTime: '08:00',
+          endTime: '16:00',
+          employees: ['David Lee', 'Anna Garcia'],
+          department: 'Kundeservice',
+          status: 'completed',
+          notes: 'Weekend vakt for kundeservice',
+          createdBy: 'HR Manager',
+          createdAt: '2024-07-24T10:00:00Z'
+        },
+        {
+          id: '5',
+          title: 'Holiday Cover',
+          date: '2024-07-29',
+          startTime: '10:00',
+          endTime: '18:00',
+          employees: ['Chris Martin', 'Rachel Green'],
+          department: 'IT',
+          status: 'scheduled',
+          notes: 'Holiday cover for IT support',
+          createdBy: 'IT Manager',
+          createdAt: '2024-07-25T10:00:00Z'
+        }
+      ];
 
-    setShifts(mockShifts);
+      setShifts(mockShifts);
+    } catch (error) {
+      console.error('Error loading shifts:', error);
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const getStatusBadge = (status: string) => {
+  const filteredShifts = shifts.filter(shift => {
+    const matchesSearch = shift.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         shift.department.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         shift.employees.some(emp => emp.toLowerCase().includes(searchTerm.toLowerCase()));
+    const matchesStatus = selectedStatus === 'all' || shift.status === selectedStatus;
+    const matchesDepartment = selectedDepartment === 'all' || shift.department === selectedDepartment;
+    return matchesSearch && matchesStatus && matchesDepartment;
+  });
+
+  const statuses = ['all', ...Array.from(new Set(shifts.map(shift => shift.status)))];
+  const departments = ['all', ...Array.from(new Set(shifts.map(shift => shift.department)))];
+
+  const getStatusColor = (status: Shift['status']) => {
     switch (status) {
-      case 'scheduled':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">Planlagt</span>;
-      case 'in_progress':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">Pågår</span>;
-      case 'completed':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">Fullført</span>;
-      case 'cancelled':
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">Kansellert</span>;
-      default:
-        return <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">Ukjent</span>;
+      case 'scheduled': return '#3b82f6';
+      case 'in-progress': return '#f59e0b';
+      case 'completed': return '#10b981';
+      case 'cancelled': return '#ef4444';
     }
+  };
+
+  const getStatusIcon = (status: Shift['status']) => {
+    switch (status) {
+      case 'scheduled': return <Clock style={{ width: '16px', height: '16px', color: '#3b82f6' }} />;
+      case 'in-progress': return <AlertTriangle style={{ width: '16px', height: '16px', color: '#f59e0b' }} />;
+      case 'completed': return <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />;
+      case 'cancelled': return <AlertTriangle style={{ width: '16px', height: '16px', color: '#ef4444' }} />;
+    }
+  };
+
+  const getShiftDuration = (startTime: string, endTime: string) => {
+    const start = new Date(`2000-01-01T${startTime}:00`);
+    const end = new Date(`2000-01-01T${endTime}:00`);
+    const diffMs = end.getTime() - start.getTime();
+    const diffHours = Math.round(diffMs / (1000 * 60 * 60));
+    return `${diffHours} timer`;
   };
 
   return (
     <div>
-      {/* Header */}
-      <div className="flex justify-between items-center mb-6 p-6">
-        <div>
-          <h1 className="text-2xl font-bold text-gray-900">Vakter</h1>
-          <p className="text-gray-600">Administrer vakter og arbeidstider</p>
+      {/* Page Header */}
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card-icon">
+            <Clock />
+          </div>
+          <div>
+            <h1 className="page-title">⏰ Skiftplan</h1>
+            <p className="page-subtitle">
+              Administrer skiftplaner og arbeidstider
+            </p>
+          </div>
         </div>
-        <button
-          onClick={() => setShowAddModal(true)}
-          className="bg-blue-600 text-white px-4 py-2 rounded-lg flex items-center space-x-2 hover:bg-blue-700"
-        >
-          <Plus className="h-4 w-4" />
-          <span>Legg til vakt</span>
-        </button>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <span className="badge badge-primary">
+            {shifts.length} skift
+          </span>
+          <button className="btn btn-secondary" onClick={() => setShowSettings(true)}>
+            <Settings style={{ width: '16px', height: '16px' }} />
+            Innstillinger
+          </button>
+          <button className="btn btn-primary">
+            <Plus style={{ width: '16px', height: '16px' }} />
+            Opprett skift
+          </button>
+        </div>
       </div>
 
-      {/* Shifts Content */}
-      <div className="px-6">
-        {/* Shifts Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {shifts.map((shift) => (
-            <div key={shift.id} className="bg-white rounded-lg shadow-sm border border-gray-200 hover:shadow-md transition-shadow">
-              <div className="p-6">
-                <div className="flex items-center justify-between mb-4">
-                  <div className="flex items-center space-x-3">
-                    <div className="w-12 h-12 bg-gradient-to-r from-green-500 to-blue-500 rounded-lg flex items-center justify-center">
-                      <Clock className="h-6 w-6 text-white" />
-                    </div>
-                    <div>
-                      <h3 className="text-lg font-semibold text-gray-900">{shift.title}</h3>
-                      <p className="text-sm text-gray-500">{shift.department}</p>
-                    </div>
-                  </div>
-                  <div className="flex items-center space-x-2">
-                    <button className="text-blue-600 hover:text-blue-900 p-1" title="Rediger">
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button className="text-gray-600 hover:text-gray-900 p-1" title="Se detaljer">
-                      <Eye className="h-4 w-4" />
-                    </button>
-                    <button className="text-red-600 hover:text-red-900 p-1" title="Slett">
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
+      {/* Search and Filters */}
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
+            <Search className="search-icon" />
+            <input
+              type="text"
+              placeholder="Søk i skift..."
+              className="search-input"
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+            />
+          </div>
+          
+          <select
+            className="form-input"
+            style={{ width: '150px' }}
+            value={selectedStatus}
+            onChange={(e) => setSelectedStatus(e.target.value)}
+          >
+            {statuses.map(status => (
+              <option key={status} value={status}>
+                {status === 'all' ? 'Alle statuser' : 
+                 status === 'scheduled' ? 'Planlagt' :
+                 status === 'in-progress' ? 'Pågår' :
+                 status === 'completed' ? 'Fullført' : 'Kansellert'}
+              </option>
+            ))}
+          </select>
 
-                <div className="space-y-3">
-                  <div className="flex items-center space-x-2">
-                    <Calendar className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-900">
-                      {new Date(shift.date).toLocaleDateString('no-NO')}
-                    </span>
-                  </div>
+          <select
+            className="form-input"
+            style={{ width: '150px' }}
+            value={selectedDepartment}
+            onChange={(e) => setSelectedDepartment(e.target.value)}
+          >
+            {departments.map(department => (
+              <option key={department} value={department}>
+                {department === 'all' ? 'Alle avdelinger' : department}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Clock className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-900">
-                      {shift.startTime} - {shift.endTime}
-                    </span>
-                  </div>
+      {/* Shifts Grid */}
+      <div className="grid grid-cols-3">
+        {filteredShifts.map((shift) => (
+          <div key={shift.id} className="card">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="card-icon">
+                <Clock />
+              </div>
+              <div style={{ flex: '1' }}>
+                <h3 style={{ 
+                  fontWeight: '600', 
+                  color: '#333',
+                  fontSize: '1.1rem',
+                  marginBottom: '0.25rem'
+                }}>
+                  {shift.title}
+                </h3>
+                <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                  {shift.department}
+                </p>
+              </div>
+              <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
+                <MoreHorizontal style={{ width: '16px', height: '16px' }} />
+              </button>
+            </div>
 
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4 text-gray-400" />
-                    <span className="text-sm text-gray-600">
-                      {shift.assignedEmployees.length} ansatte tildelt
-                    </span>
-                  </div>
-
-                  {shift.notes && (
-                    <div className="text-sm text-gray-600 bg-gray-50 p-2 rounded">
-                      {shift.notes}
-                    </div>
-                  )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm text-gray-500">Status</span>
-                    {getStatusBadge(shift.status)}
-                  </div>
-                </div>
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <Calendar style={{ width: '14px', height: '14px', color: '#666' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {new Date(shift.date).toLocaleDateString('no-NO')}
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <Clock style={{ width: '14px', height: '14px', color: '#666' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {shift.startTime} - {shift.endTime} ({getShiftDuration(shift.startTime, shift.endTime)})
+                </span>
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users style={{ width: '14px', height: '14px', color: '#666' }} />
+                <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  {shift.employees.length} ansatte
+                </span>
               </div>
             </div>
-          ))}
-        </div>
+
+            {shift.notes && (
+              <div style={{ marginBottom: '1rem' }}>
+                <p style={{ color: '#666', fontSize: '0.875rem', lineHeight: '1.4' }}>
+                  {shift.notes}
+                </p>
+              </div>
+            )}
+
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                {getStatusIcon(shift.status)}
+                <span style={{ 
+                  fontSize: '0.75rem', 
+                  fontWeight: '600',
+                  color: getStatusColor(shift.status)
+                }}>
+                  {shift.status === 'scheduled' ? 'Planlagt' : 
+                   shift.status === 'in-progress' ? 'Pågår' :
+                   shift.status === 'completed' ? 'Fullført' : 'Kansellert'}
+                </span>
+              </div>
+              <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                Opprettet av: {shift.createdBy}
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}>
+                <Eye style={{ width: '14px', height: '14px' }} />
+                Se
+              </button>
+              <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}>
+                <Edit style={{ width: '14px', height: '14px' }} />
+                Rediger
+              </button>
+              <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}>
+                <Copy style={{ width: '14px', height: '14px' }} />
+                Kopier
+              </button>
+              <button className="btn btn-secondary" style={{ 
+                fontSize: '0.75rem', 
+                padding: '0.25rem 0.5rem',
+                color: '#ef4444',
+                borderColor: '#ef4444'
+              }}>
+                <Trash2 style={{ width: '14px', height: '14px' }} />
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
 
-      {/* Add Shift Modal */}
-      {showAddModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md">
-            <h2 className="text-xl font-bold text-gray-900 mb-4">Opprett nytt skift</h2>
+      {/* Empty State */}
+      {filteredShifts.length === 0 && !loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <Clock style={{ width: '64px', height: '64px', color: '#ccc', margin: '0 auto 1rem' }} />
+          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
+            Ingen skift funnet
+          </h3>
+          <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+            {searchTerm || selectedStatus !== 'all' || selectedDepartment !== 'all' 
+              ? 'Prøv å endre søkekriteriene' 
+              : 'Du har ingen skift planlagt ennå'}
+          </p>
+          <button className="btn btn-primary">
+            <Plus style={{ width: '16px', height: '16px' }} />
+            Opprett ditt første skift
+          </button>
+        </div>
+      )}
+
+      {/* Loading State */}
+      {loading && (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
+          <p style={{ color: '#666' }}>Laster skift...</p>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettings && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          backgroundColor: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div className="card" style={{ 
+            maxWidth: '500px', 
+            width: '90%', 
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#333' }}>
+                Skiftplan Innstillinger
+              </h2>
+              <button 
+                className="btn btn-secondary" 
+                onClick={() => setShowSettings(false)}
+                style={{ padding: '0.5rem' }}
+              >
+                ✕
+              </button>
+            </div>
             
-            <form className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Skifttittel</label>
-                <input
-                  type="text"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Dato</label>
-                <input
-                  type="date"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Starttid</label>
-                  <input
-                    type="time"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Sluttid</label>
-                  <input
-                    type="time"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Avdeling</label>
-                <select className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500">
-                  <option value="IT">IT</option>
-                  <option value="HR">HR</option>
-                  <option value="Sales">Salg</option>
-                  <option value="Marketing">Markedsføring</option>
-                  <option value="Finance">Økonomi</option>
+            <div style={{ marginBottom: '1.5rem' }}>
+              <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#333', marginBottom: '1rem' }}>
+                Generelle Innstillinger
+              </h3>
+              
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  Standard skifttid
+                </label>
+                <select className="form-input" style={{ width: '100%' }}>
+                  <option>8 timer</option>
+                  <option>10 timer</option>
+                  <option>12 timer</option>
                 </select>
               </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Notater</label>
-                <textarea
-                  rows={3}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                />
+              
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  Pause mellom skift
+                </label>
+                <select className="form-input" style={{ width: '100%' }}>
+                  <option>11 timer</option>
+                  <option>12 timer</option>
+                  <option>14 timer</option>
+                </select>
               </div>
-
-              <div className="flex space-x-3 pt-4">
-                <button
-                  type="button"
-                  onClick={() => setShowAddModal(false)}
-                  className="flex-1 bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition-colors"
-                >
-                  Avbryt
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-colors"
-                >
-                  Opprett
-                </button>
+              
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#333' }}>
+                  Varsling før skift
+                </label>
+                <select className="form-input" style={{ width: '100%' }}>
+                  <option>1 time</option>
+                  <option>2 timer</option>
+                  <option>4 timer</option>
+                </select>
               </div>
-            </form>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button className="btn btn-secondary" onClick={() => setShowSettings(false)}>
+                Avbryt
+              </button>
+              <button className="btn btn-primary">
+                Lagre innstillinger
+              </button>
+            </div>
           </div>
         </div>
       )}
