@@ -197,9 +197,9 @@ class FirebaseService {
     if (!db) return null;
 
     try {
-      const doc = await getDoc(doc(db, 'users', id));
-      if (doc.exists()) {
-        return { id: doc.id, ...doc.data() } as Employee;
+      const docSnap = await getDoc(doc(db, 'users', id));
+      if (docSnap.exists()) {
+        return { id: docSnap.id, ...docSnap.data() } as Employee;
       }
       return null;
     } catch (error) {
