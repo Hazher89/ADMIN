@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 export default function LoginPage() {
-  const { login, isAuthenticated, userProfile } = useAuth();
+  const { login, logout, isAuthenticated, userProfile } = useAuth();
   const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -52,11 +52,21 @@ export default function LoginPage() {
     setError('');
 
     try {
-      await login(email, password);
+      // Check if company is selected
+      if (!selectedCompany) {
+        setError('Du må velge en bedrift først. Gå tilbake og velg bedrift.');
+        setLoading(false);
+        return;
+      }
+
+      // Login with email, password and company validation
+      await login(email, password, selectedCompany.id);
+      
+      // If login successful, proceed to dashboard
       router.push('/dashboard');
+      
     } catch (error) {
       setError('Feil e-post eller passord. Prøv igjen.');
-    } finally {
       setLoading(false);
     }
   };

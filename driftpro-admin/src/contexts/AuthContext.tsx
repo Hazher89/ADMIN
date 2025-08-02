@@ -37,7 +37,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isDepartmentLeader: boolean;
   loading: boolean;
-  login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string, companyId?: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
@@ -137,11 +137,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const login = async (email: string, password: string) => {
+  const login = async (email: string, password: string, companyId?: string) => {
     if (!auth) throw new Error('Firebase not initialized');
     
     try {
-      await signInWithEmailAndPassword(auth, email, password);
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      
+      // If companyId is provided, validate that user belongs to this company
+      if (companyId && db) {
+        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          if (userData.companyId && userData.companyId !== companyId) {
+            // User doesn't belong to this company - sign out and throw error
+            await signOut(auth);
+            throw new Error('Du har ikke tilgang til denne bedriften. Kontakt administrator.');
+          }
+        }
+      }
     } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : 'En feil oppstod');
     }
@@ -237,7 +250,7 @@ export function useAuth() {
       isAdmin: false,
       isDepartmentLeader: false,
       loading: true,
-      login: async () => { throw new Error('Auth not initialized'); },
+      login: async (email: string, password: string, companyId?: string) => { throw new Error('Auth not initialized'); },
       logout: async () => { throw new Error('Auth not initialized'); },
       register: async () => { throw new Error('Auth not initialized'); },
       updateUserProfile: async () => { throw new Error('Auth not initialized'); },

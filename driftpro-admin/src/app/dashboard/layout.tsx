@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { 
   Home, 
@@ -57,11 +57,22 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, logout, userProfile } = useAuth();
+  const router = useRouter();
   
   // Debug logging for layout
   console.log('DashboardLayout: user:', user);
   console.log('DashboardLayout: userProfile:', userProfile);
   console.log('DashboardLayout: logout function:', !!logout);
+
+  // GDPR Compliance: Ensure user has a valid companyId
+  useEffect(() => {
+    if (user && userProfile && !userProfile.companyId) {
+      console.error('GDPR VIOLATION: User without companyId detected:', user.email);
+      alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
+      logout();
+      router.push('/companies');
+    }
+  }, [user, userProfile, logout, router]);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
