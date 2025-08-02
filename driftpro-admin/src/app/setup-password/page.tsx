@@ -103,13 +103,18 @@ export default function SetupPasswordPage() {
         router.push('/dashboard');
       }, 3000);
 
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Error setting up password:', error);
-      
-      if (error.code === 'auth/email-already-in-use') {
-        setError('Denne e-postadressen er allerede i bruk. Prøv å logge inn i stedet.');
-      } else if (error.code === 'auth/weak-password') {
-        setError('Passordet er for svakt. Velg et sterkere passord.');
+
+      if (error && typeof error === 'object' && 'code' in error) {
+        const authError = error as { code: string };
+        if (authError.code === 'auth/email-already-in-use') {
+          setError('Denne e-postadressen er allerede i bruk. Prøv å logge inn i stedet.');
+        } else if (authError.code === 'auth/weak-password') {
+          setError('Passordet er for svakt. Velg et sterkere passord.');
+        } else {
+          setError('En feil oppstod under oppsett av passord. Prøv igjen.');
+        }
       } else {
         setError('En feil oppstod under oppsett av passord. Prøv igjen.');
       }
