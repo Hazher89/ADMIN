@@ -145,27 +145,47 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // If companyId is provided, validate that user belongs to this company
       if (companyId && db) {
+        console.log('🔒 GDPR VALIDATION: Checking user access for companyId:', companyId);
+        console.log('🔒 GDPR VALIDATION: User email:', userCredential.user.email);
+        console.log('🔒 GDPR VALIDATION: User UID:', userCredential.user.uid);
+        
         const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
+        console.log('🔒 GDPR VALIDATION: User document exists:', userDoc.exists());
+        
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          console.log('🔒 GDPR VALIDATION: User data:', userData);
+          console.log('🔒 GDPR VALIDATION: User companyId:', userData.companyId);
+          console.log('🔒 GDPR VALIDATION: Expected companyId:', companyId);
           
           // Check if user has a companyId and if it matches the selected company
           if (!userData.companyId) {
+            console.error('🚨 GDPR VIOLATION: User has no companyId:', userCredential.user.email);
             // User has no companyId - this is a GDPR violation
             await signOut(auth);
             throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
           }
           
           if (userData.companyId !== companyId) {
+            console.error('🚨 GDPR VIOLATION: User companyId mismatch:', {
+              userEmail: userCredential.user.email,
+              userCompanyId: userData.companyId,
+              requestedCompanyId: companyId
+            });
             // User doesn't belong to this company - sign out and throw error
             await signOut(auth);
             throw new Error('Du har ikke tilgang til denne bedriften. Kontakt administrator.');
           }
+          
+          console.log('✅ GDPR VALIDATION: User access granted for companyId:', companyId);
         } else {
+          console.error('🚨 GDPR VIOLATION: User document does not exist:', userCredential.user.email);
           // User document doesn't exist - this is also a GDPR violation
           await signOut(auth);
           throw new Error('Brukerprofil ikke funnet. Kontakt administrator.');
         }
+      } else {
+        console.warn('⚠️ GDPR VALIDATION: No companyId provided or db not available');
       }
     } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : 'En feil oppstod');

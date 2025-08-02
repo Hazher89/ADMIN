@@ -67,8 +67,11 @@ export default function DashboardLayout({
   // GDPR Compliance: Ensure user has a valid companyId
   useEffect(() => {
     if (user && userProfile) {
+      console.log('🔒 DASHBOARD GDPR CHECK: User:', user.email);
+      console.log('🔒 DASHBOARD GDPR CHECK: UserProfile:', userProfile);
+      
       if (!userProfile.companyId) {
-        console.error('GDPR VIOLATION: User without companyId detected:', user.email);
+        console.error('🚨 GDPR VIOLATION: User without companyId detected:', user.email);
         alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
         logout();
         router.push('/companies');
@@ -77,12 +80,14 @@ export default function DashboardLayout({
       
       // Additional check: ensure userProfile is properly loaded
       if (!userProfile.id || !userProfile.email) {
-        console.error('GDPR VIOLATION: Incomplete user profile detected:', user.email);
+        console.error('🚨 GDPR VIOLATION: Incomplete user profile detected:', user.email);
         alert('Ufullstendig brukerprofil oppdaget. Du blir logget ut.');
         logout();
         router.push('/companies');
         return;
       }
+      
+      console.log('✅ DASHBOARD GDPR CHECK: User validated successfully');
     }
   }, [user, userProfile, logout, router]);
   const pathname = usePathname();
@@ -94,6 +99,37 @@ export default function DashboardLayout({
 
   // Check if user is from DriftPro AS (has access to admin pages)
   const isDriftProAdmin = userProfile?.companyName === 'DriftPro AS';
+  
+  // Additional GDPR check: Validate against selected company from localStorage
+  useEffect(() => {
+    if (user && userProfile) {
+      const selectedCompany = localStorage.getItem('selectedCompany');
+      if (selectedCompany) {
+        try {
+          const company = JSON.parse(selectedCompany);
+          console.log('🔒 COMPANY VALIDATION: Selected company:', company);
+          console.log('🔒 COMPANY VALIDATION: User companyId:', userProfile.companyId);
+          
+          if (userProfile.companyId !== company.id) {
+            console.error('🚨 GDPR VIOLATION: User companyId does not match selected company:', {
+              userEmail: user.email,
+              userCompanyId: userProfile.companyId,
+              selectedCompanyId: company.id,
+              selectedCompanyName: company.name
+            });
+            alert(`Sikkerhetsbrudd: Du har ikke tilgang til ${company.name}. Du blir logget ut.`);
+            logout();
+            router.push('/companies');
+            return;
+          }
+          
+          console.log('✅ COMPANY VALIDATION: User company matches selected company');
+        } catch (error) {
+          console.error('Error parsing selected company:', error);
+        }
+      }
+    }
+  }, [user, userProfile, logout, router]);
 
   // Function to calculate tooltip position
   const calculateTooltipPosition = (event: React.MouseEvent, itemHref: string) => {

@@ -59,6 +59,10 @@ export default function LoginPage() {
         return;
       }
 
+      console.log('🔒 LOGIN ATTEMPT: User:', email);
+      console.log('🔒 LOGIN ATTEMPT: Selected company:', selectedCompany);
+      console.log('🔒 LOGIN ATTEMPT: Company ID:', selectedCompany.id);
+      
       // Login with email, password and company validation
       await login(email, password, selectedCompany.id);
       
