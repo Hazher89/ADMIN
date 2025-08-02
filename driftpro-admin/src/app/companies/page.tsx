@@ -160,6 +160,7 @@ export default function CompaniesPage() {
   }, []);
 
   const handleCompanySelect = (company: Company) => {
+    console.log('🎯 COMPANY SELECTED:', company.name, 'ID:', company.id);
     // Store selected company in localStorage for login page
     localStorage.setItem('selectedCompany', JSON.stringify(company));
     // Redirect to login page
@@ -167,16 +168,20 @@ export default function CompaniesPage() {
   };
 
   const handleEditCompany = (company: Company, e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     console.log('✏️ EDIT BUTTON CLICKED for company:', company.name, 'ID:', company.id);
+    console.log('✏️ Event details:', e);
     setEditingCompany({ ...company });
     setShowEditModal(true);
     console.log('✏️ Edit modal should now be visible');
   };
 
   const handleDeleteCompany = (company: Company, e: React.MouseEvent) => {
+    e.preventDefault();
     e.stopPropagation();
     console.log('🗑️ DELETE BUTTON CLICKED for company:', company.name, 'ID:', company.id);
+    console.log('🗑️ Event details:', e);
     setCompanyToDelete(company);
     setShowDeleteModal(true);
     console.log('🗑️ Delete modal should now be visible');
@@ -544,10 +549,8 @@ export default function CompaniesPage() {
               key={company.id}
               className="card"
               style={{ 
-                cursor: 'pointer',
                 transition: 'all var(--transition-normal)'
               }}
-              onClick={() => handleCompanySelect(company)}
             >
               {/* Company Header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
@@ -614,12 +617,27 @@ export default function CompaniesPage() {
                   >
                     <Trash2 style={{ width: '16px', height: '16px' }} />
                   </button>
-                  <ArrowRight style={{ 
-                    width: '20px', 
-                    height: '20px', 
-                    color: 'var(--gray-400)',
-                    transition: 'transform var(--transition-normal)'
-                  }} />
+                  <button
+                    onClick={() => {
+                      console.log('🎯 SELECT BUTTON CLICKED for company:', company.name);
+                      handleCompanySelect(company);
+                    }}
+                    style={{
+                      padding: '0.5rem',
+                      background: '#10b981',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="Velg bedrift"
+                  >
+                    <ArrowRight style={{ width: '16px', height: '16px' }} />
+                  </button>
                 </div>
               </div>
 
