@@ -160,23 +160,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // Check if user has a companyId and if it matches the selected company
           if (!userData.companyId) {
-            console.warn('⚠️ USER HAS NO COMPANYID: Attempting to assign companyId:', userCredential.user.email);
-            
-            // Try to assign the companyId to the user
-            try {
-              await updateDoc(doc(db, 'users', userCredential.user.uid), {
-                companyId: companyId,
-                updatedAt: new Date().toISOString()
-              });
-              console.log('✅ COMPANYID ASSIGNED: User now has companyId:', companyId);
-            } catch (updateError) {
-              console.error('❌ FAILED TO ASSIGN COMPANYID:', updateError);
-              await signOut(auth);
-              throw new Error('Kunne ikke tilordne bedrift til bruker. Kontakt administrator.');
-            }
+            console.error('🚨 GDPR VIOLATION: User has no companyId:', userCredential.user.email);
+            await signOut(auth);
+            throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
           }
           
-          if (userData.companyId !== companyId) {
+          // Special handling for DriftPro admin users
+          if (userData.email === 'baxigshti@hotmail.de' || userData.role === 'admin') {
+            // DriftPro admin users can access any company
+            console.log('✅ DRIFTPRO ADMIN ACCESS: Admin user accessing company:', companyId);
+          } else if (userData.companyId !== companyId) {
             console.error('🚨 GDPR VIOLATION: User companyId mismatch:', {
               userEmail: userCredential.user.email,
               userCompanyId: userData.companyId,

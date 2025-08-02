@@ -71,9 +71,10 @@ export default function DashboardLayout({
       console.log('🔒 DASHBOARD GDPR CHECK: UserProfile:', userProfile);
       
       if (!userProfile.companyId) {
-        console.warn('⚠️ USER WITHOUT COMPANYID: User detected without companyId:', user.email);
-        console.warn('⚠️ This user should be assigned a companyId by an administrator');
-        // Don't automatically logout - just warn
+        console.error('🚨 GDPR VIOLATION: User without companyId detected:', user.email);
+        alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
+        logout();
+        router.push('/companies');
         return;
       }
       
@@ -109,15 +110,19 @@ export default function DashboardLayout({
           console.log('🔒 COMPANY VALIDATION: Selected company:', company);
           console.log('🔒 COMPANY VALIDATION: User companyId:', userProfile.companyId);
           
-          if (userProfile.companyId !== company.id) {
-            console.warn('⚠️ COMPANY MISMATCH: User companyId does not match selected company:', {
+          // Special handling for DriftPro admin users
+          if (userProfile.email === 'baxigshti@hotmail.de' || userProfile.role === 'admin') {
+            console.log('✅ DRIFTPRO ADMIN ACCESS: Admin user accessing company:', company.name);
+          } else if (userProfile.companyId !== company.id) {
+            console.error('🚨 GDPR VIOLATION: User companyId does not match selected company:', {
               userEmail: user.email,
               userCompanyId: userProfile.companyId,
               selectedCompanyId: company.id,
               selectedCompanyName: company.name
             });
-            console.warn('⚠️ This should be investigated by an administrator');
-            // Don't automatically logout - just warn
+            alert(`Sikkerhetsbrudd: Du har ikke tilgang til ${company.name}. Du blir logget ut.`);
+            logout();
+            router.push('/companies');
             return;
           }
           
