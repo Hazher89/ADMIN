@@ -54,6 +54,17 @@ export default function CompaniesPage() {
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
 
+  // Debug state changes
+  useEffect(() => {
+    console.log('🔍 STATE DEBUG: showDeleteModal:', showDeleteModal);
+    console.log('🔍 STATE DEBUG: companyToDelete:', companyToDelete);
+  }, [showDeleteModal, companyToDelete]);
+
+  useEffect(() => {
+    console.log('🔍 STATE DEBUG: showEditModal:', showEditModal);
+    console.log('🔍 STATE DEBUG: editingCompany:', editingCompany);
+  }, [showEditModal, editingCompany]);
+
   const loadCompanies = async () => {
     try {
       setLoading(true);
@@ -157,18 +168,29 @@ export default function CompaniesPage() {
 
   const handleEditCompany = (company: Company, e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('✏️ EDIT BUTTON CLICKED for company:', company.name, 'ID:', company.id);
     setEditingCompany({ ...company });
     setShowEditModal(true);
+    console.log('✏️ Edit modal should now be visible');
   };
 
   const handleDeleteCompany = (company: Company, e: React.MouseEvent) => {
     e.stopPropagation();
+    console.log('🗑️ DELETE BUTTON CLICKED for company:', company.name, 'ID:', company.id);
     setCompanyToDelete(company);
     setShowDeleteModal(true);
+    console.log('🗑️ Delete modal should now be visible');
   };
 
   const confirmDeleteCompany = async () => {
-    if (!companyToDelete || !db) return;
+    console.log('🗑️ CONFIRM DELETE called');
+    console.log('🗑️ companyToDelete:', companyToDelete);
+    console.log('🗑️ db available:', !!db);
+    
+    if (!companyToDelete || !db) {
+      console.error('❌ Cannot delete: missing companyToDelete or db');
+      return;
+    }
 
     try {
       setDeletingCompany(companyToDelete.id);
@@ -560,15 +582,15 @@ export default function CompaniesPage() {
                     onClick={(e) => handleEditCompany(company, e)}
                     style={{
                       padding: '0.5rem',
-                      background: 'var(--primary)',
+                      background: '#3b82f6',
                       border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      color: 'var(--white)',
+                      borderRadius: '6px',
+                      color: 'white',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      transition: 'all var(--transition-normal)'
+                      transition: 'all 0.2s ease'
                     }}
                     title="Rediger bedrift"
                   >
@@ -578,15 +600,15 @@ export default function CompaniesPage() {
                     onClick={(e) => handleDeleteCompany(company, e)}
                     style={{
                       padding: '0.5rem',
-                      background: 'var(--danger)',
+                      background: '#dc2626',
                       border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      color: 'var(--white)',
+                      borderRadius: '6px',
+                      color: 'white',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
-                      transition: 'all var(--transition-normal)'
+                      transition: 'all 0.2s ease'
                     }}
                     title="Slett bedrift"
                   >
