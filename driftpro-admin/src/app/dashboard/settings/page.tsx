@@ -637,7 +637,14 @@ export default function SettingsPage() {
             className="btn btn-error"
             onClick={async () => {
               if (confirm('Er du sikker på at du vil logge ut?')) {
-                await logout();
+                try {
+                  await logout();
+                  // Redirect to login page after successful logout
+                  window.location.href = '/login';
+                } catch (error) {
+                  console.error('Error during logout:', error);
+                  alert('Feil ved utlogging. Prøv igjen.');
+                }
               }
             }}
             style={{ marginLeft: 'auto' }}
