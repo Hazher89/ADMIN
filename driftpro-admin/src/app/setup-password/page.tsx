@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -8,7 +8,7 @@ import { auth, db } from '@/lib/firebase';
 import { Eye, EyeOff, Lock, User, Building } from 'lucide-react';
 import { emailService } from '@/lib/email-service';
 
-export default function SetupPasswordPage() {
+function SetupPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [loading, setLoading] = useState(false);
@@ -246,5 +246,13 @@ export default function SetupPasswordPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function SetupPasswordPage() {
+  return (
+    <Suspense fallback={<div>Laster...</div>}>
+      <SetupPasswordContent />
+    </Suspense>
   );
 } 
