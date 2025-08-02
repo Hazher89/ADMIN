@@ -10,9 +10,14 @@ import {
   MapPin,
   Phone,
   Mail,
-  ArrowRight
+  ArrowRight,
+  Edit,
+  Trash2,
+  Plus,
+  X,
+  Save
 } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Company {
@@ -43,6 +48,11 @@ export default function CompaniesPage() {
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
   const [searching, setSearching] = useState(false);
+  const [editingCompany, setEditingCompany] = useState<Company | null>(null);
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [deletingCompany, setDeletingCompany] = useState<string | null>(null);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
 
   const loadCompanies = async () => {
     try {
@@ -143,6 +153,184 @@ export default function CompaniesPage() {
     localStorage.setItem('selectedCompany', JSON.stringify(company));
     // Redirect to login page
     router.push('/login');
+  };
+
+  const handleEditCompany = (company: Company, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setEditingCompany({ ...company });
+    setShowEditModal(true);
+  };
+
+  const handleDeleteCompany = (company: Company, e: React.MouseEvent) => {
+    e.stopPropagation();
+    setCompanyToDelete(company);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteCompany = async () => {
+    if (!companyToDelete || !db) return;
+
+    try {
+      setDeletingCompany(companyToDelete.id);
+      console.log('🗑️ DELETING COMPANY:', companyToDelete.name, 'ID:', companyToDelete.id);
+
+      // 1. Delete all users associated with this company
+      const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyToDelete.id));
+      const usersSnapshot = await getDocs(usersQuery);
+      console.log('🗑️ Found users to delete:', usersSnapshot.size);
+
+      const userDeletePromises = usersSnapshot.docs.map(async (userDoc) => {
+        console.log('🗑️ Deleting user:', userDoc.data().email);
+        return deleteDoc(doc(db!, 'users', userDoc.id));
+      });
+
+      // 2. Delete all documents associated with this company
+      const documentsQuery = query(collection(db, 'documents'), where('companyId', '==', companyToDelete.id));
+      const documentsSnapshot = await getDocs(documentsQuery);
+      console.log('🗑️ Found documents to delete:', documentsSnapshot.size);
+
+      const documentDeletePromises = documentsSnapshot.docs.map(async (docDoc) => {
+        console.log('🗑️ Deleting document:', docDoc.data().title);
+        return deleteDoc(doc(db!, 'documents', docDoc.id));
+      });
+
+      // 3. Delete all deviations associated with this company
+      const deviationsQuery = query(collection(db!, 'deviations'), where('companyId', '==', companyToDelete.id));
+      const deviationsSnapshot = await getDocs(deviationsQuery);
+      console.log('🗑️ Found deviations to delete:', deviationsSnapshot.size);
+
+      const deviationDeletePromises = deviationsSnapshot.docs.map(async (deviationDoc) => {
+        console.log('🗑️ Deleting deviation:', deviationDoc.data().title);
+        return deleteDoc(doc(db!, 'deviations', deviationDoc.id));
+      });
+
+      // 4. Delete all chats associated with this company
+      const chatsQuery = query(collection(db!, 'chats'), where('companyId', '==', companyToDelete.id));
+      const chatsSnapshot = await getDocs(chatsQuery);
+      console.log('🗑️ Found chats to delete:', chatsSnapshot.size);
+
+      const chatDeletePromises = chatsSnapshot.docs.map(async (chatDoc) => {
+        console.log('🗑️ Deleting chat:', chatDoc.data().title);
+        return deleteDoc(doc(db!, 'chats', chatDoc.id));
+      });
+
+      // 5. Delete all messages associated with this company
+      const messagesQuery = query(collection(db!, 'messages'), where('companyId', '==', companyToDelete.id));
+      const messagesSnapshot = await getDocs(messagesQuery);
+      console.log('🗑️ Found messages to delete:', messagesSnapshot.size);
+
+      const messageDeletePromises = messagesSnapshot.docs.map(async (messageDoc) => {
+        console.log('🗑️ Deleting message:', messageDoc.id);
+        return deleteDoc(doc(db!, 'messages', messageDoc.id));
+      });
+
+      // 6. Delete all absences associated with this company
+      const absencesQuery = query(collection(db!, 'absences'), where('companyId', '==', companyToDelete.id));
+      const absencesSnapshot = await getDocs(absencesQuery);
+      console.log('🗑️ Found absences to delete:', absencesSnapshot.size);
+
+      const absenceDeletePromises = absencesSnapshot.docs.map(async (absenceDoc) => {
+        console.log('🗑️ Deleting absence:', absenceDoc.id);
+        return deleteDoc(doc(db!, 'absences', absenceDoc.id));
+      });
+
+      // 7. Delete all timeclock records associated with this company
+      const timeclockQuery = query(collection(db!, 'timeclock'), where('companyId', '==', companyToDelete.id));
+      const timeclockSnapshot = await getDocs(timeclockQuery);
+      console.log('🗑️ Found timeclock records to delete:', timeclockSnapshot.size);
+
+      const timeclockDeletePromises = timeclockSnapshot.docs.map(async (timeclockDoc) => {
+        console.log('🗑️ Deleting timeclock record:', timeclockDoc.id);
+        return deleteDoc(doc(db!, 'timeclock', timeclockDoc.id));
+      });
+
+      // 8. Delete all departments associated with this company
+      const departmentsQuery = query(collection(db!, 'departments'), where('companyId', '==', companyToDelete.id));
+      const departmentsSnapshot = await getDocs(departmentsQuery);
+      console.log('🗑️ Found departments to delete:', departmentsSnapshot.size);
+
+      const departmentDeletePromises = departmentsSnapshot.docs.map(async (departmentDoc) => {
+        console.log('🗑️ Deleting department:', departmentDoc.data().name);
+        return deleteDoc(doc(db!, 'departments', departmentDoc.id));
+      });
+
+      // Execute all delete operations
+      await Promise.all([
+        ...userDeletePromises,
+        ...documentDeletePromises,
+        ...deviationDeletePromises,
+        ...chatDeletePromises,
+        ...messageDeletePromises,
+        ...absenceDeletePromises,
+        ...timeclockDeletePromises,
+        ...departmentDeletePromises
+      ]);
+
+      // 9. Finally, delete the company itself
+      console.log('🗑️ Deleting company:', companyToDelete.name);
+      await deleteDoc(doc(db!, 'companies', companyToDelete.id));
+
+      console.log('✅ COMPANY DELETION COMPLETE');
+      
+      // Update local state
+      setCompanies(companies.filter(c => c.id !== companyToDelete.id));
+      setFilteredCompanies(filteredCompanies.filter(c => c.id !== companyToDelete.id));
+      
+      // Close modal and reset state
+      setShowDeleteModal(false);
+      setCompanyToDelete(null);
+      setDeletingCompany(null);
+      
+      alert(`✅ Bedriften "${companyToDelete.name}" og all tilknyttet data er slettet.`);
+
+    } catch (error) {
+      console.error('❌ Error deleting company:', error);
+      alert('❌ Feil ved sletting av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setDeletingCompany(null);
+    }
+  };
+
+  const handleSaveCompany = async () => {
+    if (!editingCompany || !db) return;
+
+    try {
+      console.log('💾 SAVING COMPANY:', editingCompany.name);
+      
+      // Update company in Firebase
+      await updateDoc(doc(db!, 'companies', editingCompany.id), {
+        name: editingCompany.name,
+        orgNumber: editingCompany.orgNumber,
+        phone: editingCompany.phone,
+        email: editingCompany.email,
+        adminEmail: editingCompany.adminEmail,
+        address: editingCompany.address,
+        industry: editingCompany.industry,
+        employeeCount: editingCompany.employeeCount,
+        status: editingCompany.status,
+        subscriptionPlan: editingCompany.subscriptionPlan,
+        contactPerson: editingCompany.contactPerson,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update local state
+      setCompanies(companies.map(c => 
+        c.id === editingCompany.id ? { ...editingCompany, updatedAt: new Date().toISOString() } : c
+      ));
+      setFilteredCompanies(filteredCompanies.map(c => 
+        c.id === editingCompany.id ? { ...editingCompany, updatedAt: new Date().toISOString() } : c
+      ));
+
+      // Close modal and reset state
+      setShowEditModal(false);
+      setEditingCompany(null);
+      
+      alert('✅ Bedrift oppdatert!');
+
+    } catch (error) {
+      console.error('❌ Error updating company:', error);
+      alert('❌ Feil ved oppdatering av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
   };
 
 
@@ -367,12 +555,50 @@ export default function CompaniesPage() {
                     </span>
                   </div>
                 </div>
-                <ArrowRight style={{ 
-                  width: '20px', 
-                  height: '20px', 
-                  color: 'var(--gray-400)',
-                  transition: 'transform var(--transition-normal)'
-                }} />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button
+                    onClick={(e) => handleEditCompany(company, e)}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'var(--primary)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      color: 'var(--white)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all var(--transition-normal)'
+                    }}
+                    title="Rediger bedrift"
+                  >
+                    <Edit style={{ width: '16px', height: '16px' }} />
+                  </button>
+                  <button
+                    onClick={(e) => handleDeleteCompany(company, e)}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'var(--danger)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      color: 'var(--white)',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all var(--transition-normal)'
+                    }}
+                    title="Slett bedrift"
+                  >
+                    <Trash2 style={{ width: '16px', height: '16px' }} />
+                  </button>
+                  <ArrowRight style={{ 
+                    width: '20px', 
+                    height: '20px', 
+                    color: 'var(--gray-400)',
+                    transition: 'transform var(--transition-normal)'
+                  }} />
+                </div>
               </div>
 
               {/* Company Details */}
@@ -492,6 +718,348 @@ export default function CompaniesPage() {
           </a>
         </div>
       </div>
+
+      {/* Edit Company Modal */}
+      {showEditModal && editingCompany && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                Rediger bedrift
+              </h2>
+              <button
+                onClick={() => setShowEditModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Bedriftsnavn *
+                </label>
+                <input
+                  type="text"
+                  value={editingCompany.name}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Organisasjonsnummer
+                </label>
+                <input
+                  type="text"
+                  value={editingCompany.orgNumber}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, orgNumber: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Telefon
+                </label>
+                <input
+                  type="text"
+                  value={editingCompany.phone}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, phone: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  E-post
+                </label>
+                <input
+                  type="email"
+                  value={editingCompany.email}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, email: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Admin E-post
+                </label>
+                <input
+                  type="email"
+                  value={editingCompany.adminEmail}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, adminEmail: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Adresse
+                </label>
+                <input
+                  type="text"
+                  value={editingCompany.address}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, address: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Bransje
+                </label>
+                <input
+                  type="text"
+                  value={editingCompany.industry}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, industry: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Antall ansatte
+                </label>
+                <input
+                  type="number"
+                  value={editingCompany.employeeCount}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, employeeCount: parseInt(e.target.value) || 0 })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Status
+                </label>
+                <select
+                  value={editingCompany.status}
+                  onChange={(e) => setEditingCompany({ ...editingCompany, status: e.target.value as 'active' | 'inactive' | 'pending' })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                  <option value="pending">Venter</option>
+                </select>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={handleSaveCompany}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--primary)',
+                  color: 'var(--white)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                <Save style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                Lagre endringer
+              </button>
+              <button
+                onClick={() => setShowEditModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--gray-200)',
+                  color: 'var(--gray-700)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Company Modal */}
+      {showDeleteModal && companyToDelete && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                background: 'var(--danger)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem'
+              }}>
+                <Trash2 style={{ width: '32px', height: '32px', color: 'var(--white)' }} />
+              </div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                Slett bedrift
+              </h2>
+              <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-base)', lineHeight: '1.5' }}>
+                Er du sikker på at du vil slette <strong>{companyToDelete.name}</strong>?
+              </p>
+              <p style={{ color: 'var(--danger)', fontSize: 'var(--font-size-sm)', marginTop: '1rem', fontWeight: '500' }}>
+                ⚠️ Dette vil også slette alle brukere, dokumenter, avvik, chat-meldinger og annen data tilknyttet denne bedriften.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={confirmDeleteCompany}
+                disabled={deletingCompany === companyToDelete.id}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--danger)',
+                  color: 'var(--white)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  cursor: deletingCompany === companyToDelete.id ? 'not-allowed' : 'pointer',
+                  opacity: deletingCompany === companyToDelete.id ? 0.6 : 1
+                }}
+              >
+                {deletingCompany === companyToDelete.id ? (
+                  <>
+                    <div className="loading" style={{ width: '16px', height: '16px', marginRight: '0.5rem' }}></div>
+                    Sletter...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                    Ja, slett bedrift
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingCompany === companyToDelete.id}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--gray-200)',
+                  color: 'var(--gray-700)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  cursor: deletingCompany === companyToDelete.id ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
