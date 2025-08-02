@@ -166,6 +166,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           }
           
           // Strict GDPR validation - no exceptions
+          console.log('🔒 GDPR VALIDATION: Comparing companyIds:', {
+            userCompanyId: userData.companyId,
+            requestedCompanyId: companyId,
+            match: userData.companyId === companyId
+          });
+          
           if (userData.companyId !== companyId) {
             console.error('🚨 GDPR VIOLATION: User companyId mismatch:', {
               userEmail: userCredential.user.email,
@@ -173,11 +179,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               requestedCompanyId: companyId
             });
             // User doesn't belong to this company - sign out and throw error
+            console.error('🚨 SIGNING OUT USER DUE TO GDPR VIOLATION');
             await signOut(auth);
             throw new Error('Du har ikke tilgang til denne bedriften. Kontakt administrator.');
           }
           
-          console.log('✅ GDPR VALIDATION: User access granted for companyId:', companyId);
+          console.log('✅ GDPR VALIDATION: User access granted - companyId matches');
         } else {
           console.error('🚨 GDPR VIOLATION: User document does not exist:', userCredential.user.email);
           // User document doesn't exist - this is also a GDPR violation
@@ -186,6 +193,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       } else {
         console.warn('⚠️ GDPR VALIDATION: No companyId provided or db not available');
+        // If no companyId provided, this is also a violation
+        await signOut(auth);
+        throw new Error('Ingen bedrift valgt. Vennligst velg en bedrift først.');
       }
     } catch (error: unknown) {
       throw new Error(error instanceof Error ? error.message : 'En feil oppstod');

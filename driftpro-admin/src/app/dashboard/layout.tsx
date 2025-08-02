@@ -90,6 +90,37 @@ export default function DashboardLayout({
       console.log('✅ DASHBOARD GDPR CHECK: User validated successfully');
     }
   }, [user, userProfile, logout, router]);
+
+  // Immediate GDPR validation on mount
+  useEffect(() => {
+    if (user && userProfile) {
+      const selectedCompany = localStorage.getItem('selectedCompany');
+      if (selectedCompany) {
+        try {
+          const company = JSON.parse(selectedCompany);
+          console.log('🔒 IMMEDIATE GDPR CHECK: Selected company:', company);
+          console.log('🔒 IMMEDIATE GDPR CHECK: User companyId:', userProfile.companyId);
+          
+          if (userProfile.companyId !== company.id) {
+            console.error('🚨 IMMEDIATE GDPR VIOLATION: User companyId does not match selected company:', {
+              userEmail: user.email,
+              userCompanyId: userProfile.companyId,
+              selectedCompanyId: company.id,
+              selectedCompanyName: company.name
+            });
+            alert(`Sikkerhetsbrudd: Du har ikke tilgang til ${company.name}. Du blir logget ut umiddelbart.`);
+            logout();
+            router.push('/companies');
+            return;
+          }
+          
+          console.log('✅ IMMEDIATE GDPR CHECK: User company matches selected company');
+        } catch (error) {
+          console.error('Error parsing selected company:', error);
+        }
+      }
+    }
+  }, [user, userProfile, logout, router]);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
