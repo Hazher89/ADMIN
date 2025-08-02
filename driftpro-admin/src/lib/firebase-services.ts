@@ -224,7 +224,7 @@ class FirebaseService {
         type: 'employee_added',
         title: 'Ny ansatt registrert',
         description: `${employeeData.displayName} ble lagt til i systemet`,
-        userId: employeeData.id,
+        userId: docRef.id,
         userName: employeeData.displayName,
         companyId: employeeData.companyId
       });
