@@ -15,10 +15,16 @@ import {
   Trash2,
   Plus,
   X,
-  Save
+  Save,
+  Key,
+  UserPlus,
+  UserMinus,
+  Settings,
+  Eye,
+  EyeOff
 } from 'lucide-react';
 import { collection, getDocs, deleteDoc, doc, updateDoc, addDoc, query, where } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { db, auth } from '@/lib/firebase';
 
 interface Company {
   id: string;
@@ -53,6 +59,15 @@ export default function CompaniesPage() {
   const [deletingCompany, setDeletingCompany] = useState<string | null>(null);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showAdminModal, setShowAdminModal] = useState(false);
+  const [showEmployeesModal, setShowEmployeesModal] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [employees, setEmployees] = useState<any[]>([]);
+  const [loadingEmployees, setLoadingEmployees] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [passwordResetEmail, setPasswordResetEmail] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
 
   // Debug state changes
   useEffect(() => {
@@ -360,6 +375,134 @@ export default function CompaniesPage() {
     }
   };
 
+  const handlePasswordReset = async () => {
+    if (!passwordResetEmail || !db) return;
+
+    try {
+      console.log('🔑 SENDING PASSWORD RESET to:', passwordResetEmail);
+      
+      // Send password reset email using Firebase Auth
+      const { sendPasswordResetEmail } = await import('firebase/auth');
+      await sendPasswordResetEmail(auth!, passwordResetEmail);
+      
+      alert('✅ Passord tilbakestillings-e-post sendt til ' + passwordResetEmail);
+      setShowPasswordModal(false);
+      setPasswordResetEmail('');
+      
+    } catch (error) {
+      console.error('❌ Error sending password reset:', error);
+      alert('❌ Feil ved sending av passord tilbakestilling: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
+  const handleAddAdmin = async () => {
+    if (!newAdminEmail || !selectedCompany || !db) return;
+
+    try {
+      console.log('👑 ADDING ADMIN:', newAdminEmail, 'to company:', selectedCompany.name);
+      
+      // Check if user already exists
+      const usersQuery = query(collection(db, 'users'), where('email', '==', newAdminEmail));
+      const userSnapshot = await getDocs(usersQuery);
+      
+      if (userSnapshot.empty) {
+        // Create new user with admin role
+        const newUser = {
+          email: newAdminEmail,
+          displayName: newAdminEmail.split('@')[0],
+          role: 'admin',
+          companyId: selectedCompany.id,
+          companyName: selectedCompany.name,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        };
+        
+        await addDoc(collection(db, 'users'), newUser);
+        alert('✅ Ny admin bruker opprettet: ' + newAdminEmail);
+      } else {
+        // Update existing user to admin
+        const userDoc = userSnapshot.docs[0];
+        await updateDoc(doc(db, 'users', userDoc.id), {
+          role: 'admin',
+          companyId: selectedCompany.id,
+          companyName: selectedCompany.name,
+          updatedAt: new Date().toISOString()
+        });
+        alert('✅ Bruker oppdatert til admin: ' + newAdminEmail);
+      }
+      
+      setShowAdminModal(false);
+      setNewAdminEmail('');
+      
+    } catch (error) {
+      console.error('❌ Error adding admin:', error);
+      alert('❌ Feil ved tilføying av admin: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
+  const loadEmployees = async (companyId: string) => {
+    if (!db) return;
+
+    try {
+      setLoadingEmployees(true);
+      console.log('👥 LOADING EMPLOYEES for company:', companyId);
+      
+      const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
+      const snapshot = await getDocs(usersQuery);
+      
+      const employeesData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setEmployees(employeesData);
+      console.log('👥 Loaded employees:', employeesData.length);
+      
+    } catch (error) {
+      console.error('❌ Error loading employees:', error);
+      alert('❌ Feil ved lasting av ansatte: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setLoadingEmployees(false);
+    }
+  };
+
+  const handleRemoveEmployee = async (employeeId: string, employeeEmail: string) => {
+    if (!db) return;
+
+    try {
+      console.log('👤 REMOVING EMPLOYEE:', employeeEmail);
+      
+      // Delete user from Firebase
+      await deleteDoc(doc(db, 'users', employeeId));
+      
+      // Update local state
+      setEmployees(employees.filter(emp => emp.id !== employeeId));
+      
+      alert('✅ Ansatt fjernet: ' + employeeEmail);
+      
+    } catch (error) {
+      console.error('❌ Error removing employee:', error);
+      alert('❌ Feil ved fjerning av ansatt: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
+  const handleOpenEmployeesModal = (company: Company) => {
+    setSelectedCompany(company);
+    setShowEmployeesModal(true);
+    loadEmployees(company.id);
+  };
+
+  const handleOpenPasswordModal = (company: Company) => {
+    setSelectedCompany(company);
+    setPasswordResetEmail(company.adminEmail || '');
+    setShowPasswordModal(true);
+  };
+
+  const handleOpenAdminModal = (company: Company) => {
+    setSelectedCompany(company);
+    setShowAdminModal(true);
+  };
+
 
 
   if (loading) {
@@ -580,7 +723,7 @@ export default function CompaniesPage() {
                     </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                   <button
                     onClick={(e) => handleEditCompany(company, e)}
                     style={{
@@ -598,6 +741,60 @@ export default function CompaniesPage() {
                     title="Rediger bedrift"
                   >
                     <Edit style={{ width: '16px', height: '16px' }} />
+                  </button>
+                  <button
+                    onClick={() => handleOpenPasswordModal(company)}
+                    style={{
+                      padding: '0.5rem',
+                      background: '#f59e0b',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="Send passord tilbakestilling"
+                  >
+                    <Key style={{ width: '16px', height: '16px' }} />
+                  </button>
+                  <button
+                    onClick={() => handleOpenAdminModal(company)}
+                    style={{
+                      padding: '0.5rem',
+                      background: '#8b5cf6',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="Legg til admin"
+                  >
+                    <UserPlus style={{ width: '16px', height: '16px' }} />
+                  </button>
+                  <button
+                    onClick={() => handleOpenEmployeesModal(company)}
+                    style={{
+                      padding: '0.5rem',
+                      background: '#06b6d4',
+                      border: 'none',
+                      borderRadius: '6px',
+                      color: 'white',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}
+                    title="Administrer ansatte"
+                  >
+                    <Users style={{ width: '16px', height: '16px' }} />
                   </button>
                   <button
                     onClick={(e) => handleDeleteCompany(company, e)}
@@ -1097,6 +1294,319 @@ export default function CompaniesPage() {
                 Avbryt
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Password Reset Modal */}
+      {showPasswordModal && selectedCompany && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#111827' }}>
+                Send passord tilbakestilling
+              </h2>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px', color: '#9ca3af' }} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+                Send passord tilbakestillings-e-post til admin for <strong>{selectedCompany.name}</strong>
+              </p>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  E-post adresse
+                </label>
+                <input
+                  type="email"
+                  value={passwordResetEmail}
+                  onChange={(e) => setPasswordResetEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem'
+                  }}
+                  placeholder="admin@bedrift.no"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={handlePasswordReset}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#f59e0b',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                <Key style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                Send e-post
+              </button>
+              <button
+                onClick={() => setShowPasswordModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#e5e7eb',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Add Admin Modal */}
+      {showAdminModal && selectedCompany && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#111827' }}>
+                Legg til admin
+              </h2>
+              <button
+                onClick={() => setShowAdminModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px', color: '#9ca3af' }} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <p style={{ color: '#6b7280', marginBottom: '1rem' }}>
+                Legg til ny admin for <strong>{selectedCompany.name}</strong>
+              </p>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  E-post adresse
+                </label>
+                <input
+                  type="email"
+                  value={newAdminEmail}
+                  onChange={(e) => setNewAdminEmail(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '1rem'
+                  }}
+                  placeholder="nyadmin@bedrift.no"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={handleAddAdmin}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#8b5cf6',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                <UserPlus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                Legg til admin
+              </button>
+              <button
+                onClick={() => setShowAdminModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#e5e7eb',
+                  color: '#374151',
+                  border: 'none',
+                  borderRadius: '6px',
+                  fontSize: '1rem',
+                  fontWeight: '500',
+                  cursor: 'pointer'
+                }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Employees Management Modal */}
+      {showEmployeesModal && selectedCompany && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '80vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: '#111827' }}>
+                Administrer ansatte - {selectedCompany.name}
+              </h2>
+              <button
+                onClick={() => setShowEmployeesModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px', color: '#9ca3af' }} />
+              </button>
+            </div>
+
+            {loadingEmployees ? (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
+                <p style={{ color: '#6b7280' }}>Laster ansatte...</p>
+              </div>
+            ) : (
+              <div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <p style={{ color: '#6b7280' }}>
+                    Totalt {employees.length} ansatte funnet
+                  </p>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  {employees.map((employee) => (
+                    <div
+                      key={employee.id}
+                      style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '1rem',
+                        border: '1px solid #e5e7eb',
+                        borderRadius: '8px',
+                        background: '#f9fafb'
+                      }}
+                    >
+                      <div>
+                        <div style={{ fontWeight: '500', color: '#111827' }}>
+                          {employee.displayName || employee.email}
+                        </div>
+                        <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                          {employee.email}
+                        </div>
+                        <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                          Rolle: {employee.role || 'employee'}
+                        </div>
+                      </div>
+                      
+                      <button
+                        onClick={() => handleRemoveEmployee(employee.id, employee.email)}
+                        style={{
+                          padding: '0.5rem',
+                          background: '#dc2626',
+                          border: 'none',
+                          borderRadius: '6px',
+                          color: 'white',
+                          cursor: 'pointer',
+                          fontSize: '0.875rem'
+                        }}
+                        title="Fjern ansatt"
+                      >
+                        <UserMinus style={{ width: '16px', height: '16px' }} />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {employees.length === 0 && (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                    Ingen ansatte funnet for denne bedriften
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       )}
