@@ -428,6 +428,43 @@ export default function DashboardLayout({
           ))}
         </div>
 
+        {/* Logout Button */}
+        <div style={{
+          width: '100%',
+          display: 'flex',
+          justifyContent: 'center',
+          paddingTop: '1rem',
+          borderTop: '1px solid var(--gray-700)',
+          marginTop: '1rem'
+        }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: '48px',
+              height: '48px',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              background: 'transparent',
+              color: 'var(--gray-400)',
+              border: '1px solid transparent',
+              cursor: 'pointer',
+              transition: 'all var(--transition-normal)'
+            }}
+            onMouseEnter={(e) => {
+              setHoveredItem('logout');
+              setTooltipPosition({
+                left: e.clientX + 10,
+                top: e.clientY
+              });
+            }}
+            onMouseLeave={handleMouseLeave}
+          >
+            <LogOut size={20} />
+          </button>
+        </div>
+
         {/* Debug logging */}
         {(() => {
           console.log('DashboardLayout: About to render logout button, user:', user);

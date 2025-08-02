@@ -52,7 +52,8 @@ import {
   Home,
   Settings as SettingsIcon,
   ChevronUp,
-  RotateCcw
+  RotateCcw,
+  LogOut
 } from 'lucide-react';
 
 interface SystemSetting {
@@ -70,7 +71,7 @@ interface SystemSetting {
 }
 
 export default function SettingsPage() {
-  const { userProfile } = useAuth();
+  const { userProfile, logout } = useAuth();
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -631,6 +632,18 @@ export default function SettingsPage() {
           >
             {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
             {showAdvanced ? 'Skjul avanserte' : 'Vis avanserte'}
+          </button>
+          <button 
+            className="btn btn-error"
+            onClick={async () => {
+              if (confirm('Er du sikker på at du vil logge ut?')) {
+                await logout();
+              }
+            }}
+            style={{ marginLeft: 'auto' }}
+          >
+            <LogOut size={16} />
+            Logg ut
           </button>
         </div>
       </div>
