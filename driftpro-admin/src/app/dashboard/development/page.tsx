@@ -98,6 +98,22 @@ export default function DevelopmentPage() {
     {
       id: 'api-generator',
       name: 'API Generator',
+      description: 'Generate REST API endpoints',
+      category: 'Development',
+      icon: Server,
+      status: 'available'
+    },
+    {
+      id: 'gdpr-compliance',
+      name: 'GDPR Compliance Checker',
+      description: 'Check and fix GDPR compliance issues',
+      category: 'Security',
+      icon: Shield,
+      status: 'available'
+    },
+    {
+      id: 'api-generator',
+      name: 'API Generator',
       description: 'Generate RESTful APIs automatically',
       category: 'Backend',
       icon: Server,
@@ -298,6 +314,19 @@ export function EmployeeList({ companyId }: { companyId: string }) {
             'Reduce bundle size by code splitting',
             'Add monitoring and alerting systems',
             'Implement rate limiting for API endpoints'
+          ]
+        };
+
+      case 'gdpr-compliance':
+        return {
+          title: 'GDPR Compliance Check Results',
+          message: 'GDPR compliance check completed. Found users without proper company isolation.',
+          recommendations: [
+            'All users must have a valid companyId in their profile',
+            'Implement strict company-based data access controls',
+            'Add automatic logout for users without companyId',
+            'Regular audit of user-company associations',
+            'Implement data retention policies per company'
           ]
         };
 

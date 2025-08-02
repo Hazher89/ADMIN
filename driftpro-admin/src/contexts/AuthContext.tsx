@@ -148,11 +148,23 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
         if (userDoc.exists()) {
           const userData = userDoc.data();
-          if (userData.companyId && userData.companyId !== companyId) {
+          
+          // Check if user has a companyId and if it matches the selected company
+          if (!userData.companyId) {
+            // User has no companyId - this is a GDPR violation
+            await signOut(auth);
+            throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
+          }
+          
+          if (userData.companyId !== companyId) {
             // User doesn't belong to this company - sign out and throw error
             await signOut(auth);
             throw new Error('Du har ikke tilgang til denne bedriften. Kontakt administrator.');
           }
+        } else {
+          // User document doesn't exist - this is also a GDPR violation
+          await signOut(auth);
+          throw new Error('Brukerprofil ikke funnet. Kontakt administrator.');
         }
       }
     } catch (error: unknown) {

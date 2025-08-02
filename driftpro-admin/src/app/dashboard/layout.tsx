@@ -66,11 +66,23 @@ export default function DashboardLayout({
 
   // GDPR Compliance: Ensure user has a valid companyId
   useEffect(() => {
-    if (user && userProfile && !userProfile.companyId) {
-      console.error('GDPR VIOLATION: User without companyId detected:', user.email);
-      alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
-      logout();
-      router.push('/companies');
+    if (user && userProfile) {
+      if (!userProfile.companyId) {
+        console.error('GDPR VIOLATION: User without companyId detected:', user.email);
+        alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
+        logout();
+        router.push('/companies');
+        return;
+      }
+      
+      // Additional check: ensure userProfile is properly loaded
+      if (!userProfile.id || !userProfile.email) {
+        console.error('GDPR VIOLATION: Incomplete user profile detected:', user.email);
+        alert('Ufullstendig brukerprofil oppdaget. Du blir logget ut.');
+        logout();
+        router.push('/companies');
+        return;
+      }
     }
   }, [user, userProfile, logout, router]);
   const pathname = usePathname();
