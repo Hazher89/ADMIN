@@ -502,7 +502,7 @@ export default function DocumentsPage() {
                 </label>
                 <select
                   value={newDocument.category}
-                  onChange={(e) => setNewDocument({...newDocument, category: e.target.value as any})}
+                  onChange={(e) => setNewDocument({...newDocument, category: e.target.value as "policy" | "procedure" | "form" | "report" | "other"})}
                   style={{ 
                     width: '100%', 
                     padding: '0.75rem', 

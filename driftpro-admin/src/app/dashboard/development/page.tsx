@@ -5,18 +5,8 @@ import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
 import { emailService } from '@/lib/email-service';
 import { 
-  Code, Settings, Database, Server, Shield, Zap, Activity, BarChart3, 
-  LineChart, TrendingUp, Users, Building, Home, Globe, Lock, Unlock, Key,
-  Eye, EyeOff, Download, Upload, Play, Pause, RotateCcw, RefreshCw,
-  AlertTriangle, CheckCircle, XCircle, Info, Star, Heart, ThumbsUp, ThumbsDown,
-  MessageSquare, Mail, Phone, Calendar, Clock, MapPin, Navigation, Target,
-  Award, Trophy, Medal, Crown, Gem, Diamond, Sparkles, Rocket, Plane, Car,
-  Bike, Gamepad2, Headphones, Speaker, Mic,
-  Camera, Video, Image, File, Folder, Archive, Book, BookOpen, PenTool,
-  Scissors, Wrench, Hammer, Cog, Sliders, ToggleLeft,
-  ToggleRight, Power, Battery, Wifi, Signal, Bluetooth, Usb,
-  CreditCard, DollarSign, Euro, Bitcoin, TrendingDown, Minus,
-  Plus, Divide, Percent, Hash, AtSign
+  Code, Database, Server, Shield, Activity, 
+  CheckCircle, Mail, PenTool, Rocket
 } from 'lucide-react';
 
 interface AITool {
@@ -185,7 +175,7 @@ export default function DevelopmentPage() {
     
     try {
       const startTime = Date.now();
-      const results = await generateAIResults(toolId, userProfile.companyId);
+      const results = await generateAIResults(toolId);
       const executionTime = Date.now() - startTime;
       
       results.executionTime = executionTime;
@@ -217,7 +207,7 @@ export default function DevelopmentPage() {
     }
   };
 
-  const generateAIResults = async (toolId: string, companyId: string): Promise<AIResult> => {
+  const generateAIResults = async (toolId: string): Promise<AIResult> => {
     // Simulate AI processing with real data
     await new Promise(resolve => setTimeout(resolve, 2000));
 
@@ -546,7 +536,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               >
                 <div className="card-header">
                   <div className="card-icon">
-                    {React.createElement(tool.icon as React.ComponentType)}
+                    {React.createElement(tool.icon as React.ComponentType, {})}
                   </div>
                   <h3 className="card-title">{tool.name}</h3>
                 </div>

@@ -61,8 +61,8 @@ interface SystemSetting {
   name: string;
   description: string;
   type: 'toggle' | 'text' | 'number' | 'select' | 'textarea' | 'color' | 'file';
-  value: any;
-  defaultValue: any;
+  value: string | number | boolean | null;
+  defaultValue: string | number | boolean | null;
   options?: string[];
   required?: boolean;
   validation?: string;
@@ -76,7 +76,7 @@ export default function SettingsPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('general');
   const [editingSetting, setEditingSetting] = useState<string | null>(null);
-  const [tempValues, setTempValues] = useState<{[key: string]: any}>({});
+  const [tempValues, setTempValues] = useState<{[key: string]: string | number | boolean | null}>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   // Initialize default system settings
@@ -560,7 +560,7 @@ export default function SettingsPage() {
                 style={{ 
                   width: '20px', 
                   height: '20px', 
-                  backgroundColor: setting.value, 
+                  backgroundColor: setting.value as string || '#ffffff', 
                   borderRadius: '4px',
                   border: '1px solid #ddd'
                 }} 

@@ -208,7 +208,7 @@ export default function TimeclockPage() {
           >
             {statuses.map(status => (
               <option key={status} value={status}>
-                {status === 'all' ? 'Alle statuser' : getStatusLabel(status as any)}
+                {status === 'all' ? 'Alle statuser' : getStatusLabel(status as "active" | "completed" | "overtime" | "late")}
               </option>
             ))}
           </select>

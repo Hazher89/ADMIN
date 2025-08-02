@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService, Vacation } from '@/lib/firebase-services';
 import { 
@@ -12,12 +12,7 @@ import {
   Trash2,
   CheckCircle,
   Clock,
-  AlertCircle,
-  Filter,
-  Download,
-  Eye,
-  Edit,
-  MoreHorizontal
+  AlertCircle
 } from 'lucide-react';
 
 export default function AbsencePage() {
@@ -28,7 +23,6 @@ export default function AbsencePage() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
   const [selectedAbsence, setSelectedAbsence] = useState<Vacation | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [newAbsence, setNewAbsence] = useState({
@@ -52,7 +46,7 @@ export default function AbsencePage() {
     }
   }, [userProfile?.companyId]);
 
-  const loadData = async () => {
+  const loadData = useCallback(async () => {
     if (!userProfile?.companyId) return;
 
     try {
@@ -64,7 +58,7 @@ export default function AbsencePage() {
     } finally {
       setLoading(false);
     }
-  };
+  }, [userProfile?.companyId]);
 
   const handleAddAbsence = async () => {
     if (!userProfile?.companyId) return;

@@ -198,7 +198,7 @@ export default function EmployeesPage() {
 
     try {
       // Create employee data without undefined fields
-      const employeeData: any = {
+      const employeeData: Partial<Employee> & { companyId: string } = {
         displayName: newEmployee.displayName,
         email: newEmployee.email,
         phone: newEmployee.phone || undefined,
@@ -343,7 +343,7 @@ export default function EmployeesPage() {
     setShowSettingsModal(true);
   };
 
-  const handleResetPassword = async (employeeId: string) => {
+  const handleResetPassword = async () => {
     if (!confirm('Er du sikker på at du vil tilbakestille passordet for denne ansatten?')) {
       return;
     }
@@ -787,7 +787,7 @@ export default function EmployeesPage() {
                   <label className="form-label">Rolle</label>
                   <select
                     value={newEmployee.role}
-                    onChange={(e) => setNewEmployee({...newEmployee, role: e.target.value as any})}
+                    onChange={(e) => setNewEmployee({...newEmployee, role: e.target.value as "admin" | "manager" | "employee"})}
                     className="form-input"
                   >
                     <option value="employee">Ansatt</option>
@@ -1002,7 +1002,7 @@ export default function EmployeesPage() {
                   <label className="form-label">Rolle</label>
                   <select
                     value={selectedEmployee.role}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, role: e.target.value as any})}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, role: e.target.value as "admin" | "manager" | "employee"})}
                     className="form-input"
                   >
                     <option value="employee">Ansatt</option>
@@ -1014,7 +1014,7 @@ export default function EmployeesPage() {
                   <label className="form-label">Status</label>
                   <select
                     value={selectedEmployee.status}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, status: e.target.value as any})}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, status: e.target.value as "active" | "inactive" | "suspended"})}
                     className="form-input"
                   >
                     <option value="active">Aktiv</option>
