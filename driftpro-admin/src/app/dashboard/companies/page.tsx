@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { firebaseService } from '@/lib/firebase-services';
 import { 
   Building, 
   Plus, 
@@ -49,69 +50,16 @@ export default function CompaniesPage() {
 
   const loadCompanies = async () => {
     try {
-      // Mock data for demonstration
-      const mockCompanies: Company[] = [
-        {
-          id: '1',
-          name: 'TechCorp Solutions',
-          industry: 'Teknologi',
-          employees: 150,
-          location: 'Oslo, Norge',
-          phone: '+47 123 45 678',
-          email: 'info@techcorp.no',
-          website: 'www.techcorp.no',
-          status: 'active',
-          joinedDate: '2023-01-15',
-          revenue: '15.2M NOK',
-          description: 'Ledende teknologiselskap innen programvareutvikling'
-        },
-        {
-          id: '2',
-          name: 'Nordic Manufacturing',
-          industry: 'Produksjon',
-          employees: 89,
-          location: 'Bergen, Norge',
-          phone: '+47 987 65 432',
-          email: 'kontakt@nordic.no',
-          website: 'www.nordic.no',
-          status: 'active',
-          joinedDate: '2023-03-20',
-          revenue: '8.7M NOK',
-          description: 'Produksjon av høy kvalitet industriprodukter'
-        },
-        {
-          id: '3',
-          name: 'Green Energy AS',
-          industry: 'Energi',
-          employees: 45,
-          location: 'Trondheim, Norge',
-          phone: '+47 555 12 34',
-          email: 'hello@greenenergy.no',
-          website: 'www.greenenergy.no',
-          status: 'pending',
-          joinedDate: '2024-01-10',
-          revenue: '3.2M NOK',
-          description: 'Bærekraftig energiløsninger for fremtiden'
-        },
-        {
-          id: '4',
-          name: 'HealthCare Plus',
-          industry: 'Helse',
-          employees: 234,
-          location: 'Stavanger, Norge',
-          phone: '+47 777 88 99',
-          email: 'info@healthcare.no',
-          website: 'www.healthcare.no',
-          status: 'active',
-          joinedDate: '2022-11-05',
-          revenue: '22.1M NOK',
-          description: 'Avansert helseteknologi og pasientpleie'
-        }
-      ];
-
-      setCompanies(mockCompanies);
+      setLoading(true);
+      
+      // Load real companies from Firebase
+      const companiesData = await firebaseService.getCompanies();
+      
+      // Companies are already in the correct format
+      setCompanies(companiesData);
     } catch (error) {
       console.error('Error loading companies:', error);
+      setCompanies([]);
     } finally {
       setLoading(false);
     }
