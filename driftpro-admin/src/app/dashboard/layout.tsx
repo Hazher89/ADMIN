@@ -428,42 +428,7 @@ export default function DashboardLayout({
           ))}
         </div>
 
-        {/* Logout Button */}
-        <div style={{
-          width: '100%',
-          display: 'flex',
-          justifyContent: 'center',
-          paddingTop: '1rem',
-          borderTop: '1px solid var(--gray-700)',
-          marginTop: '1rem'
-        }}>
-          <button
-            onClick={handleLogout}
-            style={{
-              width: '48px',
-              height: '48px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              background: 'transparent',
-              color: 'var(--gray-400)',
-              border: '1px solid transparent',
-              cursor: 'pointer',
-              transition: 'all var(--transition-normal)'
-            }}
-            onMouseEnter={(e) => {
-              setHoveredItem('logout');
-              setTooltipPosition({
-                left: e.clientX + 10,
-                top: e.clientY
-              });
-            }}
-            onMouseLeave={handleMouseLeave}
-          >
-            <LogOut size={20} />
-          </button>
-        </div>
+
 
         {/* Debug logging */}
         {(() => {
@@ -519,10 +484,9 @@ export default function DashboardLayout({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span>
-              {hoveredItem === 'logout' ? 'Logg ut' : 
-               sidebarItems.find(item => item.href === hoveredItem)?.name || ''}
+              {sidebarItems.find(item => item.href === hoveredItem)?.name || ''}
             </span>
-            {hoveredItem !== 'logout' && sidebarItems.find(item => item.href === hoveredItem)?.isAdmin && (
+            {sidebarItems.find(item => item.href === hoveredItem)?.isAdmin && (
               <Star size={12} fill="#ef4444" color="#ef4444" />
             )}
           </div>
