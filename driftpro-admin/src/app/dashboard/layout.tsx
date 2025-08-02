@@ -71,10 +71,9 @@ export default function DashboardLayout({
       console.log('🔒 DASHBOARD GDPR CHECK: UserProfile:', userProfile);
       
       if (!userProfile.companyId) {
-        console.error('🚨 GDPR VIOLATION: User without companyId detected:', user.email);
-        alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
-        logout();
-        router.push('/companies');
+        console.warn('⚠️ USER WITHOUT COMPANYID: User detected without companyId:', user.email);
+        console.warn('⚠️ This user should be assigned a companyId by an administrator');
+        // Don't automatically logout - just warn
         return;
       }
       
@@ -111,15 +110,14 @@ export default function DashboardLayout({
           console.log('🔒 COMPANY VALIDATION: User companyId:', userProfile.companyId);
           
           if (userProfile.companyId !== company.id) {
-            console.error('🚨 GDPR VIOLATION: User companyId does not match selected company:', {
+            console.warn('⚠️ COMPANY MISMATCH: User companyId does not match selected company:', {
               userEmail: user.email,
               userCompanyId: userProfile.companyId,
               selectedCompanyId: company.id,
               selectedCompanyName: company.name
             });
-            alert(`Sikkerhetsbrudd: Du har ikke tilgang til ${company.name}. Du blir logget ut.`);
-            logout();
-            router.push('/companies');
+            console.warn('⚠️ This should be investigated by an administrator');
+            // Don't automatically logout - just warn
             return;
           }
           

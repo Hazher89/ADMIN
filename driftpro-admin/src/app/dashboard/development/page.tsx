@@ -327,6 +327,41 @@ export function EmployeeList({ companyId }: { companyId: string }) {
             'Add automatic logout for users without companyId',
             'Regular audit of user-company associations',
             'Implement data retention policies per company'
+          ],
+          files: [
+            {
+              name: 'FixUsersWithoutCompanyId.js',
+              content: `// Admin script to fix users without companyId
+import { collection, getDocs, updateDoc, doc, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+export async function fixUsersWithoutCompanyId() {
+  try {
+    // Get all users without companyId
+    const usersQuery = query(collection(db, 'users'), where('companyId', '==', null));
+    const snapshot = await getDocs(usersQuery);
+    
+    console.log('Found', snapshot.size, 'users without companyId');
+    
+    // Update each user with a default companyId (you need to specify which company)
+    const defaultCompanyId = 'YOUR_DEFAULT_COMPANY_ID'; // Replace with actual company ID
+    
+    for (const userDoc of snapshot.docs) {
+      await updateDoc(doc(db, 'users', userDoc.id), {
+        companyId: defaultCompanyId,
+        updatedAt: new Date().toISOString()
+      });
+      console.log('Updated user:', userDoc.id);
+    }
+    
+    console.log('All users updated successfully');
+  } catch (error) {
+    console.error('Error fixing users:', error);
+  }
+}`,
+              type: 'service',
+              path: 'src/admin/FixUsersWithoutCompanyId.js'
+            }
           ]
         };
 

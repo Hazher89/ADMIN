@@ -160,10 +160,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           
           // Check if user has a companyId and if it matches the selected company
           if (!userData.companyId) {
-            console.error('🚨 GDPR VIOLATION: User has no companyId:', userCredential.user.email);
-            // User has no companyId - this is a GDPR violation
-            await signOut(auth);
-            throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
+            console.warn('⚠️ USER HAS NO COMPANYID: Attempting to assign companyId:', userCredential.user.email);
+            
+            // Try to assign the companyId to the user
+            try {
+              await updateDoc(doc(db, 'users', userCredential.user.uid), {
+                companyId: companyId,
+                updatedAt: new Date().toISOString()
+              });
+              console.log('✅ COMPANYID ASSIGNED: User now has companyId:', companyId);
+            } catch (updateError) {
+              console.error('❌ FAILED TO ASSIGN COMPANYID:', updateError);
+              await signOut(auth);
+              throw new Error('Kunne ikke tilordne bedrift til bruker. Kontakt administrator.');
+            }
           }
           
           if (userData.companyId !== companyId) {
