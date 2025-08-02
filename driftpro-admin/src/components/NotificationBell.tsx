@@ -46,13 +46,13 @@ export default function NotificationBell() {
     try {
       if (!db) {
         console.error('Firebase not initialized');
-        return;
+        return () => {};
       }
 
       if (!user?.uid || !userProfile?.companyName) {
         console.error('User or company not found');
         setNotifications([]);
-        return;
+        return () => {};
       }
 
       // Filter notifications by user and company
@@ -62,65 +62,75 @@ export default function NotificationBell() {
         where('companyId', '==', userProfile.companyName)
       );
       
-      const notificationsSnapshot = await getDocs(notificationsQuery);
-      const notificationsData: Notification[] = [];
+      const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
+        const notificationsData: Notification[] = [];
 
-      notificationsSnapshot.forEach((doc) => {
-        const data = doc.data();
-        
-        try {
-          // Handle timestamps
-          let createdAt = new Date().toISOString();
-          if (data.createdAt?.toDate) {
-            createdAt = data.createdAt.toDate().toISOString();
-          } else if (data.createdAt instanceof Date) {
-            createdAt = data.createdAt.toISOString();
-          } else if (typeof data.createdAt === 'string') {
-            createdAt = data.createdAt;
-          }
-
-          let readAt = '';
-          if (data.readAt?.toDate) {
-            readAt = data.readAt.toDate().toISOString();
-          } else if (data.readAt instanceof Date) {
-            readAt = data.readAt.toISOString();
-          } else if (typeof data.readAt === 'string') {
-            readAt = data.readAt;
-          }
-
-          let archivedAt = '';
-          if (data.archivedAt?.toDate) {
-            archivedAt = data.archivedAt.toDate().toISOString();
-          } else if (data.archivedAt instanceof Date) {
-            archivedAt = data.archivedAt.toISOString();
-          } else if (typeof data.archivedAt === 'string') {
-            archivedAt = data.archivedAt;
-          }
-
-          const notification: Notification = {
-            id: doc.id,
-            userId: data.userId || user?.uid || '',
-            title: data.title || '',
-            message: data.message || '',
-            type: data.type || 'info',
-            status: data.status || 'unread',
-            priority: data.priority || 'normal',
-            createdAt,
-            readAt,
-            archivedAt,
-            metadata: data.metadata || {},
-            companyId: userProfile.companyName || '' // Add company isolation
-          };
+        snapshot.forEach((doc) => {
+          const data = doc.data();
           
-          notificationsData.push(notification);
-        } catch (error) {
-          console.error('Error parsing notification data:', error);
-        }
+          try {
+            // Handle timestamps
+            let createdAt = new Date().toISOString();
+            if (data.createdAt?.toDate) {
+              createdAt = data.createdAt.toDate().toISOString();
+            } else if (data.createdAt instanceof Date) {
+              createdAt = data.createdAt.toISOString();
+            } else if (typeof data.createdAt === 'string') {
+              createdAt = data.createdAt;
+            }
+
+            let readAt = '';
+            if (data.readAt?.toDate) {
+              readAt = data.readAt.toDate().toISOString();
+            } else if (data.readAt instanceof Date) {
+              readAt = data.readAt.toISOString();
+            } else if (typeof data.readAt === 'string') {
+              readAt = data.readAt;
+            }
+
+            let archivedAt = '';
+            if (data.archivedAt?.toDate) {
+              archivedAt = data.archivedAt.toDate().toISOString();
+            } else if (data.archivedAt instanceof Date) {
+              archivedAt = data.archivedAt.toISOString();
+            } else if (typeof data.archivedAt === 'string') {
+              archivedAt = data.archivedAt;
+            }
+
+            const notification: Notification = {
+              id: doc.id,
+              userId: data.userId || user?.uid || '',
+              title: data.title || '',
+              message: data.message || '',
+              type: data.type || 'info',
+              status: data.status || 'unread',
+              priority: data.priority || 'normal',
+              createdAt,
+              readAt,
+              archivedAt,
+              metadata: data.metadata || {},
+              companyId: userProfile.companyName || '' // Add company isolation
+            };
+            
+            notificationsData.push(notification);
+          } catch (error) {
+            console.error('Error parsing notification data:', error);
+          }
+        });
+        
+        setNotifications(notificationsData);
+        
+        // Update unread count
+        const unreadNotifications = notificationsData.filter(n => n.status === 'unread');
+        setUnreadCount(unreadNotifications.length);
+      }, (error) => {
+        console.error('Error loading notifications:', error);
       });
-      
-      setNotifications(notificationsData);
+
+      return unsubscribe;
     } catch (error) {
-      console.error('Error loading notifications:', error);
+      console.error('Error setting up notifications listener:', error);
+      return () => {};
     }
   }, [user?.uid, userProfile?.companyName]);
 
