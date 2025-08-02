@@ -10,7 +10,7 @@ import {
   updateProfile,
   sendPasswordResetEmail
 } from 'firebase/auth';
-import { doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
 interface UserProfile {
@@ -139,65 +139,55 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async (email: string, password: string, companyId?: string) => {
     if (!auth) throw new Error('Firebase not initialized');
+    if (!companyId) throw new Error('Ingen bedrift valgt. Vennligst velg en bedrift først.');
+    if (!db) throw new Error('Database ikke tilgjengelig.');
     
     try {
+      console.log('🔒 PRE-LOGIN VALIDATION: Starting validation for companyId:', companyId);
+      console.log('🔒 PRE-LOGIN VALIDATION: User email:', email);
+      
+      // FIRST: Check if user exists and validate company access BEFORE authentication
+      const usersQuery = query(collection(db, 'users'), where('email', '==', email));
+      const userSnapshot = await getDocs(usersQuery);
+      
+      if (userSnapshot.empty) {
+        console.error('🚨 PRE-LOGIN GDPR VIOLATION: User not found in database:', email);
+        throw new Error('Bruker ikke funnet. Kontakt administrator.');
+      }
+      
+      const userDoc = userSnapshot.docs[0];
+      const userData = userDoc.data();
+      
+      console.log('🔒 PRE-LOGIN VALIDATION: User data found:', userData);
+      console.log('🔒 PRE-LOGIN VALIDATION: User companyId:', userData.companyId);
+      console.log('🔒 PRE-LOGIN VALIDATION: Expected companyId:', companyId);
+      
+      // Check if user has a companyId
+      if (!userData.companyId) {
+        console.error('🚨 PRE-LOGIN GDPR VIOLATION: User has no companyId:', email);
+        throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
+      }
+      
+      // Check if user belongs to the selected company
+      if (userData.companyId !== companyId) {
+        console.error('🚨 PRE-LOGIN GDPR VIOLATION: User companyId mismatch:', {
+          userEmail: email,
+          userCompanyId: userData.companyId,
+          requestedCompanyId: companyId
+        });
+        throw new Error('Du har ikke tilgang til denne bedriften. Kontakt administrator.');
+      }
+      
+      console.log('✅ PRE-LOGIN VALIDATION: User access validated - proceeding with authentication');
+      
+      // ONLY NOW: Proceed with Firebase authentication
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
-      // If companyId is provided, validate that user belongs to this company
-      if (companyId && db) {
-        console.log('🔒 GDPR VALIDATION: Checking user access for companyId:', companyId);
-        console.log('🔒 GDPR VALIDATION: User email:', userCredential.user.email);
-        console.log('🔒 GDPR VALIDATION: User UID:', userCredential.user.uid);
-        
-        const userDoc = await getDoc(doc(db, 'users', userCredential.user.uid));
-        console.log('🔒 GDPR VALIDATION: User document exists:', userDoc.exists());
-        
-        if (userDoc.exists()) {
-          const userData = userDoc.data();
-          console.log('🔒 GDPR VALIDATION: User data:', userData);
-          console.log('🔒 GDPR VALIDATION: User companyId:', userData.companyId);
-          console.log('🔒 GDPR VALIDATION: Expected companyId:', companyId);
-          
-          // Check if user has a companyId and if it matches the selected company
-          if (!userData.companyId) {
-            console.error('🚨 GDPR VIOLATION: User has no companyId:', userCredential.user.email);
-            await signOut(auth);
-            throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
-          }
-          
-          // Strict GDPR validation - no exceptions
-          console.log('🔒 GDPR VALIDATION: Comparing companyIds:', {
-            userCompanyId: userData.companyId,
-            requestedCompanyId: companyId,
-            match: userData.companyId === companyId
-          });
-          
-          if (userData.companyId !== companyId) {
-            console.error('🚨 GDPR VIOLATION: User companyId mismatch:', {
-              userEmail: userCredential.user.email,
-              userCompanyId: userData.companyId,
-              requestedCompanyId: companyId
-            });
-            // User doesn't belong to this company - sign out and throw error
-            console.error('🚨 SIGNING OUT USER DUE TO GDPR VIOLATION');
-            await signOut(auth);
-            throw new Error('Du har ikke tilgang til denne bedriften. Kontakt administrator.');
-          }
-          
-          console.log('✅ GDPR VALIDATION: User access granted - companyId matches');
-        } else {
-          console.error('🚨 GDPR VIOLATION: User document does not exist:', userCredential.user.email);
-          // User document doesn't exist - this is also a GDPR violation
-          await signOut(auth);
-          throw new Error('Brukerprofil ikke funnet. Kontakt administrator.');
-        }
-      } else {
-        console.warn('⚠️ GDPR VALIDATION: No companyId provided or db not available');
-        // If no companyId provided, this is also a violation
-        await signOut(auth);
-        throw new Error('Ingen bedrift valgt. Vennligst velg en bedrift først.');
-      }
+      console.log('✅ AUTHENTICATION SUCCESS: User authenticated successfully');
+      console.log('✅ GDPR VALIDATION: User access granted for companyId:', companyId);
+      
     } catch (error: unknown) {
+      console.error('🚨 LOGIN ERROR:', error);
       throw new Error(error instanceof Error ? error.message : 'En feil oppstod');
     }
   };

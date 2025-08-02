@@ -72,7 +72,9 @@ export default function LoginPage() {
       router.push('/dashboard');
       
     } catch (error) {
-      setError('Feil e-post eller passord. Prøv igjen.');
+      console.error('Login error:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Feil e-post eller passord. Prøv igjen.';
+      setError(errorMessage);
       setLoading(false);
     }
   };
