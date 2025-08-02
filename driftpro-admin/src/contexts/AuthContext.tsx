@@ -165,11 +165,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
           }
           
-          // Special handling for DriftPro admin users
-          if (userData.email === 'baxigshti@hotmail.de' || userData.role === 'admin') {
-            // DriftPro admin users can access any company
-            console.log('✅ DRIFTPRO ADMIN ACCESS: Admin user accessing company:', companyId);
-          } else if (userData.companyId !== companyId) {
+          // Strict GDPR validation - no exceptions
+          if (userData.companyId !== companyId) {
             console.error('🚨 GDPR VIOLATION: User companyId mismatch:', {
               userEmail: userCredential.user.email,
               userCompanyId: userData.companyId,

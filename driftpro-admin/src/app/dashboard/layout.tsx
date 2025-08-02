@@ -110,10 +110,8 @@ export default function DashboardLayout({
           console.log('🔒 COMPANY VALIDATION: Selected company:', company);
           console.log('🔒 COMPANY VALIDATION: User companyId:', userProfile.companyId);
           
-          // Special handling for DriftPro admin users
-          if (userProfile.email === 'baxigshti@hotmail.de' || userProfile.role === 'admin') {
-            console.log('✅ DRIFTPRO ADMIN ACCESS: Admin user accessing company:', company.name);
-          } else if (userProfile.companyId !== company.id) {
+          // Strict GDPR validation - no exceptions
+          if (userProfile.companyId !== company.id) {
             console.error('🚨 GDPR VIOLATION: User companyId does not match selected company:', {
               userEmail: user.email,
               userCompanyId: userProfile.companyId,

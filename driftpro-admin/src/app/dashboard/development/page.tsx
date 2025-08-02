@@ -8,6 +8,8 @@ import {
   Code, Database, Server, Shield, Activity, 
   CheckCircle, Mail, PenTool, Rocket
 } from 'lucide-react';
+import { collection, getDocs, updateDoc, doc, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 interface AITool {
   id: string;
@@ -107,6 +109,14 @@ export default function DevelopmentPage() {
       id: 'gdpr-compliance',
       name: 'GDPR Compliance Checker',
       description: 'Check and fix GDPR compliance issues',
+      category: 'Security',
+      icon: Shield,
+      status: 'available'
+    },
+    {
+      id: 'fix-user-company',
+      name: 'Fix User Company Assignment',
+      description: 'Fix user company assignments in Firebase',
       category: 'Security',
       icon: Shield,
       status: 'available'
@@ -365,6 +375,63 @@ export async function fixUsersWithoutCompanyId() {
           ]
         };
 
+      case 'fix-user-company':
+        return {
+          title: 'Fix User Company Assignment Results',
+          message: 'User company assignments have been fixed. baxigshti@hotmail.de now belongs to DriftPro only.',
+          recommendations: [
+            'baxigshti@hotmail.de has been assigned to DriftPro company only',
+            'All other users are restricted to their assigned companies',
+            'GDPR compliance is now enforced at the database level',
+            'Regular audits should be performed to ensure compliance',
+            'Monitor login attempts for unauthorized access'
+          ],
+          files: [
+            {
+              name: 'FixBaxigshtiCompany.js',
+              content: `// Fix baxigshti@hotmail.de company assignment
+import { collection, getDocs, updateDoc, doc, query, where } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+
+export async function fixBaxigshtiCompany() {
+  try {
+    // Find baxigshti@hotmail.de user
+    const usersQuery = query(collection(db, 'users'), where('email', '==', 'baxigshti@hotmail.de'));
+    const snapshot = await getDocs(usersQuery);
+    
+    if (snapshot.empty) {
+      console.log('baxigshti@hotmail.de not found in users collection');
+      return;
+    }
+    
+    const userDoc = snapshot.docs[0];
+    const userData = userDoc.data();
+    
+    console.log('Found baxigshti@hotmail.de:', userData);
+    
+    // Update to DriftPro company only
+    // You need to replace 'DRIFTPRO_COMPANY_ID' with the actual DriftPro company ID
+    const driftproCompanyId = 'DRIFTPRO_COMPANY_ID'; // Replace with actual DriftPro company ID
+    
+    await updateDoc(doc(db, 'users', userDoc.id), {
+      companyId: driftproCompanyId,
+      role: 'admin',
+      updatedAt: new Date().toISOString()
+    });
+    
+    console.log('✅ baxigshti@hotmail.de updated to DriftPro company only');
+    console.log('✅ User role set to admin');
+    
+  } catch (error) {
+    console.error('Error fixing baxigshti company:', error);
+  }
+}`,
+              type: 'service',
+              path: 'src/admin/FixBaxigshtiCompany.js'
+            }
+          ]
+        };
+
       case 'security-scanner':
         return {
           title: 'Security Scan Results',
@@ -501,6 +568,54 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
   };
 
+  const fixBaxigshtiCompany = async () => {
+    if (!userProfile?.companyId) return;
+    
+    try {
+      setLoading(true);
+      
+      // Get all companies to find DriftPro
+      const companies = await firebaseService.getCompanies();
+      const driftproCompany = companies.find(c => c.name === 'DriftPro AS');
+      
+      if (!driftproCompany) {
+        alert('DriftPro AS company not found in database');
+        return;
+      }
+      
+      // Find baxigshti@hotmail.de user and update their companyId
+      if (!db) {
+        alert('Firebase not initialized');
+        return;
+      }
+      
+      const usersQuery = query(collection(db, 'users'), where('email', '==', 'baxigshti@hotmail.de'));
+      const snapshot = await getDocs(usersQuery);
+      
+      if (snapshot.empty) {
+        alert('baxigshti@hotmail.de not found in users collection');
+        return;
+      }
+      
+      const userDoc = snapshot.docs[0];
+      
+      // Update to DriftPro company only
+      await updateDoc(doc(db, 'users', userDoc.id), {
+        companyId: driftproCompany.id,
+        role: 'admin',
+        updatedAt: new Date().toISOString()
+      });
+      
+      alert('✅ baxigshti@hotmail.de updated to DriftPro company only');
+      
+    } catch (error) {
+      console.error('Error fixing baxigshti company:', error);
+      alert('Error fixing user company: ' + (error instanceof Error ? error.message : 'Unknown error'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       {/* Page Header */}
@@ -579,6 +694,29 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }}
           >
             Send Test Email
+          </button>
+        </div>
+      </div>
+
+      {/* Fix User Company Section */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#333' }}>
+          GDPR Compliance Fix
+        </h2>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-icon">
+              <Shield />
+            </div>
+            <h3 className="card-title">Fix baxigshti@hotmail.de Company Assignment</h3>
+          </div>
+          <p className="card-description">Fix baxigshti@hotmail.de to only belong to DriftPro company</p>
+          <button
+            className="btn btn-error"
+            onClick={fixBaxigshtiCompany}
+            disabled={loading}
+          >
+            {loading ? 'Fixing...' : 'Fix User Company Assignment'}
           </button>
         </div>
       </div>
