@@ -992,6 +992,17 @@ class FirebaseService {
     if (!db) throw new Error('Database not initialized');
 
     try {
+      // Check if company with same name already exists
+      const existingCompaniesQuery = query(
+        collection(db, 'companies'),
+        where('name', '==', companyData.name)
+      );
+      const existingSnapshot = await getDocs(existingCompaniesQuery);
+      
+      if (!existingSnapshot.empty) {
+        throw new Error(`En bedrift med navnet "${companyData.name}" eksisterer allerede. Vennligst velg et annet navn.`);
+      }
+
       const docRef = await addDoc(collection(db, 'companies'), {
         ...companyData,
         createdAt: new Date().toISOString(),
@@ -1008,6 +1019,22 @@ class FirebaseService {
     if (!db) throw new Error('Database not initialized');
 
     try {
+      // If name is being updated, check for duplicates
+      if (data.name) {
+        const existingCompaniesQuery = query(
+          collection(db, 'companies'),
+          where('name', '==', data.name)
+        );
+        const existingSnapshot = await getDocs(existingCompaniesQuery);
+        
+        // Check if any company with this name exists (excluding the current company being updated)
+        const duplicateExists = existingSnapshot.docs.some(doc => doc.id !== id);
+        
+        if (duplicateExists) {
+          throw new Error(`En bedrift med navnet "${data.name}" eksisterer allerede. Vennligst velg et annet navn.`);
+        }
+      }
+
       const docRef = doc(db, 'companies', id);
       await updateDoc(docRef, {
         ...data,

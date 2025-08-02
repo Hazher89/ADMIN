@@ -12,7 +12,7 @@ import {
   Mail,
   ArrowRight
 } from 'lucide-react';
-import { collection, getDocs, deleteDoc, doc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface Company {
@@ -145,53 +145,7 @@ export default function CompaniesPage() {
     router.push('/login');
   };
 
-  const cleanupDuplicates = async () => {
-    if (!confirm('Er du sikker på at du vil fjerne duplikater? Dette kan ikke angres.')) {
-      return;
-    }
 
-    try {
-      // Find duplicates
-      const duplicateNames = companies.filter((company, index, self) => 
-        self.findIndex(c => c.name === company.name) !== index
-      );
-
-      if (duplicateNames.length === 0) {
-        alert('Ingen duplikater funnet!');
-        return;
-      }
-
-      // Group duplicates by name
-      const duplicatesByName = companies.reduce((acc, company) => {
-        if (!acc[company.name]) {
-          acc[company.name] = [];
-        }
-        acc[company.name].push(company);
-        return acc;
-      }, {} as Record<string, Company[]>);
-
-      // Keep the first company of each name, delete the rest
-      let deletedCount = 0;
-      for (const [name, companyList] of Object.entries(duplicatesByName)) {
-        if (companyList.length > 1) {
-          // Keep the first one, delete the rest
-          const toDelete = companyList.slice(1);
-          for (const company of toDelete) {
-            if (db) {
-              await deleteDoc(doc(db, 'companies', company.id));
-              deletedCount++;
-            }
-          }
-        }
-      }
-
-      alert(`Fjernet ${deletedCount} duplikater!`);
-      loadCompanies(); // Reload the list
-    } catch (error) {
-      console.error('Error cleaning up duplicates:', error);
-      alert('Feil ved å fjerne duplikater: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
-    }
-  };
 
   if (loading) {
     return (
@@ -368,13 +322,7 @@ export default function CompaniesPage() {
                   </>
                 )}
               </button>
-              <button
-                className="btn btn-secondary"
-                onClick={cleanupDuplicates}
-                style={{ fontSize: 'var(--font-size-sm)' }}
-              >
-                🧹 Rydd
-              </button>
+
             </div>
           </div>
         </div>
