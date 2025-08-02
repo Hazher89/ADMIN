@@ -35,7 +35,8 @@ import {
   Globe,
   Key,
   Palette,
-  Terminal
+  Terminal,
+  Handshake
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import NotificationBell from '@/components/NotificationBell';
@@ -56,6 +57,11 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   const { user, logout, userProfile } = useAuth();
+  
+  // Debug logging for layout
+  console.log('DashboardLayout: user:', user);
+  console.log('DashboardLayout: userProfile:', userProfile);
+  console.log('DashboardLayout: logout function:', !!logout);
   const pathname = usePathname();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -148,7 +154,7 @@ export default function DashboardLayout({
     },
     {
       name: 'Stemple-system',
-      href: '/dashboard/timeclock',
+      href: '/dashboard/stempel',
       icon: <Clock size={20} />,
       category: 'time'
     },
@@ -198,6 +204,20 @@ export default function DashboardLayout({
       icon: <BarChart3 size={20} />,
       category: 'management'
     },
+    {
+      name: 'Samarbeidspartnere',
+      href: '/dashboard/partners',
+      icon: <Handshake size={20} />,
+      category: 'management'
+    },
+    
+    // Settings (available for all companies)
+    {
+      name: 'Innstillinger',
+      href: '/dashboard/settings',
+      icon: <Settings size={20} />,
+      category: 'settings'
+    },
     
     // Admin-only pages (only visible for DriftPro AS)
     ...(isDriftProAdmin ? [
@@ -221,13 +241,6 @@ export default function DashboardLayout({
         name: 'E-postlogger',
         href: '/dashboard/email-logs',
         icon: <Mail size={20} />,
-        category: 'admin',
-        isAdmin: true
-      },
-      {
-        name: 'Innstillinger',
-        href: '/dashboard/settings',
-        icon: <Settings size={20} />,
         category: 'admin',
         isAdmin: true
       }
@@ -415,33 +428,13 @@ export default function DashboardLayout({
           ))}
         </div>
 
-        {/* Logout Button */}
-        <div style={{
-          width: '48px',
-          height: '48px',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          color: 'var(--gray-400)',
-          cursor: 'pointer',
-          transition: 'all var(--transition-normal)',
-          marginTop: 'auto',
-          flexShrink: 0
-        }}
-        onMouseEnter={(e) => {
-          const rect = e.currentTarget.getBoundingClientRect();
-          setTooltipPosition({
-            top: rect.top + rect.height / 2,
-            left: 90
-          });
-          setHoveredItem('logout');
-        }}
-        onMouseLeave={handleMouseLeave}
-        onClick={handleLogout}
-        >
-          <LogOut size={20} />
-        </div>
+        {/* Debug logging */}
+        {(() => {
+          console.log('DashboardLayout: About to render logout button, user:', user);
+          return null;
+        })()}
+
+
       </div>
 
       {/* Main Content */}

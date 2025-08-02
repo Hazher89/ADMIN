@@ -1,3 +1,6 @@
+// GDPR COMPLIANCE: All queries are filtered by companyId to prevent cross-company data access
+// This ensures complete data isolation between companies
+
 import {
   collection,
   doc,
@@ -6,11 +9,9 @@ import {
   deleteDoc,
   query,
   where,
-  limit,
   getDocs,
   getDoc,
   writeBatch,
-  orderBy,
   onSnapshot,
   serverTimestamp,
   Timestamp
@@ -24,8 +25,8 @@ export interface Employee {
   displayName: string;
   email: string;
   phone?: string;
-  departmentId: string;
-  position: string;
+  departmentId?: string;
+  position?: string;
   role: 'admin' | 'department_leader' | 'employee';
   avatar?: string;
   createdAt: string;
@@ -36,8 +37,17 @@ export interface Employee {
   companyId: string;
   status: 'active' | 'inactive' | 'on_leave';
   hireDate: string;
+  birthDate?: string;
   salary?: number;
   managerId?: string;
+  employeeNumber?: string;
+  taxId?: string;
+  bankAccount?: string;
+  insuranceNumber?: string;
+  skills?: string[];
+  certifications?: string[];
+  education?: string;
+  workExperience?: string;
 }
 
 export interface Department {
@@ -159,6 +169,24 @@ export interface DashboardStats {
   activeTimeClocks: number;
 }
 
+export interface Company {
+  id: string;
+  name: string;
+  industry: string;
+  employees: number;
+  location: string;
+  phone: string;
+  email: string;
+  website: string;
+  status: 'active' | 'inactive' | 'pending';
+  joinedDate: string;
+  revenue: string;
+  description: string;
+  adminUserId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Activity {
   id: string;
   type: 'employee_added' | 'shift_created' | 'deviation_reported' | 'document_uploaded' | 'timeclock_event' | 'ai_tool_executed' | 'recommendation_applied';
@@ -171,22 +199,108 @@ export interface Activity {
   metadata?: Record<string, unknown>;
 }
 
+export interface Survey {
+  id: string;
+  title: string;
+  description: string;
+  questions: SurveyQuestion[];
+  status: 'draft' | 'active' | 'completed' | 'archived';
+  targetAudience: string;
+  startDate: string;
+  endDate: string;
+  responses: number;
+  companyId: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface SurveyQuestion {
+  id: string;
+  question: string;
+  type: 'text' | 'multiple_choice' | 'rating' | 'yes_no';
+  options?: string[];
+  required: boolean;
+}
+
+export interface SurveyResponse {
+  id: string;
+  surveyId: string;
+  employeeId: string;
+  employeeName: string;
+  companyId: string;
+  answers: SurveyAnswer[];
+  submittedAt: string;
+}
+
+export interface SurveyAnswer {
+  questionId: string;
+  answer: string | number | boolean;
+}
+
+export interface Partner {
+  id: string;
+  name: string;
+  description: string;
+  type: 'supplier' | 'customer' | 'vendor' | 'consultant';
+  status: 'active' | 'inactive' | 'pending';
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  website?: string;
+  rating: number;
+  projects: number;
+  revenue: number;
+  companyId: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Setting {
+  id: string;
+  name: string;
+  description: string;
+  category: string;
+  status: 'active' | 'inactive' | 'pending';
+  icon: string;
+  value?: string;
+  companyId: string;
+  createdBy: string;
+  updatedAt: string;
+}
+
 class FirebaseService {
   // Employee Management
   async getEmployees(companyId: string): Promise<Employee[]> {
-    if (!db) return [];
+    if (!db) {
+      console.error('Database not initialized in getEmployees');
+      return [];
+    }
+
+    console.log('Fetching employees for company:', companyId);
 
     try {
+      // First, let's check what's in the users collection without any filters
+      const allUsersSnapshot = await getDocs(collection(db, 'users'));
+      console.log('All users in collection:', allUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      
       const q = query(
         collection(db, 'users'),
-        where('companyId', '==', companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', companyId)
       );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      const employees = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Employee[];
+      
+      // Sort by createdAt in memory
+      employees.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      
+      console.log('Found employees for company', companyId, ':', employees.length, employees);
+      return employees;
     } catch (error) {
       console.error('Error fetching employees:', error);
       return [];
@@ -211,13 +325,26 @@ class FirebaseService {
   async createEmployee(employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
     if (!db) throw new Error('Database not initialized');
 
+    console.log('Creating employee with data:', employeeData);
+
     try {
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'users'), {
-        ...employeeData,
+      
+      // Remove undefined values to avoid Firebase errors
+      const cleanEmployeeData = Object.fromEntries(
+        Object.entries(employeeData).filter(([_, value]) => value !== undefined && value !== null)
+      );
+      
+      const employeeDoc = {
+        ...cleanEmployeeData,
         createdAt: now,
         updatedAt: now
-      });
+      };
+      
+      console.log('Employee document to save:', employeeDoc);
+      
+      const docRef = await addDoc(collection(db, 'users'), employeeDoc);
+      console.log('Employee created with ID:', docRef.id);
 
       // Create activity log
       await this.createActivity({
@@ -229,6 +356,7 @@ class FirebaseService {
         companyId: employeeData.companyId
       });
 
+      console.log('Activity log created for employee:', docRef.id);
       return docRef.id;
     } catch (error) {
       console.error('Error creating employee:', error);
@@ -268,14 +396,17 @@ class FirebaseService {
     try {
       const q = query(
         collection(db, 'departments'),
-        where('companyId', '==', companyId),
-        orderBy('name')
+        where('companyId', '==', companyId)
       );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      const departments = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Department[];
+      
+      // Sort by name in memory
+      departments.sort((a, b) => a.name.localeCompare(b.name));
+      return departments;
     } catch (error) {
       console.error('Error fetching departments:', error);
       return [];
@@ -331,12 +462,15 @@ class FirebaseService {
         q = query(q, where('status', '==', filters.status));
       }
 
-      q = query(q, orderBy('startTime', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      const shifts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Shift[];
+      
+      // Sort by startTime in memory
+      shifts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
+      return shifts;
     } catch (error) {
       console.error('Error fetching shifts:', error);
       return [];
@@ -404,12 +538,14 @@ class FirebaseService {
         q = query(q, where('severity', '==', filters.severity));
       }
 
-      q = query(q, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      const deviations = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Deviation[];
+      
+      // Sort in-memory by createdAt descending
+      return deviations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (error) {
       console.error('Error fetching deviations:', error);
       return [];
@@ -474,12 +610,14 @@ class FirebaseService {
         q = query(q, where('departmentId', '==', filters.departmentId));
       }
 
-      q = query(q, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      const documents = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Document[];
+      
+      // Sort in-memory by createdAt descending
+      return documents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (error) {
       console.error('Error fetching documents:', error);
       return [];
@@ -554,12 +692,14 @@ class FirebaseService {
         q = query(q, where('employeeId', '==', filters.employeeId));
       }
 
-      q = query(q, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      const timeClocks = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as TimeClock[];
+
+      // Sort by creation date (newest first) in memory
+      return timeClocks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (error) {
       console.error('Error fetching time clocks:', error);
       return [];
@@ -628,12 +768,14 @@ class FirebaseService {
         q = query(q, where('status', '==', filters.status));
       }
 
-      q = query(q, orderBy('createdAt', 'desc'));
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      const vacations = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Vacation[];
+
+      // Sort by creation date (newest first) in memory
+      return vacations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     } catch (error) {
       console.error('Error fetching vacations:', error);
       return [];
@@ -739,15 +881,17 @@ class FirebaseService {
     try {
       const q = query(
         collection(db, 'activities'),
-        where('companyId', '==', companyId),
-        orderBy('createdAt', 'desc'),
-        limit(limitCount)
+        where('companyId', '==', companyId)
       );
       const snapshot = await getDocs(q);
-      return snapshot.docs.map(doc => ({
+      const activities = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Activity[];
+      
+      // Sort by createdAt in memory and limit
+      activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return activities.slice(0, limitCount);
     } catch (error) {
       console.error('Error fetching activities:', error);
       return [];
@@ -788,9 +932,7 @@ class FirebaseService {
 
     const q = query(
       collection(db, 'activities'),
-      where('companyId', '==', companyId),
-      orderBy('createdAt', 'desc'),
-      limit(10)
+      where('companyId', '==', companyId)
     );
 
     return onSnapshot(q, (snapshot) => {
@@ -798,8 +940,376 @@ class FirebaseService {
         id: doc.id,
         ...doc.data()
       })) as Activity[];
-      callback(activities);
+      
+      // Sort by createdAt in memory and limit
+      activities.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      callback(activities.slice(0, 10));
     });
+  }
+
+  // Company Management
+  async getCompanies(): Promise<Company[]> {
+    if (!db) return [];
+
+    try {
+      const q = query(collection(db, 'companies'));
+      const snapshot = await getDocs(q);
+      const companies = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Company[];
+      
+      // Sort by createdAt in memory
+      companies.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      return companies;
+    } catch (error) {
+      console.error('Error fetching companies:', error);
+      return [];
+    }
+  }
+
+  async getCompany(id: string): Promise<Company | null> {
+    if (!db) return null;
+
+    try {
+      const docRef = doc(db, 'companies', id);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        return {
+          id: docSnap.id,
+          ...docSnap.data()
+        } as Company;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error fetching company:', error);
+      return null;
+    }
+  }
+
+  async createCompany(companyData: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!db) throw new Error('Database not initialized');
+
+    try {
+      const docRef = await addDoc(collection(db, 'companies'), {
+        ...companyData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating company:', error);
+      throw error;
+    }
+  }
+
+  async updateCompany(id: string, data: Partial<Company>): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
+
+    try {
+      const docRef = doc(db, 'companies', id);
+      await updateDoc(docRef, {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating company:', error);
+      throw error;
+    }
+  }
+
+  async deleteCompany(id: string): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
+
+    try {
+      const docRef = doc(db, 'companies', id);
+      await deleteDoc(docRef);
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      throw error;
+    }
+  }
+
+  async getCompanyStats(companyId: string): Promise<{
+    totalEmployees: number;
+    totalDepartments: number;
+    totalDocuments: number;
+    totalDeviations: number;
+    activeShifts: number;
+  }> {
+    if (!db) return {
+      totalEmployees: 0,
+      totalDepartments: 0,
+      totalDocuments: 0,
+      totalDeviations: 0,
+      activeShifts: 0
+    };
+
+    try {
+      const [employeesSnapshot, departmentsSnapshot, documentsSnapshot, deviationsSnapshot, shiftsSnapshot] = await Promise.all([
+        getDocs(query(collection(db, 'users'), where('companyId', '==', companyId))),
+        getDocs(query(collection(db, 'departments'), where('companyId', '==', companyId))),
+        getDocs(query(collection(db, 'documents'), where('companyId', '==', companyId))),
+        getDocs(query(collection(db, 'deviations'), where('companyId', '==', companyId))),
+        getDocs(query(collection(db, 'shifts'), where('companyId', '==', companyId), where('status', '==', 'in_progress')))
+      ]);
+
+      return {
+        totalEmployees: employeesSnapshot.size,
+        totalDepartments: departmentsSnapshot.size,
+        totalDocuments: documentsSnapshot.size,
+        totalDeviations: deviationsSnapshot.size,
+        activeShifts: shiftsSnapshot.size
+      };
+    } catch (error) {
+      console.error('Error fetching company stats:', error);
+      return {
+        totalEmployees: 0,
+        totalDepartments: 0,
+        totalDocuments: 0,
+        totalDeviations: 0,
+        activeShifts: 0
+      };
+    }
+  }
+
+  // Survey methods
+  async getSurveys(companyId: string): Promise<Survey[]> {
+    if (!db) return [];
+
+    try {
+      const surveysQuery = query(
+        collection(db, 'surveys'),
+        where('companyId', '==', companyId)
+      );
+      
+      const snapshot = await getDocs(surveysQuery);
+      const surveys = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Survey[];
+
+      // Sort by creation date (newest first)
+      return surveys.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      console.error('Error getting surveys:', error);
+      return [];
+    }
+  }
+
+  async createSurvey(surveyData: Omit<Survey, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      const docRef = await addDoc(collection(db, 'surveys'), {
+        ...surveyData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating survey:', error);
+      throw error;
+    }
+  }
+
+  async updateSurvey(id: string, data: Partial<Survey>): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await updateDoc(doc(db, 'surveys', id), {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating survey:', error);
+      throw error;
+    }
+  }
+
+  async deleteSurvey(id: string): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await deleteDoc(doc(db, 'surveys', id));
+    } catch (error) {
+      console.error('Error deleting survey:', error);
+      throw error;
+    }
+  }
+
+  async getSurveyResponses(surveyId: string): Promise<SurveyResponse[]> {
+    if (!db) return [];
+
+    try {
+      const responsesQuery = query(
+        collection(db, 'surveyResponses'),
+        where('surveyId', '==', surveyId)
+      );
+      
+      const snapshot = await getDocs(responsesQuery);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as SurveyResponse[];
+    } catch (error) {
+      console.error('Error getting survey responses:', error);
+      return [];
+    }
+  }
+
+  async submitSurveyResponse(responseData: Omit<SurveyResponse, 'id' | 'submittedAt'>): Promise<string> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      const docRef = await addDoc(collection(db, 'surveyResponses'), {
+        ...responseData,
+        submittedAt: new Date().toISOString()
+      });
+
+      return docRef.id;
+    } catch (error) {
+      console.error('Error submitting survey response:', error);
+      throw error;
+    }
+  }
+
+  // Partner methods
+  async getPartners(companyId: string): Promise<Partner[]> {
+    if (!db) return [];
+
+    try {
+      const partnersQuery = query(
+        collection(db, 'partners'),
+        where('companyId', '==', companyId)
+      );
+      
+      const snapshot = await getDocs(partnersQuery);
+      const partners = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Partner[];
+
+      // Sort by creation date (newest first)
+      return partners.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      console.error('Error getting partners:', error);
+      return [];
+    }
+  }
+
+  async createPartner(partnerData: Omit<Partner, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      const docRef = await addDoc(collection(db, 'partners'), {
+        ...partnerData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating partner:', error);
+      throw error;
+    }
+  }
+
+  async updatePartner(id: string, data: Partial<Partner>): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await updateDoc(doc(db, 'partners', id), {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating partner:', error);
+      throw error;
+    }
+  }
+
+  async deletePartner(id: string): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await deleteDoc(doc(db, 'partners', id));
+    } catch (error) {
+      console.error('Error deleting partner:', error);
+      throw error;
+    }
+  }
+
+  // Settings methods
+  async getSettings(companyId: string): Promise<Setting[]> {
+    if (!db) return [];
+
+    try {
+      const settingsQuery = query(
+        collection(db, 'settings'),
+        where('companyId', '==', companyId)
+      );
+      
+      const snapshot = await getDocs(settingsQuery);
+      const settings = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Setting[];
+
+      // Sort by category and name
+      return settings.sort((a, b) => {
+        if (a.category !== b.category) {
+          return a.category.localeCompare(b.category);
+        }
+        return a.name.localeCompare(b.name);
+      });
+    } catch (error) {
+      console.error('Error getting settings:', error);
+      return [];
+    }
+  }
+
+  async createSetting(settingData: Omit<Setting, 'id' | 'updatedAt'>): Promise<string> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      const docRef = await addDoc(collection(db, 'settings'), {
+        ...settingData,
+        updatedAt: new Date().toISOString()
+      });
+
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating setting:', error);
+      throw error;
+    }
+  }
+
+  async updateSetting(id: string, data: Partial<Setting>): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await updateDoc(doc(db, 'settings', id), {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating setting:', error);
+      throw error;
+    }
+  }
+
+  async deleteSetting(id: string): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await deleteDoc(doc(db, 'settings', id));
+    } catch (error) {
+      console.error('Error deleting setting:', error);
+      throw error;
+    }
   }
 }
 

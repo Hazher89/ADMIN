@@ -3,7 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, query, collection, where, getDocs, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { Eye, EyeOff, Lock, User, Building } from 'lucide-react';
 import { emailService } from '@/lib/email-service';
@@ -63,38 +63,42 @@ function SetupPasswordContent() {
     }
 
     try {
+      // Check if user already exists in the employees collection
+      const employeesQuery = query(
+        collection(db, 'users'),
+        where('email', '==', email),
+        where('companyName', '==', company)
+      );
+      const employeesSnapshot = await getDocs(employeesQuery);
+      
+      if (employeesSnapshot.empty) {
+        setError('Ingen ansatt funnet med denne e-posten. Vennligst kontakt systemadministrator.');
+        setLoading(false);
+        return;
+      }
+
+      const employeeDoc = employeesSnapshot.docs[0];
+      const employeeData = employeeDoc.data();
+
       // Create user account
       const userCredential = await createUserWithEmailAndPassword(auth, email, formData.password);
       const user = userCredential.user;
 
-      // Update user profile
-      const fullName = `${formData.firstName} ${formData.lastName}`.trim();
+      // Update user profile with employee data
+      const fullName = employeeData.displayName || `${formData.firstName} ${formData.lastName}`.trim();
       if (fullName) {
         await updateProfile(user, {
           displayName: fullName
         });
       }
 
-      // Create user document in Firestore
-      await setDoc(doc(db, 'users', user.uid), {
-        email: email,
-        name: fullName || 'Administrator',
-        role: 'admin',
-        companyName: company,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        status: 'active'
+      // Update the existing employee document with auth information
+      await updateDoc(doc(db, 'users', employeeDoc.id), {
+        authUid: user.uid,
+        passwordSet: true,
+        passwordSetAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
       });
-
-      // Send welcome email
-      await emailService.sendWelcomeEmail(
-        email,
-        fullName || 'Administrator',
-        'DriftPro System',
-        company || 'Unknown Company',
-        'Admin',
-        'Administrator'
-      );
 
       setSuccess(true);
       
@@ -128,9 +132,17 @@ function SetupPasswordContent() {
       <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
         <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">Sett opp passord for DriftPro</h2>
         {email && company && (
-          <p className="text-center text-gray-600 mb-4">
-            Oppretter konto for <span className="font-semibold">{email}</span> i bedriften <span className="font-semibold">{company}</span>.
-          </p>
+          <div className="text-center text-gray-600 mb-4">
+            <p>Din konto er opprettet. Sett opp passordet ditt for å komme i gang.</p>
+            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
+              <p className="text-sm text-blue-800">
+                <strong>E-post:</strong> {email}
+              </p>
+              <p className="text-sm text-blue-800">
+                <strong>Bedrift:</strong> {company}
+              </p>
+            </div>
+          </div>
         )}
 
         {error && (
@@ -143,7 +155,7 @@ function SetupPasswordContent() {
         {success && (
           <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
             <strong className="font-bold">Suksess!</strong>
-            <span className="block sm:inline"> Konto opprettet. Omdirigerer til dashbord...</span>
+            <span className="block sm:inline"> Passord satt opp! Omdirigerer til dashbord...</span>
           </div>
         )}
 
@@ -239,7 +251,7 @@ function SetupPasswordContent() {
                 className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
                 disabled={loading}
               >
-                {loading ? 'Oppretter...' : 'Sett passord og logg inn'}
+                {loading ? 'Setter opp...' : 'Sett passord og logg inn'}
               </button>
             </div>
           </form>

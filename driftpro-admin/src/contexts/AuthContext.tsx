@@ -51,22 +51,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
+  // Debug logging for state changes
   useEffect(() => {
+    console.log('AuthContext: State changed - user:', user);
+    console.log('AuthContext: State changed - userProfile:', userProfile);
+    console.log('AuthContext: State changed - loading:', loading);
+  }, [user, userProfile, loading]);
+
+  useEffect(() => {
+    console.log('AuthContext useEffect triggered');
+    console.log('Window check:', typeof window !== 'undefined');
+    console.log('Auth check:', !!auth);
+    console.log('DB check:', !!db);
+    
     // Only run on client side and if Firebase is available
     if (typeof window === 'undefined' || !auth) {
+      console.log('AuthContext: Skipping initialization - window or auth not available');
       setLoading(false);
       return;
     }
 
+    console.log('AuthContext: Setting up auth state listener');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      console.log('AuthContext: Auth state changed, user:', user);
       setUser(user);
       
       if (user && db) {
+        console.log('AuthContext: User and DB available, fetching profile');
         // Fetch user profile from Firestore
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
+          console.log('AuthContext: User doc exists:', userDoc.exists());
           if (userDoc.exists()) {
             const data = userDoc.data();
+            console.log('AuthContext: User data from Firestore:', data);
             const userProfile: UserProfile = {
               id: user.uid,
               displayName: data.displayName || user.displayName || 'Ny bruker',
@@ -81,8 +99,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               address: data.address || undefined,
               emergencyContact: data.emergencyContact || undefined,
               companyName: data.companyName || undefined, // Add company information
-              companyId: data.companyName || undefined // Use companyName as companyId for isolation
+              companyId: data.companyId || undefined
             };
+            console.log('AuthContext: Created userProfile:', userProfile);
             setUserProfile(userProfile);
           } else {
             // Create default profile if it doesn't exist

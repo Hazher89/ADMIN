@@ -249,7 +249,7 @@ export default function EmployeeVacationManager({ employees, onClose, onUpdate }
                         <div className="flex items-center">
                           <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                             <span className="text-white font-medium text-sm">
-                              {employee.firstName.charAt(0)}{employee.lastName.charAt(0)}
+                              {employee.firstName?.charAt(0) || ''}{employee.lastName?.charAt(0) || ''}
                             </span>
                           </div>
                           <div className="ml-4">

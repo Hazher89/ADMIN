@@ -2,98 +2,52 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { firebaseService, Activity } from '@/lib/firebase-services';
 import { 
   Bell, 
-  AlertTriangle, 
-  CheckCircle, 
-  Info, 
-  X,
+  Search, 
   Filter,
-  Search,
+  Eye,
+  Trash2,
+  AlertTriangle,
+  CheckCircle,
   Clock,
-  User
+  User,
+  Calendar,
+  FileText,
+  Settings,
+  Activity as ActivityIcon,
+  Archive
 } from 'lucide-react';
-
-interface Notification {
-  id: string;
-  title: string;
-  message: string;
-  type: 'info' | 'warning' | 'success' | 'error';
-  timestamp: string;
-  read: boolean;
-  sender: string;
-  priority: 'low' | 'medium' | 'high';
-}
 
 export default function NotificationsPage() {
   const { userProfile } = useAuth();
-  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [notifications, setNotifications] = useState<Activity[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [filterType, setFilterType] = useState('all');
-  const [filterPriority, setFilterPriority] = useState('all');
+  const [selectedType, setSelectedType] = useState('all');
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
-    loadNotifications();
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  const loadNotifications = async () => {
-    try {
-      // Mock data for demonstration
-      const mockNotifications: Notification[] = [
-        {
-          id: '1',
-          title: 'Ny ferieforespørsel',
-          message: 'John Doe har sendt inn en ferieforespørsel for 15.-22. august',
-          type: 'info',
-          timestamp: '2024-07-27T10:30:00Z',
-          read: false,
-          sender: 'John Doe',
-          priority: 'medium'
-        },
-        {
-          id: '2',
-          title: 'Avvik rapportert',
-          message: 'Sikkerhetsavvik rapportert i produksjonsavdelingen',
-          type: 'warning',
-          timestamp: '2024-07-27T09:15:00Z',
-          read: false,
-          sender: 'Sarah Wilson',
-          priority: 'high'
-        },
-        {
-          id: '3',
-          title: 'Skiftplan oppdatert',
-          message: 'Skiftplan for uke 32 er publisert',
-          type: 'success',
-          timestamp: '2024-07-27T08:45:00Z',
-          read: true,
-          sender: 'HR-avdelingen',
-          priority: 'low'
-        },
-        {
-          id: '4',
-          title: 'System vedlikehold',
-          message: 'Planlagt systemvedlikehold i morgen kl. 02:00-04:00',
-          type: 'info',
-          timestamp: '2024-07-27T08:00:00Z',
-          read: true,
-          sender: 'IT-avdelingen',
-          priority: 'medium'
-        },
-        {
-          id: '5',
-          title: 'Fraværsmelding',
-          message: 'Jane Smith har meldt fravær for i dag',
-          type: 'warning',
-          timestamp: '2024-07-27T07:30:00Z',
-          read: false,
-          sender: 'Jane Smith',
-          priority: 'medium'
-        }
-      ];
+  useEffect(() => {
+    if (userProfile?.companyId) {
+      loadData();
+    }
+  }, [userProfile?.companyId]);
 
-      setNotifications(mockNotifications);
+  const loadData = async () => {
+    if (!userProfile?.companyId) return;
+
+    try {
+      setLoading(true);
+      const data = await firebaseService.getActivities(userProfile.companyId, 50);
+      setNotifications(data);
     } catch (error) {
       console.error('Error loading notifications:', error);
     } finally {
@@ -101,239 +55,303 @@ export default function NotificationsPage() {
     }
   };
 
+  const getActivityIcon = (type: string) => {
+    switch (type) {
+      case 'employee_added': return <User style={{ width: '20px', height: '20px', color: 'var(--blue-600)' }} />;
+      case 'shift_created': return <Calendar style={{ width: '20px', height: '20px', color: 'var(--green-600)' }} />;
+      case 'deviation_reported': return <AlertTriangle style={{ width: '20px', height: '20px', color: 'var(--red-600)' }} />;
+      case 'document_uploaded': return <FileText style={{ width: '20px', height: '20px', color: 'var(--purple-600)' }} />;
+      case 'timeclock_event': return <Clock style={{ width: '20px', height: '20px', color: 'var(--orange-600)' }} />;
+      case 'ai_tool_executed': return <Settings style={{ width: '20px', height: '20px', color: 'var(--indigo-600)' }} />;
+      case 'recommendation_applied': return <CheckCircle style={{ width: '20px', height: '20px', color: 'var(--green-600)' }} />;
+      default: return <ActivityIcon style={{ width: '20px', height: '20px', color: 'var(--gray-600)' }} />;
+    }
+  };
+
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case 'employee_added': return 'var(--blue-100)';
+      case 'shift_created': return 'var(--green-100)';
+      case 'deviation_reported': return 'var(--red-100)';
+      case 'document_uploaded': return 'var(--purple-100)';
+      case 'timeclock_event': return 'var(--orange-100)';
+      case 'ai_tool_executed': return 'var(--indigo-100)';
+      case 'recommendation_applied': return 'var(--green-100)';
+      default: return 'var(--gray-100)';
+    }
+  };
+
+  const getActivityLabel = (type: string) => {
+    switch (type) {
+      case 'employee_added': return 'Ansatt lagt til';
+      case 'shift_created': return 'Vakt opprettet';
+      case 'deviation_reported': return 'Avvik rapportert';
+      case 'document_uploaded': return 'Dokument lastet opp';
+      case 'timeclock_event': return 'Tidsregistrering';
+      case 'ai_tool_executed': return 'AI-verktøy kjørt';
+      case 'recommendation_applied': return 'Anbefaling brukt';
+      default: return type;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) {
+      return 'Nå';
+    } else if (diffInHours < 24) {
+      return `${diffInHours}t siden`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays}d siden`;
+    }
+  };
+
   const filteredNotifications = notifications.filter(notification => {
-    const matchesSearch = notification.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         notification.message.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesType = filterType === 'all' || notification.type === filterType;
-    const matchesPriority = filterPriority === 'all' || notification.priority === filterPriority;
-    return matchesSearch && matchesType && matchesPriority;
+    const matchesSearch = (notification.title || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (notification.description || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         (notification.userName || '').toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesType = selectedType === 'all' || notification.type === selectedType;
+    return matchesSearch && matchesType;
   });
 
-  const markAsRead = (id: string) => {
-    setNotifications(prev => 
-      prev.map(notif => 
-        notif.id === id ? { ...notif, read: true } : notif
-      )
+  const stats = {
+    total: notifications.length,
+    today: notifications.filter(n => {
+      const notifDate = new Date(n.createdAt);
+      const today = new Date();
+      return notifDate.toDateString() === today.toDateString();
+    }).length,
+    unread: notifications.filter(n => !n.metadata?.read).length,
+    recent: notifications.filter(n => {
+      const notifDate = new Date(n.createdAt);
+      const weekAgo = new Date();
+      weekAgo.setDate(weekAgo.getDate() - 7);
+      return notifDate > weekAgo;
+    }).length
+  };
+
+  if (loading) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '48px', 
+            height: '48px', 
+            border: '2px solid var(--blue-600)', 
+            borderTop: '2px solid transparent', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto'
+          }}></div>
+          <p style={{ marginTop: '1rem', color: 'var(--gray-600)' }}>Laster varsler...</p>
+        </div>
+      </div>
     );
-  };
-
-  const markAllAsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => ({ ...notif, read: true }))
-    );
-  };
-
-  const deleteNotification = (id: string) => {
-    setNotifications(prev => prev.filter(notif => notif.id !== id));
-  };
-
-  const getTypeIcon = (type: Notification['type']) => {
-    switch (type) {
-      case 'info': return <Info style={{ width: '20px', height: '20px', color: '#667eea' }} />;
-      case 'warning': return <AlertTriangle style={{ width: '20px', height: '20px', color: '#f59e0b' }} />;
-      case 'success': return <CheckCircle style={{ width: '20px', height: '20px', color: '#10b981' }} />;
-      case 'error': return <AlertTriangle style={{ width: '20px', height: '20px', color: '#ef4444' }} />;
-    }
-  };
-
-  const getPriorityColor = (priority: Notification['priority']) => {
-    switch (priority) {
-      case 'low': return '#10b981';
-      case 'medium': return '#f59e0b';
-      case 'high': return '#ef4444';
-    }
-  };
-
-  const unreadCount = notifications.filter(n => !n.read).length;
+  }
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card-icon">
-            <Bell />
-          </div>
+    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
+      {/* Header */}
+      <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 className="page-title">🔔 Varsler</h1>
-            <p className="page-subtitle">
-              Administrer og se alle varsler og meldinger
-            </p>
+            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Varsler</h1>
+            <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem' }}>Oversikt over alle systemvarsler og aktiviteter</p>
           </div>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <span className="badge badge-primary">
-            {unreadCount} uleste
-          </span>
-          {unreadCount > 0 && (
-            <button 
-              onClick={markAllAsRead}
-              className="btn btn-secondary"
-              style={{ fontSize: '0.75rem' }}
-            >
-              Marker alle som lest
-            </button>
-          )}
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
-            <Search className="search-icon" />
-            <input
-              type="text"
-              placeholder="Søk i varsler..."
-              className="search-input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-          <select
-            className="form-input"
-            style={{ width: '150px' }}
-            value={filterType}
-            onChange={(e) => setFilterType(e.target.value)}
-          >
-            <option value="all">Alle typer</option>
-            <option value="info">Info</option>
-            <option value="warning">Advarsel</option>
-            <option value="success">Suksess</option>
-            <option value="error">Feil</option>
-          </select>
-
-          <select
-            className="form-input"
-            style={{ width: '150px' }}
-            value={filterPriority}
-            onChange={(e) => setFilterPriority(e.target.value)}
-          >
-            <option value="all">Alle prioriteter</option>
-            <option value="low">Lav</option>
-            <option value="medium">Medium</option>
-            <option value="high">Høy</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Notifications List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {filteredNotifications.map((notification) => (
-          <div 
-            key={notification.id} 
-            className="card"
-            style={{ 
-              opacity: notification.read ? 0.7 : 1,
-              borderLeft: `4px solid ${getPriorityColor(notification.priority)}`
-            }}
-          >
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-              <div style={{ marginTop: '0.25rem' }}>
-                {getTypeIcon(notification.type)}
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+        {/* Stats Overview */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ padding: '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
+                <Bell style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />
               </div>
-              
-              <div style={{ flex: '1' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                  <h3 style={{ 
-                    fontWeight: '600', 
-                    color: '#333',
-                    fontSize: '1.1rem'
-                  }}>
-                    {notification.title}
-                  </h3>
-                  
-                  <span 
-                    className="badge"
-                    style={{ 
-                      backgroundColor: getPriorityColor(notification.priority),
-                      fontSize: '0.625rem',
-                      padding: '0.125rem 0.5rem'
-                    }}
-                  >
-                    {notification.priority}
-                  </span>
-                  
-                  {!notification.read && (
-                    <div style={{ 
-                      width: '8px', 
-                      height: '8px', 
-                      backgroundColor: '#667eea', 
-                      borderRadius: '50%' 
-                    }} />
-                  )}
-                </div>
-                
-                <p style={{ color: '#666', marginBottom: '1rem', lineHeight: '1.5' }}>
-                  {notification.message}
-                </p>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#666' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <User style={{ width: '14px', height: '14px' }} />
-                    <span>{notification.sender}</span>
-                  </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <Clock style={{ width: '14px', height: '14px' }} />
-                    <span>{new Date(notification.timestamp).toLocaleString('no-NO')}</span>
-                  </div>
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                {!notification.read && (
-                  <button 
-                    onClick={() => markAsRead(notification.id)}
-                    className="btn btn-secondary"
-                    style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
-                  >
-                    Marker som lest
-                  </button>
-                )}
-                
-                <button 
-                  onClick={() => deleteNotification(notification.id)}
-                  className="btn btn-secondary"
-                  style={{ 
-                    fontSize: '0.75rem', 
-                    padding: '0.25rem 0.5rem',
-                    color: '#ef4444',
-                    borderColor: '#ef4444'
-                  }}
-                >
-                  <X style={{ width: '14px', height: '14px' }} />
-                </button>
+              <div style={{ marginLeft: '1rem' }}>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Totalt</p>
+                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.total}</p>
               </div>
             </div>
           </div>
-        ))}
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ padding: '0.75rem', background: 'var(--green-100)', borderRadius: 'var(--radius-lg)' }}>
+                <Calendar style={{ width: '24px', height: '24px', color: 'var(--green-600)' }} />
+              </div>
+              <div style={{ marginLeft: '1rem' }}>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>I dag</p>
+                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.today}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ padding: '0.75rem', background: 'var(--yellow-100)', borderRadius: 'var(--radius-lg)' }}>
+                <AlertTriangle style={{ width: '24px', height: '24px', color: 'var(--yellow-600)' }} />
+              </div>
+              <div style={{ marginLeft: '1rem' }}>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Uleste</p>
+                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.unread}</p>
+              </div>
+            </div>
+          </div>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ padding: '0.75rem', background: 'var(--purple-100)', borderRadius: 'var(--radius-lg)' }}>
+                <Archive style={{ width: '24px', height: '24px', color: 'var(--purple-600)' }} />
+              </div>
+              <div style={{ marginLeft: '1rem' }}>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Nylig</p>
+                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.recent}</p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Search and Filters */}
+        <div className="card" style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem' }}>
+            <div style={{ flex: '1' }}>
+              <div style={{ position: 'relative' }}>
+                <Search style={{ 
+                  position: 'absolute', 
+                  left: '12px', 
+                  top: '50%', 
+                  transform: 'translateY(-50%)', 
+                  color: 'var(--gray-400)', 
+                  width: '16px', 
+                  height: '16px' 
+                }} />
+                <input
+                  type="text"
+                  placeholder="Søk i varsler..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem 0.75rem 0.75rem 2.5rem', 
+                    border: '1px solid var(--gray-300)', 
+                    borderRadius: 'var(--radius-lg)', 
+                    outline: 'none'
+                  }}
+                />
+              </div>
+            </div>
+            <select
+              value={selectedType}
+              onChange={(e) => setSelectedType(e.target.value)}
+              style={{ 
+                padding: '0.75rem', 
+                border: '1px solid var(--gray-300)', 
+                borderRadius: 'var(--radius-lg)', 
+                outline: 'none',
+                minWidth: isMobile ? '100%' : '150px'
+              }}
+            >
+              <option value="all">Alle typer</option>
+              <option value="employee_added">Ansatt lagt til</option>
+              <option value="shift_created">Vakt opprettet</option>
+              <option value="deviation_reported">Avvik rapportert</option>
+              <option value="document_uploaded">Dokument lastet opp</option>
+              <option value="timeclock_event">Tidsregistrering</option>
+              <option value="ai_tool_executed">AI-verktøy</option>
+              <option value="recommendation_applied">Anbefaling</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Notifications List */}
+        <div className="card">
+          {filteredNotifications.length === 0 ? (
+            <div style={{ padding: '3rem', textAlign: 'center' }}>
+              <Bell style={{ width: '48px', height: '48px', color: 'var(--gray-400)', margin: '0 auto 1rem' }} />
+              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+                Ingen varsler
+              </h3>
+              <p style={{ color: 'var(--gray-600)' }}>
+                Det er ingen varsler som matcher søkekriteriene dine.
+              </p>
+            </div>
+          ) : (
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                <thead style={{ background: 'var(--gray-50)' }}>
+                  <tr>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: 'var(--font-size-xs)', fontWeight: '500', color: 'var(--gray-500)', textTransform: 'uppercase' }}>
+                      Type
+                    </th>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: 'var(--font-size-xs)', fontWeight: '500', color: 'var(--gray-500)', textTransform: 'uppercase' }}>
+                      Tittel
+                    </th>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: 'var(--font-size-xs)', fontWeight: '500', color: 'var(--gray-500)', textTransform: 'uppercase' }}>
+                      Beskrivelse
+                    </th>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: 'var(--font-size-xs)', fontWeight: '500', color: 'var(--gray-500)', textTransform: 'uppercase' }}>
+                      Bruker
+                    </th>
+                    <th style={{ padding: '1rem', textAlign: 'left', fontSize: 'var(--font-size-xs)', fontWeight: '500', color: 'var(--gray-500)', textTransform: 'uppercase' }}>
+                      Tidspunkt
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredNotifications.map((notification) => (
+                    <tr key={notification.id} style={{ borderBottom: '1px solid var(--gray-100)' }}>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ 
+                          display: 'flex', 
+                          alignItems: 'center', 
+                          gap: '0.5rem',
+                          padding: '0.5rem',
+                          borderRadius: 'var(--radius-md)',
+                          background: getActivityColor(notification.type),
+                          width: 'fit-content'
+                        }}>
+                          {getActivityIcon(notification.type)}
+                          <span style={{ 
+                            fontSize: 'var(--font-size-sm)', 
+                            fontWeight: '500', 
+                            color: 'var(--gray-700)'
+                          }}>
+                            {getActivityLabel(notification.type)}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <p style={{ fontWeight: '500', color: 'var(--gray-900)' }}>{notification.title}</p>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <p style={{ color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>{notification.description}</p>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <User style={{ width: '16px', height: '16px', color: 'var(--gray-500)' }} />
+                          <span style={{ color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                            {notification.userName}
+                          </span>
+                        </div>
+                      </td>
+                      <td style={{ padding: '1rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Clock style={{ width: '16px', height: '16px', color: 'var(--gray-500)' }} />
+                          <span style={{ color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                            {formatDate(notification.createdAt)}
+                          </span>
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
       </div>
-
-      {/* Empty State */}
-      {filteredNotifications.length === 0 && !loading && (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <Bell style={{ width: '64px', height: '64px', color: '#ccc', margin: '0 auto 1rem' }} />
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-            Ingen varsler funnet
-          </h3>
-          <p style={{ color: '#666' }}>
-            {searchTerm || filterType !== 'all' || filterPriority !== 'all' 
-              ? 'Prøv å endre søkekriteriene' 
-              : 'Du har ingen varsler for øyeblikket'}
-          </p>
-        </div>
-      )}
-
-      {/* Loading State */}
-      {loading && (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
-          <p style={{ color: '#666' }}>Laster varsler...</p>
-        </div>
-      )}
     </div>
   );
 }

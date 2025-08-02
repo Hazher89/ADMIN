@@ -2,36 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { emailService, EmailLog } from '@/lib/email-service';
 import { 
-  Mail, 
-  Search, 
-  Filter,
-  Calendar,
-  User,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Eye,
-  RefreshCw,
-  Download,
-  AlertTriangle,
-  Send,
-  Inbox,
-  Archive
+  Search, Filter, Mail, Clock, CheckCircle, AlertTriangle, XCircle,
+  Eye, Download, RefreshCw, Send, User, Calendar, FileText
 } from 'lucide-react';
-
-interface EmailLog {
-  id: string;
-  recipient: string;
-  subject: string;
-  status: 'sent' | 'delivered' | 'failed' | 'pending';
-  sentAt: string;
-  deliveredAt?: string;
-  sender: string;
-  template: string;
-  attachments: number;
-  priority: 'low' | 'medium' | 'high';
-}
 
 export default function EmailLogsPage() {
   const { userProfile } = useAuth();
@@ -39,310 +14,323 @@ export default function EmailLogsPage() {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedPriority, setSelectedPriority] = useState('all');
+  const [selectedType, setSelectedType] = useState('all');
 
   useEffect(() => {
-    loadEmailLogs();
-  }, []);
+    if (userProfile?.companyId) {
+      loadEmailLogs();
+    }
+  }, [userProfile?.companyId]);
 
   const loadEmailLogs = async () => {
-    try {
-      // Mock data for demonstration
-      const mockEmailLogs: EmailLog[] = [
-        {
-          id: '1',
-          recipient: 'john.doe@company.com',
-          subject: 'Velkommen til DriftPro',
-          status: 'delivered',
-          sentAt: '2024-07-27T10:30:00Z',
-          deliveredAt: '2024-07-27T10:31:15Z',
-          sender: 'system@driftpro.no',
-          template: 'welcome_email',
-          attachments: 0,
-          priority: 'medium'
-        },
-        {
-          id: '2',
-          recipient: 'jane.smith@company.com',
-          subject: 'Ferieforespørsel godkjent',
-          status: 'sent',
-          sentAt: '2024-07-27T09:15:00Z',
-          sender: 'hr@driftpro.no',
-          template: 'vacation_approved',
-          attachments: 1,
-          priority: 'high'
-        },
-        {
-          id: '3',
-          recipient: 'mike.johnson@company.com',
-          subject: 'Månedlig rapport',
-          status: 'failed',
-          sentAt: '2024-07-27T08:45:00Z',
-          sender: 'reports@driftpro.no',
-          template: 'monthly_report',
-          attachments: 2,
-          priority: 'low'
-        },
-        {
-          id: '4',
-          recipient: 'sarah.wilson@company.com',
-          subject: 'Passord tilbakestilling',
-          status: 'delivered',
-          sentAt: '2024-07-27T08:00:00Z',
-          deliveredAt: '2024-07-27T08:00:45Z',
-          sender: 'security@driftpro.no',
-          template: 'password_reset',
-          attachments: 0,
-          priority: 'high'
-        },
-        {
-          id: '5',
-          recipient: 'admin@company.com',
-          subject: 'System vedlikehold',
-          status: 'pending',
-          sentAt: '2024-07-27T07:30:00Z',
-          sender: 'system@driftpro.no',
-          template: 'maintenance_notice',
-          attachments: 0,
-          priority: 'medium'
-        }
-      ];
+    if (!userProfile?.companyId) return;
 
-      setEmailLogs(mockEmailLogs);
+    try {
+      setLoading(true);
+      
+      // Load email logs from Firebase
+      const logs = await emailService.getEmailLogs(userProfile.companyId);
+      setEmailLogs(logs);
     } catch (error) {
       console.error('Error loading email logs:', error);
+      setEmailLogs([]);
     } finally {
       setLoading(false);
     }
   };
 
   const filteredEmailLogs = emailLogs.filter(log => {
-    const matchesSearch = log.recipient.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.subject.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         log.sender.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesSearch = log.to.some(email => email.toLowerCase().includes(searchTerm.toLowerCase())) ||
+                         log.subject.toLowerCase().includes(searchTerm.toLowerCase());
     const matchesStatus = selectedStatus === 'all' || log.status === selectedStatus;
-    const matchesPriority = selectedPriority === 'all' || log.priority === selectedPriority;
-    return matchesSearch && matchesStatus && matchesPriority;
+    const matchesType = selectedType === 'all' || log.eventType === selectedType;
+    return matchesSearch && matchesStatus && matchesType;
   });
 
   const statuses = ['all', ...Array.from(new Set(emailLogs.map(log => log.status)))];
-  const priorities = ['all', ...Array.from(new Set(emailLogs.map(log => log.priority)))];
+  const types = ['all', ...Array.from(new Set(emailLogs.map(log => log.eventType)))];
 
   const getStatusColor = (status: EmailLog['status']) => {
     switch (status) {
-      case 'delivered': return '#10b981';
-      case 'sent': return '#3b82f6';
+      case 'sent': return '#10b981';
       case 'failed': return '#ef4444';
-      case 'pending': return '#f59e0b';
     }
   };
 
   const getStatusIcon = (status: EmailLog['status']) => {
     switch (status) {
-      case 'delivered': return <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />;
-      case 'sent': return <Send style={{ width: '16px', height: '16px', color: '#3b82f6' }} />;
+      case 'sent': return <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />;
       case 'failed': return <XCircle style={{ width: '16px', height: '16px', color: '#ef4444' }} />;
-      case 'pending': return <Clock style={{ width: '16px', height: '16px', color: '#f59e0b' }} />;
     }
   };
 
-  const getPriorityColor = (priority: EmailLog['priority']) => {
-    switch (priority) {
-      case 'high': return '#ef4444';
-      case 'medium': return '#f59e0b';
-      case 'low': return '#10b981';
+  const getStatusLabel = (status: EmailLog['status']) => {
+    switch (status) {
+      case 'sent': return 'Sendt';
+      case 'failed': return 'Feilet';
     }
   };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'deviation_reported': return 'Avvik rapportert';
+      case 'deviation_assigned': return 'Avvik tildelt';
+      case 'deviation_resolved': return 'Avvik løst';
+      case 'vacation_requested': return 'Ferie forespurt';
+      case 'vacation_approved': return 'Ferie godkjent';
+      case 'vacation_rejected': return 'Ferie avvist';
+      case 'absence_requested': return 'Fravær forespurt';
+      case 'absence_approved': return 'Fravær godkjent';
+      case 'absence_rejected': return 'Fravær avvist';
+      case 'shift_assigned': return 'Skift tildelt';
+      case 'shift_updated': return 'Skift oppdatert';
+      case 'shift_cancelled': return 'Skift kansellert';
+      case 'document_shared': return 'Dokument delt';
+      case 'chat_message': return 'Chat melding';
+      case 'employee_added': return 'Ansatt lagt til';
+      case 'employee_updated': return 'Ansatt oppdatert';
+      case 'employee_removed': return 'Ansatt fjernet';
+      case 'password_reset': return 'Passord tilbakestilling';
+      case 'welcome_email': return 'Velkomst e-post';
+      case 'system_maintenance': return 'System vedlikehold';
+      case 'security_alert': return 'Sikkerhetsvarsel';
+      case 'test_email': return 'Test e-post';
+      default: return type;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('no-NO');
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('no-NO', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const resendEmail = async (emailLog: EmailLog) => {
+    try {
+      const success = await emailService.resendEmail(emailLog);
+      if (success) {
+        alert('E-post sendt på nytt!');
+        loadEmailLogs(); // Reload to show updated status
+      } else {
+        alert('Kunne ikke sende e-post på nytt. Sjekk e-postinnstillingene.');
+      }
+    } catch (error) {
+      console.error('Error resending email:', error);
+      alert('Feil ved sending av e-post på nytt.');
+    }
+  };
+
+  const exportLogs = async () => {
+    if (!userProfile?.companyId) return;
+
+    try {
+      const csvContent = await emailService.exportEmailLogs(userProfile.companyId);
+      
+      // Create and download CSV file
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      const url = URL.createObjectURL(blob);
+      link.setAttribute('href', url);
+      link.setAttribute('download', `email-logs-${new Date().toISOString().split('T')[0]}.csv`);
+      link.style.visibility = 'hidden';
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      
+      alert('E-post logger eksportert!');
+    } catch (error) {
+      console.error('Error exporting logs:', error);
+      alert('Feil ved eksport av logger.');
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
     <div>
       {/* Page Header */}
       <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card-icon">
-            <Mail />
-          </div>
-          <div>
-            <h1 className="page-title">📧 E-post Logger</h1>
-            <p className="page-subtitle">
-              Oversikt over alle sendte e-poster og deres status
-            </p>
-          </div>
-        </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <span className="badge badge-primary">
-            {emailLogs.length} e-poster
-          </span>
-          <button className="btn btn-secondary">
-            <RefreshCw style={{ width: '16px', height: '16px' }} />
-            Oppdater
-          </button>
-          <button className="btn btn-secondary">
-            <Download style={{ width: '16px', height: '16px' }} />
-            Eksporter
-          </button>
-        </div>
+        <h1 className="page-title">📧 E-post logger</h1>
+        <p className="page-subtitle">
+          Oversikt over alle sendte e-poster og deres status
+        </p>
       </div>
 
-      {/* Search and Filters */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
-            <Search className="search-icon" />
-            <input
-              type="text"
-              placeholder="Søk i e-post logger..."
-              className="search-input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
+      {/* Filters and Search */}
+      <div className="filters-section">
+        <div className="search-filter">
+          <Search style={{ width: '20px', height: '20px', color: '#6b7280' }} />
+          <input
+            type="text"
+            placeholder="Søk i e-post logger..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+
+        <div className="filter-controls">
           <select
-            className="form-input"
-            style={{ width: '150px' }}
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
+            className="filter-select"
           >
             {statuses.map(status => (
               <option key={status} value={status}>
-                {status === 'all' ? 'Alle statuser' : 
-                 status === 'delivered' ? 'Levert' :
-                 status === 'sent' ? 'Sendt' :
-                 status === 'failed' ? 'Feilet' : 'Venter'}
+                {status === 'all' ? 'Alle statuser' : getStatusLabel(status as EmailLog['status'])}
               </option>
             ))}
           </select>
 
           <select
-            className="form-input"
-            style={{ width: '150px' }}
-            value={selectedPriority}
-            onChange={(e) => setSelectedPriority(e.target.value)}
+            value={selectedType}
+            onChange={(e) => setSelectedType(e.target.value)}
+            className="filter-select"
           >
-            {priorities.map(priority => (
-              <option key={priority} value={priority}>
-                {priority === 'all' ? 'Alle prioriteter' : 
-                 priority === 'high' ? 'Høy' :
-                 priority === 'medium' ? 'Medium' : 'Lav'}
+            {types.map(type => (
+              <option key={type} value={type}>
+                {type === 'all' ? 'Alle typer' : getTypeLabel(type)}
               </option>
             ))}
           </select>
+
+          <button onClick={exportLogs} className="btn btn-secondary">
+            <Download style={{ width: '16px', height: '16px' }} />
+            Eksporter
+          </button>
+
+          <button onClick={loadEmailLogs} className="btn btn-secondary">
+            <RefreshCw style={{ width: '16px', height: '16px' }} />
+            Oppdater
+          </button>
         </div>
       </div>
 
-      {/* Email Logs List */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {filteredEmailLogs.map((log) => (
-          <div key={log.id} className="card">
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
-              <div style={{ marginTop: '0.25rem' }}>
-                {getStatusIcon(log.status)}
-              </div>
-              
-              <div style={{ flex: '1' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
-                  <h3 style={{ 
-                    fontWeight: '600', 
-                    color: '#333',
-                    fontSize: '1rem'
-                  }}>
-                    {log.subject}
-                  </h3>
-                  
-                  <span 
-                    className="badge"
-                    style={{ 
-                      backgroundColor: getPriorityColor(log.priority),
-                      fontSize: '0.625rem',
-                      padding: '0.125rem 0.5rem'
-                    }}
-                  >
-                    {log.priority === 'high' ? 'Høy' : 
-                     log.priority === 'medium' ? 'Medium' : 'Lav'}
-                  </span>
-                  
-                  {log.attachments > 0 && (
-                    <span className="badge badge-secondary" style={{ fontSize: '0.625rem' }}>
-                      📎 {log.attachments}
-                    </span>
-                  )}
-                </div>
-                
-                <div style={{ marginBottom: '1rem' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <User style={{ width: '14px', height: '14px', color: '#666' }} />
-                    <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                      <strong>Til:</strong> {log.recipient}
-                    </span>
-                  </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <Send style={{ width: '14px', height: '14px', color: '#666' }} />
-                    <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                      <strong>Fra:</strong> {log.sender}
-                    </span>
-                  </div>
-                  
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Inbox style={{ width: '14px', height: '14px', color: '#666' }} />
-                    <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                      <strong>Malen:</strong> {log.template}
-                    </span>
-                  </div>
-                </div>
-                
-                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', fontSize: '0.875rem', color: '#666' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                    <Calendar style={{ width: '14px', height: '14px' }} />
-                    <span>Sendt: {new Date(log.sentAt).toLocaleString('no-NO')}</span>
-                  </div>
-                  
-                  {log.deliveredAt && (
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
-                      <CheckCircle style={{ width: '14px', height: '14px' }} />
-                      <span>Levert: {new Date(log.deliveredAt).toLocaleString('no-NO')}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-              
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>
-                  <Eye style={{ width: '14px', height: '14px' }} />
-                </button>
-                <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.5rem' }}>
-                  <Archive style={{ width: '14px', height: '14px' }} />
-                </button>
-              </div>
+      {/* Email Logs Grid */}
+      <div className="email-logs-grid">
+        {emailLogs.length === 0 ? (
+          <div className="empty-state">
+            <Mail style={{ width: '64px', height: '64px', color: '#9ca3af' }} />
+            <h3>Ingen e-post logger funnet</h3>
+            <p>E-post loggfunksjonalitet er under utvikling.</p>
+            <div className="feature-info">
+              <h4>Planlagte funksjoner:</h4>
+              <ul>
+                <li>Oversikt over alle sendte e-poster</li>
+                <li>Status tracking og leveringsbekreftelse</li>
+                <li>E-post maler og automatisering</li>
+                <li>Feilanalyse og ny sending</li>
+                <li>Eksport av logger og rapporter</li>
+              </ul>
             </div>
           </div>
-        ))}
+        ) : (
+          filteredEmailLogs.map((log) => (
+            <div key={log.id} className="email-log-card">
+              <div className="email-log-header">
+                <div className="email-log-status">
+                  {getStatusIcon(log.status)}
+                  <span
+                    className="status-badge"
+                    style={{ backgroundColor: getStatusColor(log.status) }}
+                  >
+                    {getStatusLabel(log.status)}
+                  </span>
+                </div>
+                <div className="email-log-actions">
+                  <button className="action-btn" title="Se detaljer">
+                    <Eye style={{ width: '16px', height: '16px' }} />
+                  </button>
+                  {log.status === 'failed' && (
+                    <button
+                      onClick={() => resendEmail(log)}
+                      className="action-btn"
+                      title="Send på nytt"
+                    >
+                      <Send style={{ width: '16px', height: '16px' }} />
+                    </button>
+                  )}
+                </div>
+              </div>
+
+              <div className="email-log-content">
+                <h3 className="email-subject">{log.subject}</h3>
+                
+                <div className="email-details">
+                  <div className="detail-item">
+                    <User style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+                    <span>Mottaker: {log.to.join(', ')}</span>
+                  </div>
+                  <div className="detail-item">
+                    <FileText style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+                    <span>Type: {getTypeLabel(log.eventType)}</span>
+                  </div>
+                  <div className="detail-item">
+                    <Calendar style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+                    <span>Sendt: {formatDate(log.sentAt)} {formatTime(log.sentAt)}</span>
+                  </div>
+                </div>
+
+                {log.error && (
+                  <div className="email-error">
+                    <AlertTriangle style={{ width: '16px', height: '16px', color: '#ef4444' }} />
+                    <span>Feil: {log.error}</span>
+                  </div>
+                )}
+
+                {log.metadata && Object.keys(log.metadata).length > 0 && (
+                  <div className="email-metadata">
+                    <h4>Metadata:</h4>
+                    <div className="metadata-grid">
+                      {Object.entries(log.metadata).map(([key, value]) => (
+                        <div key={key} className="metadata-item">
+                          <span className="metadata-key">{key}:</span>
+                          <span className="metadata-value">{String(value)}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))
+        )}
       </div>
 
-      {/* Empty State */}
-      {filteredEmailLogs.length === 0 && !loading && (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <Mail style={{ width: '64px', height: '64px', color: '#ccc', margin: '0 auto 1rem' }} />
-          <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#333', marginBottom: '0.5rem' }}>
-            Ingen e-post logger funnet
-          </h3>
-          <p style={{ color: '#666' }}>
-            {searchTerm || selectedStatus !== 'all' || selectedPriority !== 'all' 
-              ? 'Prøv å endre søkekriteriene' 
-              : 'Du har ingen e-post logger ennå'}
-          </p>
+      {/* Stats */}
+      <div className="stats-section">
+        <div className="stat-card">
+          <div className="stat-number">{emailLogs.length}</div>
+          <div className="stat-label">Totalt e-poster</div>
         </div>
-      )}
-
-      {/* Loading State */}
-      {loading && (
-        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
-          <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
-          <p style={{ color: '#666' }}>Laster e-post logger...</p>
+        <div className="stat-card">
+          <div className="stat-number">{emailLogs.filter(log => log.status === 'sent').length}</div>
+          <div className="stat-label">Sendt</div>
         </div>
-      )}
+        <div className="stat-card">
+          <div className="stat-number">{emailLogs.filter(log => log.status === 'failed').length}</div>
+          <div className="stat-label">Feilet</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-number">
+            {emailLogs.length > 0 
+              ? Math.round((emailLogs.filter(log => log.status === 'sent').length / emailLogs.length) * 100)
+              : 0}%
+          </div>
+          <div className="stat-label">Suksessrate</div>
+        </div>
+      </div>
     </div>
   );
 }

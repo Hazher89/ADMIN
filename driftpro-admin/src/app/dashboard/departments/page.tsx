@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { firebaseService, Department, Employee } from '@/lib/firebase-services';
 import { 
   Building, 
   Plus, 
@@ -21,110 +22,37 @@ import {
   TrendingUp
 } from 'lucide-react';
 
-interface Department {
-  id: string;
-  name: string;
-  description: string;
-  manager: string;
-  employees: number;
-  location: string;
-  status: 'active' | 'inactive' | 'planning';
-  budget: number;
-  createdAt: string;
-  category: string;
-  contactEmail: string;
-  contactPhone: string;
-}
+
 
 export default function DepartmentsPage() {
   const { userProfile } = useAuth();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('all');
-  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [newDepartment, setNewDepartment] = useState({
+    name: '',
+    description: '',
+    location: '',
+    budget: 0,
+    managerId: ''
+  });
+  const [employees, setEmployees] = useState<Employee[]>([]);
 
   useEffect(() => {
-    loadDepartments();
-  }, []);
+    if (userProfile?.companyId) {
+      loadDepartments();
+      loadEmployees();
+    }
+  }, [userProfile?.companyId]);
 
   const loadDepartments = async () => {
-    try {
-      // Mock data for demonstration
-      const mockDepartments: Department[] = [
-        {
-          id: '1',
-          name: 'Produksjon',
-          description: 'Hovedproduksjonsavdeling for alle produkter',
-          manager: 'John Smith',
-          employees: 45,
-          location: 'Produksjonshall A',
-          status: 'active',
-          budget: 2500000,
-          createdAt: '2023-01-15T10:00:00Z',
-          category: 'Produksjon',
-          contactEmail: 'produksjon@company.com',
-          contactPhone: '+47 123 45 678'
-        },
-        {
-          id: '2',
-          name: 'Kvalitetskontroll',
-          description: 'Kvalitetskontroll og testing av produkter',
-          manager: 'Sarah Johnson',
-          employees: 12,
-          location: 'Kontrollrom',
-          status: 'active',
-          budget: 800000,
-          createdAt: '2023-02-20T09:00:00Z',
-          category: 'Kvalitet',
-          contactEmail: 'kvalitet@company.com',
-          contactPhone: '+47 123 45 679'
-        },
-        {
-          id: '3',
-          name: 'IT og Systemer',
-          description: 'IT-støtte og systemadministrasjon',
-          manager: 'Mike Davis',
-          employees: 8,
-          location: 'IT-avdeling',
-          status: 'active',
-          budget: 1200000,
-          createdAt: '2023-03-10T11:00:00Z',
-          category: 'IT',
-          contactEmail: 'it@company.com',
-          contactPhone: '+47 123 45 680'
-        },
-        {
-          id: '4',
-          name: 'HR og Personal',
-          description: 'Human Resources og personaladministrasjon',
-          manager: 'Lisa Wilson',
-          employees: 6,
-          location: 'Hovedkontor',
-          status: 'active',
-          budget: 600000,
-          createdAt: '2023-01-05T08:00:00Z',
-          category: 'Administrasjon',
-          contactEmail: 'hr@company.com',
-          contactPhone: '+47 123 45 681'
-        },
-        {
-          id: '5',
-          name: 'Forskning og Utvikling',
-          description: 'R&D avdeling for nye produkter',
-          manager: 'Tom Brown',
-          employees: 15,
-          location: 'R&D Laboratorium',
-          status: 'planning',
-          budget: 1800000,
-          createdAt: '2024-06-01T14:00:00Z',
-          category: 'R&D',
-          contactEmail: 'rd@company.com',
-          contactPhone: '+47 123 45 682'
-        }
-      ];
+    if (!userProfile?.companyId) return;
 
-      setDepartments(mockDepartments);
+    try {
+      setLoading(true);
+      const data = await firebaseService.getDepartments(userProfile.companyId);
+      setDepartments(data);
     } catch (error) {
       console.error('Error loading departments:', error);
     } finally {
@@ -132,40 +60,62 @@ export default function DepartmentsPage() {
     }
   };
 
+  const loadEmployees = async () => {
+    if (!userProfile?.companyId) return;
+
+    try {
+      const data = await firebaseService.getEmployees(userProfile.companyId);
+      setEmployees(data);
+    } catch (error) {
+      console.error('Error loading employees:', error);
+    }
+  };
+
   const filteredDepartments = departments.filter(department => {
     const matchesSearch = department.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         department.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         department.category.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = selectedStatus === 'all' || department.status === selectedStatus;
-    const matchesCategory = selectedCategory === 'all' || department.category === selectedCategory;
-    return matchesSearch && matchesStatus && matchesCategory;
+                         (department.description?.toLowerCase().includes(searchTerm.toLowerCase()) || false);
+    return matchesSearch;
   });
 
-  const statuses = ['all', ...Array.from(new Set(departments.map(dept => dept.status)))];
-  const categories = ['all', ...Array.from(new Set(departments.map(dept => dept.category)))];
-
-  const getStatusColor = (status: Department['status']) => {
-    switch (status) {
-      case 'active': return '#10b981';
-      case 'inactive': return '#ef4444';
-      case 'planning': return '#f59e0b';
-    }
-  };
-
-  const getStatusIcon = (status: Department['status']) => {
-    switch (status) {
-      case 'active': return <CheckCircle style={{ width: '16px', height: '16px', color: '#10b981' }} />;
-      case 'inactive': return <AlertTriangle style={{ width: '16px', height: '16px', color: '#ef4444' }} />;
-      case 'planning': return <Clock style={{ width: '16px', height: '16px', color: '#f59e0b' }} />;
-    }
-  };
-
   const getTotalEmployees = () => {
-    return departments.reduce((sum, dept) => sum + dept.employees, 0);
+    return departments.reduce((sum, dept) => sum + (dept.employeeCount || 0), 0);
   };
 
   const getTotalBudget = () => {
-    return departments.reduce((sum, dept) => sum + dept.budget, 0);
+    return departments.reduce((sum, dept) => sum + (dept.budget || 0), 0);
+  };
+
+  const getManagerName = (managerId: string) => {
+    const manager = employees.find(emp => emp.id === managerId);
+    return manager ? manager.displayName : 'Ikke tildelt';
+  };
+
+  const handleAddDepartment = async () => {
+    if (!userProfile?.companyId) return;
+
+    try {
+      await firebaseService.createDepartment({
+        name: newDepartment.name,
+        description: newDepartment.description,
+        location: newDepartment.location,
+        budget: newDepartment.budget,
+        managerId: newDepartment.managerId || undefined,
+        companyId: userProfile.companyId
+      });
+
+      setShowAddModal(false);
+      setNewDepartment({
+        name: '',
+        description: '',
+        location: '',
+        budget: 0,
+        managerId: ''
+      });
+      loadDepartments();
+    } catch (error) {
+      console.error('Error adding department:', error);
+      alert('Failed to add department');
+    }
   };
 
   return (
@@ -191,7 +141,10 @@ export default function DepartmentsPage() {
           <span className="badge badge-secondary">
             {getTotalEmployees()} ansatte
           </span>
-          <button className="btn btn-primary">
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowAddModal(true)}
+          >
             <Plus style={{ width: '16px', height: '16px' }} />
             Opprett avdeling
           </button>
@@ -210,7 +163,7 @@ export default function DepartmentsPage() {
         </div>
         <div className="stat-card">
           <div className="stat-number">
-            {departments.filter(d => d.status === 'active').length}
+            {departments.length}
           </div>
           <div className="stat-label">Aktive avdelinger</div>
         </div>
@@ -236,33 +189,7 @@ export default function DepartmentsPage() {
             />
           </div>
           
-          <select
-            className="form-input"
-            style={{ width: '150px' }}
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-          >
-            {statuses.map(status => (
-              <option key={status} value={status}>
-                {status === 'all' ? 'Alle statuser' : 
-                 status === 'active' ? 'Aktive' :
-                 status === 'inactive' ? 'Inaktive' : 'Planlegging'}
-              </option>
-            ))}
-          </select>
 
-          <select
-            className="form-input"
-            style={{ width: '150px' }}
-            value={selectedCategory}
-            onChange={(e) => setSelectedCategory(e.target.value)}
-          >
-            {categories.map(category => (
-              <option key={category} value={category}>
-                {category === 'all' ? 'Alle kategorier' : category}
-              </option>
-            ))}
-          </select>
         </div>
       </div>
 
@@ -294,65 +221,40 @@ export default function DepartmentsPage() {
 
             <div style={{ marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <User style={{ width: '14px', height: '14px', color: '#666' }} />
-                <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                  <strong>Leder:</strong> {department.manager}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                 <Users style={{ width: '14px', height: '14px', color: '#666' }} />
                 <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {department.employees} ansatte
+                  {department.employeeCount || 0} ansatte
                 </span>
               </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <MapPin style={{ width: '14px', height: '14px', color: '#666' }} />
-                <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {department.location}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <BarChart3 style={{ width: '14px', height: '14px', color: '#666' }} />
-                <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {department.budget.toLocaleString()} kr budsjett
-                </span>
-              </div>
-            </div>
-
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  {getStatusIcon(department.status)}
-                  <span style={{ 
-                    fontSize: '0.75rem', 
-                    fontWeight: '600',
-                    color: getStatusColor(department.status)
-                  }}>
-                    {department.status === 'active' ? 'Aktiv' : 
-                     department.status === 'inactive' ? 'Inaktiv' : 'Planlegging'}
+              {department.managerId && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <User style={{ width: '14px', height: '14px', color: '#666' }} />
+                  <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                    <strong>Leder:</strong> {getManagerName(department.managerId)}
                   </span>
                 </div>
-                <span className="badge badge-secondary" style={{ fontSize: '0.625rem' }}>
-                  {department.category}
-                </span>
-              </div>
-              <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                Opprettet: {new Date(department.createdAt).toLocaleDateString('no-NO')}
-              </div>
+              )}
+              {department.location && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                  <MapPin style={{ width: '14px', height: '14px', color: '#666' }} />
+                  <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                    {department.location}
+                  </span>
+                </div>
+              )}
+              {department.budget && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <BarChart3 style={{ width: '14px', height: '14px', color: '#666' }} />
+                  <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                    {department.budget.toLocaleString()} kr budsjett
+                  </span>
+                </div>
+              )}
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <User style={{ width: '14px', height: '14px', color: '#666' }} />
-                <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {department.contactEmail}
-                </span>
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <MapPin style={{ width: '14px', height: '14px', color: '#666' }} />
-                <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                  {department.contactPhone}
-                </span>
+              <div style={{ fontSize: '0.75rem', color: '#666' }}>
+                Opprettet: {new Date(department.createdAt).toLocaleDateString('no-NO')}
               </div>
             </div>
 
@@ -394,11 +296,14 @@ export default function DepartmentsPage() {
             Ingen avdelinger funnet
           </h3>
           <p style={{ color: '#666', marginBottom: '1.5rem' }}>
-            {searchTerm || selectedStatus !== 'all' || selectedCategory !== 'all' 
+            {searchTerm 
               ? 'Prøv å endre søkekriteriene' 
               : 'Du har ingen avdelinger registrert ennå'}
           </p>
-          <button className="btn btn-primary">
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowAddModal(true)}
+          >
             <Plus style={{ width: '16px', height: '16px' }} />
             Opprett din første avdeling
           </button>
@@ -410,6 +315,107 @@ export default function DepartmentsPage() {
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
           <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
           <p style={{ color: '#666' }}>Laster avdelinger...</p>
+        </div>
+      )}
+
+      {/* Add Department Modal */}
+      {showAddModal && (
+        <div className="modal-overlay" onClick={() => setShowAddModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Opprett ny avdeling</h2>
+              <button className="modal-close" onClick={() => setShowAddModal(false)}>×</button>
+            </div>
+            <div className="modal-body">
+              <div className="modal-form-grid">
+                <div className="form-field">
+                  <label className="form-label">Navn *</label>
+                  <input
+                    type="text"
+                    value={newDepartment.name}
+                    onChange={(e) => setNewDepartment({ ...newDepartment, name: e.target.value })}
+                    className="form-input-modal"
+                    placeholder="Avdelingsnavn"
+                    required
+                  />
+                </div>
+                <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label">Beskrivelse</label>
+                  <textarea
+                    value={newDepartment.description}
+                    onChange={(e) => setNewDepartment({ ...newDepartment, description: e.target.value })}
+                    className="form-textarea-modal"
+                    placeholder="Beskrivelse av avdelingen"
+                    rows={3}
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Lokasjon</label>
+                  <input
+                    type="text"
+                    value={newDepartment.location}
+                    onChange={(e) => setNewDepartment({ ...newDepartment, location: e.target.value })}
+                    className="form-input-modal"
+                    placeholder="F.eks. 2. etasje, bygg A"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Budsjett (kr)</label>
+                  <input
+                    type="number"
+                    value={newDepartment.budget}
+                    onChange={(e) => setNewDepartment({ ...newDepartment, budget: Number(e.target.value) })}
+                    className="form-input-modal"
+                    placeholder="0"
+                    min="0"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Avdelingsleder</label>
+                  <select
+                    value={newDepartment.managerId}
+                    onChange={(e) => setNewDepartment({ ...newDepartment, managerId: e.target.value })}
+                    className="form-select-modal"
+                  >
+                    <option value="">Velg avdelingsleder (valgfritt)</option>
+                    {employees.map(employee => (
+                      <option key={employee.id} value={employee.id}>
+                        {employee.displayName} - {employee.position || 'Ingen stilling'}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{ 
+                  padding: '0.75rem 1.5rem', 
+                  background: 'var(--gray-300)', 
+                  color: 'var(--gray-700)', 
+                  border: 'none', 
+                  borderRadius: 'var(--radius-lg)', 
+                  cursor: 'pointer' 
+                }}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleAddDepartment}
+                style={{ 
+                  padding: '0.75rem 1.5rem', 
+                  background: 'var(--blue-600)', 
+                  color: 'var(--white)', 
+                  border: 'none', 
+                  borderRadius: 'var(--radius-lg)', 
+                  cursor: 'pointer' 
+                }}
+              >
+                Opprett avdeling
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

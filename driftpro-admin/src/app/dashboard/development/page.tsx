@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
+import { emailService } from '@/lib/email-service';
 import { 
   Code, Settings, Database, Server, Shield, Zap, Activity, BarChart3, 
   LineChart, TrendingUp, Users, Building, Home, Globe, Lock, Unlock, Key,
@@ -278,7 +279,7 @@ export function EmployeeList({ companyId }: { companyId: string }) {
       {employees.map(employee => (
         <div key={employee.id} className="employee-card">
           <h3>{employee.displayName}</h3>
-          <p>{employee.position}</p>
+          <p>{employee.position || 'Ingen stilling'}</p>
         </div>
       ))}
     </div>
@@ -483,6 +484,48 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {/* Email Test Section */}
+      <div style={{ marginBottom: '2rem' }}>
+        <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#333' }}>
+          Email System Test
+        </h2>
+        <div className="card">
+          <div className="card-header">
+            <div className="card-icon">
+              <Mail />
+            </div>
+            <h3 className="card-title">Test Email Service</h3>
+          </div>
+          <p className="card-description">Test the email functionality to ensure it's working properly</p>
+          <button
+            className="btn btn-primary"
+            onClick={async () => {
+              try {
+                const success = await emailService.sendEmail({
+                  to: 'test@example.com',
+                  subject: 'Test Email from DriftPro',
+                  body: '<h2>Test Email</h2><p>This is a test email to verify the email service is working.</p>',
+                  metadata: {
+                    eventType: 'test_email'
+                  }
+                });
+                
+                if (success) {
+                  alert('Test email sent successfully!');
+                } else {
+                  alert('Failed to send test email. Check console for details.');
+                }
+                              } catch (error) {
+                  console.error('Test email error:', error);
+                  alert('Error sending test email: ' + (error instanceof Error ? error.message : 'Unknown error'));
+                }
+            }}
+          >
+            Send Test Email
+          </button>
         </div>
       </div>
 

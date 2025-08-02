@@ -75,75 +75,45 @@ export default function CompaniesPage() {
         setCompanies(companiesData);
         console.log('Loaded companies from Firebase:', companiesData);
         console.log('Total companies loaded:', companiesData.length);
-        companiesData.forEach(company => {
-          console.log(`Company: ${company.name} (${company.status}) - Admin: ${company.adminEmail}`);
-        });
-        
-        // Check specifically for DriftPro AS
-        const driftPro = companiesData.find(company => company.name === 'DriftPro AS');
-        if (driftPro) {
-          console.log('🚨 DriftPro AS found in Firebase:');
-          console.log('   Name:', driftPro.name);
-          console.log('   Admin Email:', driftPro.adminEmail);
-          console.log('   Expected Admin Email: baxigshti@hotmail.de');
-          console.log('   Match:', driftPro.adminEmail === 'baxigshti@hotmail.de');
-        } else {
-          console.log('❌ DriftPro AS not found in Firebase');
-        }
       } else {
-        // Fallback to mock data if Firebase is not available
-        setCompanies([
-          {
-            id: 'company-1',
-            name: 'DriftPro AS',
-            orgNumber: '123456789',
-            phone: '+47 123 45 678',
-            email: 'kontakt@driftpro.no',
-            adminEmail: 'baxigshti@hotmail.de',
-            address: 'Oslo, Norge',
-            industry: 'Teknologi',
-            employeeCount: 25,
-            status: 'active',
-            createdAt: '2024-01-01T00:00:00Z',
-            updatedAt: '2024-01-01T00:00:00Z',
-            subscriptionPlan: 'premium',
-            contactPerson: {
-              name: 'Admin',
-              phone: '+47 123 45 678',
-              email: 'baxigshti@hotmail.de'
-            }
-          }
-        ]);
+        console.log('Firebase not available');
+        setCompanies([]);
       }
     } catch (error) {
       console.error('Error loading companies:', error);
-      // Fallback to mock data on error
-      setCompanies([
-        {
-          id: 'company-1',
-          name: 'DriftPro AS',
-          orgNumber: '123456789',
-          phone: '+47 123 45 678',
-          email: 'kontakt@driftpro.no',
-          adminEmail: 'baxigshti@hotmail.de',
-          address: 'Oslo, Norge',
-          industry: 'Teknologi',
-          employeeCount: 25,
-          status: 'active',
-          createdAt: '2024-01-01T00:00:00Z',
-          updatedAt: '2024-01-01T00:00:00Z',
-          subscriptionPlan: 'premium',
-          contactPerson: {
-            name: 'Admin',
-            phone: '+47 123 45 678',
-            email: 'baxigshti@hotmail.de'
-          }
-        }
-      ]);
+      setCompanies([]);
     } finally {
       setLoading(false);
     }
   };
+
+  // Auto-search when searchTerm changes
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredCompanies([]);
+      return;
+    }
+
+    setSearching(true);
+    
+    // Simulate a small delay for better UX
+    const timeoutId = setTimeout(() => {
+      try {
+        const filtered = companies.filter(company => 
+          company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          company.orgNumber.includes(searchTerm) ||
+          company.adminEmail.toLowerCase().includes(searchTerm.toLowerCase())
+        );
+        setFilteredCompanies(filtered);
+      } catch (error) {
+        console.error('Error searching companies:', error);
+      } finally {
+        setSearching(false);
+      }
+    }, 300); // 300ms delay
+
+    return () => clearTimeout(timeoutId);
+  }, [searchTerm, companies]);
 
   useEffect(() => {
     loadCompanies();
@@ -155,32 +125,6 @@ export default function CompaniesPage() {
     // Redirect to login page
     router.push('/login');
   };
-
-  const handleSearch = useCallback(async () => {
-    if (!searchTerm.trim()) {
-      setFilteredCompanies(companies);
-      return;
-    }
-
-    setSearching(true);
-
-    try {
-      const filtered = companies.filter(company => 
-        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        company.orgNumber.includes(searchTerm) ||
-        company.adminEmail.toLowerCase().includes(searchTerm.toLowerCase())
-      );
-      setFilteredCompanies(filtered);
-    } catch (error) {
-      console.error('Error searching companies:', error);
-    } finally {
-      setSearching(false);
-    }
-  }, [searchTerm, companies]);
-
-  useEffect(() => {
-    handleSearch();
-  }, [handleSearch]);
 
   if (loading) {
     return (
@@ -337,13 +281,11 @@ export default function CompaniesPage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     placeholder="Søk etter bedriftsnavn, domene eller bransje..."
                     className="search-input"
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
                   />
                   <Search className="search-icon" />
                 </div>
               </div>
               <button
-                onClick={handleSearch}
                 disabled={searching}
                 className="btn btn-primary"
               >

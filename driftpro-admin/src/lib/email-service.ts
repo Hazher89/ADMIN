@@ -7,6 +7,7 @@ import {
   doc,
   setDoc,
   getDoc,
+  updateDoc,
   serverTimestamp
 } from 'firebase/firestore';
 import { db } from './firebase';
@@ -505,8 +506,17 @@ class EmailService {
       // Get current email configuration
       const config = await this.getConfig();
       
-      // Send email via API route
-      const response = await fetch('/api/send-email', {
+      // Determine the correct endpoint based on environment
+      const isDevelopment = process.env.NODE_ENV === 'development';
+      const endpoint = isDevelopment 
+        ? '/api/send-email' 
+        : '/.netlify/functions/send-email';
+      
+      console.log('Sending email via endpoint:', endpoint);
+      console.log('Email data:', { to: emailData.to, subject: emailData.subject });
+      
+      // Send email via API route or Netlify function
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -517,13 +527,21 @@ class EmailService {
         })
       });
 
+      console.log('Response status:', response.status);
+      
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('HTTP error:', response.status, errorText);
+        return false;
+      }
+
       const result = await response.json();
       
       if (result.success) {
-        console.log('Email sent successfully via API');
+        console.log('Email sent successfully via', isDevelopment ? 'API' : 'Netlify function');
         return true;
       } else {
-        console.error('Failed to send email via API:', result.error);
+        console.error('Failed to send email:', result.error);
         return false;
       }
     } catch (error) {
@@ -662,6 +680,93 @@ class EmailService {
   // Get current email settings
   async getSettings() {
     return this.getConfig();
+  }
+
+  // Get email logs for a company
+  async getEmailLogs(companyId: string): Promise<EmailLog[]> {
+    if (!db) return [];
+
+    try {
+      const logsQuery = query(
+        collection(db, 'emailLogs'),
+        where('metadata.companyId', '==', companyId)
+      );
+      
+      const snapshot = await getDocs(logsQuery);
+      const logs = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as EmailLog[];
+
+      // Sort by sentAt (newest first) in memory
+      return logs.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
+    } catch (error) {
+      console.error('Error getting email logs:', error);
+      return [];
+    }
+  }
+
+  // Resend email
+  async resendEmail(emailLog: EmailLog): Promise<boolean> {
+    try {
+      // Recreate the email data from the log
+      const emailData: EmailData = {
+        to: emailLog.to,
+        subject: emailLog.subject,
+        body: emailLog.content,
+        metadata: {
+          eventType: emailLog.eventType,
+          ...emailLog.metadata
+        }
+      };
+
+      const success = await this.sendEmail(emailData);
+      
+      if (success) {
+        // Update the log with new timestamp
+        await updateDoc(doc(db!, 'emailLogs', emailLog.id), {
+          sentAt: new Date().toISOString(),
+          status: 'sent',
+          error: null
+        });
+      }
+
+      return success;
+    } catch (error) {
+      console.error('Error resending email:', error);
+      return false;
+    }
+  }
+
+  // Export email logs to CSV
+  async exportEmailLogs(companyId: string): Promise<string> {
+    const logs = await this.getEmailLogs(companyId);
+    
+    const csvHeaders = [
+      'ID',
+      'To',
+      'Subject',
+      'Event Type',
+      'Status',
+      'Sent At',
+      'Error'
+    ];
+
+    const csvRows = logs.map(log => [
+      log.id,
+      log.to.join(', '),
+      log.subject,
+      log.eventType,
+      log.status,
+      log.sentAt,
+      log.error || ''
+    ]);
+
+    const csvContent = [csvHeaders, ...csvRows]
+      .map(row => row.map(field => `"${field}"`).join(','))
+      .join('\n');
+
+    return csvContent;
   }
 
   // Update email settings and save to localStorage

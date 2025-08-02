@@ -10,7 +10,6 @@ import {
   EyeOff, 
   Building,
   User,
-  CheckCircle,
   AlertCircle
 } from 'lucide-react';
 
@@ -22,7 +21,19 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState('');
+  const [selectedCompany, setSelectedCompany] = useState<any>(null);
+
+  // Load selected company from localStorage
+  useEffect(() => {
+    const storedCompany = localStorage.getItem('selectedCompany');
+    if (storedCompany) {
+      try {
+        setSelectedCompany(JSON.parse(storedCompany));
+      } catch (error) {
+        console.error('Error parsing stored company:', error);
+      }
+    }
+  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -49,13 +60,6 @@ export default function LoginPage() {
       setLoading(false);
     }
   };
-
-  const companies = [
-    { id: '1', name: 'TechCorp Solutions', logo: '🏢' },
-    { id: '2', name: 'Nordic Manufacturing', logo: '🏭' },
-    { id: '3', name: 'Green Energy AS', logo: '⚡' },
-    { id: '4', name: 'HealthCare Plus', logo: '🏥' }
-  ];
 
   return (
     <div style={{
@@ -108,64 +112,60 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Company Selection */}
-        <div style={{ marginBottom: '2rem' }}>
-          <label style={{
-            display: 'block',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            color: '#333',
-            marginBottom: '0.75rem'
-          }}>
-            Velg bedrift
-          </label>
+        {/* Selected Company Display */}
+        {selectedCompany && (
           <div style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, 1fr)',
+            background: 'rgba(102, 126, 234, 0.1)',
+            border: '2px solid rgba(102, 126, 234, 0.2)',
+            borderRadius: '12px',
+            padding: '1rem',
+            marginBottom: '2rem',
+            display: 'flex',
+            alignItems: 'center',
             gap: '0.75rem'
           }}>
-            {companies.map((company) => (
-              <button
-                key={company.id}
-                type="button"
-                onClick={() => setSelectedCompany(company.id)}
-                style={{
-                  padding: '1rem',
-                  border: selectedCompany === company.id 
-                    ? '2px solid #667eea' 
-                    : '2px solid rgba(102, 126, 234, 0.2)',
-                  borderRadius: '12px',
-                  background: selectedCompany === company.id 
-                    ? 'rgba(102, 126, 234, 0.1)' 
-                    : 'rgba(255, 255, 255, 0.8)',
-                  cursor: 'pointer',
-                  transition: 'all 0.3s ease',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}
-              >
-                <span style={{ fontSize: '1.5rem' }}>{company.logo}</span>
-                <span style={{
-                  fontSize: '0.875rem',
-                  fontWeight: '500',
-                  color: '#333',
-                  textAlign: 'left'
-                }}>
-                  {company.name}
-                </span>
-                {selectedCompany === company.id && (
-                  <CheckCircle style={{ 
-                    width: '16px', 
-                    height: '16px', 
-                    color: '#667eea',
-                    marginLeft: 'auto'
-                  }} />
-                )}
-              </button>
-            ))}
+            <Building style={{ 
+              width: '24px', 
+              height: '24px', 
+              color: '#667eea' 
+            }} />
+            <div style={{ flex: '1' }}>
+              <h3 style={{
+                fontSize: '1rem',
+                fontWeight: '600',
+                color: '#333',
+                marginBottom: '0.25rem'
+              }}>
+                {selectedCompany.name}
+              </h3>
+              <p style={{
+                fontSize: '0.875rem',
+                color: '#666'
+              }}>
+                Org.nr: {selectedCompany.orgNumber}
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                localStorage.removeItem('selectedCompany');
+                setSelectedCompany(null);
+                router.push('/companies');
+              }}
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#667eea',
+                cursor: 'pointer',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                transition: 'all 0.3s ease'
+              }}
+              title="Velg annen bedrift"
+            >
+              Endre
+            </button>
           </div>
-        </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>
@@ -293,11 +293,11 @@ export default function LoginPage() {
           {/* Submit Button */}
           <button
             type="submit"
-            disabled={loading || !selectedCompany}
+            disabled={loading}
             style={{
               width: '100%',
               padding: '1rem',
-              background: loading || !selectedCompany 
+              background: loading 
                 ? 'rgba(102, 126, 234, 0.5)' 
                 : 'linear-gradient(135deg, #667eea, #764ba2)',
               color: 'white',
@@ -305,7 +305,7 @@ export default function LoginPage() {
               borderRadius: '12px',
               fontSize: '1rem',
               fontWeight: '600',
-              cursor: loading || !selectedCompany ? 'not-allowed' : 'pointer',
+              cursor: loading ? 'not-allowed' : 'pointer',
               transition: 'all 0.3s ease',
               display: 'flex',
               alignItems: 'center',
@@ -343,15 +343,18 @@ export default function LoginPage() {
           }}>
             Har du glemt passordet ditt?
           </p>
-          <button style={{
-            background: 'none',
-            border: 'none',
-            color: '#667eea',
-            fontSize: '0.875rem',
-            fontWeight: '600',
-            cursor: 'pointer',
-            textDecoration: 'underline'
-          }}>
+          <button 
+            onClick={() => router.push('/forgot-password')}
+            style={{
+              background: 'none',
+              border: 'none',
+              color: '#667eea',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              textDecoration: 'underline'
+            }}
+          >
             Tilbakestill passord
           </button>
         </div>

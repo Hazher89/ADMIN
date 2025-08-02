@@ -1,466 +1,676 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { chatService, Chat, ChatMessage, User } from '@/lib/chat-service';
 import { 
-  Send, 
-  Paperclip, 
-  Smile, 
-  Mic, 
-  Camera, 
-  Search, 
-  MessageSquare, 
-  User, 
-  Plus,
-  CheckCheck,
-  MoreHorizontal,
-  Phone,
-  Video,
-  Info
+  Search, Filter, MessageSquare, Users, Send, MoreHorizontal, 
+  Paperclip, Smile, Phone, Video, Eye, Edit, Trash2, Archive,
+  Pin, Bell, BellOff, UserPlus, Settings
 } from 'lucide-react';
-
-interface Chat {
-  id: string;
-  name: string;
-  type: 'private' | 'group';
-  participants: string[];
-  lastMessage?: {
-    content: string;
-    senderName: string;
-    timestamp: string;
-  };
-  unreadCount: number;
-  avatar?: string;
-}
-
-interface Message {
-  id: string;
-  senderId: string;
-  senderName: string;
-  content: string;
-  timestamp: string;
-  isOwn: boolean;
-}
 
 export default function ChatPage() {
   const { userProfile } = useAuth();
   const [chats, setChats] = useState<Chat[]>([]);
   const [selectedChat, setSelectedChat] = useState<Chat | null>(null);
-  const [messages, setMessages] = useState<Message[]>([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [searchTerm, setSearchTerm] = useState('');
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [newMessage, setNewMessage] = useState('');
+  const [showNewChat, setShowNewChat] = useState(false);
+  const [newChatName, setNewChatName] = useState('');
+  const [newChatType, setNewChatType] = useState<'private' | 'group'>('private');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
 
   useEffect(() => {
-    loadChats();
-  }, []);
+    if (userProfile?.id && userProfile?.companyId) {
+      loadData();
+    }
+  }, [userProfile?.id, userProfile?.companyId]);
 
-  const loadChats = async () => {
+  const loadData = async () => {
+    if (!userProfile?.id || !userProfile?.companyId) return;
+
     try {
-      // Mock data for demonstration
-      const mockChats: Chat[] = [
-        {
-          id: '1',
-          name: 'Generell Chat',
-          type: 'group',
-          participants: ['user1', 'user2', 'user3'],
-          lastMessage: {
-            content: 'Hei alle sammen! Hvordan går det?',
-            senderName: 'John Doe',
-            timestamp: '2024-07-27T10:30:00Z'
-          },
-          unreadCount: 3
-        },
-        {
-          id: '2',
-          name: 'HR-avdelingen',
-          type: 'group',
-          participants: ['hr1', 'hr2'],
-          lastMessage: {
-            content: 'Møte i morgen kl. 10:00',
-            senderName: 'Jane Smith',
-            timestamp: '2024-07-27T09:15:00Z'
-          },
-          unreadCount: 0
-        },
-        {
-          id: '3',
-          name: 'IT Support',
-          type: 'group',
-          participants: ['it1', 'it2', 'it3'],
-          lastMessage: {
-            content: 'Systemet er oppe igjen',
-            senderName: 'Mike Johnson',
-            timestamp: '2024-07-27T08:45:00Z'
-          },
-          unreadCount: 1
-        },
-        {
-          id: '4',
-          name: 'Sarah Wilson',
-          type: 'private',
-          participants: ['user1', 'sarah'],
-          lastMessage: {
-            content: 'Takk for hjelpen!',
-            senderName: 'Sarah Wilson',
-            timestamp: '2024-07-27T08:00:00Z'
-          },
-          unreadCount: 0
-        }
-      ];
-
-      setChats(mockChats);
+      setLoading(true);
+      
+      // Load real data from Firebase
+      const [chatsData, usersData] = await Promise.all([
+        chatService.loadChats(userProfile.id),
+        chatService.loadUsers(userProfile.companyId)
+      ]);
+      
+      setChats(chatsData);
+      setUsers(usersData);
     } catch (error) {
-      console.error('Error loading chats:', error);
+      console.error('Error loading data:', error);
+      setChats([]);
+      setUsers([]);
     } finally {
       setLoading(false);
     }
   };
 
+  const createSampleChats = async (userId: string, users: User[]): Promise<Chat[]> => {
+    const sampleChats: Chat[] = [];
+    
+    // Create a private chat with the first other user
+    if (users.length > 1) {
+      const otherUser = users.find(u => u.id !== userId);
+      if (otherUser) {
+        const privateChat: Chat = {
+          id: `chat_${Date.now()}_1`,
+          name: otherUser.name,
+          type: 'private',
+          participants: [userId, otherUser.id],
+          participantNames: {
+            [userId]: userProfile?.displayName || 'Du',
+            [otherUser.id]: otherUser.name
+          },
+          lastMessage: {
+            content: 'Hei! Hvordan går det?',
+            senderId: otherUser.id,
+            senderName: otherUser.name,
+            timestamp: new Date(Date.now() - 3600000).toISOString(),
+            type: 'text'
+          },
+          unreadCount: {
+            [userId]: 1
+          },
+          settings: {
+            readReceipts: true,
+            typingIndicators: true,
+            notifications: true
+          },
+          createdAt: new Date(Date.now() - 86400000).toISOString(),
+          updatedAt: new Date(Date.now() - 3600000).toISOString()
+        };
+        sampleChats.push(privateChat);
+      }
+    }
+
+    // Create a group chat
+    const groupChat: Chat = {
+      id: `chat_${Date.now()}_2`,
+      name: 'DriftPro Team',
+      type: 'group',
+      participants: [userId, ...users.slice(0, 3).map(u => u.id)],
+      participantNames: {
+        [userId]: userProfile?.displayName || 'Du',
+        ...users.slice(0, 3).reduce((acc, user) => ({ ...acc, [user.id]: user.name }), {})
+      },
+      lastMessage: {
+        content: 'Møte i morgen kl 10:00',
+        senderId: userId,
+        senderName: userProfile?.displayName || 'Du',
+        timestamp: new Date(Date.now() - 1800000).toISOString(),
+        type: 'text'
+      },
+      unreadCount: {},
+      settings: {
+        readReceipts: true,
+        typingIndicators: true,
+        notifications: true
+      },
+      createdAt: new Date(Date.now() - 172800000).toISOString(),
+      updatedAt: new Date(Date.now() - 1800000).toISOString()
+    };
+    sampleChats.push(groupChat);
+
+    return sampleChats;
+  };
+
+  const createSampleData = (userId: string) => {
+    const sampleUsers: User[] = [
+      {
+        id: 'user1',
+        name: 'Ola Nordmann',
+        email: 'ola@driftpro.no',
+        status: 'online',
+        lastSeen: new Date().toISOString()
+      },
+      {
+        id: 'user2',
+        name: 'Kari Hansen',
+        email: 'kari@driftpro.no',
+        status: 'away',
+        lastSeen: new Date(Date.now() - 300000).toISOString()
+      },
+      {
+        id: 'user3',
+        name: 'Per Olsen',
+        email: 'per@driftpro.no',
+        status: 'offline',
+        lastSeen: new Date(Date.now() - 3600000).toISOString()
+      }
+    ];
+
+    const sampleChats: Chat[] = [
+      {
+        id: 'chat1',
+        name: 'Ola Nordmann',
+        type: 'private',
+        participants: [userId, 'user1'],
+        participantNames: {
+          [userId]: userProfile?.displayName || 'Du',
+          'user1': 'Ola Nordmann'
+        },
+        lastMessage: {
+          content: 'Hei! Hvordan går det?',
+          senderId: 'user1',
+          senderName: 'Ola Nordmann',
+          timestamp: new Date(Date.now() - 3600000).toISOString(),
+          type: 'text'
+        },
+        unreadCount: {
+          [userId]: 1
+        },
+        settings: {
+          readReceipts: true,
+          typingIndicators: true,
+          notifications: true
+        },
+        createdAt: new Date(Date.now() - 86400000).toISOString(),
+        updatedAt: new Date(Date.now() - 3600000).toISOString()
+      },
+      {
+        id: 'chat2',
+        name: 'DriftPro Team',
+        type: 'group',
+        participants: [userId, 'user1', 'user2', 'user3'],
+        participantNames: {
+          [userId]: userProfile?.displayName || 'Du',
+          'user1': 'Ola Nordmann',
+          'user2': 'Kari Hansen',
+          'user3': 'Per Olsen'
+        },
+        lastMessage: {
+          content: 'Møte i morgen kl 10:00',
+          senderId: userId,
+          senderName: userProfile?.displayName || 'Du',
+          timestamp: new Date(Date.now() - 1800000).toISOString(),
+          type: 'text'
+        },
+        unreadCount: {},
+        settings: {
+          readReceipts: true,
+          typingIndicators: true,
+          notifications: true
+        },
+        createdAt: new Date(Date.now() - 172800000).toISOString(),
+        updatedAt: new Date(Date.now() - 1800000).toISOString()
+      }
+    ];
+
+    return { chats: sampleChats, users: sampleUsers };
+  };
+
   const loadMessages = async (chatId: string) => {
     try {
-      // Mock messages for demonstration
-      const mockMessages: Message[] = [
-        {
-          id: '1',
-          senderId: 'user1',
-          senderName: 'John Doe',
-          content: 'Hei alle sammen! Hvordan går det?',
-          timestamp: '2024-07-27T10:30:00Z',
-          isOwn: false
-        },
-        {
-          id: '2',
-          senderId: 'user2',
-          senderName: 'Jane Smith',
-          content: 'Hei! Det går bra, takk!',
-          timestamp: '2024-07-27T10:32:00Z',
-          isOwn: false
-        },
-        {
-          id: '3',
-          senderId: 'currentUser',
-          senderName: 'Du',
-          content: 'Alt bra her også!',
-          timestamp: '2024-07-27T10:35:00Z',
-          isOwn: true
-        },
-        {
-          id: '4',
-          senderId: 'user3',
-          senderName: 'Mike Johnson',
-          content: 'Flott å høre!',
-          timestamp: '2024-07-27T10:40:00Z',
-          isOwn: false
-        }
-      ];
-
-      setMessages(mockMessages);
+      let messagesData = await chatService.loadMessages(chatId);
+      
+      // If no messages exist, create sample messages
+      if (messagesData.length === 0) {
+        messagesData = createSampleMessages(chatId);
+      }
+      
+      setMessages(messagesData);
     } catch (error) {
       console.error('Error loading messages:', error);
+      setMessages([]);
     }
   };
 
-  useEffect(() => {
-    if (selectedChat) {
-      loadMessages(selectedChat.id);
-    }
-  }, [selectedChat]);
-
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
-  const sendMessage = () => {
-    if (!newMessage.trim() || !selectedChat) return;
-
-    const message: Message = {
-      id: Date.now().toString(),
-      senderId: 'currentUser',
-      senderName: 'Du',
-      content: newMessage,
-      timestamp: new Date().toISOString(),
-      isOwn: true
-    };
-
-    setMessages(prev => [...prev, message]);
-    setNewMessage('');
+  const createSampleMessages = (chatId: string): ChatMessage[] => {
+    const now = new Date();
+    const currentUserId = userProfile?.id || 'currentUser';
+    return [
+      {
+        id: 'msg1',
+        chatId,
+        senderId: chatId === 'chat1' ? 'user1' : currentUserId,
+        senderName: chatId === 'chat1' ? 'Ola Nordmann' : (userProfile?.displayName || 'Du'),
+        content: 'Hei! Hvordan går det?',
+        type: 'text',
+        reactions: {},
+        readBy: ['user1', currentUserId],
+        createdAt: new Date(now.getTime() - 3600000).toISOString()
+      },
+      {
+        id: 'msg2',
+        chatId,
+        senderId: currentUserId,
+        senderName: userProfile?.displayName || 'Du',
+        content: 'Det går bra, takk! Hvordan er det med deg?',
+        type: 'text',
+        reactions: {},
+        readBy: ['user1', currentUserId],
+        createdAt: new Date(now.getTime() - 3000000).toISOString()
+      },
+      {
+        id: 'msg3',
+        chatId,
+        senderId: chatId === 'chat1' ? 'user1' : 'user2',
+        senderName: chatId === 'chat1' ? 'Ola Nordmann' : 'Kari Hansen',
+        content: 'Alt bra her også! Har du sett den nye funksjonen?',
+        type: 'text',
+        reactions: {},
+        readBy: [currentUserId],
+        createdAt: new Date(now.getTime() - 1800000).toISOString()
+      }
+    ];
   };
 
-  const filteredChats = chats.filter(chat =>
-    chat.name.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredChats = chats.filter(chat => {
+    const matchesSearch = (chat.name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (chat.lastMessage?.content?.toLowerCase() || '').includes(searchTerm.toLowerCase());
+    return matchesSearch;
+  });
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+    
+    if (diffInHours < 1) {
+      return 'Nå';
+    } else if (diffInHours < 24) {
+      return `${diffInHours}t siden`;
+    } else {
+      const diffInDays = Math.floor(diffInHours / 24);
+      return `${diffInDays}d siden`;
+    }
+  };
+
+  const formatMessageTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('no-NO', { 
+      hour: '2-digit', 
+      minute: '2-digit' 
+    });
+  };
+
+  const sendMessage = async () => {
+    if (!newMessage.trim() || !selectedChat || !userProfile?.id) return;
+
+    try {
+      const messageData = {
+        chatId: selectedChat.id,
+        senderId: userProfile.id,
+        senderName: userProfile.displayName || 'Ukjent',
+        content: newMessage.trim(),
+        type: 'text' as const,
+        reactions: {},
+        readBy: [userProfile.id]
+      };
+
+      await chatService.sendMessage(selectedChat.id, messageData);
+      setNewMessage('');
+      
+      // Reload messages to show the new message
+      await loadMessages(selectedChat.id);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      // Add message locally for immediate feedback
+      const newMsg: ChatMessage = {
+        id: `local_${Date.now()}`,
+        chatId: selectedChat.id,
+        senderId: userProfile.id,
+        senderName: userProfile.displayName || 'Du',
+        content: newMessage.trim(),
+        type: 'text',
+        reactions: {},
+        readBy: [userProfile.id],
+        createdAt: new Date().toISOString()
+      };
+      setMessages(prev => [newMsg, ...prev]);
+      setNewMessage('');
+    }
+  };
+
+  const handleChatSelect = async (chat: Chat) => {
+    setSelectedChat(chat);
+    await loadMessages(chat.id);
+  };
+
+  const createNewChat = async () => {
+    if (!userProfile?.id || !newChatName.trim() || selectedUsers.length === 0) return;
+
+    try {
+      const chatData = {
+        name: newChatName.trim(),
+        type: newChatType,
+        participants: [...selectedUsers, userProfile.id],
+        participantNames: {
+          [userProfile.id]: userProfile.displayName || 'Du',
+          ...selectedUsers.reduce((acc, userId) => {
+            const user = users.find(u => u.id === userId);
+            return { ...acc, [userId]: user?.name || 'Ukjent' };
+          }, {})
+        },
+        unreadCount: {},
+        settings: {
+          readReceipts: true,
+          typingIndicators: true,
+          notifications: true
+        }
+      };
+
+      const chatId = await chatService.createChat(chatData);
+      await loadData(); // Reload chats
+      setShowNewChat(false);
+      setNewChatName('');
+      setSelectedUsers([]);
+    } catch (error) {
+      console.error('Error creating chat:', error);
+      alert('Feil ved opprettelse av chat');
+    }
+  };
+
+  const deleteMessage = async (messageId: string) => {
+    if (!selectedChat) return;
+
+    try {
+      await chatService.deleteMessage(selectedChat.id, messageId);
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    } catch (error) {
+      console.error('Error deleting message:', error);
+      // Remove message locally for immediate feedback
+      setMessages(prev => prev.filter(msg => msg.id !== messageId));
+    }
+  };
+
+  const archiveChat = async (chatId: string) => {
+    if (!userProfile?.id) return;
+
+    try {
+      await chatService.archiveChat(chatId, userProfile.id);
+      await loadData(); // Reload chats
+      if (selectedChat?.id === chatId) {
+        setSelectedChat(null);
+        setMessages([]);
+      }
+    } catch (error) {
+      console.error('Error archiving chat:', error);
+      alert('Feil ved arkivering av chat');
+    }
+  };
+
+  const handleUserSelection = (userId: string) => {
+    setSelectedUsers(prev => 
+      prev.includes(userId) 
+        ? prev.filter(id => id !== userId)
+        : [...prev, userId]
+    );
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
   return (
-    <div style={{ height: 'calc(100vh - 2rem)', display: 'flex', gap: '1rem' }}>
-      {/* Chat List */}
-      <div className="card" style={{ width: '350px', display: 'flex', flexDirection: 'column' }}>
-        <div style={{ padding: '1.5rem', borderBottom: '1px solid rgba(0,0,0,0.1)' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="card-icon">
-              <MessageSquare />
-            </div>
-            <div>
-              <h2 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#333' }}>Chat</h2>
-              <p style={{ fontSize: '0.875rem', color: '#666' }}>Kommuniser med teamet</p>
-            </div>
-          </div>
-          
-          <div className="search-container">
-            <Search className="search-icon" />
-            <input
-              type="text"
-              placeholder="Søk i chat..."
-              className="search-input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
+    <div className="chat-container">
+      {/* Chat List Sidebar */}
+      <div className="chat-sidebar">
+        <div className="chat-header">
+          <h2 className="chat-title">💬 Chat</h2>
+          <div className="chat-actions">
+            <button
+              onClick={() => setShowNewChat(true)}
+              className="action-btn"
+              title="Ny chat"
+            >
+              <MessageSquare style={{ width: '16px', height: '16px' }} />
+            </button>
+            <button className="action-btn" title="Innstillinger">
+              <Settings style={{ width: '16px', height: '16px' }} />
+            </button>
           </div>
         </div>
 
-        <div style={{ flex: '1', overflowY: 'auto', padding: '0.5rem' }}>
-          {filteredChats.map((chat) => (
-            <div
-              key={chat.id}
-              onClick={() => setSelectedChat(chat)}
-              className="card"
-              style={{ 
-                marginBottom: '0.5rem',
-                cursor: 'pointer',
-                padding: '1rem',
-                backgroundColor: selectedChat?.id === chat.id ? 'rgba(102, 126, 234, 0.1)' : 'rgba(255, 255, 255, 0.95)',
-                border: selectedChat?.id === chat.id ? '2px solid #667eea' : '1px solid rgba(255, 255, 255, 0.2)'
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div className="user-avatar" style={{ width: '40px', height: '40px' }}>
-                  {chat.name.charAt(0)}
+        <div className="chat-search">
+          <Search style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+          <input
+            type="text"
+            placeholder="Søk i chat..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="search-input"
+          />
+        </div>
+
+        <div className="chat-list">
+          {filteredChats.length === 0 ? (
+            <div className="empty-chats">
+              <MessageSquare style={{ width: '48px', height: '48px', color: '#9ca3af' }} />
+              <p>Ingen chat funnet</p>
+            </div>
+          ) : (
+            filteredChats.map((chat) => (
+              <div
+                key={chat.id}
+                className={`chat-item ${selectedChat?.id === chat.id ? 'active' : ''}`}
+                onClick={() => handleChatSelect(chat)}
+              >
+                <div className="chat-avatar">
+                  {chat.type === 'group' ? (
+                    <Users style={{ width: '20px', height: '20px' }} />
+                  ) : (
+                    <div className="user-avatar">
+                      {chat.name?.charAt(0)?.toUpperCase() || 'U'}
+                    </div>
+                  )}
                 </div>
-                <div style={{ flex: '1', minWidth: 0 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
-                    <h3 style={{ 
-                      fontWeight: '600', 
-                      color: '#333',
-                      fontSize: '0.875rem',
-                      whiteSpace: 'nowrap',
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis'
-                    }}>
-                      {chat.name}
-                    </h3>
-                    {chat.unreadCount > 0 && (
-                      <span className="badge badge-primary" style={{ fontSize: '0.625rem' }}>
-                        {chat.unreadCount}
+                
+                <div className="chat-info">
+                  <div className="chat-name">{chat.name}</div>
+                  {chat.lastMessage && (
+                    <div className="chat-preview">
+                      <span className="last-message">
+                        {chat.lastMessage.senderName}: {chat.lastMessage.content}
                       </span>
-                    )}
-                  </div>
-                  <p style={{ 
-                    color: '#666', 
-                    fontSize: '0.75rem',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis'
-                  }}>
-                    {chat.lastMessage?.content || 'Ingen meldinger'}
-                  </p>
-                  <p style={{ 
-                    color: '#999', 
-                    fontSize: '0.625rem',
-                    marginTop: '0.25rem'
-                  }}>
-                    {chat.lastMessage?.timestamp ? 
-                      new Date(chat.lastMessage.timestamp).toLocaleTimeString('no-NO', { 
-                        hour: '2-digit', 
-                        minute: '2-digit' 
-                      }) : ''}
-                  </p>
+                      <span className="last-time">
+                        {formatDate(chat.lastMessage.timestamp)}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="chat-meta">
+                  {chat.unreadCount[userProfile?.id || ''] > 0 && (
+                    <span className="unread-badge">
+                      {chat.unreadCount[userProfile?.id || '']}
+                    </span>
+                  )}
+                  <button className="chat-menu-btn">
+                    <MoreHorizontal style={{ width: '16px', height: '16px' }} />
+                  </button>
                 </div>
               </div>
-            </div>
-          ))}
+            ))
+          )}
         </div>
       </div>
 
       {/* Chat Messages */}
-      <div className="card" style={{ flex: '1', display: 'flex', flexDirection: 'column' }}>
+      <div className="chat-messages">
         {selectedChat ? (
           <>
-            {/* Chat Header */}
-            <div style={{ 
-              padding: '1.5rem', 
-              borderBottom: '1px solid rgba(0,0,0,0.1)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between'
-            }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <div className="user-avatar" style={{ width: '40px', height: '40px' }}>
-                  {selectedChat.name.charAt(0)}
-                </div>
-                <div>
-                  <h3 style={{ fontWeight: '600', color: '#333', fontSize: '1.1rem' }}>
-                    {selectedChat.name}
-                  </h3>
-                  <p style={{ color: '#666', fontSize: '0.875rem' }}>
-                    {selectedChat.type === 'group' ? 'Gruppechat' : 'Privat melding'}
-                  </p>
-                </div>
+            <div className="messages-header">
+              <div className="chat-details">
+                <h3 className="chat-name">{selectedChat.name}</h3>
+                <span className="chat-type">
+                  {selectedChat.type === 'group' ? 'Gruppe' : 'Privat'}
+                </span>
               </div>
-              
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
-                  <Phone style={{ width: '16px', height: '16px' }} />
-                </button>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
+              <div className="chat-actions">
+                <button className="action-btn" title="Video call">
                   <Video style={{ width: '16px', height: '16px' }} />
                 </button>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
-                  <Info style={{ width: '16px', height: '16px' }} />
+                <button className="action-btn" title="Voice call">
+                  <Phone style={{ width: '16px', height: '16px' }} />
+                </button>
+                <button className="action-btn" title="Se profil">
+                  <Eye style={{ width: '16px', height: '16px' }} />
+                </button>
+                <button 
+                  className="action-btn" 
+                  title="Arkiver"
+                  onClick={() => archiveChat(selectedChat.id)}
+                >
+                  <Archive style={{ width: '16px', height: '16px' }} />
                 </button>
               </div>
             </div>
 
-            {/* Messages */}
-            <div style={{ 
-              flex: '1', 
-              overflowY: 'auto', 
-              padding: '1.5rem',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: '1rem'
-            }}>
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  style={{ 
-                    display: 'flex',
-                    justifyContent: message.isOwn ? 'flex-end' : 'flex-start'
-                  }}
-                >
-                  <div style={{
-                    maxWidth: '70%',
-                    padding: '1rem',
-                    borderRadius: '20px',
-                    backgroundColor: message.isOwn 
-                      ? 'linear-gradient(135deg, #667eea, #764ba2)' 
-                      : 'rgba(255, 255, 255, 0.9)',
-                    color: message.isOwn ? 'white' : '#333',
-                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.1)',
-                    position: 'relative'
-                  }}>
-                    {!message.isOwn && (
-                      <p style={{ 
-                        fontSize: '0.75rem', 
-                        fontWeight: '600', 
-                        marginBottom: '0.5rem',
-                        color: '#667eea'
-                      }}>
-                        {message.senderName}
-                      </p>
-                    )}
-                    <p style={{ fontSize: '0.875rem', lineHeight: '1.4' }}>
-                      {message.content}
-                    </p>
-                    <div style={{ 
-                      display: 'flex', 
-                      alignItems: 'center', 
-                      gap: '0.5rem',
-                      marginTop: '0.5rem',
-                      fontSize: '0.625rem',
-                      opacity: 0.7
-                    }}>
-                      <span>
-                        {new Date(message.timestamp).toLocaleTimeString('no-NO', {
-                          hour: '2-digit',
-                          minute: '2-digit'
-                        })}
-                      </span>
-                      {message.isOwn && (
-                        <CheckCheck style={{ width: '12px', height: '12px' }} />
-                      )}
-                    </div>
-                  </div>
+            <div className="messages-container">
+              {messages.length === 0 ? (
+                <div className="empty-messages">
+                  <MessageSquare style={{ width: '48px', height: '48px', color: '#9ca3af' }} />
+                  <p>Ingen meldinger ennå</p>
+                  <p>Start en samtale!</p>
                 </div>
-              ))}
-              <div ref={messagesEndRef} />
+              ) : (
+                messages.map((message) => (
+                  <div
+                    key={message.id}
+                    className={`message ${message.senderId === userProfile?.id ? 'own' : 'other'}`}
+                  >
+                    <div className="message-content">
+                      <div className="message-header">
+                        <span className="sender-name">{message.senderName}</span>
+                        <span className="message-time">
+                          {formatMessageTime(message.createdAt)}
+                        </span>
+                      </div>
+                      <div className="message-text">{message.content}</div>
+                    </div>
+                    
+                    {message.senderId === userProfile?.id && (
+                      <div className="message-actions">
+                        <button
+                          onClick={() => deleteMessage(message.id)}
+                          className="message-action-btn"
+                          title="Slett"
+                        >
+                          <Trash2 style={{ width: '12px', height: '12px' }} />
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                ))
+              )}
             </div>
 
-            {/* Message Input */}
-            <div style={{ 
-              padding: '1.5rem', 
-              borderTop: '1px solid rgba(0,0,0,0.1)',
-              display: 'flex',
-              gap: '1rem',
-              alignItems: 'flex-end'
-            }}>
-              <div style={{ flex: '1', display: 'flex', gap: '0.5rem' }}>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
+            <div className="message-input">
+              <div className="input-actions">
+                <button className="input-action-btn" title="Vedlegg">
                   <Paperclip style={{ width: '16px', height: '16px' }} />
                 </button>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
+                <button className="input-action-btn" title="Emoji">
                   <Smile style={{ width: '16px', height: '16px' }} />
                 </button>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
-                  <Camera style={{ width: '16px', height: '16px' }} />
-                </button>
               </div>
-              
               <input
                 type="text"
+                placeholder="Skriv en melding..."
                 value={newMessage}
                 onChange={(e) => setNewMessage(e.target.value)}
-                onKeyPress={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    sendMessage();
-                  }
-                }}
-                placeholder="Skriv en melding..."
-                className="form-input"
-                style={{ flex: '1' }}
+                onKeyPress={(e) => e.key === 'Enter' && sendMessage()}
+                className="message-input-field"
               />
-              
               <button
                 onClick={sendMessage}
                 disabled={!newMessage.trim()}
-                className="btn btn-primary"
-                style={{ padding: '0.75rem 1.5rem' }}
+                className="send-btn"
               >
                 <Send style={{ width: '16px', height: '16px' }} />
               </button>
             </div>
           </>
         ) : (
-          <div style={{ 
-            flex: '1', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            textAlign: 'center'
-          }}>
-            <div>
-              <MessageSquare style={{ 
-                width: '64px', 
-                height: '64px', 
-                color: '#ccc', 
-                margin: '0 auto 1rem' 
-              }} />
-              <h3 style={{ 
-                fontSize: '1.25rem', 
-                fontWeight: '600', 
-                color: '#333', 
-                marginBottom: '0.5rem' 
-              }}>
-                Velg en chat
-              </h3>
-              <p style={{ color: '#666' }}>
-                Velg en chat fra listen for å starte å snakke
-              </p>
-            </div>
+          <div className="no-chat-selected">
+            <MessageSquare style={{ width: '64px', height: '64px', color: '#9ca3af' }} />
+            <h3>Velg en chat</h3>
+            <p>Velg en chat fra listen for å starte en samtale</p>
           </div>
         )}
       </div>
+
+      {/* New Chat Modal */}
+      {showNewChat && (
+        <div className="modal-overlay">
+          <div className="modal-content">
+            <div className="modal-header">
+              <h2>Ny chat</h2>
+              <button
+                onClick={() => setShowNewChat(false)}
+                className="modal-close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div className="form-group">
+                <label>Chat navn</label>
+                <input
+                  type="text"
+                  placeholder="Skriv chat navn..."
+                  value={newChatName}
+                  onChange={(e) => setNewChatName(e.target.value)}
+                  className="form-input"
+                />
+              </div>
+              <div className="form-group">
+                <label>Type</label>
+                <select 
+                  className="form-select"
+                  value={newChatType}
+                  onChange={(e) => setNewChatType(e.target.value as 'private' | 'group')}
+                >
+                  <option value="private">Privat</option>
+                  <option value="group">Gruppe</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Deltakere</label>
+                <div className="users-list">
+                  {users.filter(user => user.id !== userProfile?.id).map((user) => (
+                    <div key={user.id} className="user-item">
+                      <input 
+                        type="checkbox" 
+                        id={user.id}
+                        checked={selectedUsers.includes(user.id)}
+                        onChange={() => handleUserSelection(user.id)}
+                      />
+                      <label htmlFor={user.id}>{user.name}</label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowNewChat(false)}
+                className="btn btn-secondary"
+              >
+                Avbryt
+              </button>
+              <button 
+                onClick={createNewChat}
+                disabled={!newChatName.trim() || selectedUsers.length === 0}
+                className="btn btn-primary"
+              >
+                Opprett chat
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

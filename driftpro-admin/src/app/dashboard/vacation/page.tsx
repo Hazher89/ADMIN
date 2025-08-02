@@ -511,21 +511,20 @@ export default function VacationPage() {
       {showAddModal && (
         <div className="modal-overlay">
           <div className="modal-content">
-            <div style={{ padding: '2rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#333', marginBottom: '1rem' }}>
-                Legg til ferieforespørsel
-              </h3>
+            <div className="modal-header">
+              <h2 className="modal-title">Legg til ferieforespørsel</h2>
+              <button onClick={() => setShowAddModal(false)} className="modal-close">×</button>
+            </div>
+            <div className="modal-body">
               <form onSubmit={handleSubmit}>
-                <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
-                      Ansatt
-                    </label>
+                <div className="modal-form-grid">
+                  <div className="form-field">
+                    <label className="form-label">Ansatt</label>
                     <select
                       required
                       value={formData.employeeId}
                       onChange={(e) => setFormData({...formData, employeeId: e.target.value})}
-                      className="form-input"
+                      className="form-select-modal"
                     >
                       <option value="">Velg ansatt</option>
                       {employees.map(employee => (
@@ -535,60 +534,52 @@ export default function VacationPage() {
                       ))}
                     </select>
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
-                      Startdato
-                    </label>
+                  <div className="form-field">
+                    <label className="form-label">Startdato</label>
                     <input
                       type="date"
                       required
                       value={formData.startDate}
                       onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                      className="form-input"
+                      className="form-input-modal"
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
-                      Sluttdato
-                    </label>
+                  <div className="form-field">
+                    <label className="form-label">Sluttdato</label>
                     <input
                       type="date"
                       required
                       value={formData.endDate}
                       onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                      className="form-input"
+                      className="form-input-modal"
                     />
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
-                      Type
-                    </label>
+                  <div className="form-field">
+                    <label className="form-label">Type</label>
                     <select
                       required
                       value={formData.type}
                       onChange={(e) => setFormData({...formData, type: e.target.value as 'vacation' | 'sick_leave' | 'other'})}
-                      className="form-input"
+                      className="form-select-modal"
                     >
                       <option value="vacation">Ferie</option>
                       <option value="sick_leave">Sykefravær</option>
                       <option value="other">Annet</option>
                     </select>
                   </div>
-                  <div>
-                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '600', color: '#333', marginBottom: '0.25rem' }}>
-                      Årsak
-                    </label>
+                  <div className="form-field">
+                    <label className="form-label">Årsak</label>
                     <textarea
                       required
                       value={formData.reason}
                       onChange={(e) => setFormData({...formData, reason: e.target.value})}
                       rows={3}
                       placeholder="Beskriv årsaken til ferien..."
-                      className="form-input"
+                      className="form-textarea-modal"
                     />
                   </div>
                 </div>
-                <div style={{ display: 'flex', justifyContent: 'end', gap: '0.75rem' }}>
+                <div className="modal-footer">
                   <button
                     type="button"
                     onClick={() => setShowAddModal(false)}
@@ -598,10 +589,9 @@ export default function VacationPage() {
                   </button>
                   <button
                     type="submit"
-                    disabled={saving}
                     className="btn btn-primary"
                   >
-                    {saving ? 'Lagrer...' : 'Legg til'}
+                    Legg til
                   </button>
                 </div>
               </form>

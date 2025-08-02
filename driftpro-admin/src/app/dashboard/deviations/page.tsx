@@ -252,17 +252,17 @@ export default function DeviationsPage() {
   }
 
   return (
-    <div className="deviations-page">
+    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
       {/* Mobile Header */}
       {isMobile && (
-        <div className="mobile-header bg-white shadow-sm border-b px-4 py-3">
-          <div className="flex items-center justify-between">
-            <h1 className="text-lg font-semibold text-gray-900">Avvik</h1>
+        <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h1 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)' }}>Avvik</h1>
             <button
               onClick={() => setShowAddModal(true)}
-              className="bg-blue-600 text-white p-2 rounded-lg"
+              style={{ background: 'var(--primary)', color: 'var(--white)', padding: '0.5rem', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer' }}
             >
-              <Plus className="h-5 w-5" />
+              <Plus style={{ width: '20px', height: '20px' }} />
             </button>
           </div>
         </div>
@@ -270,93 +270,118 @@ export default function DeviationsPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <h1 className="page-title">Avvik</h1>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn btn-primary"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Rapporter avvik
-          </button>
+        <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Avvik</h1>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary"
+            >
+              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+              Rapporter avvik
+            </button>
+          </div>
         </div>
       )}
 
-      <div className="px-4 py-6 max-w-7xl mx-auto">
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
         {/* Stats Overview */}
-        <div className="stats-grid" style={{ marginBottom: '2rem' }}>
-          <div className="stat-card">
-            <div className="stat-number">{getTotalDeviations()}</div>
-            <div className="stat-label">Totalt avvik</div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Totalt avvik</p>
+                <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--gray-900)' }}>{getTotalDeviations()}</p>
+              </div>
+              <div style={{ background: 'var(--blue-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
+                <AlertTriangle style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />
+              </div>
+            </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-number">{getOpenDeviations()}</div>
-            <div className="stat-label">Åpne avvik</div>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Åpne avvik</p>
+                <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--orange-600)' }}>{getOpenDeviations()}</p>
+              </div>
+              <div style={{ background: 'var(--orange-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
+                <Clock style={{ width: '24px', height: '24px', color: 'var(--orange-600)' }} />
+              </div>
+            </div>
           </div>
-          <div className="stat-card">
-            <div className="stat-number">{getResolvedDeviations()}</div>
-            <div className="stat-label">Løste avvik</div>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+              <div>
+                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Løste avvik</p>
+                <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--green-600)' }}>{getResolvedDeviations()}</p>
+              </div>
+              <div style={{ background: 'var(--green-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
+                <CheckCircle style={{ width: '24px', height: '24px', color: 'var(--green-600)' }} />
+              </div>
+            </div>
           </div>
         </div>
 
         {/* Mobile Controls */}
         {isMobile && (
-          <div className="mobile-controls mb-4">
-            <div className="flex gap-2 mb-3">
-              <div className="flex-1 relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+          <div style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.75rem' }}>
+              <div style={{ flex: '1', position: 'relative' }}>
+                <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: 'var(--gray-400)' }} />
                 <input
                   type="text"
                   placeholder="Søk i avvik..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg"
+                  style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.5rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)' }}
                 />
               </div>
               <button
                 onClick={() => setShowFilters(!showFilters)}
-                className="p-2 border border-gray-300 rounded-lg"
+                style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', background: 'var(--white)', cursor: 'pointer' }}
               >
-                <Filter className="h-4 w-4" />
+                <Filter style={{ width: '16px', height: '16px' }} />
               </button>
             </div>
             
             {showFilters && (
-              <div className="filter-section bg-gray-50 p-3 rounded-lg space-y-3">
-                <select
-                  value={selectedStatus}
-                  onChange={(e) => setSelectedStatus(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="all">Alle statuser</option>
-                  <option value="reported">Rapportert</option>
-                  <option value="investigating">Undersøkes</option>
-                  <option value="resolved">Løst</option>
-                  <option value="closed">Lukket</option>
-                </select>
-                <select
-                  value={selectedType}
-                  onChange={(e) => setSelectedType(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="all">Alle typer</option>
-                  <option value="safety">Sikkerhet</option>
-                  <option value="quality">Kvalitet</option>
-                  <option value="maintenance">Vedlikehold</option>
-                  <option value="environmental">Miljø</option>
-                  <option value="other">Annet</option>
-                </select>
-                <select
-                  value={selectedSeverity}
-                  onChange={(e) => setSelectedSeverity(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded"
-                >
-                  <option value="all">Alle alvorlighetsgrader</option>
-                  <option value="low">Lav</option>
-                  <option value="medium">Medium</option>
-                  <option value="high">Høy</option>
-                  <option value="critical">Kritisk</option>
-                </select>
+              <div style={{ background: 'var(--white)', padding: '1rem', borderRadius: 'var(--radius-lg)', boxShadow: 'var(--shadow-sm)', border: '1px solid var(--gray-200)' }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <select
+                    value={selectedStatus}
+                    onChange={(e) => setSelectedStatus(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)' }}
+                  >
+                    <option value="all">Alle statuser</option>
+                    <option value="reported">Rapportert</option>
+                    <option value="investigating">Undersøkes</option>
+                    <option value="resolved">Løst</option>
+                    <option value="closed">Lukket</option>
+                  </select>
+                  <select
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)' }}
+                  >
+                    <option value="all">Alle typer</option>
+                    <option value="safety">Sikkerhet</option>
+                    <option value="quality">Kvalitet</option>
+                    <option value="security">Sikkerhet</option>
+                    <option value="process">Prosess</option>
+                    <option value="other">Annet</option>
+                  </select>
+                  <select
+                    value={selectedSeverity}
+                    onChange={(e) => setSelectedSeverity(e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)' }}
+                  >
+                    <option value="all">Alle alvorlighetsgrader</option>
+                    <option value="low">Lav</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">Høy</option>
+                    <option value="critical">Kritisk</option>
+                  </select>
+                </div>
               </div>
             )}
           </div>
@@ -364,21 +389,23 @@ export default function DeviationsPage() {
 
         {/* Desktop Controls */}
         {!isMobile && (
-          <div className="controls-section">
-            <div className="search-filter-row">
-              <div className="search-box">
-                <Search className="search-icon" />
+          <div className="card" style={{ marginBottom: '1.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div style={{ position: 'relative', flex: '1' }}>
+                <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '20px', height: '20px', color: 'var(--gray-400)' }} />
                 <input
                   type="text"
                   placeholder="Søk i avvik..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
+                  style={{ width: '100%', padding: '0.75rem 0.75rem 0.75rem 2.5rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)' }}
                 />
               </div>
-              <div className="filter-controls">
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
                 <select
                   value={selectedStatus}
                   onChange={(e) => setSelectedStatus(e.target.value)}
+                  style={{ padding: '0.75rem 1rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)', minWidth: '150px' }}
                 >
                   <option value="all">Alle statuser</option>
                   <option value="reported">Rapportert</option>
@@ -389,17 +416,19 @@ export default function DeviationsPage() {
                 <select
                   value={selectedType}
                   onChange={(e) => setSelectedType(e.target.value)}
+                  style={{ padding: '0.75rem 1rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)', minWidth: '150px' }}
                 >
                   <option value="all">Alle typer</option>
                   <option value="safety">Sikkerhet</option>
                   <option value="quality">Kvalitet</option>
-                  <option value="maintenance">Vedlikehold</option>
-                  <option value="environmental">Miljø</option>
+                  <option value="security">Sikkerhet</option>
+                  <option value="process">Prosess</option>
                   <option value="other">Annet</option>
                 </select>
                 <select
                   value={selectedSeverity}
                   onChange={(e) => setSelectedSeverity(e.target.value)}
+                  style={{ padding: '0.75rem 1rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)', minWidth: '150px' }}
                 >
                   <option value="all">Alle alvorlighetsgrader</option>
                   <option value="low">Lav</option>
@@ -413,76 +442,68 @@ export default function DeviationsPage() {
         )}
 
         {/* Deviations List */}
-        <div className="deviations-list">
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
           {filteredDeviations.length === 0 ? (
-            <div className="empty-state">
-              <AlertTriangle className="empty-icon" />
-              <h3>Ingen avvik funnet</h3>
-              <p>Det er ingen avvik som matcher søkekriteriene dine.</p>
+            <div className="card" style={{ padding: '3rem', textAlign: 'center' }}>
+              <AlertTriangle style={{ width: '48px', height: '48px', color: 'var(--gray-400)', margin: '0 auto 1rem' }} />
+              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>Ingen avvik funnet</h3>
+              <p style={{ color: 'var(--gray-600)' }}>Det er ingen avvik som matcher søkekriteriene dine.</p>
             </div>
           ) : (
             filteredDeviations.map(deviation => (
-              <div key={deviation.id} className="deviation-card">
-                <div className="deviation-header">
-                  <div className="deviation-title">
-                    <h3>{deviation.title}</h3>
-                    <div className="deviation-badges">
-                      <span className={`badge ${getStatusColor(deviation.status)}`}>
-                        {getStatusIcon(deviation.status)}
-                        {deviation.status}
-                      </span>
-                      <span className={`badge ${getTypeColor(deviation.type)}`}>
-                        {deviation.type}
-                      </span>
-                      <span className={`badge ${getSeverityColor(deviation.severity)}`}>
-                        {deviation.severity}
-                      </span>
-                    </div>
-                  </div>
-                  <div className="deviation-actions">
-                    <button
-                      onClick={() => {
-                        setSelectedDeviation(deviation);
-                        setShowEditModal(true);
-                      }}
-                      className="action-btn"
-                    >
-                      <Edit className="h-4 w-4" />
-                    </button>
-                    <button
-                      onClick={() => handleDeleteDeviation(deviation.id)}
-                      className="action-btn delete"
-                    >
-                      <Trash2 className="h-4 w-4" />
-                    </button>
-                  </div>
-                </div>
-                <div className="deviation-content">
-                  <p>{deviation.description}</p>
-                  <div className="deviation-meta">
-                    <div className="meta-item">
-                      <User className="h-4 w-4" />
-                                             <span>Rapportert av: {getReporterName(deviation.reportedBy)}</span>
-                    </div>
-                    {deviation.assignedTo && (
-                      <div className="meta-item">
-                        <User className="h-4 w-4" />
-                        <span>Tildelt til: {getAssignedName(deviation.assignedTo)}</span>
+              <div key={deviation.id} className="card" style={{ cursor: 'pointer' }}>
+                <div style={{ padding: '1.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                    <div style={{ flex: '1' }}>
+                      <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>{deviation.title}</h3>
+                      <p style={{ color: 'var(--gray-600)', marginBottom: '0.75rem' }}>{deviation.description}</p>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.75rem' }}>
+                        <span className={`badge ${getStatusColor(deviation.status)}`}>
+                          {getStatusIcon(deviation.status)}
+                          <span style={{ marginLeft: '0.25rem' }}>{deviation.status}</span>
+                        </span>
+                        <span className={`badge ${getTypeColor(deviation.type)}`}>
+                          {deviation.type}
+                        </span>
+                        <span className={`badge ${getSeverityColor(deviation.severity)}`}>
+                          {deviation.severity}
+                        </span>
                       </div>
-                    )}
-                    <div className="meta-item">
-                      <MapPin className="h-4 w-4" />
-                      <span>Avdeling: {getDepartmentName(deviation.departmentId)}</span>
-                    </div>
-                    {deviation.location && (
-                      <div className="meta-item">
-                        <MapPin className="h-4 w-4" />
-                        <span>Lokasjon: {deviation.location}</span>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem', fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <User style={{ width: '16px', height: '16px' }} />
+                          <span>Rapportert av: {getReporterName(deviation.reportedBy)}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Calendar style={{ width: '16px', height: '16px' }} />
+                          <span>{formatDate(deviation.createdAt)}</span>
+                        </div>
+                        {deviation.departmentId && (
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                            <MapPin style={{ width: '16px', height: '16px' }} />
+                            <span>{getDepartmentName(deviation.departmentId)}</span>
+                          </div>
+                        )}
                       </div>
-                    )}
-                    <div className="meta-item">
-                      <Calendar className="h-4 w-4" />
-                      <span>Rapportert: {formatDate(deviation.createdAt)}</span>
+                    </div>
+                    <div style={{ display: 'flex', gap: '0.5rem', marginLeft: '1rem' }}>
+                      <button
+                        onClick={() => {
+                          setSelectedDeviation(deviation);
+                          setShowEditModal(true);
+                        }}
+                        style={{ padding: '0.5rem', color: 'var(--gray-400)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)' }}
+                        title="Rediger"
+                      >
+                        <Edit style={{ width: '16px', height: '16px' }} />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDeviation(deviation.id)}
+                        style={{ padding: '0.5rem', color: 'var(--gray-400)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)' }}
+                        title="Slett"
+                      >
+                        <Trash2 style={{ width: '16px', height: '16px' }} />
+                      </button>
                     </div>
                   </div>
                 </div>
@@ -501,31 +522,33 @@ export default function DeviationsPage() {
               <button onClick={() => setShowAddModal(false)} className="modal-close">×</button>
             </div>
             <div className="modal-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Tittel</label>
+              <div className="modal-form-grid">
+                <div className="form-field">
+                  <label className="form-label">Tittel</label>
                   <input
                     type="text"
                     value={newDeviation.title}
                     onChange={(e) => setNewDeviation({ ...newDeviation, title: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                    className="form-input-modal"
+                    placeholder="Beskriv avviket kort"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Beskrivelse</label>
+                <div className="form-field">
+                  <label className="form-label">Beskrivelse</label>
                   <textarea
                     value={newDeviation.description}
                     onChange={(e) => setNewDeviation({ ...newDeviation, description: e.target.value })}
                     rows={4}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', resize: 'vertical' }}
+                    className="form-textarea-modal"
+                    placeholder="Detaljert beskrivelse av avviket"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Type</label>
+                <div className="form-field">
+                  <label className="form-label">Type</label>
                   <select
                     value={newDeviation.type}
                     onChange={(e) => setNewDeviation({ ...newDeviation, type: e.target.value as 'safety' | 'quality' | 'security' | 'process' | 'other' })}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                    className="form-select-modal"
                   >
                     <option value="safety">Sikkerhet</option>
                     <option value="quality">Kvalitet</option>
@@ -534,12 +557,12 @@ export default function DeviationsPage() {
                     <option value="other">Annet</option>
                   </select>
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Alvorlighetsgrad</label>
+                <div className="form-field">
+                  <label className="form-label">Alvorlighetsgrad</label>
                   <select
                     value={newDeviation.severity}
                     onChange={(e) => setNewDeviation({ ...newDeviation, severity: e.target.value as 'low' | 'medium' | 'high' | 'critical' })}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                    className="form-select-modal"
                   >
                     <option value="low">Lav</option>
                     <option value="medium">Medium</option>
@@ -547,12 +570,12 @@ export default function DeviationsPage() {
                     <option value="critical">Kritisk</option>
                   </select>
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Avdeling</label>
+                <div className="form-field">
+                  <label className="form-label">Avdeling</label>
                   <select
                     value={newDeviation.departmentId}
                     onChange={(e) => setNewDeviation({ ...newDeviation, departmentId: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                    className="form-select-modal"
                   >
                     <option value="">Velg avdeling</option>
                     {departments.map(dept => (
@@ -560,13 +583,14 @@ export default function DeviationsPage() {
                     ))}
                   </select>
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Lokasjon</label>
+                <div className="form-field">
+                  <label className="form-label">Lokasjon</label>
                   <input
                     type="text"
                     value={newDeviation.location}
                     onChange={(e) => setNewDeviation({ ...newDeviation, location: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                    className="form-input-modal"
+                    placeholder="Hvor skjedde avviket?"
                   />
                 </div>
               </div>
@@ -588,31 +612,31 @@ export default function DeviationsPage() {
               <button onClick={() => setShowEditModal(false)} className="modal-close">×</button>
             </div>
             <div className="modal-body">
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Tittel</label>
+              <div className="modal-form-grid">
+                <div className="form-field">
+                  <label className="form-label">Tittel</label>
                   <input
                     type="text"
                     value={selectedDeviation.title}
                     onChange={(e) => setSelectedDeviation({ ...selectedDeviation, title: e.target.value })}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                    className="form-input-modal"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Beskrivelse</label>
+                <div className="form-field">
+                  <label className="form-label">Beskrivelse</label>
                   <textarea
                     value={selectedDeviation.description}
                     onChange={(e) => setSelectedDeviation({ ...selectedDeviation, description: e.target.value })}
                     rows={4}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px', resize: 'vertical' }}
+                    className="form-textarea-modal"
                   />
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Status</label>
+                <div className="form-field">
+                  <label className="form-label">Status</label>
                   <select
                     value={selectedDeviation.status}
                     onChange={(e) => setSelectedDeviation({ ...selectedDeviation, status: e.target.value as 'reported' | 'investigating' | 'resolved' | 'closed' })}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                    className="form-select-modal"
                   >
                     <option value="reported">Rapportert</option>
                     <option value="investigating">Undersøkes</option>
@@ -620,12 +644,12 @@ export default function DeviationsPage() {
                     <option value="closed">Lukket</option>
                   </select>
                 </div>
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>Tildelt til</label>
+                <div className="form-field">
+                  <label className="form-label">Tildelt til</label>
                   <select
                     value={selectedDeviation.assignedTo || ''}
                     onChange={(e) => setSelectedDeviation({ ...selectedDeviation, assignedTo: e.target.value || undefined })}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid #d1d5db', borderRadius: '8px' }}
+                    className="form-select-modal"
                   >
                     <option value="">Ikke tildelt</option>
                     {employees.map(emp => (
