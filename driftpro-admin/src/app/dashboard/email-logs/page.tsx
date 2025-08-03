@@ -237,13 +237,18 @@ export default function EmailLogsPage() {
   const saveSettings = async () => {
     try {
       setSaving(true);
+      
+      const requestBody = {
+        ...settings,
+        smtpPassword: smtpPassword || undefined
+      };
+      
+      console.log('Saving email settings:', { ...requestBody, smtpPassword: requestBody.smtpPassword ? '[HIDDEN]' : 'not provided' });
+      
       const response = await fetch('/api/email-settings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          ...settings,
-          smtpPassword: smtpPassword || undefined
-        })
+        body: JSON.stringify(requestBody)
       });
       
       if (response.ok) {
@@ -259,7 +264,8 @@ export default function EmailLogsPage() {
         setTimeout(() => setMessage(''), 3000);
       } else {
         const errorData = await response.json().catch(() => ({}));
-        setMessage(`Feil ved lagring av innstillinger: ${errorData.error || 'Ukjent feil'}`);
+        console.error('Error response from server:', errorData);
+        setMessage(`Feil ved lagring av innstillinger: ${errorData.error || errorData.details || 'Ukjent feil'}`);
       }
     } catch (error) {
       console.error('Error saving settings:', error);

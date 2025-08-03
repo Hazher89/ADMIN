@@ -78,18 +78,27 @@ export async function GET() {
 
 export async function POST(request: NextRequest) {
   try {
+    console.log('Starting to save email settings...');
+    
     const firestoreDb = getDb();
     if (!firestoreDb) {
+      console.error('Firestore database not available');
       return NextResponse.json({ error: 'Database not available' }, { status: 500 });
     }
 
+    console.log('Firestore database available, parsing request body...');
     const body = await request.json();
+    console.log('Request body received:', { ...body, smtpPassword: body.smtpPassword ? '[HIDDEN]' : 'not provided' });
+    
     const { smtpPassword, ...settings } = body;
 
     // Validate required fields
     if (!settings.fromEmail || !settings.fromName) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      console.error('Missing required fields:', { fromEmail: !!settings.fromEmail, fromName: !!settings.fromName });
+      return NextResponse.json({ error: 'Missing required fields: fromEmail and fromName are required' }, { status: 400 });
     }
+
+    console.log('Validation passed, preparing data for storage...');
 
     // Prepare data for storage
     const settingsData = {
@@ -101,13 +110,28 @@ export async function POST(request: NextRequest) {
     // If SMTP password is provided, store it separately or encrypted
     if (smtpPassword) {
       settingsData.smtpPassword = smtpPassword; // In production, encrypt this
+      console.log('SMTP password provided and will be stored');
+    } else {
+      console.log('No SMTP password provided');
     }
+
+    console.log('Attempting to save to Firestore...');
+    console.log('Settings data to save:', { ...settingsData, smtpPassword: settingsData.smtpPassword ? '[HIDDEN]' : 'not provided' });
 
     await setDoc(doc(firestoreDb, 'system', 'emailSettings'), settingsData);
 
+    console.log('Email settings saved successfully');
     return NextResponse.json({ success: true, message: 'Email settings saved successfully' });
   } catch (error) {
     console.error('Error saving email settings:', error);
-    return NextResponse.json({ error: 'Failed to save email settings' }, { status: 500 });
+    console.error('Error details:', {
+      name: error instanceof Error ? error.name : 'Unknown',
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : 'No stack trace'
+    });
+    return NextResponse.json({ 
+      error: 'Failed to save email settings',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
   }
 } 
