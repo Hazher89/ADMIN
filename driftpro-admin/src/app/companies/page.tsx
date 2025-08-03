@@ -10,9 +10,10 @@ import {
   MapPin,
   Phone,
   Mail,
-  ArrowRight
+  ArrowRight,
+  Plus
 } from 'lucide-react';
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Prevent pre-rendering since this page uses useRouter and Firebase
@@ -45,6 +46,7 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
+  const [creatingTestCompany, setCreatingTestCompany] = useState(false);
 
   const loadCompanies = async () => {
     try {
@@ -85,6 +87,48 @@ export default function CompaniesPage() {
       setFilteredCompanies([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const createTestCompany = async () => {
+    try {
+      setCreatingTestCompany(true);
+      if (!db) {
+        alert('Firebase ikke tilgjengelig');
+        return;
+      }
+
+      const testCompany = {
+        name: 'DriftPro Test Bedrift',
+        orgNumber: '123456789',
+        phone: '+47 123 45 678',
+        email: 'test@driftpro.no',
+        adminEmail: 'admin@driftpro.no',
+        address: 'Testveien 123, 0001 Oslo',
+        industry: 'Teknologi',
+        employeeCount: 10,
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        subscriptionPlan: 'basic',
+        contactPerson: {
+          name: 'Test Admin',
+          phone: '+47 123 45 678',
+          email: 'admin@driftpro.no'
+        }
+      };
+
+      const docRef = await addDoc(collection(db, 'companies'), testCompany);
+      console.log('Test company created with ID:', docRef.id);
+      
+      // Reload companies
+      await loadCompanies();
+      alert('Test-bedrift opprettet! Du kan nå logge inn.');
+    } catch (error) {
+      console.error('Error creating test company:', error);
+      alert('Feil ved opprettelse av test-bedrift: ' + error);
+    } finally {
+      setCreatingTestCompany(false);
     }
   };
 
@@ -434,13 +478,39 @@ export default function CompaniesPage() {
               </h3>
               <p style={{ 
                 color: 'var(--gray-600)',
-                fontSize: 'var(--font-size-base)'
+                fontSize: 'var(--font-size-base)',
+                marginBottom: '2rem'
               }}>
                 {searchTerm 
                   ? 'Prøv å søke med et annet navn eller organisasjonsnummer'
-                  : 'Kontakt systemadministrator for å få tilgang til DriftPro.'
+                  : 'Ingen bedrifter er registrert i systemet ennå.'
                 }
               </p>
+              
+              {!searchTerm && (
+                <button
+                  onClick={createTestCompany}
+                  disabled={creatingTestCompany}
+                  style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.75rem 1.5rem',
+                    background: 'var(--primary)',
+                    color: 'var(--white)',
+                    border: 'none',
+                    borderRadius: 'var(--radius-lg)',
+                    fontSize: 'var(--font-size-base)',
+                    fontWeight: '600',
+                    cursor: creatingTestCompany ? 'not-allowed' : 'pointer',
+                    opacity: creatingTestCompany ? 0.6 : 1,
+                    transition: 'all var(--transition-normal)'
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  {creatingTestCompany ? 'Oppretter test-bedrift...' : 'Opprett test-bedrift'}
+                </button>
+              )}
             </div>
           )}
         </div>
