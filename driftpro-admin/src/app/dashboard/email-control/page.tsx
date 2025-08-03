@@ -2,16 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
-import { Switch } from '@/components/ui/switch';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Alert, AlertDescription } from '@/components/ui/alert';
 import { 
   Mail, 
   Settings, 
@@ -210,6 +200,7 @@ export default function EmailControlPage() {
   const [message, setMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [smtpPassword, setSmtpPassword] = useState('');
+  const [activeTab, setActiveTab] = useState('settings');
 
   // Load settings from Firebase
   useEffect(() => {
@@ -320,12 +311,14 @@ export default function EmailControlPage() {
   if (!userProfile || userProfile.role !== 'super_admin') {
     return (
       <div className="container mx-auto p-6">
-        <Alert>
-          <AlertTriangle className="h-4 w-4" />
-          <AlertDescription>
-            Du har ikke tilgang til denne siden. Kun super-administratorer kan konfigurere e-post-innstillinger.
-          </AlertDescription>
-        </Alert>
+        <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+          <div className="flex items-center">
+            <AlertTriangle className="h-5 w-5 text-red-500 mr-2" />
+            <p className="text-red-700">
+              Du har ikke tilgang til denne siden. Kun super-administratorer kan konfigurere e-post-innstillinger.
+            </p>
+          </div>
+        </div>
       </div>
     );
   }
@@ -335,411 +328,393 @@ export default function EmailControlPage() {
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-3xl font-bold">E-post-kontroll</h1>
-          <p className="text-muted-foreground">
+          <p className="text-gray-600">
             Full kontroll over alle e-poster som sendes i systemet
           </p>
         </div>
         <div className="flex items-center space-x-2">
-          <Badge variant={settings.enabled ? "default" : "secondary"}>
+          <span className={`px-3 py-1 rounded-full text-sm font-medium ${
+            settings.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+          }`}>
             {settings.enabled ? "Aktiv" : "Inaktiv"}
-          </Badge>
-          <Button
-            variant="outline"
-            size="sm"
+          </span>
+          <button
+            className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50"
             onClick={loadEmailLogs}
           >
-            <RefreshCw className="h-4 w-4 mr-2" />
+            <RefreshCw className="h-4 w-4 mr-2 inline" />
             Oppdater logger
-          </Button>
+          </button>
         </div>
       </div>
 
       {message && (
-        <Alert>
-          {message.includes('Feil') ? (
-            <XCircle className="h-4 w-4" />
-          ) : (
-            <CheckCircle className="h-4 w-4" />
-          )}
-          <AlertDescription>{message}</AlertDescription>
-        </Alert>
+        <div className={`p-4 rounded-lg ${
+          message.includes('Feil') ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'
+        }`}>
+          <div className="flex items-center">
+            {message.includes('Feil') ? (
+              <XCircle className="h-5 w-5 text-red-500 mr-2" />
+            ) : (
+              <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
+            )}
+            <p className={message.includes('Feil') ? 'text-red-700' : 'text-green-700'}>{message}</p>
+          </div>
+        </div>
       )}
 
-      <Tabs defaultValue="settings" className="space-y-6">
-        <TabsList>
-          <TabsTrigger value="settings">Innstillinger</TabsTrigger>
-          <TabsTrigger value="templates">Maler</TabsTrigger>
-          <TabsTrigger value="smtp">SMTP</TabsTrigger>
-          <TabsTrigger value="logs">E-post-logger</TabsTrigger>
-          <TabsTrigger value="test">Test</TabsTrigger>
-        </TabsList>
+      {/* Tab Navigation */}
+      <div className="border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
+          {[
+            { id: 'settings', label: 'Innstillinger', icon: Settings },
+            { id: 'templates', label: 'Maler', icon: Mail },
+            { id: 'smtp', label: 'SMTP', icon: Settings },
+            { id: 'logs', label: 'E-post-logger', icon: Bell },
+            { id: 'test', label: 'Test', icon: TestTube }
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center ${
+                activeTab === tab.id
+                  ? 'border-blue-500 text-blue-600'
+                  : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
+            >
+              <tab.icon className="h-4 w-4 mr-2" />
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+      </div>
 
-        <TabsContent value="settings" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                Generelle innstillinger
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      {/* Settings Tab */}
+      {activeTab === 'settings' && (
+        <div className="space-y-6">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <Settings className="h-5 w-5 mr-2" />
+              Generelle innstillinger
+            </h2>
+            <div className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
-                  <Label htmlFor="enabled">Aktiver e-post-system</Label>
-                  <p className="text-sm text-muted-foreground">
+                  <label className="font-medium">Aktiver e-post-system</label>
+                  <p className="text-sm text-gray-600">
                     Slå av/på hele e-post-systemet
                   </p>
                 </div>
-                <Switch
-                  id="enabled"
-                  checked={settings.enabled}
-                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, enabled: checked }))}
-                />
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                    settings.enabled ? 'bg-blue-600' : 'bg-gray-200'
+                  }`}
+                >
+                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                    settings.enabled ? 'translate-x-6' : 'translate-x-1'
+                  }`} />
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="fromEmail">Avsender e-post</Label>
-                  <Input
-                    id="fromEmail"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Avsender e-post
+                  </label>
+                  <input
+                    type="email"
                     value={settings.fromEmail}
                     onChange={(e) => setSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="noreply@driftpro.no"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="fromName">Avsender navn</Label>
-                  <Input
-                    id="fromName"
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Avsender navn
+                  </label>
+                  <input
+                    type="text"
                     value={settings.fromName}
                     onChange={(e) => setSettings(prev => ({ ...prev, fromName: e.target.value }))}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
                     placeholder="DriftPro System"
                   />
                 </div>
               </div>
-            </CardContent>
-          </Card>
+            </div>
+          </div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Bell className="h-5 w-5 mr-2" />
-                E-post-typer
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="flex items-center justify-between p-4 border rounded-lg">
+          <div className="bg-white shadow rounded-lg p-6">
+            <h2 className="text-lg font-semibold mb-4 flex items-center">
+              <Bell className="h-5 w-5 mr-2" />
+              E-post-typer
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: 'adminSetup', label: 'Admin-oppsett', description: 'E-post til nye administratorer', icon: UserPlus, color: 'blue' },
+                { key: 'deviationReports', label: 'Avviksrapporter', description: 'Nye avviksrapporter', icon: AlertTriangle, color: 'red' },
+                { key: 'deviationResolved', label: 'Avvik løst', description: 'Når avvik blir løst', icon: CheckCircle, color: 'green' },
+                { key: 'userWelcome', label: 'Velkomstmeldinger', description: 'Velkomst til nye brukere', icon: Mail, color: 'purple' },
+                { key: 'notifications', label: 'Varsler', description: 'Generelle varsler', icon: Bell, color: 'orange' },
+                { key: 'warnings', label: 'Advarsler', description: 'Systemadvarsler', icon: AlertTriangle, color: 'yellow' }
+              ].map((item) => (
+                <div key={item.key} className="flex items-center justify-between p-4 border rounded-lg">
                   <div className="flex items-center space-x-3">
-                    <UserPlus className="h-5 w-5 text-blue-500" />
+                    <item.icon className={`h-5 w-5 text-${item.color}-500`} />
                     <div>
-                      <Label htmlFor="adminSetup">Admin-oppsett</Label>
-                      <p className="text-sm text-muted-foreground">
-                        E-post til nye administratorer
-                      </p>
+                      <label className="font-medium">{item.label}</label>
+                      <p className="text-sm text-gray-600">{item.description}</p>
                     </div>
                   </div>
-                  <Switch
-                    id="adminSetup"
-                    checked={settings.adminSetup}
-                    onCheckedChange={() => toggleEmailType('adminSetup')}
-                  />
+                  <button
+                    onClick={() => toggleEmailType(item.key as keyof EmailSettings)}
+                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                      settings[item.key as keyof EmailSettings] ? 'bg-blue-600' : 'bg-gray-200'
+                    }`}
+                  >
+                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                      settings[item.key as keyof EmailSettings] ? 'translate-x-6' : 'translate-x-1'
+                    }`} />
+                  </button>
                 </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="h-5 w-5 text-red-500" />
-                    <div>
-                      <Label htmlFor="deviationReports">Avviksrapporter</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Nye avviksrapporter
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    id="deviationReports"
-                    checked={settings.deviationReports}
-                    onCheckedChange={() => toggleEmailType('deviationReports')}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <CheckCircle className="h-5 w-5 text-green-500" />
-                    <div>
-                      <Label htmlFor="deviationResolved">Avvik løst</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Når avvik blir løst
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    id="deviationResolved"
-                    checked={settings.deviationResolved}
-                    onCheckedChange={() => toggleEmailType('deviationResolved')}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Mail className="h-5 w-5 text-purple-500" />
-                    <div>
-                      <Label htmlFor="userWelcome">Velkomstmeldinger</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Velkomst til nye brukere
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    id="userWelcome"
-                    checked={settings.userWelcome}
-                    onCheckedChange={() => toggleEmailType('userWelcome')}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <Bell className="h-5 w-5 text-orange-500" />
-                    <div>
-                      <Label htmlFor="notifications">Varsler</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Generelle varsler
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    id="notifications"
-                    checked={settings.notifications}
-                    onCheckedChange={() => toggleEmailType('notifications')}
-                  />
-                </div>
-
-                <div className="flex items-center justify-between p-4 border rounded-lg">
-                  <div className="flex items-center space-x-3">
-                    <AlertTriangle className="h-5 w-5 text-yellow-500" />
-                    <div>
-                      <Label htmlFor="warnings">Advarsler</Label>
-                      <p className="text-sm text-muted-foreground">
-                        Systemadvarsler
-                      </p>
-                    </div>
-                  </div>
-                  <Switch
-                    id="warnings"
-                    checked={settings.warnings}
-                    onCheckedChange={() => toggleEmailType('warnings')}
-                  />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              ))}
+            </div>
+          </div>
 
           <div className="flex justify-end">
-            <Button onClick={saveSettings} disabled={saving}>
+            <button
+              onClick={saveSettings}
+              disabled={saving}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
+            >
               <Save className="h-4 w-4 mr-2" />
               {saving ? 'Lagrer...' : 'Lagre innstillinger'}
-            </Button>
+            </button>
           </div>
-        </TabsContent>
+        </div>
+      )}
 
-        <TabsContent value="templates" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>E-post-maler</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
+      {/* Templates Tab */}
+      {activeTab === 'templates' && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-4">E-post-maler</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Admin-oppsett mal
+              </label>
+              <textarea
+                value={settings.adminSetupTemplate}
+                onChange={(e) => updateTemplate('adminSetupTemplate', e.target.value)}
+                rows={10}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="HTML-mal for admin-oppsett e-post..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Avviksrapport mal
+              </label>
+              <textarea
+                value={settings.deviationReportTemplate}
+                onChange={(e) => updateTemplate('deviationReportTemplate', e.target.value)}
+                rows={10}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="HTML-mal for avviksrapport e-post..."
+              />
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Varsel mal
+              </label>
+              <textarea
+                value={settings.notificationTemplate}
+                onChange={(e) => updateTemplate('notificationTemplate', e.target.value)}
+                rows={8}
+                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="HTML-mal for varsel e-post..."
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMTP Tab */}
+      {activeTab === 'smtp' && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-4">SMTP-innstillinger</h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="adminSetupTemplate">Admin-oppsett mal</Label>
-                <Textarea
-                  id="adminSetupTemplate"
-                  value={settings.adminSetupTemplate}
-                  onChange={(e) => updateTemplate('adminSetupTemplate', e.target.value)}
-                  rows={10}
-                  placeholder="HTML-mal for admin-oppsett e-post..."
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  SMTP-server
+                </label>
+                <input
+                  type="text"
+                  value={settings.smtpHost}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="smtp.office365.com"
                 />
               </div>
-
               <div>
-                <Label htmlFor="deviationReportTemplate">Avviksrapport mal</Label>
-                <Textarea
-                  id="deviationReportTemplate"
-                  value={settings.deviationReportTemplate}
-                  onChange={(e) => updateTemplate('deviationReportTemplate', e.target.value)}
-                  rows={10}
-                  placeholder="HTML-mal for avviksrapport e-post..."
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Port
+                </label>
+                <input
+                  type="number"
+                  value={settings.smtpPort}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpPort: parseInt(e.target.value) }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="587"
                 />
               </div>
+            </div>
 
+            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label htmlFor="notificationTemplate">Varsel mal</Label>
-                <Textarea
-                  id="notificationTemplate"
-                  value={settings.notificationTemplate}
-                  onChange={(e) => updateTemplate('notificationTemplate', e.target.value)}
-                  rows={8}
-                  placeholder="HTML-mal for varsel e-post..."
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Brukernavn
+                </label>
+                <input
+                  type="text"
+                  value={settings.smtpUser}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpUser: e.target.value }))}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="noreply@driftpro.no"
                 />
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="smtp" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>SMTP-innstillinger</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="smtpHost">SMTP-server</Label>
-                  <Input
-                    id="smtpHost"
-                    value={settings.smtpHost}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
-                    placeholder="smtp.office365.com"
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Passord
+                </label>
+                <div className="relative">
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
+                    placeholder="••••••••"
                   />
-                </div>
-                <div>
-                  <Label htmlFor="smtpPort">Port</Label>
-                  <Input
-                    id="smtpPort"
-                    type="number"
-                    value={settings.smtpPort}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpPort: parseInt(e.target.value) }))}
-                    placeholder="587"
-                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-0 top-0 h-full px-3 text-gray-500 hover:text-gray-700"
+                  >
+                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                  </button>
                 </div>
               </div>
+            </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="smtpUser">Brukernavn</Label>
-                  <Input
-                    id="smtpUser"
-                    value={settings.smtpUser}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpUser: e.target.value }))}
-                    placeholder="noreply@driftpro.no"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="smtpPassword">Passord</Label>
-                  <div className="relative">
-                    <Input
-                      id="smtpPassword"
-                      type={showPassword ? "text" : "password"}
-                      value={smtpPassword}
-                      onChange={(e) => setSmtpPassword(e.target.value)}
-                      placeholder="••••••••"
-                    />
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      className="absolute right-0 top-0 h-full px-3"
-                      onClick={() => setShowPassword(!showPassword)}
-                    >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                    </Button>
+            <div className="flex items-center space-x-2">
+              <button
+                onClick={() => setSettings(prev => ({ ...prev, smtpSecure: !prev.smtpSecure }))}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                  settings.smtpSecure ? 'bg-blue-600' : 'bg-gray-200'
+                }`}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  settings.smtpSecure ? 'translate-x-6' : 'translate-x-1'
+                }`} />
+              </button>
+              <label className="text-sm font-medium text-gray-700">Bruk SSL/TLS</label>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logs Tab */}
+      {activeTab === 'logs' && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-4">E-post-logger</h2>
+          <div className="space-y-4">
+            {emailLogs.length === 0 ? (
+              <p className="text-gray-500">Ingen e-post-logger funnet</p>
+            ) : (
+              emailLogs.map((log) => (
+                <div key={log.id} className="flex items-center justify-between p-4 border rounded-lg">
+                  <div className="flex-1">
+                    <div className="flex items-center space-x-2">
+                      <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                        log.status === 'sent' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
+                      }`}>
+                        {log.status === 'sent' ? 'Sendt' : log.status === 'failed' ? 'Feilet' : 'Venter'}
+                      </span>
+                      <span className="font-medium">{log.type}</span>
+                    </div>
+                    <p className="text-sm text-gray-600 mt-1">
+                      Til: {log.to.join(', ')}
+                    </p>
+                    <p className="text-sm mt-1">{log.subject}</p>
+                    {log.error && (
+                      <p className="text-sm text-red-500 mt-1">Feil: {log.error}</p>
+                    )}
+                  </div>
+                  <div className="text-sm text-gray-500">
+                    {new Date(log.sentAt).toLocaleString('nb-NO')}
                   </div>
                 </div>
-              </div>
+              ))
+            )}
+          </div>
+        </div>
+      )}
 
-              <div className="flex items-center space-x-2">
-                <Switch
-                  id="smtpSecure"
-                  checked={settings.smtpSecure}
-                  onCheckedChange={(checked) => setSettings(prev => ({ ...prev, smtpSecure: checked }))}
+      {/* Test Tab */}
+      {activeTab === 'test' && (
+        <div className="bg-white shadow rounded-lg p-6">
+          <h2 className="text-lg font-semibold mb-4 flex items-center">
+            <TestTube className="h-5 w-5 mr-2" />
+            Test e-post
+          </h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Mottaker e-post
+                </label>
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  placeholder="test@example.com"
                 />
-                <Label htmlFor="smtpSecure">Bruk SSL/TLS</Label>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="logs" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>E-post-logger</CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                {emailLogs.length === 0 ? (
-                  <p className="text-muted-foreground">Ingen e-post-logger funnet</p>
-                ) : (
-                  emailLogs.map((log) => (
-                    <div key={log.id} className="flex items-center justify-between p-4 border rounded-lg">
-                      <div className="flex-1">
-                        <div className="flex items-center space-x-2">
-                          <Badge variant={log.status === 'sent' ? 'default' : 'destructive'}>
-                            {log.status === 'sent' ? 'Sendt' : log.status === 'failed' ? 'Feilet' : 'Venter'}
-                          </Badge>
-                          <span className="font-medium">{log.type}</span>
-                        </div>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          Til: {log.to.join(', ')}
-                        </p>
-                        <p className="text-sm mt-1">{log.subject}</p>
-                        {log.error && (
-                          <p className="text-sm text-red-500 mt-1">Feil: {log.error}</p>
-                        )}
-                      </div>
-                      <div className="text-sm text-muted-foreground">
-                        {new Date(log.sentAt).toLocaleString('nb-NO')}
-                      </div>
-                    </div>
-                  ))
-                )}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  E-post-type
+                </label>
+                <select
+                  value={testType}
+                  onChange={(e) => setTestType(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="admin_setup">Admin-oppsett</option>
+                  <option value="deviation_report">Avviksrapport</option>
+                  <option value="notification">Varsel</option>
+                  <option value="warning">Advarsel</option>
+                  <option value="welcome">Velkomst</option>
+                </select>
               </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
+            </div>
 
-        <TabsContent value="test" className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TestTube className="h-5 w-5 mr-2" />
-                Test e-post
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="testEmail">Mottaker e-post</Label>
-                  <Input
-                    id="testEmail"
-                    type="email"
-                    value={testEmail}
-                    onChange={(e) => setTestEmail(e.target.value)}
-                    placeholder="test@example.com"
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="testType">E-post-type</Label>
-                  <Select value={testType} onValueChange={setTestType}>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="admin_setup">Admin-oppsett</SelectItem>
-                      <SelectItem value="deviation_report">Avviksrapport</SelectItem>
-                      <SelectItem value="notification">Varsel</SelectItem>
-                      <SelectItem value="warning">Advarsel</SelectItem>
-                      <SelectItem value="welcome">Velkomst</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-              </div>
-
-              <Button onClick={sendTestEmail} disabled={testing || !testEmail}>
-                <Send className="h-4 w-4 mr-2" />
-                {testing ? 'Sender...' : 'Send test-e-post'}
-              </Button>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+            <button
+              onClick={sendTestEmail}
+              disabled={testing || !testEmail}
+              className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
+            >
+              <Send className="h-4 w-4 mr-2" />
+              {testing ? 'Sender...' : 'Send test-e-post'}
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
