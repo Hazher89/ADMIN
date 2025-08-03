@@ -217,9 +217,10 @@ export default function CompaniesPage() {
       };
 
       // Add admins to the company
+      const adminResults = [];
       for (const admin of validAdmins) {
         try {
-          await brrgService.addAdmin({
+          const result = await brrgService.addAdmin({
             email: admin.email,
             name: admin.name,
             role: 'admin',
@@ -227,8 +228,10 @@ export default function CompaniesPage() {
             companyName: selectedBRRGCompany.navn,
             permissions: ['manage_users', 'manage_documents', 'manage_deviations', 'manage_reports', 'view_analytics']
           });
+          adminResults.push({ email: admin.email, success: true });
         } catch (error) {
           console.error(`Error adding admin ${admin.email}:`, error);
+          adminResults.push({ email: admin.email, success: false, error: error instanceof Error ? error.message : 'Ukjent feil' });
           // Continue with other admins even if one fails
         }
       }
@@ -244,7 +247,21 @@ export default function CompaniesPage() {
       setBrrgSearchTerm('');
       setBrrgOrgNumber('');
       
-      alert(`Bedrift "${selectedBRRGCompany.navn}" opprettet med ${validAdmins.length} admin(s)! E-post med passordoppsett er sendt til alle admins.`);
+      // Show detailed results
+      const successfulAdmins = adminResults.filter(r => r.success);
+      const failedAdmins = adminResults.filter(r => !r.success);
+      
+      let message = `Bedrift "${selectedBRRGCompany.navn}" opprettet!\n\n`;
+      message += `✅ ${successfulAdmins.length} admin(s) lagt til og e-post sendt.\n`;
+      
+      if (failedAdmins.length > 0) {
+        message += `❌ ${failedAdmins.length} admin(s) feilet:\n`;
+        failedAdmins.forEach(admin => {
+          message += `- ${admin.email}: ${admin.error}\n`;
+        });
+      }
+      
+      alert(message);
 
     } catch (error) {
       console.error('Error creating company with admins:', error);

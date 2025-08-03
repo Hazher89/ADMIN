@@ -4,19 +4,10 @@ import { collection, addDoc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface EmailData {
-  to: string | string[];
+  to: string;
   subject: string;
-  body: string;
-  metadata?: Record<string, unknown>;
-}
-
-interface EmailConfig {
-  senderName: string;
-  senderEmail: string;
-  smtpHost: string;
-  smtpPort: number;
-  smtpUser: string;
-  smtpPass: string;
+  html: string;
+  text?: string;
 }
 
 export async function POST(request: NextRequest) {
@@ -24,21 +15,42 @@ export async function POST(request: NextRequest) {
   
   try {
     const requestData = await request.json();
-    emailData = requestData.emailData as EmailData;
-    const config = requestData.config as EmailConfig;
-
-    if (!emailData) {
-      throw new Error('emailData is null');
+    
+    // Handle both old and new data structures
+    if (requestData.emailData && requestData.config) {
+      // Old structure
+      emailData = {
+        to: Array.isArray(requestData.emailData.to) ? requestData.emailData.to[0] : requestData.emailData.to,
+        subject: requestData.emailData.subject,
+        html: requestData.emailData.body
+      };
+    } else {
+      // New structure (from admin-email-service)
+      emailData = requestData as EmailData;
     }
+
+    if (!emailData || !emailData.to || !emailData.subject || !emailData.html) {
+      throw new Error('Invalid email data: missing required fields');
+    }
+
+    // Email configuration - you should move these to environment variables
+    const emailConfig = {
+      senderName: 'DriftPro',
+      senderEmail: 'noreply@driftpro.no',
+      smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
+      smtpPort: parseInt(process.env.SMTP_PORT || '587'),
+      smtpUser: process.env.SMTP_USER || 'noreply@driftpro.no',
+      smtpPass: process.env.SMTP_PASS || ''
+    };
 
     // Create transporter
     const transporter = nodemailer.createTransport({
-      host: config.smtpHost,
-      port: config.smtpPort,
+      host: emailConfig.smtpHost,
+      port: emailConfig.smtpPort,
       secure: false, // Use TLS
       auth: {
-        user: config.smtpUser,
-        pass: config.smtpPass
+        user: emailConfig.smtpUser,
+        pass: emailConfig.smtpPass
       },
       tls: {
         rejectUnauthorized: false
@@ -47,10 +59,11 @@ export async function POST(request: NextRequest) {
 
     // Prepare email
     const mailOptions = {
-      from: `${config.senderName} <${config.senderEmail}>`,
-      to: Array.isArray(emailData.to) ? emailData.to.join(', ') : emailData.to,
+      from: `${emailConfig.senderName} <${emailConfig.senderEmail}>`,
+      to: emailData.to,
       subject: emailData.subject,
-      html: emailData.body
+      html: emailData.html,
+      text: emailData.text || emailData.html.replace(/<[^>]*>/g, '') // Strip HTML tags for text version
     };
 
     // Send email
@@ -60,11 +73,14 @@ export async function POST(request: NextRequest) {
     // Log email to Firebase for tracking
     if (db) {
       await addDoc(collection(db, 'emailLogs'), {
-        to: Array.isArray(emailData.to) ? emailData.to : [emailData.to],
+        to: [emailData.to],
         subject: emailData.subject,
-        content: emailData.body,
-        eventType: emailData.metadata?.eventType || 'system_maintenance',
-        metadata: emailData.metadata || {},
+        content: emailData.html,
+        eventType: 'admin_setup',
+        metadata: {
+          messageId: info.messageId,
+          adminSetup: true
+        },
         status: 'sent',
         sentAt: new Date().toISOString()
       });
@@ -78,11 +94,13 @@ export async function POST(request: NextRequest) {
     try {
       if (db && emailData) {
         await addDoc(collection(db, 'emailLogs'), {
-          to: Array.isArray(emailData.to) ? emailData.to : [emailData.to],
+          to: [emailData.to],
           subject: emailData.subject || '',
-          content: emailData.body || '',
-          eventType: emailData.metadata?.eventType || 'system_maintenance',
-          metadata: emailData.metadata || {},
+          content: emailData.html || '',
+          eventType: 'admin_setup',
+          metadata: {
+            adminSetup: true
+          },
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error',
           sentAt: new Date().toISOString()

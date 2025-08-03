@@ -228,9 +228,17 @@ export class AdminEmailService {
       });
 
       if (!response.ok) {
-        throw new Error(`Failed to send email: ${response.status}`);
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Email API response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        throw new Error(`Failed to send email: ${response.status} - ${errorData.error || response.statusText}`);
       }
 
+      const result = await response.json();
+      console.log('Email sent successfully:', result);
       return true;
     } catch (error) {
       console.error('Error sending password setup email:', error);
