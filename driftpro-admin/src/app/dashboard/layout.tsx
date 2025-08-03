@@ -345,13 +345,7 @@ export default function DashboardLayout({
         category: 'admin',
         isAdmin: true
       },
-      {
-        name: 'E-post-kontroll',
-        href: '/dashboard/email-control',
-        icon: <Mail size={20} />,
-        category: 'admin',
-        isAdmin: true
-      }
+
     ] : [])
   ];
 
