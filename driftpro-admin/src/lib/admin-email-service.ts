@@ -31,12 +31,12 @@ export class AdminEmailService {
       if (apps.length === 0) {
         // Initialize Firebase if not already done
         const firebaseConfig = {
-          apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-          authDomain: "driftpro-40ccd.firebaseapp.com",
-          projectId: "driftpro-40ccd",
-          storageBucket: "driftpro-40ccd.appspot.com",
-          messagingSenderId: "123456789",
-          appId: "1:123456789:web:abcdef123456"
+          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
+          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
+          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
+          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
+          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
         };
         initializeApp(firebaseConfig);
       }
