@@ -1,8 +1,11 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Eye, EyeOff, CheckCircle, AlertCircle, Lock } from 'lucide-react';
+
+// Prevent pre-rendering since this page uses search parameters
+export const dynamic = 'force-dynamic';
 
 interface TokenData {
   valid: boolean;
@@ -11,7 +14,7 @@ interface TokenData {
   companyName: string;
 }
 
-export default function SetupPasswordPage() {
+function SetupPasswordContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const [token, setToken] = useState<string>('');
@@ -507,5 +510,39 @@ export default function SetupPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function SetupPasswordPage() {
+  return (
+    <Suspense fallback={
+      <div style={{
+        minHeight: '100vh',
+        background: 'var(--gray-50)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="loading" style={{ margin: '0 auto 2rem' }}></div>
+          <h3 style={{ 
+            fontSize: 'var(--font-size-xl)', 
+            fontWeight: '600', 
+            color: 'var(--gray-900)', 
+            marginBottom: '0.5rem' 
+          }}>
+            Laster...
+          </h3>
+          <p style={{ 
+            color: 'var(--gray-600)',
+            fontSize: 'var(--font-size-base)'
+          }}>
+            Forbereder passordoppsett
+          </p>
+        </div>
+      </div>
+    }>
+      <SetupPasswordContent />
+    </Suspense>
   );
 } 

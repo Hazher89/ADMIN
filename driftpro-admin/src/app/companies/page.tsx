@@ -20,6 +20,9 @@ import {
 import { collection, getDocs, addDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
+// Prevent pre-rendering since this page uses useRouter and Firebase
+export const dynamic = 'force-dynamic';
+
 interface Company {
   id: string;
   name: string;

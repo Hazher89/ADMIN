@@ -13,6 +13,9 @@ import {
   AlertCircle
 } from 'lucide-react';
 
+// Prevent pre-rendering since this page uses useRouter and localStorage
+export const dynamic = 'force-dynamic';
+
 export default function LoginPage() {
   const { login, logout, isAuthenticated, userProfile } = useAuth();
   const router = useRouter();

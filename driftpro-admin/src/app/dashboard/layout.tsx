@@ -51,6 +51,9 @@ interface SidebarItem {
   isAdmin?: boolean;
 }
 
+// Prevent pre-rendering since this layout uses usePathname
+export const dynamic = 'force-dynamic';
+
 export default function DashboardLayout({
   children,
 }: {

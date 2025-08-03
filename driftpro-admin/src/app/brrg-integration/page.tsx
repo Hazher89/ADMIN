@@ -19,6 +19,9 @@ import {
 } from 'lucide-react';
 import { brrgService, BRRGCompany } from '@/lib/brrg-service';
 
+// Prevent pre-rendering since this page uses useRouter
+export const dynamic = 'force-dynamic';
+
 export default function BRRGIntegrationPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');

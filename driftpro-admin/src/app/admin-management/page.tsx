@@ -20,6 +20,9 @@ import {
 } from 'lucide-react';
 import { brrgService, BRRGAdmin } from '@/lib/brrg-service';
 
+// Prevent pre-rendering since this page uses useRouter and localStorage
+export const dynamic = 'force-dynamic';
+
 interface AdminFormData {
   email: string;
   name: string;
