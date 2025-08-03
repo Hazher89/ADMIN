@@ -186,6 +186,7 @@ export default function EmailLogsPage() {
   const [message, setMessage] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [smtpPassword, setSmtpPassword] = useState('');
+  const [testingSmtp, setTestingSmtp] = useState(false);
 
   useEffect(() => {
     if (userProfile?.companyId) {
@@ -224,6 +225,9 @@ export default function EmailLogsPage() {
       if (response.ok) {
         const data = await response.json();
         setSettings(prev => ({ ...prev, ...data }));
+        
+        // Don't update smtpPassword from server for security
+        // The password field should remain empty until user types something
       }
     } catch (error) {
       console.error('Error loading email settings:', error);
@@ -244,9 +248,18 @@ export default function EmailLogsPage() {
       
       if (response.ok) {
         setMessage('Innstillinger lagret!');
+        
+        // Reload settings to get the latest data
+        await loadEmailSettings();
+        
+        // Clear the password field after successful save
+        setSmtpPassword('');
+        
+        // Show success message for 3 seconds
         setTimeout(() => setMessage(''), 3000);
       } else {
-        setMessage('Feil ved lagring av innstillinger');
+        const errorData = await response.json().catch(() => ({}));
+        setMessage(`Feil ved lagring av innstillinger: ${errorData.error || 'Ukjent feil'}`);
       }
     } catch (error) {
       console.error('Error saving settings:', error);
@@ -286,6 +299,41 @@ export default function EmailLogsPage() {
       setMessage('Feil ved sending av test-e-post');
     } finally {
       setTesting(false);
+    }
+  };
+
+  const testSmtpConnection = async () => {
+    if (!settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !smtpPassword) {
+      setMessage('Vennligst fyll ut alle SMTP-feltene først');
+      return;
+    }
+
+    try {
+      setTestingSmtp(true);
+      const response = await fetch('/api/send-test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: settings.smtpUser, // Send to self
+          type: 'notification',
+          settings: {
+            ...settings,
+            smtpPassword: smtpPassword
+          }
+        })
+      });
+      
+      if (response.ok) {
+        setMessage('SMTP-tilkobling testet! Sjekk innboksen din for test-e-post.');
+      } else {
+        const error = await response.json();
+        setMessage(`SMTP-test feilet: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error testing SMTP:', error);
+      setMessage('Feil ved testing av SMTP-tilkobling');
+    } finally {
+      setTestingSmtp(false);
     }
   };
 
@@ -891,6 +939,26 @@ export default function EmailLogsPage() {
                 <span className="toggle-slider"></span>
               </button>
               <label className="form-label">Bruk SSL/TLS</label>
+            </div>
+
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={testSmtpConnection}
+                disabled={testingSmtp || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !smtpPassword}
+                className="btn btn-secondary"
+              >
+                <TestTube style={{ width: '16px', height: '16px' }} />
+                {testingSmtp ? 'Tester...' : 'Test SMTP'}
+              </button>
+              <button
+                onClick={saveSettings}
+                disabled={saving}
+                className="btn btn-primary"
+              >
+                <Save style={{ width: '16px', height: '16px' }} />
+                {saving ? 'Lagrer...' : 'Lagre SMTP-innstillinger'}
+              </button>
             </div>
           </div>
         </div>
