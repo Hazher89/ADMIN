@@ -1,4 +1,4 @@
-import { addDoc, collection } from 'firebase/firestore';
+import { addDoc, collection, getFirestore } from 'firebase/firestore';
 import { db } from './firebase';
 
 export interface EmailData {
@@ -42,6 +42,39 @@ export class EmailService {
       pass: process.env.DRIFTPRO_EMAIL_PASSWORD || '',
       secure: false
     };
+  }
+
+  /**
+   * Get Firebase database instance with fallback
+   */
+  private getDb() {
+    if (db) {
+      return db;
+    }
+    
+    // Try to get Firestore directly if db is not available
+    try {
+      const { getApps, initializeApp } = require('firebase/app');
+      const apps = getApps();
+      
+      if (apps.length === 0) {
+        // Initialize Firebase if not already done
+        const firebaseConfig = {
+          apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+          authDomain: "driftpro-40ccd.firebaseapp.com",
+          projectId: "driftpro-40ccd",
+          storageBucket: "driftpro-40ccd.appspot.com",
+          messagingSenderId: "123456789",
+          appId: "1:123456789:web:abcdef123456"
+        };
+        initializeApp(firebaseConfig);
+      }
+      
+      return getFirestore();
+    } catch (error) {
+      console.error('Error getting Firestore instance:', error);
+      return null; // Return null instead of throwing to allow graceful fallback
+    }
   }
 
   /**
@@ -362,7 +395,11 @@ export class EmailService {
    * Log email attempt to Firebase
    */
   private async logEmailAttempt(emailData: EmailData, status: 'pending' | 'sent' | 'failed'): Promise<string> {
-    if (!db) return '';
+    const firestoreDb = this.getDb();
+    if (!firestoreDb) {
+      console.warn('Firebase not available, skipping email log');
+      return '';
+    }
 
     try {
       const logData = {
@@ -377,7 +414,7 @@ export class EmailService {
         }
       };
 
-      const docRef = await addDoc(collection(db, 'emailLogs'), logData);
+      const docRef = await addDoc(collection(firestoreDb, 'emailLogs'), logData);
       return docRef.id;
     } catch (error) {
       console.error('Error logging email attempt:', error);
@@ -389,11 +426,12 @@ export class EmailService {
    * Update email log
    */
   private async updateEmailLog(logId: string, status: 'sent' | 'failed', error?: string, messageId?: string): Promise<void> {
-    if (!db || !logId) return;
+    const firestoreDb = this.getDb();
+    if (!firestoreDb || !logId) return;
 
     try {
       const { updateDoc, doc } = await import('firebase/firestore');
-      await updateDoc(doc(db, 'emailLogs', logId), {
+      await updateDoc(doc(firestoreDb, 'emailLogs', logId), {
         status,
         error,
         messageId,

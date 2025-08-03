@@ -1,4 +1,4 @@
-import { addDoc, collection, doc, setDoc, getDoc, updateDoc, getDocs } from 'firebase/firestore';
+import { addDoc, collection, doc, setDoc, getDoc, updateDoc, getDocs, getFirestore } from 'firebase/firestore';
 import { db } from './firebase';
 import { emailService } from './email-service';
 
@@ -15,6 +15,39 @@ export interface AdminSetupToken {
 }
 
 export class AdminEmailService {
+  /**
+   * Get Firebase database instance with fallback
+   */
+  private getDb() {
+    if (db) {
+      return db;
+    }
+    
+    // Try to get Firestore directly if db is not available
+    try {
+      const { getApps, initializeApp } = require('firebase/app');
+      const apps = getApps();
+      
+      if (apps.length === 0) {
+        // Initialize Firebase if not already done
+        const firebaseConfig = {
+          apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+          authDomain: "driftpro-40ccd.firebaseapp.com",
+          projectId: "driftpro-40ccd",
+          storageBucket: "driftpro-40ccd.appspot.com",
+          messagingSenderId: "123456789",
+          appId: "1:123456789:web:abcdef123456"
+        };
+        initializeApp(firebaseConfig);
+      }
+      
+      return getFirestore();
+    } catch (error) {
+      console.error('Error getting Firestore instance:', error);
+      throw new Error('Firebase database not available. Please check Firebase configuration.');
+    }
+  }
+
   /**
    * Generate a secure token for password setup
    */
@@ -34,38 +67,40 @@ export class AdminEmailService {
     companyName: string, 
     companyId: string
   ): Promise<string> {
-    if (!db) {
-      throw new Error('Database not available');
+    try {
+      const firestoreDb = this.getDb();
+
+      const token = this.generateToken();
+      const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
+
+      const setupToken: Omit<AdminSetupToken, 'id'> = {
+        email: email.toLowerCase().trim(),
+        adminName,
+        companyName,
+        companyId,
+        token,
+        expiresAt: expiresAt.toISOString(),
+        used: false,
+        createdAt: new Date().toISOString()
+      };
+
+      const docRef = await addDoc(collection(firestoreDb, 'adminSetupTokens'), setupToken);
+      console.log('Setup token created successfully:', docRef.id);
+      return token;
+    } catch (error) {
+      console.error('Error creating setup token:', error);
+      throw new Error(`Failed to create setup token: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
-
-    const token = this.generateToken();
-    const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
-
-    const setupToken: Omit<AdminSetupToken, 'id'> = {
-      email: email.toLowerCase().trim(),
-      adminName,
-      companyName,
-      companyId,
-      token,
-      expiresAt: expiresAt.toISOString(),
-      used: false,
-      createdAt: new Date().toISOString()
-    };
-
-    await addDoc(collection(db, 'adminSetupTokens'), setupToken);
-    return token;
   }
 
   /**
    * Validate a setup token
    */
   async validateSetupToken(token: string): Promise<AdminSetupToken | null> {
-    if (!db) {
-      return null;
-    }
-
     try {
-      const tokensQuery = collection(db, 'adminSetupTokens');
+      const firestoreDb = this.getDb();
+
+      const tokensQuery = collection(firestoreDb, 'adminSetupTokens');
       const tokenDocs = await getDocs(tokensQuery);
       
       const tokenDoc = tokenDocs.docs.find(doc => doc.data().token === token);
@@ -100,14 +135,17 @@ export class AdminEmailService {
    * Mark a token as used
    */
   async markTokenAsUsed(tokenId: string): Promise<void> {
-    if (!db) {
-      throw new Error('Database not available');
-    }
+    try {
+      const firestoreDb = this.getDb();
 
-    await updateDoc(doc(db, 'adminSetupTokens', tokenId), {
-      used: true,
-      updatedAt: new Date().toISOString()
-    });
+      await updateDoc(doc(firestoreDb, 'adminSetupTokens', tokenId), {
+        used: true,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error marking token as used:', error);
+      throw new Error(`Failed to mark token as used: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   /**
@@ -120,10 +158,13 @@ export class AdminEmailService {
     setupToken: string
   ): Promise<boolean> {
     try {
-      return await emailService.sendAdminSetupEmail(email, adminName, companyName, setupToken);
+      console.log('Sending password setup email to:', email);
+      const result = await emailService.sendAdminSetupEmail(email, adminName, companyName, setupToken);
+      console.log('Password setup email sent successfully:', result);
+      return result;
     } catch (error) {
       console.error('Error sending password setup email:', error);
-      throw error;
+      throw new Error(`Failed to send password setup email: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
 
@@ -141,12 +182,10 @@ export class AdminEmailService {
         return { success: false, error: 'Ugyldig eller utløpt token' };
       }
 
-      if (!db) {
-        return { success: false, error: 'Database ikke tilgjengelig' };
-      }
+      const firestoreDb = this.getDb();
 
       // Update user with password
-      const usersQuery = collection(db, 'users');
+      const usersQuery = collection(firestoreDb, 'users');
       const userDocs = await getDocs(usersQuery);
       const userDoc = userDocs.docs.find(doc => 
         doc.data().email === tokenData.email && 
@@ -158,7 +197,7 @@ export class AdminEmailService {
       }
 
       // Update user with password and mark as active
-      await updateDoc(doc(db, 'users', userDoc.id), {
+      await updateDoc(doc(firestoreDb, 'users', userDoc.id), {
         password: password, // In production, this should be hashed
         status: 'active',
         passwordSetAt: new Date().toISOString(),
@@ -179,7 +218,7 @@ export class AdminEmailService {
       return { success: true };
     } catch (error) {
       console.error('Error setting up admin password:', error);
-      return { success: false, error: 'Feil ved oppsett av passord' };
+      return { success: false, error: `Feil ved oppsett av passord: ${error instanceof Error ? error.message : 'Unknown error'}` };
     }
   }
 }
