@@ -1,53 +1,12 @@
-import {
-  collection,
-  addDoc,
-  query,
-  where,
-  getDocs,
-  doc,
-  setDoc,
-  getDoc,
-  updateDoc,
-  serverTimestamp
-} from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 import { db } from './firebase';
-import nodemailer from 'nodemailer';
-
-export interface EmailTemplate {
-  subject: string;
-  body: string;
-  variables: string[];
-}
-
-export type EmailType =
-  | 'deviation_reported'
-  | 'deviation_assigned'
-  | 'deviation_resolved'
-  | 'vacation_requested'
-  | 'vacation_approved'
-  | 'vacation_rejected'
-  | 'absence_requested'
-  | 'absence_approved'
-  | 'absence_rejected'
-  | 'shift_assigned'
-  | 'shift_updated'
-  | 'shift_cancelled'
-  | 'document_shared'
-  | 'chat_message'
-  | 'employee_added'
-  | 'employee_updated'
-  | 'employee_removed'
-  | 'password_reset'
-  | 'welcome_email'
-  | 'system_maintenance'
-  | 'security_alert'
-  | 'test_email';
 
 export interface EmailData {
   to: string;
   subject: string;
   html: string;
   text?: string;
+  type?: 'admin_setup' | 'notification' | 'warning' | 'system' | 'welcome';
 }
 
 export interface EmailLog {
@@ -55,965 +14,419 @@ export interface EmailLog {
   to: string[];
   subject: string;
   content: string;
-  eventType: EmailType;
-  metadata: Record<string, unknown>;
-  status: 'sent' | 'failed';
+  type: string;
+  status: 'sent' | 'failed' | 'pending';
   error?: string;
   sentAt: string;
+  metadata?: Record<string, any>;
 }
-
-export interface EmailConfig {
-  senderEmail: string;
-  senderName: string;
-  smtpHost: string;
-  smtpPort: number;
-  smtpUser: string;
-  smtpPass: string;
-}
-
-const defaultConfig: EmailConfig = {
-  senderEmail: 'driftpro.system@gmail.com',
-  senderName: 'DriftPro',
-  smtpHost: 'smtp.gmail.com',
-  smtpPort: 587,
-  smtpUser: 'driftpro.system@gmail.com',
-  smtpPass: 'your-app-password-here' // Gmail App Password
-};
 
 export class EmailService {
   private baseUrl: string;
+  private smtpConfig: {
+    host: string;
+    port: number;
+    user: string;
+    pass: string;
+    secure: boolean;
+  };
 
   constructor() {
     this.baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
-  }
-
-  private async getConfig() {
-    try {
-      // Try to get config from Firebase first
-      if (db) {
-        const configDoc = doc(db, 'systemConfig', 'emailSettings');
-        const configSnapshot = await getDoc(configDoc);
-        
-        if (configSnapshot.exists()) {
-          const config = configSnapshot.data();
-          return {
-            senderEmail: config.senderEmail || 'driftpro.system@gmail.com',
-            senderName: config.senderName || 'DriftPro',
-            smtpHost: config.smtpHost || 'smtp.gmail.com',
-            smtpPort: config.smtpPort || 587,
-            smtpUser: config.smtpUser || 'driftpro.system@gmail.com',
-            smtpPass: config.smtpPass || 'your-app-password-here' // Gmail App Password
-          };
-        }
-      }
-    } catch (error) {
-      console.error('Error loading email config from Firebase:', error);
-    }
     
-    // Fallback to localStorage if Firebase fails
-    try {
-      const savedConfig = localStorage.getItem('emailConfig');
-      if (savedConfig) {
-        const config = JSON.parse(savedConfig);
-        return {
-          senderEmail: config.senderEmail || 'driftpro.system@gmail.com',
-          senderName: config.senderName || 'DriftPro',
-          smtpHost: config.smtpHost || 'smtp.gmail.com',
-          smtpPort: config.smtpPort || 587,
-          smtpUser: config.smtpUser || 'driftpro.system@gmail.com',
-          smtpPass: config.smtpPass || 'your-app-password-here' // Gmail App Password
-        };
-      }
-    } catch (error) {
-      console.error('Error parsing email config from localStorage:', error);
-    }
-    
-    // Default configuration - Using Gmail SMTP for better reliability
-    return {
-      senderEmail: 'driftpro.system@gmail.com',
-      senderName: 'DriftPro',
-      smtpHost: 'smtp.gmail.com',
-      smtpPort: 587,
-      smtpUser: 'driftpro.system@gmail.com',
-      smtpPass: 'your-app-password-here' // Gmail App Password
-    };
-  }
-
-  private get smtpConfig() {
-    // This needs to be handled differently since getConfig is now async
-    // For now, return a default config and handle async loading in sendEmail
-    return {
-      host: 'smtp.domeneshop.no',
+    // Automatic SMTP configuration for noreply@driftpro.no
+    this.smtpConfig = {
+      host: 'smtp.office365.com', // Microsoft 365/Outlook
       port: 587,
-      secure: false,
-      auth: {
-        user: 'noreply@driftpro.no',
-        pass: 'HazGada1989!'
-      }
+      user: 'noreply@driftpro.no',
+      pass: process.env.DRIFTPRO_EMAIL_PASSWORD || '',
+      secure: false
     };
   }
 
-  private get senderEmail() {
-    return 'noreply@driftpro.no';
-  }
-
-  private get senderName() {
-    return 'DriftPro';
-  }
-
-  private templates: Record<EmailType, EmailTemplate> = {
-    deviation_reported: {
-      subject: 'Nytt avvik rapportert - {deviationTitle}',
-      body: `
-        <h2>Nytt avvik rapportert</h2>
-        <p>Et nytt avvik har blitt rapportert av {reporterName}.</p>
-        <p><strong>Avvik:</strong> {deviationTitle}</p>
-        <p><strong>Beskrivelse:</strong> {deviationDescription}</p>
-        <p><strong>Prioritet:</strong> {priority}</p>
-        <p><strong>Lokasjon:</strong> {location}</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p>Klikk <a href="{deviationUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['reporterName', 'deviationTitle', 'deviationDescription', 'priority', 'location', 'date', 'deviationUrl']
-    },
-    deviation_assigned: {
-      subject: 'Avvik tildelt til deg - {deviationTitle}',
-      body: `
-        <h2>Avvik tildelt</h2>
-        <p>Du har blitt tildelt et avvik av {assignerName}.</p>
-        <p><strong>Avvik:</strong> {deviationTitle}</p>
-        <p><strong>Beskrivelse:</strong> {deviationDescription}</p>
-        <p><strong>Prioritet:</strong> {priority}</p>
-        <p><strong>Frist:</strong> {deadline}</p>
-        <p>Klikk <a href="{deviationUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['assignerName', 'deviationTitle', 'deviationDescription', 'priority', 'deadline', 'deviationUrl']
-    },
-    deviation_resolved: {
-      subject: 'Avvik løst - {deviationTitle}',
-      body: `
-        <h2>Avvik løst</h2>
-        <p>Avviket "{deviationTitle}" har blitt løst av {resolverName}.</p>
-        <p><strong>Løsning:</strong> {resolution}</p>
-        <p><strong>Løst dato:</strong> {resolvedDate}</p>
-        <p>Klikk <a href="{deviationUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['deviationTitle', 'resolverName', 'resolution', 'resolvedDate', 'deviationUrl']
-    },
-    vacation_requested: {
-      subject: 'Forespørsel om ferie - {employeeName}',
-      body: `
-        <h2>Forespørsel om ferie</h2>
-        <p>{employeeName} har sendt inn en forespørsel om ferie.</p>
-        <p><strong>Periode:</strong> {startDate} - {endDate}</p>
-        <p><strong>Antall dager:</strong> {days}</p>
-        <p><strong>Årsak:</strong> {reason}</p>
-        <p>Klikk <a href="{requestUrl}">her</a> for å godkjenne eller avvise.</p>
-      `,
-      variables: ['employeeName', 'startDate', 'endDate', 'days', 'reason', 'requestUrl']
-    },
-    vacation_approved: {
-      subject: 'Ferie godkjent - {employeeName}',
-      body: `
-        <h2>Ferie godkjent</h2>
-        <p>Din forespørsel om ferie har blitt godkjent av {approverName}.</p>
-        <p><strong>Periode:</strong> {startDate} - {endDate}</p>
-        <p><strong>Antall dager:</strong> {days}</p>
-        <p>Klikk <a href="{requestUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['approverName', 'startDate', 'endDate', 'days', 'requestUrl']
-    },
-    vacation_rejected: {
-      subject: 'Ferie avvist - {employeeName}',
-      body: `
-        <h2>Ferie avvist</h2>
-        <p>Din forespørsel om ferie har blitt avvist av {rejecterName}.</p>
-        <p><strong>Periode:</strong> {startDate} - {endDate}</p>
-        <p><strong>Årsak:</strong> {reason}</p>
-        <p>Klikk <a href="{requestUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['rejecterName', 'startDate', 'endDate', 'reason', 'requestUrl']
-    },
-    absence_requested: {
-      subject: 'Forespørsel om fravær - {employeeName}',
-      body: `
-        <h2>Forespørsel om fravær</h2>
-        <p>{employeeName} har sendt inn en forespørsel om fravær.</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p><strong>Årsak:</strong> {reason}</p>
-        <p><strong>Type:</strong> {type}</p>
-        <p>Klikk <a href="{requestUrl}">her</a> for å godkjenne eller avvise.</p>
-      `,
-      variables: ['employeeName', 'date', 'reason', 'type', 'requestUrl']
-    },
-    absence_approved: {
-      subject: 'Fravær godkjent - {employeeName}',
-      body: `
-        <h2>Fravær godkjent</h2>
-        <p>Din forespørsel om fravær har blitt godkjent av {approverName}.</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p><strong>Type:</strong> {type}</p>
-        <p>Klikk <a href="{requestUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['approverName', 'date', 'type', 'requestUrl']
-    },
-    absence_rejected: {
-      subject: 'Fravær avvist - {employeeName}',
-      body: `
-        <h2>Fravær avvist</h2>
-        <p>Din forespørsel om fravær har blitt avvist av {rejecterName}.</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p><strong>Årsak:</strong> {reason}</p>
-        <p>Klikk <a href="{requestUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['rejecterName', 'date', 'reason', 'requestUrl']
-    },
-    shift_assigned: {
-      subject: 'Skift tildelt - {employeeName}',
-      body: `
-        <h2>Skift tildelt</h2>
-        <p>Du har blitt tildelt et nytt skift av {assignerName}.</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p><strong>Start:</strong> {startTime}</p>
-        <p><strong>Slutt:</strong> {endTime}</p>
-        <p><strong>Avdeling:</strong> {department}</p>
-        <p>Klikk <a href="{shiftUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['assignerName', 'date', 'startTime', 'endTime', 'department', 'shiftUrl']
-    },
-    shift_updated: {
-      subject: 'Skift oppdatert - {employeeName}',
-      body: `
-        <h2>Skift oppdatert</h2>
-        <p>Ditt skift har blitt oppdatert av {updaterName}.</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p><strong>Start:</strong> {startTime}</p>
-        <p><strong>Slutt:</strong> {endTime}</p>
-        <p><strong>Endring:</strong> {change}</p>
-        <p>Klikk <a href="{shiftUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['updaterName', 'date', 'startTime', 'endTime', 'change', 'shiftUrl']
-    },
-    shift_cancelled: {
-      subject: 'Skift kansellert - {employeeName}',
-      body: `
-        <h2>Skift kansellert</h2>
-        <p>Ditt skift har blitt kansellert av {cancellerName}.</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p><strong>Årsak:</strong> {reason}</p>
-        <p>Klikk <a href="{shiftUrl}">her</a> for å se detaljer.</p>
-      `,
-      variables: ['cancellerName', 'date', 'reason', 'shiftUrl']
-    },
-    document_shared: {
-      subject: 'Dokument delt - {documentName}',
-      body: `
-        <h2>Dokument delt</h2>
-        <p>{sharerName} har delt et dokument med deg.</p>
-        <p><strong>Dokument:</strong> {documentName}</p>
-        <p><strong>Beskrivelse:</strong> {description}</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p>Klikk <a href="{documentUrl}">her</a> for å se dokumentet.</p>
-      `,
-      variables: ['sharerName', 'documentName', 'description', 'date', 'documentUrl']
-    },
-    chat_message: {
-      subject: 'Ny melding i chat - {chatName}',
-      body: `
-        <h2>Ny melding</h2>
-        <p>Du har mottatt en ny melding i {chatName} fra {senderName}.</p>
-        <p><strong>Melding:</strong> {message}</p>
-        <p><strong>Tid:</strong> {time}</p>
-        <p>Klikk <a href="{chatUrl}">her</a> for å svare.</p>
-      `,
-      variables: ['chatName', 'senderName', 'message', 'time', 'chatUrl']
-    },
-    employee_added: {
-      subject: 'Ny ansatt lagt til - {employeeName}',
-      body: `
-        <h2>Ny ansatt</h2>
-        <p>En ny ansatt har blitt lagt til av {adderName}.</p>
-        <p><strong>Navn:</strong> {employeeName}</p>
-        <p><strong>E-post:</strong> {email}</p>
-        <p><strong>Avdeling:</strong> {department}</p>
-        <p><strong>Stilling:</strong> {position}</p>
-        <p>Klikk <a href="{employeeUrl}">her</a> for å se profil.</p>
-      `,
-      variables: ['adderName', 'employeeName', 'email', 'department', 'position', 'employeeUrl']
-    },
-    employee_updated: {
-      subject: 'Ansatt oppdatert - {employeeName}',
-      body: `
-        <h2>Ansatt oppdatert</h2>
-        <p>Profilen til {employeeName} har blitt oppdatert av {updaterName}.</p>
-        <p><strong>Endringer:</strong> {changes}</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p>Klikk <a href="{employeeUrl}">her</a> for å se profil.</p>
-      `,
-      variables: ['employeeName', 'updaterName', 'changes', 'date', 'employeeUrl']
-    },
-    employee_removed: {
-      subject: 'Ansatt fjernet - {employeeName}',
-      body: `
-        <h2>Ansatt fjernet</h2>
-        <p>{employeeName} har blitt fjernet fra systemet av {removerName}.</p>
-        <p><strong>Årsak:</strong> {reason}</p>
-        <p><strong>Dato:</strong> {date}</p>
-      `,
-      variables: ['employeeName', 'removerName', 'reason', 'date']
-    },
-    password_reset: {
-      subject: 'Tilbakestill passord - DriftPro',
-      body: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background-color: #3B82F6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0; font-size: 24px;">Tilbakestill passord</h1>
-          </div>
-          
-          <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
-            <p>Hei,</p>
-            
-            <p>Du har bedt om å tilbakestille passordet ditt for DriftPro-kontoen din.</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="{resetUrl}" style="background-color: #3B82F6; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-                🔐 Tilbakestill passord
-              </a>
-            </div>
-            
-            <p style="font-size: 14px; color: #6b7280;">
-              <strong>Viktig:</strong> Hvis knappen ikke fungerer, kopier denne adressen til nettleseren din:
-            </p>
-            <div style="background-color: #f3f4f6; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; word-break: break-all; margin: 10px 0;">
-              {resetUrl}
-            </div>
-            
-            <p style="font-size: 14px; color: #6b7280;">
-              <strong>Denne lenken utløper om 1 time.</strong>
-            </p>
-            
-            <p>Hvis du ikke ba om å tilbakestille passordet ditt, kan du trygt ignorere denne e-posten.</p>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-            
-            <p style="font-size: 14px; color: #6b7280;">
-              Hvis du har spørsmål, ikke nøl med å kontakte oss.
-            </p>
-            
-            <p style="margin-bottom: 0;">
-              Med vennlig hilsen,<br>
-              <strong>DriftPro-teamet</strong>
-            </p>
-          </div>
-        </div>
-      `,
-      variables: ['email', 'resetUrl', 'resetToken']
-    },
-    welcome_email: {
-      subject: 'Velkommen til DriftPro - Sett opp passordet ditt',
-      body: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-          <div style="background-color: #3B82F6; color: white; padding: 20px; text-align: center; border-radius: 8px 8px 0 0;">
-            <h1 style="margin: 0; font-size: 24px;">Velkommen til DriftPro!</h1>
-          </div>
-          
-          <div style="background-color: #f9fafb; padding: 30px; border-radius: 0 0 8px 8px;">
-            <p>Hei <strong>{employeeName}</strong>,</p>
-            
-            <p>Din konto har blitt opprettet av <strong>{adminName}</strong>.</p>
-            
-            <div style="background-color: white; padding: 20px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #3B82F6;">
-              <h3 style="margin-top: 0; color: #374151;">Kontoinformasjon:</h3>
-              <p><strong>Bedrift:</strong> {companyName}</p>
-              <p><strong>Avdeling:</strong> {department}</p>
-              <p><strong>Stilling:</strong> {position}</p>
-              <p><strong>E-post:</strong> {employeeEmail}</p>
-            </div>
-            
-            <p>For å komme i gang må du først sette opp passordet ditt:</p>
-            
-            <div style="text-align: center; margin: 30px 0;">
-              <a href="{passwordSetupUrl}" style="background-color: #3B82F6; color: white; padding: 16px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
-                🔐 Sett opp passord
-              </a>
-            </div>
-            
-            <p style="font-size: 14px; color: #6b7280;">
-              <strong>Viktig:</strong> Hvis knappen ikke fungerer, kopier denne adressen til nettleseren din:
-            </p>
-            <div style="background-color: #f3f4f6; padding: 12px; border-radius: 6px; font-family: monospace; font-size: 12px; word-break: break-all; margin: 10px 0;">
-              {passwordSetupUrl}
-            </div>
-            
-            <p>Etter at du har satt opp passordet kan du logge inn på <a href="{loginUrl}" style="color: #3B82F6;">DriftPro</a>.</p>
-            
-            <hr style="border: none; border-top: 1px solid #e5e7eb; margin: 30px 0;">
-            
-            <p style="font-size: 14px; color: #6b7280;">
-              Hvis du har spørsmål, ikke nøl med å kontakte oss.
-            </p>
-            
-            <p style="margin-bottom: 0;">
-              Med vennlig hilsen,<br>
-              <strong>DriftPro-teamet</strong>
-            </p>
-          </div>
-        </div>
-      `,
-      variables: ['employeeName', 'adminName', 'companyName', 'department', 'position', 'employeeEmail', 'loginUrl', 'passwordSetupUrl']
-    },
-    system_maintenance: {
-      subject: 'Systemvedlikehold - DriftPro',
-      body: `
-        <h2>Systemvedlikehold</h2>
-        <p>DriftPro vil være nede for vedlikehold.</p>
-        <p><strong>Dato:</strong> {date}</p>
-        <p><strong>Tid:</strong> {time}</p>
-        <p><strong>Varighet:</strong> {duration}</p>
-        <p><strong>Årsak:</strong> {reason}</p>
-        <p>Vi beklager ulempen og takker for din forståelse.</p>
-      `,
-      variables: ['date', 'time', 'duration', 'reason']
-    },
-    security_alert: {
-      subject: 'Sikkerhetsvarsel - DriftPro',
-      body: `
-        <h2>Sikkerhetsvarsel</h2>
-        <p>Et sikkerhetsvarsel har blitt utløst.</p>
-        <p><strong>Type:</strong> {alertType}</p>
-        <p><strong>Beskrivelse:</strong> {description}</p>
-        <p><strong>Tid:</strong> {time}</p>
-        <p>Kontakt systemadministrator umiddelbart.</p>
-      `,
-      variables: ['alertType', 'description', 'time']
-    },
-    test_email: {
-      subject: 'Test e-post fra DriftPro',
-      body: `
-        <h2>Test e-post fra DriftPro</h2>
-        <p>Dette er en test e-post for å verifisere at e-postinnstillingene fungerer.</p>
-        <p><strong>Avsender:</strong> {senderEmail}</p>
-        <p><strong>SMTP Server:</strong> {smtpHost}:{smtpPort}</p>
-        <p><strong>Sendt:</strong> {sentTime}</p>
-        <p>Hvis du mottar denne e-posten, fungerer e-postinnstillingene korrekt.</p>
-      `,
-      variables: ['senderEmail', 'smtpHost', 'smtpPort', 'sentTime']
-    }
-  };
-
+  /**
+   * Send email using internal SMTP server
+   */
   async sendEmail(emailData: EmailData): Promise<boolean> {
     try {
-      // Get current email configuration
-      const config = await this.getConfig();
-      
-      // Determine the correct endpoint based on environment
-      const isDevelopment = process.env.NODE_ENV === 'development';
-      const endpoint = isDevelopment 
-        ? '/api/send-email' 
-        : '/.netlify/functions/send-email';
-      
-      console.log('Sending email via endpoint:', endpoint);
-      console.log('Email data:', { to: emailData.to, subject: emailData.subject });
-      
-      // Send email via API route or Netlify function
-      const response = await fetch(endpoint, {
+      // Log email attempt
+      const emailLogId = await this.logEmailAttempt(emailData, 'pending');
+
+      const response = await fetch('/api/send-email', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          emailData,
-          config
-        })
+          ...emailData,
+          smtpConfig: this.smtpConfig
+        }),
       });
 
-      console.log('Response status:', response.status);
-      
       if (!response.ok) {
-        const errorText = await response.text();
-        console.error('HTTP error:', response.status, errorText);
-        return false;
+        const errorData = await response.json().catch(() => ({}));
+        console.error('Email API response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        
+        // Update log with error
+        await this.updateEmailLog(emailLogId, 'failed', errorData.error || response.statusText);
+        throw new Error(`Failed to send email: ${response.status} - ${errorData.error || response.statusText}`);
       }
 
       const result = await response.json();
+      console.log('Email sent successfully:', result);
       
-      if (result.success) {
-        console.log('Email sent successfully via', isDevelopment ? 'API' : 'Netlify function');
-        return true;
-      } else {
-        console.error('Failed to send email:', result.error);
-        return false;
-      }
+      // Update log with success
+      await this.updateEmailLog(emailLogId, 'sent', undefined, result.messageId);
+      return true;
     } catch (error) {
       console.error('Error sending email:', error);
-      return false;
+      throw error;
     }
   }
 
-  async logEmailToFirebase(emailLog: Omit<EmailLog, 'id' | 'sentAt'>): Promise<void> {
-    if (!db) return;
-
-    try {
-      await addDoc(collection(db, 'emailLogs'), {
-        ...emailLog,
-        sentAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error logging email to Firebase:', error);
-    }
-  }
-
-  getTemplate(type: EmailType): EmailTemplate {
-    return this.templates[type];
-  }
-
-  replaceVariables(template: EmailTemplate, variables: Record<string, string>): { subject: string; body: string } {
-    let subject = template.subject;
-    let body = template.body;
-
-    template.variables.forEach(variable => {
-      const value = variables[variable] || `{${variable}}`;
-      const regex = new RegExp(`{${variable}}`, 'g');
-      subject = subject.replace(regex, value);
-      body = body.replace(regex, value);
-    });
-
-    return { subject, body };
-  }
-
-  async sendNotificationEmail(
-    type: EmailType,
-    recipients: string[],
-    variables: Record<string, string>
-  ): Promise<boolean> {
-    const template = this.getTemplate(type);
-    const { subject, body } = this.replaceVariables(template, variables);
-
-    return this.sendEmail({
-      to: recipients,
-      subject,
-      body,
-      metadata: {
-        eventType: type,
-        ...variables
-      }
-    });
-  }
-
-  async getCompanyAdmins(companyId: string): Promise<string[]> {
-    if (!db) return [];
-
-    try {
-      const usersQuery = query(
-        collection(db, 'users'),
-        where('companyId', '==', companyId),
-        where('role', '==', 'admin')
-      );
-
-      const snapshot = await getDocs(usersQuery);
-      return snapshot.docs.map(doc => doc.data().email).filter(Boolean);
-    } catch (error) {
-      console.error('Error getting company admins:', error);
-      return [];
-    }
-  }
-
-  async getDepartmentLeaders(companyId: string, department?: string): Promise<string[]> {
-    if (!db) return [];
-
-    try {
-      let usersQuery = query(
-        collection(db, 'users'),
-        where('companyId', '==', companyId),
-        where('role', '==', 'department_leader')
-      );
-
-      if (department) {
-        usersQuery = query(usersQuery, where('department', '==', department));
-      }
-
-      const snapshot = await getDocs(usersQuery);
-      return snapshot.docs.map(doc => doc.data().email).filter(Boolean);
-    } catch (error) {
-      console.error('Error getting department leaders:', error);
-      return [];
-    }
-  }
-
-  async sendPasswordResetEmail(email: string, resetToken: string): Promise<boolean> {
-    const resetUrl = `${process.env.NEXT_PUBLIC_APP_URL}/reset-password?token=${resetToken}`;
-
-    return this.sendNotificationEmail('password_reset', [email], {
-      email,
-      resetUrl,
-      resetToken
-    });
-  }
-
-  async sendWelcomeEmail(
-    employeeEmail: string,
-    employeeName: string,
+  /**
+   * Send admin setup email
+   */
+  async sendAdminSetupEmail(
+    email: string,
     adminName: string,
     companyName: string,
-    department: string,
-    position: string
+    setupToken: string
   ): Promise<boolean> {
-    // Use a more reliable URL structure
-    const baseUrl = process.env.NODE_ENV === 'development' 
-      ? 'http://localhost:3001' 
-      : 'https://admin.driftpro.no'; // Use the admin subdomain
+    const setupUrl = `${this.baseUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
     
-    const passwordSetupUrl = `${baseUrl}/setup-password?email=${encodeURIComponent(employeeEmail)}&company=${encodeURIComponent(companyName)}`;
-    
-    return this.sendNotificationEmail('welcome_email', [employeeEmail], {
-      employeeName,
-      adminName,
-      companyName,
-      department,
-      position,
-      employeeEmail,
-      loginUrl: baseUrl,
-      passwordSetupUrl
-    });
+    const emailData: EmailData = {
+      to: email,
+      subject: `Velkommen til DriftPro - Sett opp passord`,
+      type: 'admin_setup',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Velkommen til DriftPro</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🚀 Velkommen til DriftPro</h1>
+              <p>Du har blitt utnevnt som administrator</p>
+            </div>
+            <div class="content">
+              <h2>Hei ${adminName}!</h2>
+              <p>Du har blitt utnevnt som administrator for <strong>${companyName}</strong> i DriftPro-systemet.</p>
+              
+              <p>For å komme i gang må du sette opp ditt passord:</p>
+              
+              <div style="text-align: center;">
+                <a href="${setupUrl}" class="button">Sett opp passord</a>
+              </div>
+              
+              <div class="warning">
+                <strong>⚠️ Viktig:</strong> Denne lenken er gyldig i 24 timer. Hvis lenken utløper, kontakt systemadministrator.
+              </div>
+              
+              <p>Hvis knappen ikke fungerer, kan du kopiere og lime inn denne lenken i nettleseren:</p>
+              <p style="word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 5px; font-size: 12px;">
+                ${setupUrl}
+              </p>
+              
+              <h3>Hva kan du gjøre som administrator?</h3>
+              <ul>
+                <li>Administrere brukere og tillatelser</li>
+                <li>Håndtere dokumenter og avvik</li>
+                <li>Generere rapporter og analyser</li>
+                <li>Konfigurere systeminnstillinger</li>
+              </ul>
+              
+              <p>Hvis du har spørsmål, ikke nøl med å kontakte oss.</p>
+              
+              <p>Med vennlig hilsen,<br>
+              <strong>DriftPro-teamet</strong></p>
+            </div>
+            <div class="footer">
+              <p>Denne e-posten ble sendt fra noreply@driftpro.no</p>
+              <p>© 2024 DriftPro. Alle rettigheter forbeholdt.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        Velkommen til DriftPro - Sett opp passord
+
+        Hei ${adminName}!
+
+        Du har blitt utnevnt som administrator for ${companyName} i DriftPro-systemet.
+
+        For å komme i gang må du sette opp ditt passord ved å besøke denne lenken:
+        ${setupUrl}
+
+        Viktig: Denne lenken er gyldig i 24 timer.
+
+        Hva kan du gjøre som administrator?
+        - Administrere brukere og tillatelser
+        - Håndtere dokumenter og avvik
+        - Generere rapporter og analyser
+        - Konfigurere systeminnstillinger
+
+        Hvis du har spørsmål, ikke nøl med å kontakte oss.
+
+        Med vennlig hilsen,
+        DriftPro-teamet
+
+        Denne e-posten ble sendt fra noreply@driftpro.no
+      `
+    };
+
+    return this.sendEmail(emailData);
   }
 
   /**
-   * Send password setup email to new admin
+   * Send notification email
    */
-  async sendPasswordSetupEmail(email: string, adminName: string, companyName: string, setupToken: string): Promise<boolean> {
-    try {
-      const setupUrl = `${this.baseUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
-      
-      const emailData: EmailData = {
-        to: email,
-        subject: `Velkommen til DriftPro - Sett opp passord`,
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Velkommen til DriftPro</title>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-              .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-              .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-              .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-              .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>🚀 Velkommen til DriftPro</h1>
-                <p>Du har blitt utnevnt som administrator</p>
-              </div>
-              <div class="content">
-                <h2>Hei ${adminName}!</h2>
-                <p>Du har blitt utnevnt som administrator for <strong>${companyName}</strong> i DriftPro-systemet.</p>
-                
-                <p>For å komme i gang må du sette opp ditt passord:</p>
-                
-                <div style="text-align: center;">
-                  <a href="${setupUrl}" class="button">Sett opp passord</a>
-                </div>
-                
-                <div class="warning">
-                  <strong>⚠️ Viktig:</strong> Denne lenken er gyldig i 24 timer. Hvis lenken utløper, kontakt systemadministrator.
-                </div>
-                
-                <p>Hvis knappen ikke fungerer, kan du kopiere og lime inn denne lenken i nettleseren:</p>
-                <p style="word-break: break-all; background: #f0f0f0; padding: 10px; border-radius: 5px; font-size: 12px;">
-                  ${setupUrl}
-                </p>
-                
-                <h3>Hva kan du gjøre som administrator?</h3>
-                <ul>
-                  <li>Administrere brukere og tillatelser</li>
-                  <li>Håndtere dokumenter og avvik</li>
-                  <li>Generere rapporter og analyser</li>
-                  <li>Konfigurere systeminnstillinger</li>
-                </ul>
-                
-                <p>Hvis du har spørsmål, ikke nøl med å kontakte oss.</p>
-                
-                <p>Med vennlig hilsen,<br>
-                <strong>DriftPro-teamet</strong></p>
-              </div>
-              <div class="footer">
-                <p>Denne e-posten ble sendt fra noreply@driftpro.no</p>
-                <p>© 2024 DriftPro. Alle rettigheter forbeholdt.</p>
-              </div>
+  async sendNotificationEmail(
+    email: string,
+    subject: string,
+    message: string,
+    type: 'info' | 'warning' | 'error' | 'success' = 'info'
+  ): Promise<boolean> {
+    const emailData: EmailData = {
+      to: email,
+      subject: `DriftPro - ${subject}`,
+      type: 'notification',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>DriftPro Notification</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .${type} { background: ${this.getTypeColor(type)}; border: 1px solid ${this.getTypeBorderColor(type)}; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔔 DriftPro Notification</h1>
+              <p>${subject}</p>
             </div>
-          </body>
-          </html>
-        `,
-        text: `
-          Velkommen til DriftPro - Sett opp passord
+            <div class="content">
+              <div class="${type}">
+                ${message}
+              </div>
+              
+              <p>Med vennlig hilsen,<br>
+              <strong>DriftPro-teamet</strong></p>
+            </div>
+            <div class="footer">
+              <p>Denne e-posten ble sendt fra noreply@driftpro.no</p>
+              <p>© 2024 DriftPro. Alle rettigheter forbeholdt.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        DriftPro Notification
 
-          Hei ${adminName}!
+        ${subject}
 
-          Du har blitt utnevnt som administrator for ${companyName} i DriftPro-systemet.
+        ${message}
 
-          For å komme i gang må du sette opp ditt passord ved å besøke denne lenken:
-          ${setupUrl}
+        Med vennlig hilsen,
+        DriftPro-teamet
 
-          Viktig: Denne lenken er gyldig i 24 timer.
+        Denne e-posten ble sendt fra noreply@driftpro.no
+      `
+    };
 
-          Hva kan du gjøre som administrator?
-          - Administrere brukere og tillatelser
-          - Håndtere dokumenter og avvik
-          - Generere rapporter og analyser
-          - Konfigurere systeminnstillinger
-
-          Hvis du har spørsmål, ikke nøl med å kontakte oss.
-
-          Med vennlig hilsen,
-          DriftPro-teamet
-
-          Denne e-posten ble sendt fra noreply@driftpro.no
-        `
-      };
-
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailData),
-      });
-
-      if (!response.ok) {
-        throw new Error(`Failed to send email: ${response.status}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error sending password setup email:', error);
-      throw error;
-    }
+    return this.sendEmail(emailData);
   }
 
   /**
-   * Send welcome email to new admin (without password setup)
+   * Send welcome email
    */
-  async sendWelcomeEmail(email: string, adminName: string, companyName: string): Promise<boolean> {
-    try {
-      const loginUrl = `${this.baseUrl}/login`;
-      
-      const emailData: EmailData = {
-        to: email,
-        subject: `Velkommen til DriftPro - Administrator`,
-        html: `
-          <!DOCTYPE html>
-          <html>
-          <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Velkommen til DriftPro</title>
-            <style>
-              body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-              .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-              .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-              .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-              .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-              .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-            </style>
-          </head>
-          <body>
-            <div class="container">
-              <div class="header">
-                <h1>🚀 Velkommen til DriftPro</h1>
-                <p>Du har blitt utnevnt som administrator</p>
-              </div>
-              <div class="content">
-                <h2>Hei ${adminName}!</h2>
-                <p>Du har blitt utnevnt som administrator for <strong>${companyName}</strong> i DriftPro-systemet.</p>
-                
-                <p>Du kan nå logge inn på systemet:</p>
-                
-                <div style="text-align: center;">
-                  <a href="${loginUrl}" class="button">Logg inn på DriftPro</a>
-                </div>
-                
-                <h3>Hva kan du gjøre som administrator?</h3>
-                <ul>
-                  <li>Administrere brukere og tillatelser</li>
-                  <li>Håndtere dokumenter og avvik</li>
-                  <li>Generere rapporter og analyser</li>
-                  <li>Konfigurere systeminnstillinger</li>
-                </ul>
-                
-                <p>Hvis du har spørsmål, ikke nøl med å kontakte oss.</p>
-                
-                <p>Med vennlig hilsen,<br>
-                <strong>DriftPro-teamet</strong></p>
-              </div>
-              <div class="footer">
-                <p>Denne e-posten ble sendt fra noreply@driftpro.no</p>
-                <p>© 2024 DriftPro. Alle rettigheter forbeholdt.</p>
-              </div>
+  async sendWelcomeEmail(
+    email: string,
+    userName: string,
+    companyName: string
+  ): Promise<boolean> {
+    const emailData: EmailData = {
+      to: email,
+      subject: `Velkommen til DriftPro - ${companyName}`,
+      type: 'welcome',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Velkommen til DriftPro</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🎉 Velkommen til DriftPro</h1>
+              <p>Din konto er nå aktiv</p>
             </div>
-          </body>
-          </html>
-        `,
-        text: `
-          Velkommen til DriftPro - Administrator
+            <div class="content">
+              <h2>Hei ${userName}!</h2>
+              <p>Velkommen til <strong>${companyName}</strong> på DriftPro!</p>
+              
+              <p>Din konto er nå aktiv og du kan logge inn på systemet.</p>
+              
+              <div style="text-align: center;">
+                <a href="${this.baseUrl}/login" class="button">Logg inn på DriftPro</a>
+              </div>
+              
+              <h3>Hva kan du gjøre?</h3>
+              <ul>
+                <li>Se oversikt over bedriften din</li>
+                <li>Håndtere dokumenter og avvik</li>
+                <li>Generere rapporter</li>
+                <li>Administrere brukere (hvis du er admin)</li>
+              </ul>
+              
+              <p>Hvis du har spørsmål, ikke nøl med å kontakte oss.</p>
+              
+              <p>Med vennlig hilsen,<br>
+              <strong>DriftPro-teamet</strong></p>
+            </div>
+            <div class="footer">
+              <p>Denne e-posten ble sendt fra noreply@driftpro.no</p>
+              <p>© 2024 DriftPro. Alle rettigheter forbeholdt.</p>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        Velkommen til DriftPro
 
-          Hei ${adminName}!
+        Hei ${userName}!
 
-          Du har blitt utnevnt som administrator for ${companyName} i DriftPro-systemet.
+        Velkommen til ${companyName} på DriftPro!
 
-          Du kan nå logge inn på systemet ved å besøke:
-          ${loginUrl}
+        Din konto er nå aktiv og du kan logge inn på systemet.
 
-          Hva kan du gjøre som administrator?
-          - Administrere brukere og tillatelser
-          - Håndtere dokumenter og avvik
-          - Generere rapporter og analyser
-          - Konfigurere systeminnstillinger
+        Logg inn her: ${this.baseUrl}/login
 
-          Hvis du har spørsmål, ikke nøl med å kontakte oss.
+        Hva kan du gjøre?
+        - Se oversikt over bedriften din
+        - Håndtere dokumenter og avvik
+        - Generere rapporter
+        - Administrere brukere (hvis du er admin)
 
-          Med vennlig hilsen,
-          DriftPro-teamet
+        Hvis du har spørsmål, ikke nøl med å kontakte oss.
 
-          Denne e-posten ble sendt fra noreply@driftpro.no
-        `
-      };
+        Med vennlig hilsen,
+        DriftPro-teamet
 
-      const response = await fetch('/api/send-email', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(emailData),
-      });
+        Denne e-posten ble sendt fra noreply@driftpro.no
+      `
+    };
 
-      if (!response.ok) {
-        throw new Error(`Failed to send email: ${response.status}`);
-      }
-
-      return true;
-    } catch (error) {
-      console.error('Error sending welcome email:', error);
-      throw error;
-    }
+    return this.sendEmail(emailData);
   }
 
-  // Get current email settings
-  async getSettings() {
-    return this.getConfig();
-  }
-
-  // Get email logs for a company
-  async getEmailLogs(companyId: string): Promise<EmailLog[]> {
-    if (!db) return [];
+  /**
+   * Log email attempt to Firebase
+   */
+  private async logEmailAttempt(emailData: EmailData, status: 'pending' | 'sent' | 'failed'): Promise<string> {
+    if (!db) return '';
 
     try {
-      const logsQuery = query(
-        collection(db, 'emailLogs'),
-        where('metadata.companyId', '==', companyId)
-      );
-      
-      const snapshot = await getDocs(logsQuery);
-      const logs = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as EmailLog[];
-
-      // Sort by sentAt (newest first) in memory
-      return logs.sort((a, b) => new Date(b.sentAt).getTime() - new Date(a.sentAt).getTime());
-    } catch (error) {
-      console.error('Error getting email logs:', error);
-      return [];
-    }
-  }
-
-  // Resend email
-  async resendEmail(emailLog: EmailLog): Promise<boolean> {
-    try {
-      // Recreate the email data from the log
-      const emailData: EmailData = {
-        to: emailLog.to,
-        subject: emailLog.subject,
-        body: emailLog.content,
+      const logData = {
+        to: [emailData.to],
+        subject: emailData.subject,
+        content: emailData.html,
+        type: emailData.type || 'system',
+        status,
+        sentAt: new Date().toISOString(),
         metadata: {
-          eventType: emailLog.eventType,
-          ...emailLog.metadata
+          textVersion: emailData.text
         }
       };
 
-      const success = await this.sendEmail(emailData);
-      
-      if (success) {
-        // Update the log with new timestamp
-        await updateDoc(doc(db!, 'emailLogs', emailLog.id), {
-          sentAt: new Date().toISOString(),
-          status: 'sent',
-          error: null
-        });
-      }
-
-      return success;
+      const docRef = await addDoc(collection(db, 'emailLogs'), logData);
+      return docRef.id;
     } catch (error) {
-      console.error('Error resending email:', error);
-      return false;
+      console.error('Error logging email attempt:', error);
+      return '';
     }
   }
 
-  // Export email logs to CSV
-  async exportEmailLogs(companyId: string): Promise<string> {
-    const logs = await this.getEmailLogs(companyId);
-    
-    const csvHeaders = [
-      'ID',
-      'To',
-      'Subject',
-      'Event Type',
-      'Status',
-      'Sent At',
-      'Error'
-    ];
-
-    const csvRows = logs.map(log => [
-      log.id,
-      log.to.join(', '),
-      log.subject,
-      log.eventType,
-      log.status,
-      log.sentAt,
-      log.error || ''
-    ]);
-
-    const csvContent = [csvHeaders, ...csvRows]
-      .map(row => row.map(field => `"${field}"`).join(','))
-      .join('\n');
-
-    return csvContent;
-  }
-
-  // Update email settings and save to localStorage
-  async updateSettings(newSettings: {
-    senderEmail: string;
-    senderName: string;
-    smtpHost: string;
-    smtpPort: number;
-    smtpUser: string;
-    smtpPass: string;
-  }) {
-    if (!db) {
-      console.error('Firebase is not initialized, cannot update settings.');
-      return;
-    }
+  /**
+   * Update email log
+   */
+  private async updateEmailLog(logId: string, status: 'sent' | 'failed', error?: string, messageId?: string): Promise<void> {
+    if (!db || !logId) return;
 
     try {
-      await setDoc(doc(db, 'systemConfig', 'emailSettings'), newSettings);
-      console.log('Email settings updated and saved to Firebase');
+      const { updateDoc, doc } = await import('firebase/firestore');
+      await updateDoc(doc(db, 'emailLogs', logId), {
+        status,
+        error,
+        messageId,
+        updatedAt: new Date().toISOString()
+      });
     } catch (error) {
-      console.error('Error saving email settings to Firebase:', error);
+      console.error('Error updating email log:', error);
+    }
+  }
+
+  /**
+   * Get color for notification type
+   */
+  private getTypeColor(type: 'info' | 'warning' | 'error' | 'success'): string {
+    switch (type) {
+      case 'info': return '#d1ecf1';
+      case 'warning': return '#fff3cd';
+      case 'error': return '#f8d7da';
+      case 'success': return '#d4edda';
+      default: return '#f8f9fa';
+    }
+  }
+
+  /**
+   * Get border color for notification type
+   */
+  private getTypeBorderColor(type: 'info' | 'warning' | 'error' | 'success'): string {
+    switch (type) {
+      case 'info': return '#bee5eb';
+      case 'warning': return '#ffeaa7';
+      case 'error': return '#f5c6cb';
+      case 'success': return '#c3e6cb';
+      default: return '#dee2e6';
     }
   }
 }

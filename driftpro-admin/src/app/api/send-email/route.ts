@@ -8,10 +8,20 @@ interface EmailData {
   subject: string;
   html: string;
   text?: string;
+  type?: 'admin_setup' | 'notification' | 'warning' | 'system' | 'welcome';
+}
+
+interface SMTPConfig {
+  host: string;
+  port: number;
+  user: string;
+  pass: string;
+  secure: boolean;
 }
 
 export async function POST(request: NextRequest) {
   let emailData: EmailData | null = null;
+  let smtpConfig: SMTPConfig | null = null;
   
   try {
     const requestData = await request.json();
@@ -24,33 +34,46 @@ export async function POST(request: NextRequest) {
         subject: requestData.emailData.subject,
         html: requestData.emailData.body
       };
+      smtpConfig = requestData.config;
+    } else if (requestData.smtpConfig) {
+      // New structure (from email service)
+      emailData = {
+        to: requestData.to,
+        subject: requestData.subject,
+        html: requestData.html,
+        text: requestData.text,
+        type: requestData.type
+      };
+      smtpConfig = requestData.smtpConfig;
     } else {
-      // New structure (from admin-email-service)
+      // Direct email data
       emailData = requestData as EmailData;
+      // Use default SMTP config for noreply@driftpro.no
+      smtpConfig = {
+        host: 'smtp.office365.com',
+        port: 587,
+        user: 'noreply@driftpro.no',
+        pass: process.env.DRIFTPRO_EMAIL_PASSWORD || '',
+        secure: false
+      };
     }
 
     if (!emailData || !emailData.to || !emailData.subject || !emailData.html) {
       throw new Error('Invalid email data: missing required fields');
     }
 
-    // Email configuration - you should move these to environment variables
-    const emailConfig = {
-      senderName: 'DriftPro',
-      senderEmail: 'noreply@driftpro.no',
-      smtpHost: process.env.SMTP_HOST || 'smtp.gmail.com',
-      smtpPort: parseInt(process.env.SMTP_PORT || '587'),
-      smtpUser: process.env.SMTP_USER || 'noreply@driftpro.no',
-      smtpPass: process.env.SMTP_PASS || ''
-    };
+    if (!smtpConfig) {
+      throw new Error('SMTP configuration is required');
+    }
 
     // Create transporter
     const transporter = nodemailer.createTransport({
-      host: emailConfig.smtpHost,
-      port: emailConfig.smtpPort,
-      secure: false, // Use TLS
+      host: smtpConfig.host,
+      port: smtpConfig.port,
+      secure: smtpConfig.secure,
       auth: {
-        user: emailConfig.smtpUser,
-        pass: emailConfig.smtpPass
+        user: smtpConfig.user,
+        pass: smtpConfig.pass
       },
       tls: {
         rejectUnauthorized: false
@@ -59,7 +82,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare email
     const mailOptions = {
-      from: `${emailConfig.senderName} <${emailConfig.senderEmail}>`,
+      from: `DriftPro <${smtpConfig.user}>`,
       to: emailData.to,
       subject: emailData.subject,
       html: emailData.html,
@@ -76,10 +99,11 @@ export async function POST(request: NextRequest) {
         to: [emailData.to],
         subject: emailData.subject,
         content: emailData.html,
-        eventType: 'admin_setup',
+        type: emailData.type || 'system',
         metadata: {
           messageId: info.messageId,
-          adminSetup: true
+          smtpHost: smtpConfig.host,
+          smtpUser: smtpConfig.user
         },
         status: 'sent',
         sentAt: new Date().toISOString()
@@ -97,9 +121,10 @@ export async function POST(request: NextRequest) {
           to: [emailData.to],
           subject: emailData.subject || '',
           content: emailData.html || '',
-          eventType: 'admin_setup',
+          type: emailData.type || 'system',
           metadata: {
-            adminSetup: true
+            smtpHost: smtpConfig?.host,
+            smtpUser: smtpConfig?.user
           },
           status: 'failed',
           error: error instanceof Error ? error.message : 'Unknown error',
