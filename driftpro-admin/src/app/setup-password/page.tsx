@@ -1,270 +1,511 @@
 'use client';
 
-import { useState, useEffect, Suspense } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { doc, setDoc, query, collection, where, getDocs, updateDoc } from 'firebase/firestore';
-import { auth, db } from '@/lib/firebase';
-import { Eye, EyeOff, Lock, User, Building } from 'lucide-react';
-import { emailService } from '@/lib/email-service';
+import { Eye, EyeOff, CheckCircle, AlertCircle, Lock } from 'lucide-react';
 
-function SetupPasswordContent() {
+interface TokenData {
+  valid: boolean;
+  email: string;
+  adminName: string;
+  companyName: string;
+}
+
+export default function SetupPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const [loading, setLoading] = useState(false);
+  const [token, setToken] = useState<string>('');
+  const [email, setEmail] = useState<string>('');
+  const [tokenData, setTokenData] = useState<TokenData | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [validating, setValidating] = useState(false);
+  const [password, setPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
 
-  const [formData, setFormData] = useState({
-    password: '',
-    confirmPassword: '',
-    firstName: '',
-    lastName: ''
-  });
-
-  const email = searchParams.get('email');
-  const company = searchParams.get('company');
-
   useEffect(() => {
-    if (!email || !company) {
-      setError('Manglende e-post eller bedriftsinformasjon. Vennligst bruk lenken fra e-posten din.');
+    const tokenParam = searchParams.get('token');
+    const emailParam = searchParams.get('email');
+    
+    if (tokenParam) {
+      setToken(tokenParam);
+      validateToken(tokenParam);
     }
-  }, [email, company]);
+    
+    if (emailParam) {
+      setEmail(emailParam);
+    }
+  }, [searchParams]);
+
+  const validateToken = async (tokenToValidate: string) => {
+    try {
+      setValidating(true);
+      const response = await fetch(`/api/setup-password?token=${tokenToValidate}`);
+      const data = await response.json();
+
+      if (response.ok && data.valid) {
+        setTokenData(data);
+        setEmail(data.email);
+      } else {
+        setError(data.error || 'Ugyldig eller utløpt token');
+      }
+    } catch (error) {
+      console.error('Error validating token:', error);
+      setError('Feil ved validering av token');
+    } finally {
+      setLoading(false);
+      setValidating(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
-    setLoading(true);
 
-    if (!email) {
-      setError('E-post mangler');
-      setLoading(false);
+    // Validate passwords
+    if (password.length < 8) {
+      setError('Passordet må være minst 8 tegn langt');
       return;
     }
 
-    if (!auth || !db) {
-      setError('Firebase ikke initialisert');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
+    if (password !== confirmPassword) {
       setError('Passordene matcher ikke');
-      setLoading(false);
-      return;
-    }
-
-    if (formData.password.length < 6) {
-      setError('Passordet må være minst 6 tegn langt');
-      setLoading(false);
       return;
     }
 
     try {
-      // Check if user already exists in the employees collection
-      const employeesQuery = query(
-        collection(db, 'users'),
-        where('email', '==', email),
-        where('companyName', '==', company)
-      );
-      const employeesSnapshot = await getDocs(employeesQuery);
-      
-      if (employeesSnapshot.empty) {
-        setError('Ingen ansatt funnet med denne e-posten. Vennligst kontakt systemadministrator.');
-        setLoading(false);
-        return;
-      }
-
-      const employeeDoc = employeesSnapshot.docs[0];
-      const employeeData = employeeDoc.data();
-
-      // Create user account
-      const userCredential = await createUserWithEmailAndPassword(auth, email, formData.password);
-      const user = userCredential.user;
-
-      // Update user profile with employee data
-      const fullName = employeeData.displayName || `${formData.firstName} ${formData.lastName}`.trim();
-      if (fullName) {
-        await updateProfile(user, {
-          displayName: fullName
-        });
-      }
-
-      // Update the existing employee document with auth information
-      await updateDoc(doc(db, 'users', employeeDoc.id), {
-        authUid: user.uid,
-        passwordSet: true,
-        passwordSetAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+      setLoading(true);
+      const response = await fetch('/api/setup-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          token,
+          password
+        }),
       });
 
-      setSuccess(true);
-      
-      // Redirect to dashboard after 3 seconds
-      setTimeout(() => {
-        router.push('/dashboard');
-      }, 3000);
+      const data = await response.json();
 
-    } catch (error: unknown) {
-      console.error('Error setting up password:', error);
-
-      if (error && typeof error === 'object' && 'code' in error) {
-        const authError = error as { code: string };
-        if (authError.code === 'auth/email-already-in-use') {
-          setError('Denne e-postadressen er allerede i bruk. Prøv å logge inn i stedet.');
-        } else if (authError.code === 'auth/weak-password') {
-          setError('Passordet er for svakt. Velg et sterkere passord.');
-        } else {
-          setError('En feil oppstod under oppsett av passord. Prøv igjen.');
-        }
+      if (response.ok) {
+        setSuccess(true);
+        setTimeout(() => {
+          router.push('/login');
+        }, 3000);
       } else {
-        setError('En feil oppstod under oppsett av passord. Prøv igjen.');
+        setError(data.error || 'Feil ved oppsett av passord');
       }
+    } catch (error) {
+      console.error('Error setting up password:', error);
+      setError('Feil ved oppsett av passord');
     } finally {
       setLoading(false);
     }
   };
 
+  if (loading) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'var(--gray-50)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div className="loading" style={{ margin: '0 auto 2rem' }}></div>
+          <h3 style={{ 
+            fontSize: 'var(--font-size-xl)', 
+            fontWeight: '600', 
+            color: 'var(--gray-900)', 
+            marginBottom: '0.5rem' 
+          }}>
+            {validating ? 'Validerer token...' : 'Laster...'}
+          </h3>
+          <p style={{ 
+            color: 'var(--gray-600)',
+            fontSize: 'var(--font-size-base)'
+          }}>
+            {validating ? 'Sjekker gyldighet av lenken' : 'Forbereder passordoppsett'}
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error && !tokenData) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'var(--gray-50)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          maxWidth: '500px',
+          width: '90%',
+          background: 'var(--white)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '3rem',
+          textAlign: 'center',
+          boxShadow: 'var(--shadow-lg)'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            background: 'var(--danger)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.5rem'
+          }}>
+            <AlertCircle style={{ width: '32px', height: '32px', color: 'var(--white)' }} />
+          </div>
+          <h1 style={{
+            fontSize: 'var(--font-size-2xl)',
+            fontWeight: '700',
+            color: 'var(--gray-900)',
+            marginBottom: '1rem'
+          }}>
+            Ugyldig lenke
+          </h1>
+          <p style={{
+            color: 'var(--gray-600)',
+            fontSize: 'var(--font-size-base)',
+            marginBottom: '2rem',
+            lineHeight: '1.6'
+          }}>
+            {error}
+          </p>
+          <button
+            onClick={() => router.push('/login')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: 'var(--primary)',
+              color: 'var(--white)',
+              border: 'none',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: 'var(--font-size-base)',
+              fontWeight: '500',
+              cursor: 'pointer'
+            }}
+          >
+            Gå til innlogging
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (success) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'var(--gray-50)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          maxWidth: '500px',
+          width: '90%',
+          background: 'var(--white)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '3rem',
+          textAlign: 'center',
+          boxShadow: 'var(--shadow-lg)'
+        }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            background: 'var(--success)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.5rem'
+          }}>
+            <CheckCircle style={{ width: '32px', height: '32px', color: 'var(--white)' }} />
+          </div>
+          <h1 style={{
+            fontSize: 'var(--font-size-2xl)',
+            fontWeight: '700',
+            color: 'var(--gray-900)',
+            marginBottom: '1rem'
+          }}>
+            Passord satt opp!
+          </h1>
+          <p style={{
+            color: 'var(--gray-600)',
+            fontSize: 'var(--font-size-base)',
+            marginBottom: '2rem',
+            lineHeight: '1.6'
+          }}>
+            Ditt passord er nå satt opp. Du vil bli omdirigert til innloggingssiden om noen sekunder.
+          </p>
+          <div style={{
+            background: 'var(--success)',
+            color: 'var(--white)',
+            padding: '1rem',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '2rem'
+          }}>
+            <p style={{ margin: 0, fontWeight: '500' }}>
+              Du kan nå logge inn med din e-postadresse og det nye passordet.
+            </p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-100">
-      <div className="bg-white p-8 rounded-lg shadow-md w-full max-w-md">
-        <h2 className="text-2xl font-bold text-center text-gray-900 mb-6">Sett opp passord for DriftPro</h2>
-        {email && company && (
-          <div className="text-center text-gray-600 mb-4">
-            <p>Din konto er opprettet. Sett opp passordet ditt for å komme i gang.</p>
-            <div className="mt-3 p-3 bg-blue-50 rounded-lg">
-              <p className="text-sm text-blue-800">
-                <strong>E-post:</strong> {email}
-              </p>
-              <p className="text-sm text-blue-800">
-                <strong>Bedrift:</strong> {company}
-              </p>
+    <div style={{
+      minHeight: '100vh',
+      background: 'var(--gray-50)',
+      display: 'flex',
+      alignItems: 'center',
+      justifyContent: 'center',
+      padding: '1rem'
+    }}>
+      <div style={{
+        maxWidth: '500px',
+        width: '100%',
+        background: 'var(--white)',
+        borderRadius: 'var(--radius-lg)',
+        padding: '3rem',
+        boxShadow: 'var(--shadow-lg)'
+      }}>
+        {/* Header */}
+        <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+          <div style={{
+            width: '64px',
+            height: '64px',
+            background: 'var(--primary)',
+            borderRadius: '50%',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.5rem'
+          }}>
+            <Lock style={{ width: '32px', height: '32px', color: 'var(--white)' }} />
+          </div>
+          <h1 style={{
+            fontSize: 'var(--font-size-2xl)',
+            fontWeight: '700',
+            color: 'var(--gray-900)',
+            marginBottom: '0.5rem'
+          }}>
+            Sett opp passord
+          </h1>
+          <p style={{
+            color: 'var(--gray-600)',
+            fontSize: 'var(--font-size-base)'
+          }}>
+            Velkommen til DriftPro, {tokenData?.adminName}
+          </p>
+        </div>
+
+        {/* User Info */}
+        <div style={{
+          background: 'var(--gray-50)',
+          padding: '1.5rem',
+          borderRadius: 'var(--radius-lg)',
+          marginBottom: '2rem',
+          border: '1px solid var(--gray-200)'
+        }}>
+          <h3 style={{
+            fontSize: 'var(--font-size-lg)',
+            fontWeight: '600',
+            color: 'var(--gray-900)',
+            marginBottom: '1rem'
+          }}>
+            Kontoinformasjon
+          </h3>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div>
+              <strong>Navn:</strong> {tokenData?.adminName}
+            </div>
+            <div>
+              <strong>E-post:</strong> {tokenData?.email}
+            </div>
+            <div>
+              <strong>Bedrift:</strong> {tokenData?.companyName}
+            </div>
+            <div>
+              <strong>Rolle:</strong> Administrator
             </div>
           </div>
-        )}
+        </div>
 
+        {/* Error Message */}
         {error && (
-          <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong className="font-bold">Feil:</strong>
-            <span className="block sm:inline"> {error}</span>
+          <div style={{
+            background: 'var(--danger)',
+            color: 'var(--white)',
+            padding: '1rem',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.5rem',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <AlertCircle style={{ width: '20px', height: '20px' }} />
+            {error}
           </div>
         )}
 
-        {success && (
-          <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong className="font-bold">Suksess!</strong>
-            <span className="block sm:inline"> Passord satt opp! Omdirigerer til dashbord...</span>
-          </div>
-        )}
-
-        {!email || !company ? (
-          <p className="text-center text-red-500">Ugyldig lenke. Vennligst kontakt administrator.</p>
-        ) : (
-          <form onSubmit={handleSubmit}>
-            <div className="mb-4">
-              <label htmlFor="firstName" className="block text-gray-700 text-sm font-bold mb-2">
-                Fornavn
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  id="firstName"
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-900 leading-tight focus:outline-none focus:shadow-outline pl-10 bg-white"
-                  placeholder="Ditt fornavn"
-                  value={formData.firstName}
-                  onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
-                  required
-                />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              </div>
-            </div>
-            <div className="mb-4">
-              <label htmlFor="lastName" className="block text-gray-700 text-sm font-bold mb-2">
-                Etternavn
-              </label>
-              <div className="relative">
-                <input
-                  type="text"
-                  id="lastName"
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-900 leading-tight focus:outline-none focus:shadow-outline pl-10 bg-white"
-                  placeholder="Ditt etternavn"
-                  value={formData.lastName}
-                  onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                  required
-                />
-                <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-              </div>
-            </div>
-            <div className="mb-4">
-              <label htmlFor="password" className="block text-gray-700 text-sm font-bold mb-2">
-                Nytt passord
-              </label>
-              <div className="relative">
-                <input
-                  type={showPassword ? 'text' : 'password'}
-                  id="password"
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-900 leading-tight focus:outline-none focus:shadow-outline pl-10 bg-white"
-                  placeholder="Skriv inn nytt passord"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  required
-                />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-            <div className="mb-6">
-              <label htmlFor="confirmPassword" className="block text-gray-700 text-sm font-bold mb-2">
-                Gjenta passord
-              </label>
-              <div className="relative">
-                <input
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  id="confirmPassword"
-                  className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-900 leading-tight focus:outline-none focus:shadow-outline pl-10 bg-white"
-                  placeholder="Gjenta nytt passord"
-                  value={formData.confirmPassword}
-                  onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
-                  required
-                />
-                <Lock className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-5 w-5" />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 transform -translate-y-1/2 text-gray-500 hover:text-gray-700"
-                >
-                  {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-                </button>
-              </div>
-            </div>
-            <div className="flex items-center justify-between">
+        {/* Password Setup Form */}
+        <form onSubmit={handleSubmit}>
+          <div style={{ marginBottom: '1.5rem' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontWeight: '500',
+              color: 'var(--gray-700)'
+            }}>
+              Nytt passord *
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  paddingRight: '3rem',
+                  border: '1px solid var(--gray-300)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-base)'
+                }}
+                placeholder="Minst 8 tegn"
+                required
+              />
               <button
-                type="submit"
-                className="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded focus:outline-none focus:shadow-outline w-full"
-                disabled={loading}
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--gray-400)'
+                }}
               >
-                {loading ? 'Setter opp...' : 'Sett passord og logg inn'}
+                {showPassword ? <EyeOff style={{ width: '20px', height: '20px' }} /> : <Eye style={{ width: '20px', height: '20px' }} />}
               </button>
             </div>
-          </form>
-        )}
+            <p style={{
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--gray-500)',
+              marginTop: '0.5rem'
+            }}>
+              Passordet må være minst 8 tegn langt
+            </p>
+          </div>
+
+          <div style={{ marginBottom: '2rem' }}>
+            <label style={{
+              display: 'block',
+              marginBottom: '0.5rem',
+              fontWeight: '500',
+              color: 'var(--gray-700)'
+            }}>
+              Bekreft passord *
+            </label>
+            <div style={{ position: 'relative' }}>
+              <input
+                type={showConfirmPassword ? 'text' : 'password'}
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem',
+                  paddingRight: '3rem',
+                  border: '1px solid var(--gray-300)',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-base)'
+                }}
+                placeholder="Skriv passordet igjen"
+                required
+              />
+              <button
+                type="button"
+                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                style={{
+                  position: 'absolute',
+                  right: '0.75rem',
+                  top: '50%',
+                  transform: 'translateY(-50%)',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  color: 'var(--gray-400)'
+                }}
+              >
+                {showConfirmPassword ? <EyeOff style={{ width: '20px', height: '20px' }} /> : <Eye style={{ width: '20px', height: '20px' }} />}
+              </button>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              background: loading ? 'var(--gray-400)' : 'var(--primary)',
+              color: 'var(--white)',
+              border: 'none',
+              borderRadius: 'var(--radius-md)',
+              fontSize: 'var(--font-size-base)',
+              fontWeight: '500',
+              cursor: loading ? 'not-allowed' : 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            {loading ? (
+              <>
+                <div className="loading" style={{ width: '20px', height: '20px' }}></div>
+                Setter opp passord...
+              </>
+            ) : (
+              <>
+                <Lock style={{ width: '20px', height: '20px' }} />
+                Sett opp passord
+              </>
+            )}
+          </button>
+        </form>
+
+        {/* Footer */}
+        <div style={{
+          textAlign: 'center',
+          marginTop: '2rem',
+          paddingTop: '2rem',
+          borderTop: '1px solid var(--gray-200)'
+        }}>
+          <p style={{
+            fontSize: 'var(--font-size-sm)',
+            color: 'var(--gray-500)'
+          }}>
+            Har du problemer? Kontakt systemadministrator
+          </p>
+        </div>
       </div>
     </div>
-  );
-}
-
-export default function SetupPasswordPage() {
-  return (
-    <Suspense fallback={<div>Laster...</div>}>
-      <SetupPasswordContent />
-    </Suspense>
   );
 } 
