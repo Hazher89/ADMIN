@@ -42,6 +42,12 @@ export default function CompaniesPage() {
   const [brrgResults, setBrrgResults] = useState<BRRGCompany[]>([]);
   const [brrgLoading, setBrrgLoading] = useState(false);
   const [brrgError, setBrrgError] = useState<string | null>(null);
+  
+  // Admin setup state
+  const [showAdminSetupModal, setShowAdminSetupModal] = useState(false);
+  const [selectedBRRGCompany, setSelectedBRRGCompany] = useState<BRRGCompany | null>(null);
+  const [admins, setAdmins] = useState<Array<{name: string; email: string; phone: string}>>([{name: '', email: '', phone: ''}]);
+  const [addingCompany, setAddingCompany] = useState(false);
 
   useEffect(() => {
     loadCompanies();
@@ -122,24 +128,66 @@ export default function CompaniesPage() {
   };
 
   const handleAddFromBRRG = async (brrgCompany: BRRGCompany) => {
+    setSelectedBRRGCompany(brrgCompany);
+    setShowAdminSetupModal(true);
+    setShowBRRGModal(false);
+  };
+
+  const handleAddAdmin = () => {
+    setAdmins([...admins, {name: '', email: '', phone: ''}]);
+  };
+
+  const handleRemoveAdmin = (index: number) => {
+    if (admins.length > 1) {
+      setAdmins(admins.filter((_, i) => i !== index));
+    }
+  };
+
+  const handleAdminChange = (index: number, field: 'name' | 'email' | 'phone', value: string) => {
+    const newAdmins = [...admins];
+    newAdmins[index][field] = value;
+    setAdmins(newAdmins);
+  };
+
+  const handleCreateCompanyWithAdmins = async () => {
+    if (!selectedBRRGCompany) return;
+
+    // Validate admins
+    const validAdmins = admins.filter(admin => admin.name.trim() && admin.email.trim());
+    if (validAdmins.length === 0) {
+      alert('Du må legge til minst én admin med navn og e-post');
+      return;
+    }
+
+    // Validate email format
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    for (const admin of validAdmins) {
+      if (!emailRegex.test(admin.email)) {
+        alert(`Ugyldig e-post format: ${admin.email}`);
+        return;
+      }
+    }
+
     try {
+      setAddingCompany(true);
+
       // Transform BRRG data to our company format
       const newCompany: Omit<Company, 'id' | 'createdAt' | 'updatedAt'> = {
-        name: brrgCompany.navn,
-        industry: brrgCompany.naeringskode1?.beskrivelse || 'Ukjent',
-        employees: brrgCompany.antallAnsatte || 0,
-        location: brrgCompany.forretningsadresse?.adresse || 'Ukjent',
-        phone: brrgCompany.kontaktinformasjon?.telefon || '',
-        email: brrgCompany.kontaktinformasjon?.epost || '',
+        name: selectedBRRGCompany.navn,
+        industry: selectedBRRGCompany.naeringskode1?.beskrivelse || 'Ukjent',
+        employees: selectedBRRGCompany.antallAnsatte || 0,
+        location: selectedBRRGCompany.forretningsadresse?.adresse || 'Ukjent',
+        phone: selectedBRRGCompany.kontaktinformasjon?.telefon || '',
+        email: selectedBRRGCompany.kontaktinformasjon?.epost || '',
         website: '',
         status: 'active',
         joinedDate: new Date().toISOString(),
         revenue: 'Ikke tilgjengelig',
-        description: `${brrgCompany.navn} - ${brrgCompany.organisasjonsform?.beskrivelse || 'Bedrift'}`,
+        description: `${selectedBRRGCompany.navn} - ${selectedBRRGCompany.organisasjonsform?.beskrivelse || 'Bedrift'}`,
         adminUserId: userProfile?.id || ''
       };
 
-      // Add to Firebase
+      // Add company to Firebase
       const companyId = await firebaseService.createCompany(newCompany);
       const addedCompany = { 
         id: companyId, 
@@ -147,18 +195,42 @@ export default function CompaniesPage() {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
-      
-      if (addedCompany) {
-        setCompanies([...companies, addedCompany]);
-        setShowBRRGModal(false);
-        setBrrgResults([]);
-        setBrrgSearchTerm('');
-        setBrrgOrgNumber('');
-        alert(`Bedrift "${brrgCompany.navn}" lagt til fra BRRG!`);
+
+      // Add admins to the company
+      for (const admin of validAdmins) {
+        try {
+          await brrgService.addAdmin({
+            email: admin.email,
+            name: admin.name,
+            role: 'admin',
+            companyId: companyId,
+            companyName: selectedBRRGCompany.navn,
+            permissions: ['manage_users', 'manage_documents', 'manage_deviations', 'manage_reports', 'view_analytics']
+          });
+        } catch (error) {
+          console.error(`Error adding admin ${admin.email}:`, error);
+          // Continue with other admins even if one fails
+        }
       }
+
+      // Update local state
+      setCompanies([...companies, addedCompany]);
+      
+      // Close modals and reset state
+      setShowAdminSetupModal(false);
+      setSelectedBRRGCompany(null);
+      setAdmins([{name: '', email: '', phone: ''}]);
+      setBrrgResults([]);
+      setBrrgSearchTerm('');
+      setBrrgOrgNumber('');
+      
+      alert(`Bedrift "${selectedBRRGCompany.navn}" opprettet med ${validAdmins.length} admin(s)! E-post med passordoppsett er sendt til alle admins.`);
+
     } catch (error) {
-      console.error('Error adding company from BRRG:', error);
-      alert('Feil ved å legge til bedrift fra BRRG');
+      console.error('Error creating company with admins:', error);
+      alert('Feil ved opprettelse av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setAddingCompany(false);
     }
   };
 
@@ -638,6 +710,139 @@ export default function CompaniesPage() {
                 }}
               >
                 Lukk
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Setup Modal */}
+      {showAdminSetupModal && selectedBRRGCompany && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                  <Users style={{ width: '24px', height: '24px', marginRight: '0.5rem' }} />
+                  Legg til admin for {selectedBRRGCompany.navn}
+                </h2>
+                <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)' }}>
+                  Velg hvem som skal være admin for denne bedriften.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAdminSetupModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <MoreHorizontal style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
+              </button>
+            </div>
+
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', marginBottom: '1rem' }}>
+                Administrerte personer ({admins.length})
+              </h3>
+              {admins.map((admin, index) => (
+                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Navn"
+                    value={admin.name}
+                    onChange={(e) => handleAdminChange(index, 'name', e.target.value)}
+                    style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  <input
+                    type="email"
+                    placeholder="E-post"
+                    value={admin.email}
+                    onChange={(e) => handleAdminChange(index, 'email', e.target.value)}
+                    style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  <button
+                    onClick={() => handleRemoveAdmin(index)}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: 'var(--danger)',
+                      color: 'var(--white)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                      fontSize: 'var(--font-size-sm)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Trash2 style={{ width: '14px', height: '14px' }} />
+                    Fjern
+                  </button>
+                </div>
+              ))}
+              <button
+                onClick={handleAddAdmin}
+                style={{
+                  padding: '0.75rem 1rem',
+                  background: 'var(--primary)',
+                  color: 'var(--white)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Legg til ny admin
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem' }}>
+              <button
+                onClick={handleCreateCompanyWithAdmins}
+                disabled={addingCompany}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: addingCompany ? 'var(--gray-300)' : 'var(--primary)',
+                  color: addingCompany ? 'var(--gray-600)' : 'var(--white)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: addingCompany ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {addingCompany ? (
+                  <RefreshCw style={{ width: '16px', height: '16px' }} />
+                ) : (
+                  <CheckCircle style={{ width: '16px', height: '16px' }} />
+                )}
+                {addingCompany ? 'Oppretter bedrift...' : 'Opprett bedrift med admin'}
               </button>
             </div>
           </div>
