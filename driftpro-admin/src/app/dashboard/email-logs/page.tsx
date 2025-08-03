@@ -6,7 +6,7 @@ import { emailService, EmailLog } from '@/lib/email-service';
 import { 
   Search, Filter, Mail, Clock, CheckCircle, AlertTriangle, XCircle,
   Eye, Download, RefreshCw, Send, User, Calendar, FileText,
-  Settings, Bell, UserPlus, Save, TestTube, EyeOff
+  Settings, Bell, UserPlus, Save, TestTube, EyeOff, TrendingUp
 } from 'lucide-react';
 
 interface EmailSettings {
@@ -418,531 +418,530 @@ export default function EmailLogsPage() {
   const canAccessEmailControl = userProfile?.role === 'admin';
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">E-post</h1>
-              <p className="text-gray-600">Administrer e-post-innstillinger og se logger</p>
-            </div>
-            <div className="flex items-center space-x-2">
-              <span className={`px-3 py-1 rounded-full text-sm font-medium ${
-                settings.enabled ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
-              }`}>
-                {settings.enabled ? "Aktiv" : "Inaktiv"}
-              </span>
-              <button
-                onClick={loadEmailLogs}
-                className="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-50 flex items-center"
-              >
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Oppdater
-              </button>
-            </div>
+    <div>
+      {/* Page Header */}
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card-icon">
+            <Mail />
+          </div>
+          <div>
+            <h1 className="page-title">📧 E-post</h1>
+            <p className="page-subtitle">
+              Administrer e-post-innstillinger og se logger
+            </p>
           </div>
         </div>
-
-        {message && (
-          <div className={`p-4 rounded-lg mb-6 ${
-            message.includes('Feil') ? 'bg-red-50 border border-red-200' : 'bg-green-50 border border-green-200'
-          }`}>
-            <div className="flex items-center">
-              {message.includes('Feil') ? (
-                <XCircle className="h-5 w-5 text-red-500 mr-2" />
-              ) : (
-                <CheckCircle className="h-5 w-5 text-green-500 mr-2" />
-              )}
-              <p className={message.includes('Feil') ? 'text-red-700' : 'text-green-700'}>{message}</p>
-            </div>
-          </div>
-        )}
-
-        {/* Tab Navigation */}
-        <div className="border-b border-gray-200 mb-6">
-          <nav className="-mb-px flex space-x-8">
-            {[
-              { id: 'logs', label: 'E-post-logger', icon: Mail },
-              ...(canAccessEmailControl ? [
-                { id: 'settings', label: 'Innstillinger', icon: Settings },
-                { id: 'templates', label: 'Maler', icon: FileText },
-                { id: 'smtp', label: 'SMTP', icon: Settings },
-                { id: 'test', label: 'Test', icon: TestTube }
-              ] : [])
-            ].map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`py-2 px-1 border-b-2 font-medium text-sm flex items-center ${
-                  activeTab === tab.id
-                    ? 'border-blue-500 text-blue-600'
-                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-                }`}
-              >
-                <tab.icon className="h-4 w-4 mr-2" />
-                {tab.label}
-              </button>
-            ))}
-          </nav>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <span className={`badge ${settings.enabled ? 'badge-success' : 'badge-secondary'}`}>
+            {settings.enabled ? "Aktiv" : "Inaktiv"}
+          </span>
+          <button
+            className="btn btn-secondary"
+            onClick={loadEmailLogs}
+          >
+            <RefreshCw style={{ width: '16px', height: '16px' }} />
+            Oppdater
+          </button>
         </div>
+      </div>
 
-        {/* Email Logs Tab */}
-        {activeTab === 'logs' && (
-          <div className="bg-white shadow rounded-lg">
-            {/* Filters */}
-            <div className="p-6 border-b border-gray-200">
-              <div className="flex flex-col sm:flex-row gap-4">
-                <div className="flex-1">
-                  <div className="relative">
-                    <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
-                    <input
-                      type="text"
-                      placeholder="Søk i e-post-logger..."
-                      value={searchTerm}
-                      onChange={(e) => setSearchTerm(e.target.value)}
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    />
-                  </div>
-                </div>
-                
-                <div className="flex gap-2">
-                  <select
-                    value={selectedStatus}
-                    onChange={(e) => setSelectedStatus(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {statuses.map(status => (
-                      <option key={status} value={status}>
-                        {status === 'all' ? 'Alle statuser' : getStatusLabel(status as EmailLog['status'])}
-                      </option>
-                    ))}
-                  </select>
-                  
-                  <select
-                    value={selectedType}
-                    onChange={(e) => setSelectedType(e.target.value)}
-                    className="px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    {types.map(type => (
-                      <option key={type} value={type}>
-                        {type === 'all' ? 'Alle typer' : getTypeLabel(type)}
-                      </option>
-                    ))}
-                  </select>
-                  
-                  <button
-                    onClick={exportLogs}
-                    className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 flex items-center"
-                  >
-                    <Download className="h-4 w-4 mr-2" />
-                    Eksporter
-                  </button>
-                </div>
+      {message && (
+        <div className={`alert ${message.includes('Feil') ? 'alert-error' : 'alert-success'}`}>
+          <div className="flex items-center">
+            {message.includes('Feil') ? (
+              <XCircle style={{ width: '16px', height: '16px' }} />
+            ) : (
+              <CheckCircle style={{ width: '16px', height: '16px' }} />
+            )}
+            <span>{message}</span>
+          </div>
+        </div>
+      )}
+
+      {/* Tab Navigation */}
+      <div className="card" style={{ marginBottom: '2rem' }}>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          {[
+            { id: 'logs', label: 'E-post-logger', icon: Mail },
+            ...(canAccessEmailControl ? [
+              { id: 'settings', label: 'Innstillinger', icon: Settings },
+              { id: 'templates', label: 'Maler', icon: FileText },
+              { id: 'smtp', label: 'SMTP', icon: Settings },
+              { id: 'test', label: 'Test', icon: TestTube }
+            ] : [])
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`btn ${activeTab === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+            >
+              <tab.icon style={{ width: '16px', height: '16px' }} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Email Logs Tab */}
+      {activeTab === 'logs' && (
+        <>
+          {/* Search and Filters */}
+          <div className="card" style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
+                <Search className="search-icon" />
+                <input
+                  type="text"
+                  placeholder="Søk i e-post-logger..."
+                  className="search-input"
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                />
               </div>
+              
+              <select
+                className="form-input"
+                style={{ width: '150px' }}
+                value={selectedStatus}
+                onChange={(e) => setSelectedStatus(e.target.value)}
+              >
+                {statuses.map(status => (
+                  <option key={status} value={status}>
+                    {status === 'all' ? 'Alle statuser' : getStatusLabel(status as EmailLog['status'])}
+                  </option>
+                ))}
+              </select>
+              
+              <select
+                className="form-input"
+                style={{ width: '150px' }}
+                value={selectedType}
+                onChange={(e) => setSelectedType(e.target.value)}
+              >
+                {types.map(type => (
+                  <option key={type} value={type}>
+                    {type === 'all' ? 'Alle typer' : getTypeLabel(type)}
+                  </option>
+                ))}
+              </select>
+              
+              <button
+                onClick={exportLogs}
+                className="btn btn-secondary"
+              >
+                <Download style={{ width: '16px', height: '16px' }} />
+                Eksporter
+              </button>
             </div>
+          </div>
 
-            {/* Email Logs Grid */}
-            <div className="p-6">
-              {loading ? (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto"></div>
-                  <p className="mt-2 text-gray-600">Laster e-post-logger...</p>
-                </div>
-              ) : emailLogs.length === 0 ? (
-                <div className="text-center py-8">
-                  <Mail className="mx-auto h-12 w-12 text-gray-400" />
-                  <h3 className="mt-2 text-sm font-medium text-gray-900">Ingen e-post-logger</h3>
-                  <p className="mt-1 text-sm text-gray-500">Ingen e-poster har blitt sendt ennå.</p>
-                </div>
-              ) : (
-                <div className="space-y-4">
-                  {filteredEmailLogs.map((log) => (
-                    <div key={log.id} className="border border-gray-200 rounded-lg p-4 hover:bg-gray-50">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center space-x-3">
-                          {getStatusIcon(log.status)}
-                          <div>
-                            <h3 className="text-sm font-medium text-gray-900">{log.subject}</h3>
-                                                         <p className="text-sm text-gray-500">
-                               Til: {log.to.join(', ')} • {getTypeLabel(log.type || 'unknown')}
-                             </p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex items-center space-x-2">
-                          <span className="text-sm text-gray-500">
-                            {formatDate(log.sentAt)} {formatTime(log.sentAt)}
-                          </span>
-                          
-                          <button
-                            onClick={() => resendEmail(log)}
-                            className="p-1 text-gray-400 hover:text-gray-600"
-                            title="Send på nytt"
-                          >
-                            <Send className="h-4 w-4" />
-                          </button>
-                        </div>
+          {/* Email Logs Grid */}
+          {loading ? (
+            <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+              <div className="loading-spinner"></div>
+              <p style={{ marginTop: '1rem', color: '#666' }}>Laster e-post-logger...</p>
+            </div>
+          ) : emailLogs.length === 0 ? (
+            <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+              <Mail style={{ width: '64px', height: '64px', color: '#9ca3af', margin: '0 auto 1rem' }} />
+              <h3 style={{ marginBottom: '0.5rem', color: '#374151' }}>Ingen e-post-logger</h3>
+              <p style={{ color: '#6b7280' }}>Ingen e-poster har blitt sendt ennå.</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1">
+              {filteredEmailLogs.map((log) => (
+                <div key={log.id} className="card">
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="card-icon">
+                      {getStatusIcon(log.status)}
+                    </div>
+                    <div style={{ flex: '1' }}>
+                      <h3 style={{ 
+                        fontWeight: '600', 
+                        color: '#333',
+                        fontSize: '1.1rem',
+                        marginBottom: '0.25rem'
+                      }}>
+                        {log.subject}
+                      </h3>
+                      <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                        Til: {log.to.join(', ')} • {getTypeLabel(log.type || 'unknown')}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+                        <span className="badge" style={{ backgroundColor: getStatusColor(log.status) }}>
+                          {getStatusLabel(log.status)}
+                        </span>
+                        <span style={{ color: '#666', fontSize: '0.875rem' }}>
+                          {formatDate(log.sentAt)} {formatTime(log.sentAt)}
+                        </span>
                       </div>
                       
                       {log.error && (
-                        <div className="mt-2 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">
-                          Feil: {log.error}
+                        <div style={{ 
+                          marginTop: '1rem', 
+                          padding: '0.75rem', 
+                          backgroundColor: '#fef2f2', 
+                          border: '1px solid #fecaca', 
+                          borderRadius: '0.375rem',
+                          color: '#dc2626'
+                        }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                            <AlertTriangle style={{ width: '16px', height: '16px' }} />
+                            <span>Feil: {log.error}</span>
+                          </div>
                         </div>
                       )}
                     </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          </div>
-        )}
-
-        {/* Settings Tab */}
-        {activeTab === 'settings' && canAccessEmailControl && (
-          <div className="space-y-6">
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center">
-                <Settings className="h-5 w-5 mr-2" />
-                Generelle innstillinger
-              </h2>
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <label className="font-medium">Aktiver e-post-system</label>
-                    <p className="text-sm text-gray-600">
-                      Slå av/på hele e-post-systemet
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      settings.enabled ? 'bg-blue-600' : 'bg-gray-200'
-                    }`}
-                  >
-                    <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                      settings.enabled ? 'translate-x-6' : 'translate-x-1'
-                    }`} />
-                  </button>
-                </div>
-
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Avsender e-post
-                    </label>
-                    <input
-                      type="email"
-                      value={settings.fromEmail}
-                      onChange={(e) => setSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="noreply@driftpro.no"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Avsender navn
-                    </label>
-                    <input
-                      type="text"
-                      value={settings.fromName}
-                      onChange={(e) => setSettings(prev => ({ ...prev, fromName: e.target.value }))}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                      placeholder="DriftPro System"
-                    />
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-semibold mb-4 flex items-center">
-                <Bell className="h-5 w-5 mr-2" />
-                E-post-typer
-              </h2>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {[
-                  { key: 'adminSetup', label: 'Admin-oppsett', description: 'E-post til nye administratorer', icon: UserPlus, color: 'blue' },
-                  { key: 'deviationReports', label: 'Avviksrapporter', description: 'Nye avviksrapporter', icon: AlertTriangle, color: 'red' },
-                  { key: 'deviationResolved', label: 'Avvik løst', description: 'Når avvik blir løst', icon: CheckCircle, color: 'green' },
-                  { key: 'userWelcome', label: 'Velkomstmeldinger', description: 'Velkomst til nye brukere', icon: Mail, color: 'purple' },
-                  { key: 'notifications', label: 'Varsler', description: 'Generelle varsler', icon: Bell, color: 'orange' },
-                  { key: 'warnings', label: 'Advarsler', description: 'Systemadvarsler', icon: AlertTriangle, color: 'yellow' }
-                ].map((item) => (
-                  <div key={item.key} className="flex items-center justify-between p-4 border rounded-lg">
-                    <div className="flex items-center space-x-3">
-                      <item.icon className={`h-5 w-5 text-${item.color}-500`} />
-                      <div>
-                        <label className="font-medium">{item.label}</label>
-                        <p className="text-sm text-gray-600">{item.description}</p>
-                      </div>
+                    
+                    <div style={{ display: 'flex', gap: '0.5rem' }}>
+                      <button
+                        onClick={() => resendEmail(log)}
+                        className="btn btn-secondary"
+                        title="Send på nytt"
+                      >
+                        <Send style={{ width: '16px', height: '16px' }} />
+                      </button>
                     </div>
-                    <button
-                      onClick={() => toggleEmailType(item.key as keyof EmailSettings)}
-                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                        settings[item.key as keyof EmailSettings] ? 'bg-blue-600' : 'bg-gray-200'
-                      }`}
-                    >
-                      <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        settings[item.key as keyof EmailSettings] ? 'translate-x-6' : 'translate-x-1'
-                      }`} />
-                    </button>
                   </div>
-                ))}
-              </div>
-            </div>
-
-            <div className="flex justify-end">
-              <button
-                onClick={saveSettings}
-                disabled={saving}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {saving ? 'Lagrer...' : 'Lagre innstillinger'}
-              </button>
-            </div>
-          </div>
-        )}
-
-        {/* Templates Tab */}
-        {activeTab === 'templates' && canAccessEmailControl && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">E-post-maler</h2>
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Admin-oppsett mal
-                </label>
-                <textarea
-                  value={settings.adminSetupTemplate}
-                  onChange={(e) => updateTemplate('adminSetupTemplate', e.target.value)}
-                  rows={10}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="HTML-mal for admin-oppsett e-post..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Avviksrapport mal
-                </label>
-                <textarea
-                  value={settings.deviationReportTemplate}
-                  onChange={(e) => updateTemplate('deviationReportTemplate', e.target.value)}
-                  rows={10}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="HTML-mal for avviksrapport e-post..."
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Varsel mal
-                </label>
-                <textarea
-                  value={settings.notificationTemplate}
-                  onChange={(e) => updateTemplate('notificationTemplate', e.target.value)}
-                  rows={8}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  placeholder="HTML-mal for varsel e-post..."
-                />
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* SMTP Tab */}
-        {activeTab === 'smtp' && canAccessEmailControl && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4">SMTP-innstillinger</h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    SMTP-server
-                  </label>
-                  <input
-                    type="text"
-                    value={settings.smtpHost}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="smtp.office365.com"
-                  />
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Port
-                  </label>
-                  <input
-                    type="number"
-                    value={settings.smtpPort}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpPort: parseInt(e.target.value) }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="587"
-                  />
+              ))}
+            </div>
+          )}
+
+          {/* Stats */}
+          {emailLogs.length > 0 && (
+            <div className="grid grid-cols-4" style={{ marginTop: '2rem' }}>
+              <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div className="card-icon">
+                    <Mail />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '600', color: '#333' }}>
+                      {emailLogs.length}
+                    </div>
+                    <div style={{ color: '#666', fontSize: '0.875rem' }}>Totalt</div>
+                  </div>
                 </div>
+              </div>
+              
+              <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div className="card-icon">
+                    <CheckCircle />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '600', color: '#333' }}>
+                      {emailLogs.filter(log => log.status === 'sent').length}
+                    </div>
+                    <div style={{ color: '#666', fontSize: '0.875rem' }}>Sendt</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div className="card-icon">
+                    <XCircle />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '600', color: '#333' }}>
+                      {emailLogs.filter(log => log.status === 'failed').length}
+                    </div>
+                    <div style={{ color: '#666', fontSize: '0.875rem' }}>Feilet</div>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div className="card-icon">
+                    <TrendingUp />
+                  </div>
+                  <div>
+                    <div style={{ fontSize: '1.5rem', fontWeight: '600', color: '#333' }}>
+                      {emailLogs.length > 0
+                        ? Math.round((emailLogs.filter(log => log.status === 'sent').length / emailLogs.length) * 100)
+                        : 0}%
+                    </div>
+                    <div style={{ color: '#666', fontSize: '0.875rem' }}>Suksessrate</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </>
+      )}
+
+      {/* Settings Tab */}
+      {activeTab === 'settings' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">
+              <Settings style={{ width: '20px', height: '20px' }} />
+              Generelle innstillinger
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver e-post-system</label>
+                  <p className="form-help">Slå av/på hele e-post-systemet</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+                  className={`toggle-switch ${settings.enabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Brukernavn
-                  </label>
+                  <label className="form-label">Avsender e-post</label>
                   <input
-                    type="text"
-                    value={settings.smtpUser}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpUser: e.target.value }))}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                    type="email"
+                    value={settings.fromEmail}
+                    onChange={(e) => setSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
+                    className="form-input"
                     placeholder="noreply@driftpro.no"
                   />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Passord
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={smtpPassword}
-                      onChange={(e) => setSmtpPassword(e.target.value)}
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500 pr-10"
-                      placeholder="••••••••"
-                    />
+                  <label className="form-label">Avsender navn</label>
+                  <input
+                    type="text"
+                    value={settings.fromName}
+                    onChange={(e) => setSettings(prev => ({ ...prev, fromName: e.target.value }))}
+                    className="form-input"
+                    placeholder="DriftPro System"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">
+              <Bell style={{ width: '20px', height: '20px' }} />
+              E-post-typer
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { key: 'adminSetup', label: 'Admin-oppsett', description: 'E-post til nye administratorer', icon: UserPlus, color: 'blue' },
+                { key: 'deviationReports', label: 'Avviksrapporter', description: 'Nye avviksrapporter', icon: AlertTriangle, color: 'red' },
+                { key: 'deviationResolved', label: 'Avvik løst', description: 'Når avvik blir løst', icon: CheckCircle, color: 'green' },
+                { key: 'userWelcome', label: 'Velkomstmeldinger', description: 'Velkomst til nye brukere', icon: Mail, color: 'purple' },
+                { key: 'notifications', label: 'Varsler', description: 'Generelle varsler', icon: Bell, color: 'orange' },
+                { key: 'warnings', label: 'Advarsler', description: 'Systemadvarsler', icon: AlertTriangle, color: 'yellow' }
+              ].map((item) => (
+                <div key={item.key} className="card">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div className="card-icon">
+                        <item.icon />
+                      </div>
+                      <div>
+                        <label className="form-label">{item.label}</label>
+                        <p className="form-help">{item.description}</p>
+                      </div>
+                    </div>
                     <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      className="absolute right-0 top-0 h-full px-3 text-gray-500 hover:text-gray-700"
+                      onClick={() => toggleEmailType(item.key as keyof EmailSettings)}
+                      className={`toggle-switch ${settings[item.key as keyof EmailSettings] ? 'active' : ''}`}
                     >
-                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      <span className="toggle-slider"></span>
                     </button>
                   </div>
                 </div>
-              </div>
-
-              <div className="flex items-center space-x-2">
-                <button
-                  onClick={() => setSettings(prev => ({ ...prev, smtpSecure: !prev.smtpSecure }))}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.smtpSecure ? 'bg-blue-600' : 'bg-gray-200'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.smtpSecure ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-                <label className="text-sm font-medium text-gray-700">Bruk SSL/TLS</label>
-              </div>
+              ))}
             </div>
           </div>
-        )}
 
-        {/* Test Tab */}
-        {activeTab === 'test' && canAccessEmailControl && (
-          <div className="bg-white shadow rounded-lg p-6">
-            <h2 className="text-lg font-semibold mb-4 flex items-center">
-              <TestTube className="h-5 w-5 mr-2" />
-              Test e-post
-            </h2>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Mottaker e-post
-                  </label>
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={saveSettings}
+              disabled={saving}
+              className="btn btn-primary"
+            >
+              <Save style={{ width: '16px', height: '16px' }} />
+              {saving ? 'Lagrer...' : 'Lagre innstillinger'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Templates Tab */}
+      {activeTab === 'templates' && canAccessEmailControl && (
+        <div className="card">
+          <h2 className="card-title">E-post-maler</h2>
+          <div className="space-y-4">
+            <div>
+              <label className="form-label">Admin-oppsett mal</label>
+              <textarea
+                value={settings.adminSetupTemplate}
+                onChange={(e) => updateTemplate('adminSetupTemplate', e.target.value)}
+                rows={10}
+                className="form-input"
+                placeholder="HTML-mal for admin-oppsett e-post..."
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Avviksrapport mal</label>
+              <textarea
+                value={settings.deviationReportTemplate}
+                onChange={(e) => updateTemplate('deviationReportTemplate', e.target.value)}
+                rows={10}
+                className="form-input"
+                placeholder="HTML-mal for avviksrapport e-post..."
+              />
+            </div>
+
+            <div>
+              <label className="form-label">Varsel mal</label>
+              <textarea
+                value={settings.notificationTemplate}
+                onChange={(e) => updateTemplate('notificationTemplate', e.target.value)}
+                rows={8}
+                className="form-input"
+                placeholder="HTML-mal for varsel e-post..."
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMTP Tab */}
+      {activeTab === 'smtp' && canAccessEmailControl && (
+        <div className="card">
+          <h2 className="card-title">SMTP-innstillinger</h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">SMTP-server</label>
+                <input
+                  type="text"
+                  value={settings.smtpHost}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
+                  className="form-input"
+                  placeholder="smtp.office365.com"
+                />
+              </div>
+              <div>
+                <label className="form-label">Port</label>
+                <input
+                  type="number"
+                  value={settings.smtpPort}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpPort: parseInt(e.target.value) }))}
+                  className="form-input"
+                  placeholder="587"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Brukernavn</label>
+                <input
+                  type="text"
+                  value={settings.smtpUser}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpUser: e.target.value }))}
+                  className="form-input"
+                  placeholder="noreply@driftpro.no"
+                />
+              </div>
+              <div>
+                <label className="form-label">Passord</label>
+                <div style={{ position: 'relative' }}>
                   <input
-                    type="email"
-                    value={testEmail}
-                    onChange={(e) => setTestEmail(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    placeholder="test@example.com"
+                    type={showPassword ? "text" : "password"}
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                    className="form-input"
+                    style={{ paddingRight: '2.5rem' }}
+                    placeholder="••••••••"
                   />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    E-post-type
-                  </label>
-                  <select
-                    value={testType}
-                    onChange={(e) => setTestType(e.target.value)}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '0.75rem', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#6b7280',
+                      cursor: 'pointer'
+                    }}
                   >
-                    <option value="admin_setup">Admin-oppsett</option>
-                    <option value="deviation_report">Avviksrapport</option>
-                    <option value="notification">Varsel</option>
-                    <option value="warning">Advarsel</option>
-                    <option value="welcome">Velkomst</option>
-                  </select>
+                    {showPassword ? <EyeOff style={{ width: '16px', height: '16px' }} /> : <Eye style={{ width: '16px', height: '16px' }} />}
+                  </button>
                 </div>
               </div>
+            </div>
 
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
               <button
-                onClick={sendTestEmail}
-                disabled={testing || !testEmail}
-                className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 disabled:opacity-50 flex items-center"
+                onClick={() => setSettings(prev => ({ ...prev, smtpSecure: !prev.smtpSecure }))}
+                className={`toggle-switch ${settings.smtpSecure ? 'active' : ''}`}
               >
-                <Send className="h-4 w-4 mr-2" />
-                {testing ? 'Sender...' : 'Send test-e-post'}
+                <span className="toggle-slider"></span>
               </button>
+              <label className="form-label">Bruk SSL/TLS</label>
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* Stats */}
-        {activeTab === 'logs' && emailLogs.length > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mt-6">
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="flex items-center">
-                <Mail className="h-8 w-8 text-blue-600" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-500">Totalt</p>
-                  <div className="text-2xl font-semibold text-gray-900">{emailLogs.length}</div>
-                </div>
+      {/* Test Tab */}
+      {activeTab === 'test' && canAccessEmailControl && (
+        <div className="card">
+          <h2 className="card-title">
+            <TestTube style={{ width: '20px', height: '20px' }} />
+            Test e-post
+          </h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Mottaker e-post</label>
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="form-input"
+                  placeholder="test@example.com"
+                />
+              </div>
+              <div>
+                <label className="form-label">E-post-type</label>
+                <select
+                  value={testType}
+                  onChange={(e) => setTestType(e.target.value)}
+                  className="form-input"
+                >
+                  <option value="admin_setup">Admin-oppsett</option>
+                  <option value="deviation_report">Avviksrapport</option>
+                  <option value="notification">Varsel</option>
+                  <option value="warning">Advarsel</option>
+                  <option value="welcome">Velkomst</option>
+                </select>
               </div>
             </div>
-            
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="flex items-center">
-                <CheckCircle className="h-8 w-8 text-green-600" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-500">Sendt</p>
-                  <div className="text-2xl font-semibold text-gray-900">
-                    {emailLogs.filter(log => log.status === 'sent').length}
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="flex items-center">
-                <XCircle className="h-8 w-8 text-red-600" />
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-500">Feilet</p>
-                  <div className="text-2xl font-semibold text-gray-900">
-                    {emailLogs.filter(log => log.status === 'failed').length}
-                  </div>
-                </div>
-              </div>
-            </div>
-            
-            <div className="bg-white p-4 rounded-lg shadow">
-              <div className="flex items-center">
-                <div className="h-8 w-8 bg-blue-100 rounded-full flex items-center justify-center">
-                  <span className="text-sm font-medium text-blue-600">%</span>
-                </div>
-                <div className="ml-3">
-                  <p className="text-sm font-medium text-gray-500">Suksessrate</p>
-                  <div className="text-2xl font-semibold text-gray-900">
-                    {emailLogs.length > 0
-                      ? Math.round((emailLogs.filter(log => log.status === 'sent').length / emailLogs.length) * 100)
-                      : 0}%
-                  </div>
-                </div>
-              </div>
-            </div>
+
+            <button
+              onClick={sendTestEmail}
+              disabled={testing || !testEmail}
+              className="btn btn-primary"
+            >
+              <Send style={{ width: '16px', height: '16px' }} />
+              {testing ? 'Sender...' : 'Send test-e-post'}
+            </button>
           </div>
-        )}
-      </div>
+        </div>
+      )}
     </div>
   );
 }
