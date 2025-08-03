@@ -1,7 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, getFirestore } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { adminEmailService } from '@/lib/admin-email-service';
+
+/**
+ * Get Firebase database instance with fallback
+ */
+function getDb() {
+  if (db) {
+    return db;
+  }
+  
+  // Try to get Firestore directly if db is not available
+  try {
+    const { getApps, initializeApp } = require('firebase/app');
+    const apps = getApps();
+    
+    if (apps.length === 0) {
+      // Initialize Firebase if not already done
+      const firebaseConfig = {
+        apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+        authDomain: "driftpro-40ccd.firebaseapp.com",
+        projectId: "driftpro-40ccd",
+        storageBucket: "driftpro-40ccd.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abcdef123456"
+      };
+      initializeApp(firebaseConfig);
+    }
+    
+    return getFirestore();
+  } catch (error) {
+    console.error('Error getting Firestore instance:', error);
+    throw new Error('Firebase database not available. Please check Firebase configuration.');
+  }
+}
 
 // GET /api/admins - Get all admins for a company
 export async function GET(request: NextRequest) {
@@ -13,13 +46,11 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Company ID is required' }, { status: 400 });
     }
 
-    if (!db) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    const firestoreDb = getDb();
 
     // Get admins from Firebase
     const adminsQuery = query(
-      collection(db, 'users'), 
+      collection(firestoreDb, 'users'), 
       where('companyId', '==', companyId),
       where('role', 'in', ['admin', 'super_admin'])
     );
@@ -34,7 +65,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error fetching admins:', error);
     return NextResponse.json(
-      { error: 'Failed to fetch admins' }, 
+      { error: `Failed to fetch admins: ${error instanceof Error ? error.message : 'Unknown error'}` }, 
       { status: 500 }
     );
   }
@@ -53,13 +84,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!db) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    const firestoreDb = getDb();
 
     // Check if user already exists with this email
     const existingUserQuery = query(
-      collection(db, 'users'), 
+      collection(firestoreDb, 'users'), 
       where('email', '==', email.toLowerCase().trim())
     );
     const existingUserSnapshot = await getDocs(existingUserQuery);
@@ -77,7 +106,7 @@ export async function POST(request: NextRequest) {
       }
 
       // Update existing user to admin for this company
-      await updateDoc(doc(db, 'users', existingUser.id), {
+      await updateDoc(doc(firestoreDb, 'users', existingUser.id), {
         role: role,
         companyId: companyId,
         companyName: companyName || '',
@@ -123,7 +152,7 @@ export async function POST(request: NextRequest) {
         status: 'pending' // Will be set to 'active' after password setup
       };
 
-      const docRef = await addDoc(collection(db, 'users'), newAdmin);
+      const docRef = await addDoc(collection(firestoreDb, 'users'), newAdmin);
       
       const createdAdmin = {
         id: docRef.id,
@@ -155,7 +184,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Error adding admin:', error);
     return NextResponse.json(
-      { error: 'Failed to add admin' }, 
+      { error: `Failed to add admin: ${error instanceof Error ? error.message : 'Unknown error'}` }, 
       { status: 500 }
     );
   }
@@ -170,9 +199,7 @@ export async function PATCH(
     const body = await request.json();
     const { role, permissions, name } = body;
 
-    if (!db) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    const firestoreDb = getDb();
 
     const updates: any = {
       updatedAt: new Date().toISOString()
@@ -182,10 +209,10 @@ export async function PATCH(
     if (permissions) updates.permissions = permissions;
     if (name) updates.displayName = name;
 
-    await updateDoc(doc(db, 'users', params.id), updates);
+    await updateDoc(doc(firestoreDb, 'users', params.id), updates);
 
     // Get updated user
-    const userDoc = await getDocs(query(collection(db, 'users'), where('__name__', '==', params.id)));
+    const userDoc = await getDocs(query(collection(firestoreDb, 'users'), where('__name__', '==', params.id)));
     const updatedUser = {
       id: params.id,
       ...userDoc.docs[0]?.data()
@@ -195,7 +222,7 @@ export async function PATCH(
   } catch (error) {
     console.error('Error updating admin:', error);
     return NextResponse.json(
-      { error: 'Failed to update admin' }, 
+      { error: `Failed to update admin: ${error instanceof Error ? error.message : 'Unknown error'}` }, 
       { status: 500 }
     );
   }
@@ -207,17 +234,15 @@ export async function DELETE(
   { params }: { params: { id: string } }
 ) {
   try {
-    if (!db) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    const firestoreDb = getDb();
 
-    await deleteDoc(doc(db, 'users', params.id));
+    await deleteDoc(doc(firestoreDb, 'users', params.id));
 
     return NextResponse.json({ success: true });
   } catch (error) {
     console.error('Error removing admin:', error);
     return NextResponse.json(
-      { error: 'Failed to remove admin' }, 
+      { error: `Failed to remove admin: ${error instanceof Error ? error.message : 'Unknown error'}` }, 
       { status: 500 }
     );
   }

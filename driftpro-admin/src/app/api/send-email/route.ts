@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as nodemailer from 'nodemailer';
-import { collection, addDoc } from 'firebase/firestore';
+import { collection, addDoc, getFirestore } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 interface EmailData {
@@ -17,6 +17,39 @@ interface SMTPConfig {
   user: string;
   pass: string;
   secure: boolean;
+}
+
+/**
+ * Get Firebase database instance with fallback
+ */
+function getDb() {
+  if (db) {
+    return db;
+  }
+  
+  // Try to get Firestore directly if db is not available
+  try {
+    const { getApps, initializeApp } = require('firebase/app');
+    const apps = getApps();
+    
+    if (apps.length === 0) {
+      // Initialize Firebase if not already done
+      const firebaseConfig = {
+        apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+        authDomain: "driftpro-40ccd.firebaseapp.com",
+        projectId: "driftpro-40ccd",
+        storageBucket: "driftpro-40ccd.appspot.com",
+        messagingSenderId: "123456789",
+        appId: "1:123456789:web:abcdef123456"
+      };
+      initializeApp(firebaseConfig);
+    }
+    
+    return getFirestore();
+  } catch (error) {
+    console.error('Error getting Firestore instance:', error);
+    return null; // Return null instead of throwing to allow graceful fallback
+  }
 }
 
 export async function POST(request: NextRequest) {
@@ -94,20 +127,26 @@ export async function POST(request: NextRequest) {
     console.log('Email sent successfully:', info.messageId);
     
     // Log email to Firebase for tracking
-    if (db) {
-      await addDoc(collection(db, 'emailLogs'), {
-        to: [emailData.to],
-        subject: emailData.subject,
-        content: emailData.html,
-        type: emailData.type || 'system',
-        metadata: {
-          messageId: info.messageId,
-          smtpHost: smtpConfig.host,
-          smtpUser: smtpConfig.user
-        },
-        status: 'sent',
-        sentAt: new Date().toISOString()
-      });
+    const firestoreDb = getDb();
+    if (firestoreDb) {
+      try {
+        await addDoc(collection(firestoreDb, 'emailLogs'), {
+          to: [emailData.to],
+          subject: emailData.subject,
+          content: emailData.html,
+          type: emailData.type || 'system',
+          metadata: {
+            messageId: info.messageId,
+            smtpHost: smtpConfig.host,
+            smtpUser: smtpConfig.user
+          },
+          status: 'sent',
+          sentAt: new Date().toISOString()
+        });
+      } catch (logError) {
+        console.error('Error logging email to Firebase:', logError);
+        // Don't fail the email sending if logging fails
+      }
     }
 
     return NextResponse.json({ success: true, messageId: info.messageId });
@@ -115,9 +154,10 @@ export async function POST(request: NextRequest) {
     console.error('Error sending email:', error);
     
     // Log failed email to Firebase
-    try {
-      if (db && emailData) {
-        await addDoc(collection(db, 'emailLogs'), {
+    const firestoreDb = getDb();
+    if (firestoreDb && emailData) {
+      try {
+        await addDoc(collection(firestoreDb, 'emailLogs'), {
           to: [emailData.to],
           subject: emailData.subject || '',
           content: emailData.html || '',
@@ -130,9 +170,9 @@ export async function POST(request: NextRequest) {
           error: error instanceof Error ? error.message : 'Unknown error',
           sentAt: new Date().toISOString()
         });
+      } catch (logError) {
+        console.error('Error logging failed email to Firebase:', logError);
       }
-    } catch (logError) {
-      console.error('Error logging failed email:', logError);
     }
     
     return NextResponse.json(
