@@ -22,7 +22,8 @@ import {
   AlertTriangle,
   Database,
   ExternalLink,
-  RefreshCw
+  RefreshCw,
+  Save
 } from 'lucide-react';
 
 
@@ -48,6 +49,25 @@ export default function CompaniesPage() {
   const [selectedBRRGCompany, setSelectedBRRGCompany] = useState<BRRGCompany | null>(null);
   const [admins, setAdmins] = useState<Array<{name: string; email: string; phone: string}>>([{name: '', email: '', phone: ''}]);
   const [addingCompany, setAddingCompany] = useState(false);
+  
+  // Edit and delete state
+  const [showEditModal, setShowEditModal] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [selectedCompany, setSelectedCompany] = useState<Company | null>(null);
+  const [editingCompany, setEditingCompany] = useState(false);
+  const [deletingCompany, setDeletingCompany] = useState(false);
+  const [editForm, setEditForm] = useState({
+    name: '',
+    industry: '',
+    employees: 0,
+    location: '',
+    phone: '',
+    email: '',
+    website: '',
+    status: 'active' as 'active' | 'inactive' | 'pending',
+    revenue: '',
+    description: ''
+  });
 
   useEffect(() => {
     loadCompanies();
@@ -231,6 +251,96 @@ export default function CompaniesPage() {
       alert('Feil ved opprettelse av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     } finally {
       setAddingCompany(false);
+    }
+  };
+
+  // Edit and Delete Functions
+  const handleEditCompany = (company: Company) => {
+    setSelectedCompany(company);
+    setEditForm({
+      name: company.name,
+      industry: company.industry,
+      employees: company.employees,
+      location: company.location,
+      phone: company.phone,
+      email: company.email,
+      website: company.website,
+      status: company.status,
+      revenue: company.revenue,
+      description: company.description
+    });
+    setShowEditModal(true);
+  };
+
+  const handleUpdateCompany = async () => {
+    if (!selectedCompany) return;
+
+    if (!editForm.name.trim()) {
+      alert('Bedriftsnavn er påkrevd');
+      return;
+    }
+
+    try {
+      setEditingCompany(true);
+      
+      await firebaseService.updateCompany(selectedCompany.id, {
+        name: editForm.name.trim(),
+        industry: editForm.industry,
+        employees: editForm.employees,
+        location: editForm.location,
+        phone: editForm.phone,
+        email: editForm.email,
+        website: editForm.website,
+        status: editForm.status,
+        revenue: editForm.revenue,
+        description: editForm.description,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Update local state
+      const updatedCompanies = companies.map(company => 
+        company.id === selectedCompany.id 
+          ? { ...company, ...editForm, updatedAt: new Date().toISOString() }
+          : company
+      );
+      setCompanies(updatedCompanies);
+
+      setShowEditModal(false);
+      setSelectedCompany(null);
+      alert('Bedrift oppdatert!');
+    } catch (error) {
+      console.error('Error updating company:', error);
+      alert('Feil ved oppdatering av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setEditingCompany(false);
+    }
+  };
+
+  const handleDeleteCompany = (company: Company) => {
+    setSelectedCompany(company);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDeleteCompany = async () => {
+    if (!selectedCompany) return;
+
+    try {
+      setDeletingCompany(true);
+
+      // Delete all associated data in Firebase
+      await firebaseService.deleteCompany(selectedCompany.id);
+
+      // Update local state
+      setCompanies(companies.filter(c => c.id !== selectedCompany.id));
+      
+      setShowDeleteModal(false);
+      setSelectedCompany(null);
+      alert(`Bedrift "${selectedCompany.name}" og all tilknyttet data er slettet fra Firebase.`);
+    } catch (error) {
+      console.error('Error deleting company:', error);
+      alert('Feil ved sletting av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setDeletingCompany(false);
     }
   };
 
@@ -421,7 +531,11 @@ export default function CompaniesPage() {
             </div>
 
             <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                onClick={() => handleEditCompany(company)}
+              >
                 <Edit style={{ width: '14px', height: '14px' }} />
                 Rediger
               </button>
@@ -429,12 +543,16 @@ export default function CompaniesPage() {
                 <Users style={{ width: '14px', height: '14px' }} />
                 Ansatte
               </button>
-              <button className="btn btn-secondary" style={{ 
-                fontSize: '0.75rem', 
-                padding: '0.25rem 0.5rem',
-                color: '#ef4444',
-                borderColor: '#ef4444'
-              }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ 
+                  fontSize: '0.75rem', 
+                  padding: '0.25rem 0.5rem',
+                  color: '#ef4444',
+                  borderColor: '#ef4444'
+                }}
+                onClick={() => handleDeleteCompany(company)}
+              >
                 <Trash2 style={{ width: '14px', height: '14px' }} />
               </button>
             </div>
@@ -843,6 +961,392 @@ export default function CompaniesPage() {
                   <CheckCircle style={{ width: '16px', height: '16px' }} />
                 )}
                 {addingCompany ? 'Oppretter bedrift...' : 'Opprett bedrift med admin'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Company Modal */}
+      {showEditModal && selectedCompany && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '600px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                  <Edit style={{ width: '24px', height: '24px', marginRight: '0.5rem' }} />
+                  Rediger bedrift
+                </h2>
+                <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)' }}>
+                  Oppdater informasjon for {selectedCompany.name}
+                </p>
+              </div>
+              <button
+                onClick={() => setShowEditModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <MoreHorizontal style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '2rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Bedriftsnavn *
+                </label>
+                <input
+                  type="text"
+                  value={editForm.name}
+                  onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                  placeholder="Bedriftsnavn"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Bransje
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.industry}
+                    onChange={(e) => setEditForm({ ...editForm, industry: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-base)'
+                    }}
+                    placeholder="Bransje"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Antall ansatte
+                  </label>
+                  <input
+                    type="number"
+                    value={editForm.employees}
+                    onChange={(e) => setEditForm({ ...editForm, employees: parseInt(e.target.value) || 0 })}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-base)'
+                    }}
+                    placeholder="0"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Adresse
+                </label>
+                <input
+                  type="text"
+                  value={editForm.location}
+                  onChange={(e) => setEditForm({ ...editForm, location: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                  placeholder="Adresse"
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Telefon
+                  </label>
+                  <input
+                    type="text"
+                    value={editForm.phone}
+                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-base)'
+                    }}
+                    placeholder="Telefon"
+                  />
+                </div>
+
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    E-post
+                  </label>
+                  <input
+                    type="email"
+                    value={editForm.email}
+                    onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-base)'
+                    }}
+                    placeholder="E-post"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Nettside
+                </label>
+                <input
+                  type="url"
+                  value={editForm.website}
+                  onChange={(e) => setEditForm({ ...editForm, website: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                  placeholder="https://www.example.com"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Status
+                </label>
+                <select
+                  value={editForm.status}
+                  onChange={(e) => setEditForm({ ...editForm, status: e.target.value as 'active' | 'inactive' | 'pending' })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                >
+                  <option value="active">Aktiv</option>
+                  <option value="inactive">Inaktiv</option>
+                  <option value="pending">Venter</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Omsetning
+                </label>
+                <input
+                  type="text"
+                  value={editForm.revenue}
+                  onChange={(e) => setEditForm({ ...editForm, revenue: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)'
+                  }}
+                  placeholder="Omsetning"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                  Beskrivelse
+                </label>
+                <textarea
+                  value={editForm.description}
+                  onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)',
+                    minHeight: '100px',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Beskrivelse av bedriften"
+                />
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                onClick={() => setShowEditModal(false)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'var(--gray-200)',
+                  color: 'var(--gray-700)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer'
+                }}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleUpdateCompany}
+                disabled={editingCompany}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: editingCompany ? 'var(--gray-300)' : 'var(--primary)',
+                  color: editingCompany ? 'var(--gray-600)' : 'var(--white)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: editingCompany ? 'not-allowed' : 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {editingCompany ? (
+                  <RefreshCw style={{ width: '16px', height: '16px' }} />
+                ) : (
+                  <Save style={{ width: '16px', height: '16px' }} />
+                )}
+                {editingCompany ? 'Oppdaterer...' : 'Oppdater bedrift'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Company Modal */}
+      {showDeleteModal && selectedCompany && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
+              <div style={{
+                width: '64px',
+                height: '64px',
+                background: 'var(--danger)',
+                borderRadius: '50%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                margin: '0 auto 1rem'
+              }}>
+                <Trash2 style={{ width: '32px', height: '32px', color: 'var(--white)' }} />
+              </div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                Slett bedrift
+              </h2>
+              <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-base)', lineHeight: '1.5' }}>
+                Er du sikker på at du vil slette <strong>{selectedCompany.name}</strong>?
+              </p>
+              <p style={{ color: 'var(--danger)', fontSize: 'var(--font-size-sm)', marginTop: '1rem', fontWeight: '500' }}>
+                ⚠️ Dette vil også slette alle brukere, dokumenter, avvik, chat-meldinger og annen data tilknyttet denne bedriften fra Firebase.
+              </p>
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={confirmDeleteCompany}
+                disabled={deletingCompany}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--danger)',
+                  color: 'var(--white)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  cursor: deletingCompany ? 'not-allowed' : 'pointer',
+                  opacity: deletingCompany ? 0.6 : 1,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                {deletingCompany ? (
+                  <>
+                    <RefreshCw style={{ width: '16px', height: '16px' }} />
+                    Sletter...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 style={{ width: '16px', height: '16px' }} />
+                    Ja, slett bedrift
+                  </>
+                )}
+              </button>
+              <button
+                onClick={() => setShowDeleteModal(false)}
+                disabled={deletingCompany}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: 'var(--gray-200)',
+                  color: 'var(--gray-700)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  cursor: deletingCompany ? 'not-allowed' : 'pointer'
+                }}
+              >
+                Avbryt
               </button>
             </div>
           </div>

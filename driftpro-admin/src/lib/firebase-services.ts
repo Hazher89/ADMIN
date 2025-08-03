@@ -1050,6 +1050,99 @@ class FirebaseService {
     if (!db) throw new Error('Database not initialized');
 
     try {
+      // Delete all users associated with this company
+      const usersQuery = query(collection(db, 'users'), where('companyId', '==', id));
+      const usersSnapshot = await getDocs(usersQuery);
+      const userDeletePromises = usersSnapshot.docs.map(async (userDoc) => {
+        return deleteDoc(doc(db, 'users', userDoc.id));
+      });
+
+      // Delete all documents associated with this company
+      const documentsQuery = query(collection(db, 'documents'), where('companyId', '==', id));
+      const documentsSnapshot = await getDocs(documentsQuery);
+      const documentDeletePromises = documentsSnapshot.docs.map(async (docDoc) => {
+        return deleteDoc(doc(db, 'documents', docDoc.id));
+      });
+
+      // Delete all deviations associated with this company
+      const deviationsQuery = query(collection(db, 'deviations'), where('companyId', '==', id));
+      const deviationsSnapshot = await getDocs(deviationsQuery);
+      const deviationDeletePromises = deviationsSnapshot.docs.map(async (deviationDoc) => {
+        return deleteDoc(doc(db, 'deviations', deviationDoc.id));
+      });
+
+      // Delete all shifts associated with this company
+      const shiftsQuery = query(collection(db, 'shifts'), where('companyId', '==', id));
+      const shiftsSnapshot = await getDocs(shiftsQuery);
+      const shiftDeletePromises = shiftsSnapshot.docs.map(async (shiftDoc) => {
+        return deleteDoc(doc(db, 'shifts', shiftDoc.id));
+      });
+
+      // Delete all timeclock records associated with this company
+      const timeclockQuery = query(collection(db, 'timeclock'), where('companyId', '==', id));
+      const timeclockSnapshot = await getDocs(timeclockQuery);
+      const timeclockDeletePromises = timeclockSnapshot.docs.map(async (timeclockDoc) => {
+        return deleteDoc(doc(db, 'timeclock', timeclockDoc.id));
+      });
+
+      // Delete all vacations associated with this company
+      const vacationsQuery = query(collection(db, 'vacations'), where('companyId', '==', id));
+      const vacationsSnapshot = await getDocs(vacationsQuery);
+      const vacationDeletePromises = vacationsSnapshot.docs.map(async (vacationDoc) => {
+        return deleteDoc(doc(db, 'vacations', vacationDoc.id));
+      });
+
+      // Delete all departments associated with this company
+      const departmentsQuery = query(collection(db, 'departments'), where('companyId', '==', id));
+      const departmentsSnapshot = await getDocs(departmentsQuery);
+      const departmentDeletePromises = departmentsSnapshot.docs.map(async (departmentDoc) => {
+        return deleteDoc(doc(db, 'departments', departmentDoc.id));
+      });
+
+      // Delete all surveys associated with this company
+      const surveysQuery = query(collection(db, 'surveys'), where('companyId', '==', id));
+      const surveysSnapshot = await getDocs(surveysQuery);
+      const surveyDeletePromises = surveysSnapshot.docs.map(async (surveyDoc) => {
+        return deleteDoc(doc(db, 'surveys', surveyDoc.id));
+      });
+
+      // Delete all partners associated with this company
+      const partnersQuery = query(collection(db, 'partners'), where('companyId', '==', id));
+      const partnersSnapshot = await getDocs(partnersQuery);
+      const partnerDeletePromises = partnersSnapshot.docs.map(async (partnerDoc) => {
+        return deleteDoc(doc(db, 'partners', partnerDoc.id));
+      });
+
+      // Delete all settings associated with this company
+      const settingsQuery = query(collection(db, 'settings'), where('companyId', '==', id));
+      const settingsSnapshot = await getDocs(settingsQuery);
+      const settingDeletePromises = settingsSnapshot.docs.map(async (settingDoc) => {
+        return deleteDoc(doc(db, 'settings', settingDoc.id));
+      });
+
+      // Delete all activities associated with this company
+      const activitiesQuery = query(collection(db, 'activities'), where('companyId', '==', id));
+      const activitiesSnapshot = await getDocs(activitiesQuery);
+      const activityDeletePromises = activitiesSnapshot.docs.map(async (activityDoc) => {
+        return deleteDoc(doc(db, 'activities', activityDoc.id));
+      });
+
+      // Execute all delete operations
+      await Promise.all([
+        ...userDeletePromises,
+        ...documentDeletePromises,
+        ...deviationDeletePromises,
+        ...shiftDeletePromises,
+        ...timeclockDeletePromises,
+        ...vacationDeletePromises,
+        ...departmentDeletePromises,
+        ...surveyDeletePromises,
+        ...partnerDeletePromises,
+        ...settingDeletePromises,
+        ...activityDeletePromises
+      ]);
+
+      // Finally, delete the company itself
       const docRef = doc(db, 'companies', id);
       await deleteDoc(docRef);
     } catch (error) {
