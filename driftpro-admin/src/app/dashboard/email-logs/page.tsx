@@ -283,7 +283,14 @@ export default function EmailLogsPage() {
         body: JSON.stringify({
           to: testEmail,
           type: testType,
-          settings
+          settings: {
+            smtpHost: settings.smtpHost,
+            smtpPort: settings.smtpPort,
+            smtpUser: settings.smtpUser,
+            smtpSecure: settings.smtpSecure,
+            fromEmail: settings.fromEmail,
+            fromName: settings.fromName
+          }
         })
       });
       
@@ -317,8 +324,13 @@ export default function EmailLogsPage() {
           to: settings.smtpUser, // Send to self
           type: 'notification',
           settings: {
-            ...settings,
-            smtpPassword: smtpPassword
+            smtpHost: settings.smtpHost,
+            smtpPort: settings.smtpPort,
+            smtpUser: settings.smtpUser,
+            smtpSecure: settings.smtpSecure,
+            smtpPassword: smtpPassword,
+            fromEmail: settings.fromEmail,
+            fromName: settings.fromName
           }
         })
       });

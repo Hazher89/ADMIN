@@ -41,20 +41,29 @@ export async function POST(request: NextRequest) {
     }
 
     const body = await request.json();
-    const { to, type, settings } = body;
+    const { to, type, settings: providedSettings } = body;
 
     if (!to || !type) {
       return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
     }
 
-    // Get email settings from Firebase
-    const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
-    if (!settingsDoc.exists()) {
-      return NextResponse.json({ error: 'Email settings not configured' }, { status: 400 });
-    }
+    // Use provided settings if available, otherwise get from Firebase
+    let emailSettings;
+    let smtpPassword;
 
-    const emailSettings = settingsDoc.data();
-    const smtpPassword = emailSettings.smtpPassword || process.env.DRIFTPRO_EMAIL_PASSWORD;
+    if (providedSettings && providedSettings.smtpHost) {
+      // Use settings provided from frontend
+      emailSettings = providedSettings;
+      smtpPassword = providedSettings.smtpPassword || process.env.DRIFTPRO_EMAIL_PASSWORD;
+    } else {
+      // Get email settings from Firebase
+      const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
+      if (!settingsDoc.exists()) {
+        return NextResponse.json({ error: 'Email settings not configured' }, { status: 400 });
+      }
+      emailSettings = settingsDoc.data();
+      smtpPassword = emailSettings.smtpPassword || process.env.DRIFTPRO_EMAIL_PASSWORD;
+    }
 
     if (!smtpPassword) {
       return NextResponse.json({ error: 'SMTP password not configured' }, { status: 400 });
@@ -70,6 +79,17 @@ export async function POST(request: NextRequest) {
         pass: smtpPassword
       }
     });
+
+    // Verify connection configuration
+    try {
+      await transporter.verify();
+    } catch (error) {
+      console.error('SMTP connection verification failed:', error);
+      return NextResponse.json({ 
+        error: 'SMTP connection failed', 
+        details: error instanceof Error ? error.message : 'Unknown error'
+      }, { status: 500 });
+    }
 
     // Generate test email content based on type
     let subject = '';
