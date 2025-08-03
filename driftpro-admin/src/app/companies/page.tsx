@@ -10,10 +10,9 @@ import {
   MapPin,
   Phone,
   Mail,
-  ArrowRight,
-  Plus
+  ArrowRight
 } from 'lucide-react';
-import { collection, getDocs, addDoc } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Prevent pre-rendering since this page uses useRouter and Firebase
@@ -46,89 +45,60 @@ export default function CompaniesPage() {
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
-  const [creatingTestCompany, setCreatingTestCompany] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const loadCompanies = async () => {
     try {
       setLoading(true);
-      if (db) {
-        const companiesQuery = collection(db, 'companies');
-        const snapshot = await getDocs(companiesQuery);
-        const companiesData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          name: doc.data().name || '',
-          orgNumber: doc.data().orgNumber || '',
-          phone: doc.data().phone || '',
-          email: doc.data().email || '',
-          adminEmail: doc.data().adminEmail || '',
-          address: doc.data().address || '',
-          industry: doc.data().industry || '',
-          employeeCount: doc.data().employeeCount || 0,
-          status: doc.data().status || 'active',
-          createdAt: doc.data().createdAt || new Date().toISOString(),
-          updatedAt: doc.data().updatedAt || new Date().toISOString(),
-          subscriptionPlan: doc.data().subscriptionPlan || 'basic',
-          contactPerson: {
-            name: doc.data().contactPerson?.name || '',
-            phone: doc.data().contactPerson?.phone || '',
-            email: doc.data().contactPerson?.email || ''
-          }
-        })) as Company[];
-        
-        setCompanies(companiesData);
-        setFilteredCompanies(companiesData);
-      } else {
-        setCompanies([]);
-        setFilteredCompanies([]);
+      setError(null);
+      
+      if (!db) {
+        console.error('Firebase database not available');
+        setError('Kunne ikke koble til databasen. Vennligst prøv igjen senere.');
+        return;
       }
+
+      console.log('Loading companies from Firebase...');
+      const companiesQuery = collection(db, 'companies');
+      const snapshot = await getDocs(companiesQuery);
+      
+      console.log('Found companies:', snapshot.docs.length);
+      
+      const companiesData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('Company data:', data);
+        return {
+          id: doc.id,
+          name: data.name || '',
+          orgNumber: data.orgNumber || '',
+          phone: data.phone || '',
+          email: data.email || '',
+          adminEmail: data.adminEmail || '',
+          address: data.address || '',
+          industry: data.industry || '',
+          employeeCount: data.employeeCount || 0,
+          status: data.status || 'active',
+          createdAt: data.createdAt || new Date().toISOString(),
+          updatedAt: data.updatedAt || new Date().toISOString(),
+          subscriptionPlan: data.subscriptionPlan || 'basic',
+          contactPerson: {
+            name: data.contactPerson?.name || '',
+            phone: data.contactPerson?.phone || '',
+            email: data.contactPerson?.email || ''
+          }
+        };
+      }) as Company[];
+      
+      console.log('Processed companies:', companiesData);
+      setCompanies(companiesData);
+      setFilteredCompanies(companiesData);
     } catch (error) {
       console.error('Error loading companies:', error);
+      setError('Feil ved lasting av bedrifter: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
       setCompanies([]);
       setFilteredCompanies([]);
     } finally {
       setLoading(false);
-    }
-  };
-
-  const createTestCompany = async () => {
-    try {
-      setCreatingTestCompany(true);
-      if (!db) {
-        alert('Firebase ikke tilgjengelig');
-        return;
-      }
-
-      const testCompany = {
-        name: 'DriftPro Test Bedrift',
-        orgNumber: '123456789',
-        phone: '+47 123 45 678',
-        email: 'test@driftpro.no',
-        adminEmail: 'admin@driftpro.no',
-        address: 'Testveien 123, 0001 Oslo',
-        industry: 'Teknologi',
-        employeeCount: 10,
-        status: 'active',
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-        subscriptionPlan: 'basic',
-        contactPerson: {
-          name: 'Test Admin',
-          phone: '+47 123 45 678',
-          email: 'admin@driftpro.no'
-        }
-      };
-
-      const docRef = await addDoc(collection(db, 'companies'), testCompany);
-      console.log('Test company created with ID:', docRef.id);
-      
-      // Reload companies
-      await loadCompanies();
-      alert('Test-bedrift opprettet! Du kan nå logge inn.');
-    } catch (error) {
-      console.error('Error creating test company:', error);
-      alert('Feil ved opprettelse av test-bedrift: ' + error);
-    } finally {
-      setCreatingTestCompany(false);
     }
   };
 
@@ -181,6 +151,35 @@ export default function CompaniesPage() {
             fontSize: 'var(--font-size-base)'
           }}>
             Henter bedriftsinformasjon fra databasen
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'var(--gray-50)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <h3 style={{ 
+            fontSize: 'var(--font-size-xl)', 
+            fontWeight: '600', 
+            color: 'var(--gray-900)', 
+            marginBottom: '0.5rem' 
+          }}>
+            {error}
+          </h3>
+          <p style={{ 
+            color: 'var(--gray-600)',
+            fontSize: 'var(--font-size-base)'
+          }}>
+            Vennligst prøv igjen senere.
           </p>
         </div>
       </div>
@@ -478,39 +477,14 @@ export default function CompaniesPage() {
               </h3>
               <p style={{ 
                 color: 'var(--gray-600)',
-                fontSize: 'var(--font-size-base)',
-                marginBottom: '2rem'
+                fontSize: 'var(--font-size-base)'
               }}>
                 {searchTerm 
                   ? 'Prøv å søke med et annet navn eller organisasjonsnummer'
-                  : 'Ingen bedrifter er registrert i systemet ennå.'
+                  : 'Ingen bedrifter funnet i databasen. Kontakt systemadministrator for å få tilgang til DriftPro.'
                 }
               </p>
               
-              {!searchTerm && (
-                <button
-                  onClick={createTestCompany}
-                  disabled={creatingTestCompany}
-                  style={{
-                    display: 'inline-flex',
-                    alignItems: 'center',
-                    gap: '0.5rem',
-                    padding: '0.75rem 1.5rem',
-                    background: 'var(--primary)',
-                    color: 'var(--white)',
-                    border: 'none',
-                    borderRadius: 'var(--radius-lg)',
-                    fontSize: 'var(--font-size-base)',
-                    fontWeight: '600',
-                    cursor: creatingTestCompany ? 'not-allowed' : 'pointer',
-                    opacity: creatingTestCompany ? 0.6 : 1,
-                    transition: 'all var(--transition-normal)'
-                  }}
-                >
-                  <Plus style={{ width: '16px', height: '16px' }} />
-                  {creatingTestCompany ? 'Oppretter test-bedrift...' : 'Opprett test-bedrift'}
-                </button>
-              )}
             </div>
           )}
         </div>
