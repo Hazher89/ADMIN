@@ -10,14 +10,9 @@ import {
   MapPin,
   Phone,
   Mail,
-  ArrowRight,
-  Shield,
-  Trash2,
-  Plus,
-  X,
-  Save
+  ArrowRight
 } from 'lucide-react';
-import { collection, getDocs, addDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
 // Prevent pre-rendering since this page uses useRouter and Firebase
@@ -48,27 +43,8 @@ export default function CompaniesPage() {
   const router = useRouter();
   const [companies, setCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(false);
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [companyToDelete, setCompanyToDelete] = useState<Company | null>(null);
-  const [deletingCompany, setDeletingCompany] = useState<string | null>(null);
-  const [newCompany, setNewCompany] = useState({
-    name: '',
-    orgNumber: '',
-    phone: '',
-    email: '',
-    adminEmail: '',
-    address: '',
-    industry: '',
-    employeeCount: 0,
-    status: 'active' as const,
-    subscriptionPlan: 'basic' as const,
-    contactPerson: {
-      name: '',
-      phone: '',
-      email: ''
-    }
-  });
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
 
   const loadCompanies = async () => {
     try {
@@ -98,12 +74,15 @@ export default function CompaniesPage() {
         })) as Company[];
         
         setCompanies(companiesData);
+        setFilteredCompanies(companiesData);
       } else {
         setCompanies([]);
+        setFilteredCompanies([]);
       }
     } catch (error) {
       console.error('Error loading companies:', error);
       setCompanies([]);
+      setFilteredCompanies([]);
     } finally {
       setLoading(false);
     }
@@ -113,187 +92,25 @@ export default function CompaniesPage() {
     loadCompanies();
   }, []);
 
+  // Filter companies based on search term
+  useEffect(() => {
+    if (!searchTerm.trim()) {
+      setFilteredCompanies(companies);
+    } else {
+      const filtered = companies.filter(company =>
+        company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        company.orgNumber.includes(searchTerm) ||
+        company.email.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+      setFilteredCompanies(filtered);
+    }
+  }, [searchTerm, companies]);
+
   const handleCompanySelect = (company: Company) => {
     // Store selected company in localStorage for login page
     localStorage.setItem('selectedCompany', JSON.stringify(company));
     // Redirect to login page
     router.push('/login');
-  };
-
-  const handleAddCompany = async () => {
-    if (!newCompany.name.trim()) {
-      alert('Bedriftsnavn er påkrevd');
-      return;
-    }
-
-    if (!db) {
-      alert('Database ikke tilgjengelig');
-      return;
-    }
-
-    try {
-      // Check if company with same name already exists
-      const existingCompanyQuery = query(
-        collection(db, 'companies'),
-        where('name', '==', newCompany.name.trim())
-      );
-      const existingCompanySnapshot = await getDocs(existingCompanyQuery);
-
-      if (!existingCompanySnapshot.empty) {
-        alert('En bedrift med dette navnet eksisterer allerede');
-        return;
-      }
-
-      // Create new company
-      const companyData = {
-        ...newCompany,
-        name: newCompany.name.trim(),
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      };
-
-      const docRef = await addDoc(collection(db, 'companies'), companyData);
-      
-      const createdCompany = {
-        id: docRef.id,
-        ...companyData
-      };
-
-      setCompanies([...companies, createdCompany]);
-      setShowAddModal(false);
-      setNewCompany({
-        name: '',
-        orgNumber: '',
-        phone: '',
-        email: '',
-        adminEmail: '',
-        address: '',
-        industry: '',
-        employeeCount: 0,
-        status: 'active',
-        subscriptionPlan: 'basic',
-        contactPerson: {
-          name: '',
-          phone: '',
-          email: ''
-        }
-      });
-      
-      alert('Bedrift opprettet!');
-    } catch (error) {
-      console.error('Error adding company:', error);
-      alert('Feil ved opprettelse av bedrift');
-    }
-  };
-
-  const handleDeleteCompany = (company: Company) => {
-    setCompanyToDelete(company);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDeleteCompany = async () => {
-    if (!companyToDelete || !db) {
-      return;
-    }
-
-    try {
-      setDeletingCompany(companyToDelete.id);
-
-      // Delete all users associated with this company
-      const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyToDelete.id));
-      const usersSnapshot = await getDocs(usersQuery);
-
-      const userDeletePromises = usersSnapshot.docs.map(async (userDoc) => {
-        return deleteDoc(doc(db!, 'users', userDoc.id));
-      });
-
-      // Delete all documents associated with this company
-      const documentsQuery = query(collection(db, 'documents'), where('companyId', '==', companyToDelete.id));
-      const documentsSnapshot = await getDocs(documentsQuery);
-
-      const documentDeletePromises = documentsSnapshot.docs.map(async (docDoc) => {
-        return deleteDoc(doc(db!, 'documents', docDoc.id));
-      });
-
-      // Delete all deviations associated with this company
-      const deviationsQuery = query(collection(db, 'deviations'), where('companyId', '==', companyToDelete.id));
-      const deviationsSnapshot = await getDocs(deviationsQuery);
-
-      const deviationDeletePromises = deviationsSnapshot.docs.map(async (deviationDoc) => {
-        return deleteDoc(doc(db!, 'deviations', deviationDoc.id));
-      });
-
-      // Delete all chats associated with this company
-      const chatsQuery = query(collection(db, 'chats'), where('companyId', '==', companyToDelete.id));
-      const chatsSnapshot = await getDocs(chatsQuery);
-
-      const chatDeletePromises = chatsSnapshot.docs.map(async (chatDoc) => {
-        return deleteDoc(doc(db!, 'chats', chatDoc.id));
-      });
-
-      // Delete all messages associated with this company
-      const messagesQuery = query(collection(db, 'messages'), where('companyId', '==', companyToDelete.id));
-      const messagesSnapshot = await getDocs(messagesQuery);
-
-      const messageDeletePromises = messagesSnapshot.docs.map(async (messageDoc) => {
-        return deleteDoc(doc(db!, 'messages', messageDoc.id));
-      });
-
-      // Delete all absences associated with this company
-      const absencesQuery = query(collection(db, 'absences'), where('companyId', '==', companyToDelete.id));
-      const absencesSnapshot = await getDocs(absencesQuery);
-
-      const absenceDeletePromises = absencesSnapshot.docs.map(async (absenceDoc) => {
-        return deleteDoc(doc(db!, 'absences', absenceDoc.id));
-      });
-
-      // Delete all timeclock records associated with this company
-      const timeclockQuery = query(collection(db, 'timeclock'), where('companyId', '==', companyToDelete.id));
-      const timeclockSnapshot = await getDocs(timeclockQuery);
-
-      const timeclockDeletePromises = timeclockSnapshot.docs.map(async (timeclockDoc) => {
-        return deleteDoc(doc(db!, 'timeclock', timeclockDoc.id));
-      });
-
-      // Delete all departments associated with this company
-      const departmentsQuery = query(collection(db, 'departments'), where('companyId', '==', companyToDelete.id));
-      const departmentsSnapshot = await getDocs(departmentsQuery);
-
-      const departmentDeletePromises = departmentsSnapshot.docs.map(async (departmentDoc) => {
-        return deleteDoc(doc(db!, 'departments', departmentDoc.id));
-      });
-
-      // Execute all delete operations
-      await Promise.all([
-        ...userDeletePromises,
-        ...documentDeletePromises,
-        ...deviationDeletePromises,
-        ...chatDeletePromises,
-        ...messageDeletePromises,
-        ...absenceDeletePromises,
-        ...timeclockDeletePromises,
-        ...departmentDeletePromises
-      ]);
-
-      // Finally, delete the company itself
-      await deleteDoc(doc(db!, 'companies', companyToDelete.id));
-      
-      // Update local state
-      setCompanies(companies.filter(c => c.id !== companyToDelete.id));
-      
-      // Close modal and reset state
-      setShowDeleteModal(false);
-      setCompanyToDelete(null);
-      setDeletingCompany(null);
-      
-      alert(`✅ Bedriften "${companyToDelete.name}" og all tilknyttet data er slettet.`);
-
-    } catch (error) {
-      console.error('Error deleting company:', error);
-      alert('❌ Feil ved sletting av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
-    } finally {
-      setDeletingCompany(null);
-    }
   };
 
   if (loading) {
@@ -393,20 +210,6 @@ export default function CompaniesPage() {
                 Hjem
               </Link>
               <Link
-                href="/brrg-integration"
-                style={{
-                  color: 'var(--gray-600)',
-                  padding: 'var(--space-2) var(--space-4)',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--font-size-sm)',
-                  fontWeight: '500',
-                  textDecoration: 'none',
-                  transition: 'all var(--transition-normal)'
-                }}
-              >
-                BRRG-integrasjon
-              </Link>
-              <Link
                 href="/help"
                 style={{
                   color: 'var(--gray-600)',
@@ -432,55 +235,68 @@ export default function CompaniesPage() {
         padding: '3rem 1.5rem'
       }}>
         {/* Header */}
-        <div style={{ 
-          display: 'flex', 
-          justifyContent: 'space-between', 
-          alignItems: 'center', 
-          marginBottom: '3rem' 
+        <div style={{ textAlign: 'center', marginBottom: '3rem' }}>
+          <h1 style={{
+            fontSize: 'var(--font-size-5xl)',
+            fontWeight: '700',
+            color: 'var(--gray-900)',
+            marginBottom: '1rem',
+            lineHeight: '1.2'
+          }}>
+            Velkommen til DriftPro
+          </h1>
+          <p style={{
+            fontSize: 'var(--font-size-xl)',
+            color: 'var(--gray-600)',
+            maxWidth: '600px',
+            margin: '0 auto',
+            lineHeight: '1.6'
+          }}>
+            Velg din bedrift for å få tilgang til DriftPro Admin-panelet
+          </p>
+        </div>
+
+        {/* Search Section */}
+        <div style={{
+          maxWidth: '600px',
+          margin: '0 auto 3rem',
+          background: 'var(--white)',
+          borderRadius: 'var(--radius-lg)',
+          padding: '2rem',
+          boxShadow: 'var(--shadow-sm)',
+          border: '1px solid var(--gray-200)'
         }}>
-          <div>
-            <h1 style={{
-              fontSize: 'var(--font-size-5xl)',
-              fontWeight: '700',
-              color: 'var(--gray-900)',
-              marginBottom: '1rem',
-              lineHeight: '1.2'
-            }}>
-              Bedrifter
-            </h1>
-            <p style={{
-              fontSize: 'var(--font-size-xl)',
-              color: 'var(--gray-600)',
-              lineHeight: '1.6'
-            }}>
-              Administrer bedrifter og få tilgang til DriftPro Admin-panelet
-            </p>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+            <Search style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
+            <input
+              type="text"
+              placeholder="Søk etter bedrift..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '0.75rem',
+                border: '1px solid var(--gray-300)',
+                borderRadius: 'var(--radius-md)',
+                fontSize: 'var(--font-size-base)',
+                outline: 'none'
+              }}
+            />
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem',
-              padding: '0.75rem 1.5rem',
-              background: 'var(--primary)',
-              color: 'var(--white)',
-              border: 'none',
-              borderRadius: 'var(--radius-lg)',
-              fontSize: 'var(--font-size-base)',
-              fontWeight: '500',
-              cursor: 'pointer',
-              transition: 'all var(--transition-normal)'
-            }}
-          >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Legg til bedrift
-          </button>
+          {searchTerm && (
+            <p style={{
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--gray-600)',
+              marginTop: '0.5rem'
+            }}>
+              {filteredCompanies.length} bedrift{filteredCompanies.length !== 1 ? 'er' : ''} funnet
+            </p>
+          )}
         </div>
 
         {/* Companies List */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {companies.map((company) => (
+          {filteredCompanies.map((company) => (
             <div
               key={company.id}
               className="card"
@@ -518,62 +334,18 @@ export default function CompaniesPage() {
                     </span>
                   </div>
                 </div>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <Link
-                    href="/admin-management"
-                    style={{
-                      padding: '0.5rem',
-                      background: '#8b5cf6',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s ease',
-                      textDecoration: 'none',
-                      fontSize: 'var(--font-size-sm)'
-                    }}
-                    title="Administrer admins"
-                    onClick={(e) => e.stopPropagation()}
-                  >
-                    <Shield style={{ width: '16px', height: '16px' }} />
-                  </Link>
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      handleDeleteCompany(company);
-                    }}
-                    style={{
-                      padding: '0.5rem',
-                      background: '#dc2626',
-                      border: 'none',
-                      borderRadius: '6px',
-                      color: 'white',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      transition: 'all 0.2s ease'
-                    }}
-                    title="Slett bedrift"
-                  >
-                    <Trash2 style={{ width: '16px', height: '16px' }} />
-                  </button>
-                  <div style={{
-                    padding: '0.75rem',
-                    background: '#10b981',
-                    border: 'none',
-                    borderRadius: '8px',
-                    color: 'white',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s ease'
-                  }}>
-                    <ArrowRight style={{ width: '20px', height: '20px' }} />
-                  </div>
+                <div style={{
+                  padding: '0.75rem',
+                  background: '#10b981',
+                  border: 'none',
+                  borderRadius: '8px',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s ease'
+                }}>
+                  <ArrowRight style={{ width: '20px', height: '20px' }} />
                 </div>
               </div>
 
@@ -638,7 +410,7 @@ export default function CompaniesPage() {
             </div>
           ))}
 
-          {companies.length === 0 && (
+          {filteredCompanies.length === 0 && (
             <div style={{
               textAlign: 'center',
               padding: '3rem',
@@ -658,35 +430,17 @@ export default function CompaniesPage() {
                 color: 'var(--gray-900)', 
                 marginBottom: '0.5rem' 
               }}>
-                Ingen bedrifter
+                {searchTerm ? 'Ingen bedrifter funnet' : 'Ingen bedrifter'}
               </h3>
               <p style={{ 
                 color: 'var(--gray-600)',
-                fontSize: 'var(--font-size-base)',
-                marginBottom: '1.5rem'
+                fontSize: 'var(--font-size-base)'
               }}>
-                Legg til din første bedrift for å komme i gang
+                {searchTerm 
+                  ? 'Prøv å søke med et annet navn eller organisasjonsnummer'
+                  : 'Kontakt systemadministrator for å få tilgang til DriftPro.'
+                }
               </p>
-              <button
-                onClick={() => setShowAddModal(true)}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.5rem',
-                  background: 'var(--primary)',
-                  color: 'var(--white)',
-                  border: 'none',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--font-size-base)',
-                  fontWeight: '500',
-                  cursor: 'pointer',
-                  margin: '0 auto'
-                }}
-              >
-                <Plus style={{ width: '16px', height: '16px' }} />
-                Legg til bedrift
-              </button>
             </div>
           )}
         </div>
@@ -720,335 +474,6 @@ export default function CompaniesPage() {
           </a>
         </div>
       </div>
-
-      {/* Add Company Modal */}
-      {showAddModal && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'var(--white)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '2rem',
-            maxWidth: '600px',
-            width: '90%',
-            maxHeight: '90vh',
-            overflow: 'auto'
-          }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
-                Legg til bedrift
-              </h2>
-              <button
-                onClick={() => setShowAddModal(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  cursor: 'pointer',
-                  padding: '0.5rem'
-                }}
-              >
-                <X style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
-              </button>
-            </div>
-
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Bedriftsnavn *
-                </label>
-                <input
-                  type="text"
-                  value={newCompany.name}
-                  onChange={(e) => setNewCompany({ ...newCompany, name: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 'var(--font-size-base)'
-                  }}
-                  placeholder="Bedriftsnavn"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Organisasjonsnummer
-                </label>
-                <input
-                  type="text"
-                  value={newCompany.orgNumber}
-                  onChange={(e) => setNewCompany({ ...newCompany, orgNumber: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 'var(--font-size-base)'
-                  }}
-                  placeholder="123456789"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Telefon
-                </label>
-                <input
-                  type="text"
-                  value={newCompany.phone}
-                  onChange={(e) => setNewCompany({ ...newCompany, phone: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 'var(--font-size-base)'
-                  }}
-                  placeholder="+47 123 45 678"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  E-post
-                </label>
-                <input
-                  type="email"
-                  value={newCompany.email}
-                  onChange={(e) => setNewCompany({ ...newCompany, email: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 'var(--font-size-base)'
-                  }}
-                  placeholder="kontakt@bedrift.no"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Admin E-post
-                </label>
-                <input
-                  type="email"
-                  value={newCompany.adminEmail}
-                  onChange={(e) => setNewCompany({ ...newCompany, adminEmail: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 'var(--font-size-base)'
-                  }}
-                  placeholder="admin@bedrift.no"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Adresse
-                </label>
-                <input
-                  type="text"
-                  value={newCompany.address}
-                  onChange={(e) => setNewCompany({ ...newCompany, address: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 'var(--font-size-base)'
-                  }}
-                  placeholder="Bedriftsadresse"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Bransje
-                </label>
-                <input
-                  type="text"
-                  value={newCompany.industry}
-                  onChange={(e) => setNewCompany({ ...newCompany, industry: e.target.value })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 'var(--font-size-base)'
-                  }}
-                  placeholder="Bransje"
-                />
-              </div>
-
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Antall ansatte
-                </label>
-                <input
-                  type="number"
-                  value={newCompany.employeeCount}
-                  onChange={(e) => setNewCompany({ ...newCompany, employeeCount: parseInt(e.target.value) || 0 })}
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-md)',
-                    fontSize: 'var(--font-size-base)'
-                  }}
-                  placeholder="0"
-                />
-              </div>
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
-              <button
-                onClick={handleAddCompany}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  background: 'var(--primary)',
-                  color: 'var(--white)',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--font-size-base)',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                Legg til bedrift
-              </button>
-              <button
-                onClick={() => setShowAddModal(false)}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  background: 'var(--gray-200)',
-                  color: 'var(--gray-700)',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--font-size-base)',
-                  fontWeight: '500',
-                  cursor: 'pointer'
-                }}
-              >
-                Avbryt
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Delete Company Modal */}
-      {showDeleteModal && companyToDelete && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1000
-        }}>
-          <div style={{
-            background: 'var(--white)',
-            borderRadius: 'var(--radius-lg)',
-            padding: '2rem',
-            maxWidth: '500px',
-            width: '90%'
-          }}>
-            <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-              <div style={{
-                width: '64px',
-                height: '64px',
-                background: 'var(--danger)',
-                borderRadius: '50%',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                margin: '0 auto 1rem'
-              }}>
-                <Trash2 style={{ width: '32px', height: '32px', color: 'var(--white)' }} />
-              </div>
-              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
-                Slett bedrift
-              </h2>
-              <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-base)', lineHeight: '1.5' }}>
-                Er du sikker på at du vil slette <strong>{companyToDelete.name}</strong>?
-              </p>
-              <p style={{ color: 'var(--danger)', fontSize: 'var(--font-size-sm)', marginTop: '1rem', fontWeight: '500' }}>
-                ⚠️ Dette vil også slette alle brukere, dokumenter, avvik, chat-meldinger og annen data tilknyttet denne bedriften.
-              </p>
-            </div>
-
-            <div style={{ display: 'flex', gap: '1rem' }}>
-              <button
-                onClick={confirmDeleteCompany}
-                disabled={deletingCompany === companyToDelete.id}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  background: 'var(--danger)',
-                  color: 'var(--white)',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--font-size-base)',
-                  fontWeight: '500',
-                  cursor: deletingCompany === companyToDelete.id ? 'not-allowed' : 'pointer',
-                  opacity: deletingCompany === companyToDelete.id ? 0.6 : 1
-                }}
-              >
-                {deletingCompany === companyToDelete.id ? (
-                  <>
-                    <div className="loading" style={{ width: '16px', height: '16px', marginRight: '0.5rem' }}></div>
-                    Sletter...
-                  </>
-                ) : (
-                  <>
-                    <Trash2 style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                    Ja, slett bedrift
-                  </>
-                )}
-              </button>
-              <button
-                onClick={() => setShowDeleteModal(false)}
-                disabled={deletingCompany === companyToDelete.id}
-                style={{
-                  flex: 1,
-                  padding: '0.75rem',
-                  background: 'var(--gray-200)',
-                  color: 'var(--gray-700)',
-                  border: 'none',
-                  borderRadius: 'var(--radius-md)',
-                  fontSize: 'var(--font-size-base)',
-                  fontWeight: '500',
-                  cursor: deletingCompany === companyToDelete.id ? 'not-allowed' : 'pointer'
-                }}
-              >
-                Avbryt
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 } 
