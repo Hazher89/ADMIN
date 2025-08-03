@@ -69,17 +69,6 @@ export default function CompaniesPage() {
   const [passwordResetEmail, setPasswordResetEmail] = useState('');
   const [showPassword, setShowPassword] = useState(false);
 
-  // Debug state changes
-  useEffect(() => {
-    console.log('🔍 STATE DEBUG: showDeleteModal:', showDeleteModal);
-    console.log('🔍 STATE DEBUG: companyToDelete:', companyToDelete);
-  }, [showDeleteModal, companyToDelete]);
-
-  useEffect(() => {
-    console.log('🔍 STATE DEBUG: showEditModal:', showEditModal);
-    console.log('🔍 STATE DEBUG: editingCompany:', editingCompany);
-  }, [showEditModal, editingCompany]);
-
   const loadCompanies = async () => {
     try {
       setLoading(true);
@@ -109,29 +98,8 @@ export default function CompaniesPage() {
           }
         })) as Company[];
         
-        // Check for duplicates
-        const duplicateNames = companiesData.filter((company, index, self) => 
-          self.findIndex(c => c.name === company.name) !== index
-        );
-        
-        if (duplicateNames.length > 0) {
-          console.warn('⚠️ DUPLICATE COMPANIES FOUND:', duplicateNames);
-          console.warn('Companies with same name:', duplicateNames.map(c => ({ name: c.name, id: c.id, orgNumber: c.orgNumber })));
-          
-          // Remove duplicates - keep the first occurrence of each company name
-          const uniqueCompanies = companiesData.filter((company, index, self) => 
-            self.findIndex(c => c.name === company.name) === index
-          );
-          
-          console.log('Removed duplicates, unique companies:', uniqueCompanies.length);
-          setCompanies(uniqueCompanies);
-        } else {
-          setCompanies(companiesData);
-        }
-        console.log('Loaded companies from Firebase:', companiesData);
-        console.log('Total companies loaded:', companiesData.length);
+        setCompanies(companiesData);
       } else {
-        console.log('Firebase not available');
         setCompanies([]);
       }
     } catch (error) {
@@ -175,7 +143,6 @@ export default function CompaniesPage() {
   }, []);
 
   const handleCompanySelect = (company: Company) => {
-    console.log('🎯 COMPANY SELECTED:', company.name, 'ID:', company.id);
     // Store selected company in localStorage for login page
     localStorage.setItem('selectedCompany', JSON.stringify(company));
     // Redirect to login page
@@ -185,114 +152,86 @@ export default function CompaniesPage() {
   const handleEditCompany = (company: Company, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('✏️ EDIT BUTTON CLICKED for company:', company.name, 'ID:', company.id);
-    console.log('✏️ Event details:', e);
     setEditingCompany({ ...company });
     setShowEditModal(true);
-    console.log('✏️ Edit modal should now be visible');
   };
 
   const handleDeleteCompany = (company: Company, e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
-    console.log('🗑️ DELETE BUTTON CLICKED for company:', company.name, 'ID:', company.id);
-    console.log('🗑️ Event details:', e);
     setCompanyToDelete(company);
     setShowDeleteModal(true);
-    console.log('🗑️ Delete modal should now be visible');
   };
 
   const confirmDeleteCompany = async () => {
-    console.log('🗑️ CONFIRM DELETE called');
-    console.log('🗑️ companyToDelete:', companyToDelete);
-    console.log('🗑️ db available:', !!db);
-    
     if (!companyToDelete || !db) {
-      console.error('❌ Cannot delete: missing companyToDelete or db');
       return;
     }
 
     try {
       setDeletingCompany(companyToDelete.id);
-      console.log('🗑️ DELETING COMPANY:', companyToDelete.name, 'ID:', companyToDelete.id);
 
       // 1. Delete all users associated with this company
       const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyToDelete.id));
       const usersSnapshot = await getDocs(usersQuery);
-      console.log('🗑️ Found users to delete:', usersSnapshot.size);
 
       const userDeletePromises = usersSnapshot.docs.map(async (userDoc) => {
-        console.log('🗑️ Deleting user:', userDoc.data().email);
         return deleteDoc(doc(db!, 'users', userDoc.id));
       });
 
       // 2. Delete all documents associated with this company
       const documentsQuery = query(collection(db, 'documents'), where('companyId', '==', companyToDelete.id));
       const documentsSnapshot = await getDocs(documentsQuery);
-      console.log('🗑️ Found documents to delete:', documentsSnapshot.size);
 
       const documentDeletePromises = documentsSnapshot.docs.map(async (docDoc) => {
-        console.log('🗑️ Deleting document:', docDoc.data().title);
         return deleteDoc(doc(db!, 'documents', docDoc.id));
       });
 
       // 3. Delete all deviations associated with this company
       const deviationsQuery = query(collection(db!, 'deviations'), where('companyId', '==', companyToDelete.id));
       const deviationsSnapshot = await getDocs(deviationsQuery);
-      console.log('🗑️ Found deviations to delete:', deviationsSnapshot.size);
 
       const deviationDeletePromises = deviationsSnapshot.docs.map(async (deviationDoc) => {
-        console.log('🗑️ Deleting deviation:', deviationDoc.data().title);
         return deleteDoc(doc(db!, 'deviations', deviationDoc.id));
       });
 
       // 4. Delete all chats associated with this company
       const chatsQuery = query(collection(db!, 'chats'), where('companyId', '==', companyToDelete.id));
       const chatsSnapshot = await getDocs(chatsQuery);
-      console.log('🗑️ Found chats to delete:', chatsSnapshot.size);
 
       const chatDeletePromises = chatsSnapshot.docs.map(async (chatDoc) => {
-        console.log('🗑️ Deleting chat:', chatDoc.data().title);
         return deleteDoc(doc(db!, 'chats', chatDoc.id));
       });
 
       // 5. Delete all messages associated with this company
       const messagesQuery = query(collection(db!, 'messages'), where('companyId', '==', companyToDelete.id));
       const messagesSnapshot = await getDocs(messagesQuery);
-      console.log('🗑️ Found messages to delete:', messagesSnapshot.size);
 
       const messageDeletePromises = messagesSnapshot.docs.map(async (messageDoc) => {
-        console.log('🗑️ Deleting message:', messageDoc.id);
         return deleteDoc(doc(db!, 'messages', messageDoc.id));
       });
 
       // 6. Delete all absences associated with this company
       const absencesQuery = query(collection(db!, 'absences'), where('companyId', '==', companyToDelete.id));
       const absencesSnapshot = await getDocs(absencesQuery);
-      console.log('🗑️ Found absences to delete:', absencesSnapshot.size);
 
       const absenceDeletePromises = absencesSnapshot.docs.map(async (absenceDoc) => {
-        console.log('🗑️ Deleting absence:', absenceDoc.id);
         return deleteDoc(doc(db!, 'absences', absenceDoc.id));
       });
 
       // 7. Delete all timeclock records associated with this company
       const timeclockQuery = query(collection(db!, 'timeclock'), where('companyId', '==', companyToDelete.id));
       const timeclockSnapshot = await getDocs(timeclockQuery);
-      console.log('🗑️ Found timeclock records to delete:', timeclockSnapshot.size);
 
       const timeclockDeletePromises = timeclockSnapshot.docs.map(async (timeclockDoc) => {
-        console.log('🗑️ Deleting timeclock record:', timeclockDoc.id);
         return deleteDoc(doc(db!, 'timeclock', timeclockDoc.id));
       });
 
       // 8. Delete all departments associated with this company
       const departmentsQuery = query(collection(db!, 'departments'), where('companyId', '==', companyToDelete.id));
       const departmentsSnapshot = await getDocs(departmentsQuery);
-      console.log('🗑️ Found departments to delete:', departmentsSnapshot.size);
 
       const departmentDeletePromises = departmentsSnapshot.docs.map(async (departmentDoc) => {
-        console.log('🗑️ Deleting department:', departmentDoc.data().name);
         return deleteDoc(doc(db!, 'departments', departmentDoc.id));
       });
 
@@ -309,10 +248,7 @@ export default function CompaniesPage() {
       ]);
 
       // 9. Finally, delete the company itself
-      console.log('🗑️ Deleting company:', companyToDelete.name);
       await deleteDoc(doc(db!, 'companies', companyToDelete.id));
-
-      console.log('✅ COMPANY DELETION COMPLETE');
       
       // Update local state
       setCompanies(companies.filter(c => c.id !== companyToDelete.id));
@@ -326,7 +262,7 @@ export default function CompaniesPage() {
       alert(`✅ Bedriften "${companyToDelete.name}" og all tilknyttet data er slettet.`);
 
     } catch (error) {
-      console.error('❌ Error deleting company:', error);
+      console.error('Error deleting company:', error);
       alert('❌ Feil ved sletting av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     } finally {
       setDeletingCompany(null);
@@ -337,8 +273,6 @@ export default function CompaniesPage() {
     if (!editingCompany || !db) return;
 
     try {
-      console.log('💾 SAVING COMPANY:', editingCompany.name);
-      
       // Update company in Firebase
       await updateDoc(doc(db!, 'companies', editingCompany.id), {
         name: editingCompany.name,
@@ -370,7 +304,7 @@ export default function CompaniesPage() {
       alert('✅ Bedrift oppdatert!');
 
     } catch (error) {
-      console.error('❌ Error updating company:', error);
+      console.error('Error updating company:', error);
       alert('❌ Feil ved oppdatering av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     }
   };
@@ -379,8 +313,6 @@ export default function CompaniesPage() {
     if (!passwordResetEmail || !db) return;
 
     try {
-      console.log('🔑 SENDING PASSWORD RESET to:', passwordResetEmail);
-      
       // Send password reset email using Firebase Auth
       const { sendPasswordResetEmail } = await import('firebase/auth');
       await sendPasswordResetEmail(auth!, passwordResetEmail);
@@ -390,7 +322,7 @@ export default function CompaniesPage() {
       setPasswordResetEmail('');
       
     } catch (error) {
-      console.error('❌ Error sending password reset:', error);
+      console.error('Error sending password reset:', error);
       alert('❌ Feil ved sending av passord tilbakestilling: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     }
   };
@@ -399,8 +331,6 @@ export default function CompaniesPage() {
     if (!newAdminEmail || !selectedCompany || !db) return;
 
     try {
-      console.log('👑 ADDING ADMIN:', newAdminEmail, 'to company:', selectedCompany.name);
-      
       // Check if user already exists
       const usersQuery = query(collection(db, 'users'), where('email', '==', newAdminEmail));
       const userSnapshot = await getDocs(usersQuery);
@@ -435,7 +365,7 @@ export default function CompaniesPage() {
       setNewAdminEmail('');
       
     } catch (error) {
-      console.error('❌ Error adding admin:', error);
+      console.error('Error adding admin:', error);
       alert('❌ Feil ved tilføying av admin: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     }
   };
@@ -445,7 +375,6 @@ export default function CompaniesPage() {
 
     try {
       setLoadingEmployees(true);
-      console.log('👥 LOADING EMPLOYEES for company:', companyId);
       
       const usersQuery = query(collection(db, 'users'), where('companyId', '==', companyId));
       const snapshot = await getDocs(usersQuery);
@@ -456,10 +385,9 @@ export default function CompaniesPage() {
       }));
       
       setEmployees(employeesData);
-      console.log('👥 Loaded employees:', employeesData.length);
       
     } catch (error) {
-      console.error('❌ Error loading employees:', error);
+      console.error('Error loading employees:', error);
       alert('❌ Feil ved lasting av ansatte: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     } finally {
       setLoadingEmployees(false);
@@ -470,8 +398,6 @@ export default function CompaniesPage() {
     if (!db) return;
 
     try {
-      console.log('👤 REMOVING EMPLOYEE:', employeeEmail);
-      
       // Delete user from Firebase
       await deleteDoc(doc(db, 'users', employeeId));
       
@@ -481,7 +407,7 @@ export default function CompaniesPage() {
       alert('✅ Ansatt fjernet: ' + employeeEmail);
       
     } catch (error) {
-      console.error('❌ Error removing employee:', error);
+      console.error('Error removing employee:', error);
       alert('❌ Feil ved fjerning av ansatt: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
     }
   };
@@ -816,7 +742,6 @@ export default function CompaniesPage() {
                   </button>
                   <button
                     onClick={() => {
-                      console.log('🎯 SELECT BUTTON CLICKED for company:', company.name);
                       handleCompanySelect(company);
                     }}
                     style={{
