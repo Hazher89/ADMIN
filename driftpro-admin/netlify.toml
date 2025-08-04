@@ -5,6 +5,7 @@
 
 [build.environment]
   NODE_VERSION = "18"
+  NEXT_PUBLIC_APP_URL = "https://driftpro-admin.netlify.app"
 
 [[plugins]]
   package = "@netlify/plugin-nextjs"

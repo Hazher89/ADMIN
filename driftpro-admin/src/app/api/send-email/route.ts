@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import * as nodemailer from 'nodemailer';
 import { collection, addDoc, getFirestore } from 'firebase/firestore';
+import { getApps, initializeApp } from 'firebase/app';
 import { db } from '@/lib/firebase';
 
 interface EmailData {
@@ -29,19 +30,18 @@ function getDb() {
   
   // Try to get Firestore directly if db is not available
   try {
-    const { getApps, initializeApp } = require('firebase/app');
     const apps = getApps();
     
     if (apps.length === 0) {
       // Initialize Firebase if not already done
-              const firebaseConfig = {
-          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
-          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
-        };
+      const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
+      };
       initializeApp(firebaseConfig);
     }
     
@@ -81,14 +81,54 @@ export async function POST(request: NextRequest) {
     } else {
       // Direct email data
       emailData = requestData as EmailData;
-      // Use default SMTP config for noreply@driftpro.no
-      smtpConfig = {
-        host: 'smtp.office365.com',
-        port: 587,
-        user: 'noreply@driftpro.no',
-        pass: process.env.DRIFTPRO_EMAIL_PASSWORD || '',
-        secure: false
-      };
+      
+      // Get SMTP config from Firebase settings
+      try {
+        const firestoreDb = getDb();
+        if (firestoreDb) {
+          const { doc, getDoc } = await import('firebase/firestore');
+          const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
+          
+          if (settingsDoc.exists()) {
+            const settings = settingsDoc.data();
+            smtpConfig = {
+              host: settings.smtpHost || 'smtp.domeneshop.no',
+              port: settings.smtpPort || 587,
+              user: settings.smtpUser || 'driftpro2',
+              pass: settings.smtpPassword || 'HazGada89!',
+              secure: settings.smtpSecure || false
+            };
+          } else {
+            // Use default SMTP config
+            smtpConfig = {
+              host: 'smtp.domeneshop.no',
+              port: 587,
+              user: 'noreplay@driftpro.no',
+              pass: 'HazGada89!',
+              secure: false
+            };
+          }
+                  } else {
+            // Use default SMTP config
+            smtpConfig = {
+              host: 'smtp.domeneshop.no',
+              port: 587,
+              user: 'noreplay@driftpro.no',
+              pass: 'HazGada89!',
+              secure: false
+            };
+          }
+      } catch (error) {
+        console.error('Error getting email settings:', error);
+        // Use default SMTP config
+        smtpConfig = {
+          host: 'smtp.domeneshop.no',
+          port: 587,
+          user: 'noreplay@driftpro.no',
+          pass: 'HazGada89!',
+          secure: false
+        };
+      }
     }
 
     if (!emailData || !emailData.to || !emailData.subject || !emailData.html) {
@@ -99,7 +139,7 @@ export async function POST(request: NextRequest) {
       throw new Error('SMTP configuration is required');
     }
 
-    // Create transporter
+    // Create transporter with Domeneshop-optimized configuration
     const transporter = nodemailer.createTransport({
       host: smtpConfig.host,
       port: smtpConfig.port,
@@ -109,13 +149,37 @@ export async function POST(request: NextRequest) {
         pass: smtpConfig.pass
       },
       tls: {
-        rejectUnauthorized: false
-      }
+        rejectUnauthorized: false,
+        ciphers: 'SSLv3'
+      },
+      connectionTimeout: 30000, // 30 seconds for Domeneshop
+      greetingTimeout: 30000,   // 30 seconds for Domeneshop
+      socketTimeout: 30000,     // 30 seconds for Domeneshop
+      debug: smtpConfig.host.includes('domeneshop'), // Enable debug for Domeneshop
+      logger: smtpConfig.host.includes('domeneshop')  // Enable logger for Domeneshop
     });
+
+    // Verify connection configuration
+    console.log('SMTP Configuration:', {
+      host: smtpConfig.host,
+      port: smtpConfig.port,
+      secure: smtpConfig.secure,
+      user: smtpConfig.user,
+      passwordProvided: !!smtpConfig.pass
+    });
+
+    // Verify connection before sending
+    try {
+      await transporter.verify();
+      console.log('SMTP connection verified successfully');
+    } catch (verifyError) {
+      console.error('SMTP connection verification failed:', verifyError);
+      throw new Error(`SMTP connection failed: ${verifyError instanceof Error ? verifyError.message : 'Unknown error'}`);
+    }
 
     // Prepare email
     const mailOptions = {
-      from: `DriftPro <${smtpConfig.user}>`,
+      from: `DriftPro <noreply@driftpro.no>`,
       to: emailData.to,
       subject: emailData.subject,
       html: emailData.html,

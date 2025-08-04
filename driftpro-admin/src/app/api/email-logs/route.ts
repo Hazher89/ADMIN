@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getFirestore, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { getApps, initializeApp } from 'firebase/app';
 
 export const dynamic = 'force-dynamic';
 
@@ -8,9 +9,6 @@ export const dynamic = 'force-dynamic';
  */
 function getDb() {
   try {
-    const { getFirestore } = require('firebase/firestore');
-    const { getApps, initializeApp } = require('firebase/app');
-    
     const apps = getApps();
     if (apps.length === 0) {
       // Initialize Firebase if not already done

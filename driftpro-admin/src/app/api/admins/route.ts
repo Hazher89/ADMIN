@@ -1,35 +1,49 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, getFirestore } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
+import { getApps, initializeApp } from 'firebase/app';
 import { adminEmailService } from '@/lib/admin-email-service';
 
 /**
  * Get Firebase database instance with fallback
  */
 function getDb() {
-  if (db) {
-    return db;
-  }
-  
-  // Try to get Firestore directly if db is not available
   try {
-    const { getApps, initializeApp } = require('firebase/app');
-    const apps = getApps();
+    // Check if Firebase is already initialized
+    let apps = getApps();
     
+    // If no apps exist, initialize Firebase
     if (apps.length === 0) {
-      // Initialize Firebase if not already done
-              const firebaseConfig = {
-          apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-          authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
-          projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
-          storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
-          messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-          appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
-        };
-      initializeApp(firebaseConfig);
+      console.log('Initializing Firebase...');
+      const firebaseConfig = {
+        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
+        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
+        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
+        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
+        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
+      };
+      
+      try {
+        initializeApp(firebaseConfig);
+        console.log('Firebase initialized successfully');
+      } catch (initError) {
+        console.error('Error initializing Firebase:', initError);
+        // If initialization fails, try to get existing app
+        apps = getApps();
+        if (apps.length === 0) {
+          throw new Error('Failed to initialize Firebase and no existing apps found');
+        }
+      }
     }
     
-    return getFirestore();
+    // Get Firestore instance
+    const firestoreDb = getFirestore();
+    if (!firestoreDb) {
+      throw new Error('Failed to get Firestore instance');
+    }
+    
+    console.log('Firestore instance obtained successfully');
+    return firestoreDb;
   } catch (error) {
     console.error('Error getting Firestore instance:', error);
     throw new Error('Firebase database not available. Please check Firebase configuration.');
@@ -47,6 +61,13 @@ export async function GET(request: NextRequest) {
     }
 
     const firestoreDb = getDb();
+    if (!firestoreDb) {
+      console.error('Firestore database not available');
+      return NextResponse.json(
+        { error: 'Database not available. Please check Firebase configuration.' }, 
+        { status: 500 }
+      );
+    }
 
     // Get admins from Firebase
     const adminsQuery = query(
@@ -85,6 +106,13 @@ export async function POST(request: NextRequest) {
     }
 
     const firestoreDb = getDb();
+    if (!firestoreDb) {
+      console.error('Firestore database not available');
+      return NextResponse.json(
+        { error: 'Database not available. Please check Firebase configuration.' }, 
+        { status: 500 }
+      );
+    }
 
     // Check if user already exists with this email
     const existingUserQuery = query(
@@ -200,6 +228,13 @@ export async function PATCH(
     const { role, permissions, name } = body;
 
     const firestoreDb = getDb();
+    if (!firestoreDb) {
+      console.error('Firestore database not available');
+      return NextResponse.json(
+        { error: 'Database not available. Please check Firebase configuration.' }, 
+        { status: 500 }
+      );
+    }
 
     const updates: any = {
       updatedAt: new Date().toISOString()
@@ -235,6 +270,13 @@ export async function DELETE(
 ) {
   try {
     const firestoreDb = getDb();
+    if (!firestoreDb) {
+      console.error('Firestore database not available');
+      return NextResponse.json(
+        { error: 'Database not available. Please check Firebase configuration.' }, 
+        { status: 500 }
+      );
+    }
 
     await deleteDoc(doc(firestoreDb, 'users', params.id));
 

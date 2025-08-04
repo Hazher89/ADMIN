@@ -9,9 +9,6 @@ export const dynamic = 'force-dynamic';
  */
 function getDb() {
   try {
-    const { getFirestore } = require('firebase/firestore');
-    const { getApps, initializeApp } = require('firebase/app');
-    
     const apps = getApps();
     if (apps.length === 0) {
       // Initialize Firebase if not already done
@@ -33,25 +30,35 @@ function getDb() {
   }
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
     const firestoreDb = getDb();
     if (!firestoreDb) {
       return NextResponse.json({ error: 'Database not available' }, { status: 500 });
     }
 
+    // Check if password should be included
+    const url = new URL(request.url);
+    const includePassword = url.searchParams.get('includePassword') === 'true';
+
     const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
     
     if (settingsDoc.exists()) {
       const data = settingsDoc.data();
-      // Don't return sensitive data like SMTP password
-      const { smtpPassword, ...safeData } = data;
-      return NextResponse.json(safeData);
+      
+      if (includePassword) {
+        // Return all data including password
+        return NextResponse.json(data);
+      } else {
+        // Don't return sensitive data like SMTP password
+        const { smtpPassword, ...safeData } = data;
+        return NextResponse.json(safeData);
+      }
     } else {
       // Return default settings
-      return NextResponse.json({
+      const defaultSettings = {
         enabled: true,
-        fromEmail: 'noreply@driftpro.no',
+        fromEmail: 'noreplay@driftpro.no',
         fromName: 'DriftPro System',
         adminSetup: true,
         deviationReports: true,
@@ -60,15 +67,23 @@ export async function GET() {
         notifications: true,
         warnings: true,
         systemAlerts: true,
-        smtpHost: 'smtp.office365.com',
+        smtpHost: 'smtp.domeneshop.no',
         smtpPort: 587,
-        smtpUser: 'noreply@driftpro.no',
+        smtpUser: 'driftpro2',
+        smtpPassword: 'HazGada89!',
         smtpSecure: false,
         retryAttempts: 3,
         retryDelay: 5000,
         maxEmailsPerHour: 100,
         logAllEmails: true
-      });
+      };
+      
+      if (includePassword) {
+        return NextResponse.json(defaultSettings);
+      } else {
+        const { smtpPassword, ...safeData } = defaultSettings;
+        return NextResponse.json(safeData);
+      }
     }
   } catch (error) {
     console.error('Error getting email settings:', error);

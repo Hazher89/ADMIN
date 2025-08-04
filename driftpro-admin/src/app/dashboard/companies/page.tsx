@@ -4,6 +4,8 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService, Company } from '@/lib/firebase-services';
 import { brrgService, BRRGCompany } from '@/lib/brrg-service';
+import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
+import { storage } from '@/lib/firebase';
 import { 
   Building, 
   Plus, 
@@ -23,7 +25,17 @@ import {
   Database,
   ExternalLink,
   RefreshCw,
-  Save
+  Save,
+  Settings,
+  Upload,
+  Image,
+  FileText,
+  Clock,
+  User,
+  Hash,
+  Tag,
+  Shield,
+  FileImage
 } from 'lucide-react';
 
 
@@ -47,8 +59,74 @@ export default function CompaniesPage() {
   // Admin setup state
   const [showAdminSetupModal, setShowAdminSetupModal] = useState(false);
   const [selectedBRRGCompany, setSelectedBRRGCompany] = useState<BRRGCompany | null>(null);
-  const [admins, setAdmins] = useState<Array<{name: string; email: string; phone: string}>>([{name: '', email: '', phone: ''}]);
+  const [admins, setAdmins] = useState<Array<{
+    name: string; 
+    email: string; 
+    phone: string;
+    position: string;
+    department: string;
+    accessLevel: 'full' | 'limited' | 'readonly';
+    notes: string;
+  }>>([{
+    name: '', 
+    email: '', 
+    phone: '',
+    position: '',
+    department: '',
+    accessLevel: 'full',
+    notes: ''
+  }]);
   const [addingCompany, setAddingCompany] = useState(false);
+  
+  // Company details state
+  const [companyDetails, setCompanyDetails] = useState({
+    orgNumber: '',
+    vatNumber: '',
+    contactPerson: {
+      name: '',
+      email: '',
+      phone: '',
+      position: ''
+    },
+    address: {
+      street: '',
+      city: '',
+      postalCode: '',
+      country: 'Norge'
+    },
+    businessHours: {
+      monday: '08:00-17:00',
+      tuesday: '08:00-17:00',
+      wednesday: '08:00-17:00',
+      thursday: '08:00-17:00',
+      friday: '08:00-17:00',
+      saturday: 'Stengt',
+      sunday: 'Stengt'
+    },
+    socialMedia: {
+      linkedin: '',
+      facebook: '',
+      twitter: '',
+      instagram: ''
+    },
+    foundedYear: new Date().getFullYear(),
+    companySize: 'small' as 'micro' | 'small' | 'medium' | 'large',
+    sector: '',
+    certifications: [] as string[],
+    insurance: {
+      provider: '',
+      policyNumber: '',
+      expiryDate: ''
+    },
+    notes: '',
+    tags: [] as string[]
+  });
+  
+  // File upload state
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [documentFiles, setDocumentFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
   
   // Edit and delete state
   const [showEditModal, setShowEditModal] = useState(false);
@@ -68,6 +146,9 @@ export default function CompaniesPage() {
     revenue: '',
     description: ''
   });
+
+  const [showSettingsModal, setShowSettingsModal] = useState<boolean>(false);
+  const [selectedCompanyForSettings, setSelectedCompanyForSettings] = useState<Company | null>(null);
 
   useEffect(() => {
     loadCompanies();
@@ -149,12 +230,39 @@ export default function CompaniesPage() {
 
   const handleAddFromBRRG = async (brrgCompany: BRRGCompany) => {
     setSelectedBRRGCompany(brrgCompany);
+    
+    // Auto-fill company details from BRRG data
+    setCompanyDetails(prev => ({
+      ...prev,
+      orgNumber: brrgCompany.organisasjonsnummer || '',
+      vatNumber: `MVA ${brrgCompany.organisasjonsnummer || ''}`,
+      contactPerson: {
+        ...prev.contactPerson,
+        email: brrgCompany.kontaktinformasjon?.epost || '',
+        phone: brrgCompany.kontaktinformasjon?.telefon || ''
+      },
+      address: {
+        ...prev.address,
+        street: brrgCompany.forretningsadresse?.adresse || '',
+        city: brrgCompany.forretningsadresse?.poststed || '',
+        postalCode: brrgCompany.forretningsadresse?.postnummer || ''
+      }
+    }));
+    
     setShowAdminSetupModal(true);
     setShowBRRGModal(false);
   };
 
   const handleAddAdmin = () => {
-    setAdmins([...admins, {name: '', email: '', phone: ''}]);
+    setAdmins([...admins, {
+      name: '', 
+      email: '', 
+      phone: '',
+      position: '',
+      department: '',
+      accessLevel: 'full',
+      notes: ''
+    }]);
   };
 
   const handleRemoveAdmin = (index: number) => {
@@ -163,10 +271,128 @@ export default function CompaniesPage() {
     }
   };
 
-  const handleAdminChange = (index: number, field: 'name' | 'email' | 'phone', value: string) => {
+  const handleAdminChange = (index: number, field: 'name' | 'email' | 'phone' | 'position' | 'department' | 'accessLevel' | 'notes', value: string) => {
     const newAdmins = [...admins];
-    newAdmins[index][field] = value;
+    if (field === 'accessLevel') {
+      newAdmins[index][field] = value as 'full' | 'limited' | 'readonly';
+    } else {
+      newAdmins[index][field] = value;
+    }
     setAdmins(newAdmins);
+  };
+
+  const handleCompanyDetailsChange = (field: string, value: any) => {
+    setCompanyDetails(prev => ({
+      ...prev,
+      [field]: value
+    }));
+  };
+
+  const handleContactPersonChange = (field: string, value: string) => {
+    setCompanyDetails(prev => ({
+      ...prev,
+      contactPerson: {
+        ...prev.contactPerson,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleAddressChange = (field: string, value: string) => {
+    setCompanyDetails(prev => ({
+      ...prev,
+      address: {
+        ...prev.address,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleBusinessHoursChange = (day: string, value: string) => {
+    setCompanyDetails(prev => ({
+      ...prev,
+      businessHours: {
+        ...prev.businessHours,
+        [day]: value
+      }
+    }));
+  };
+
+  const handleSocialMediaChange = (platform: string, value: string) => {
+    setCompanyDetails(prev => ({
+      ...prev,
+      socialMedia: {
+        ...prev.socialMedia,
+        [platform]: value
+      }
+    }));
+  };
+
+  const handleInsuranceChange = (field: string, value: string) => {
+    setCompanyDetails(prev => ({
+      ...prev,
+      insurance: {
+        ...prev.insurance,
+        [field]: value
+      }
+    }));
+  };
+
+  const handleFileUpload = (type: 'avatar' | 'logo' | 'document', file: File) => {
+    if (type === 'avatar') {
+      setAvatarFile(file);
+    } else if (type === 'logo') {
+      setLogoFile(file);
+    } else if (type === 'document') {
+      setDocumentFiles(prev => [...prev, file]);
+    }
+  };
+
+  const removeDocument = (index: number) => {
+    setDocumentFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadFilesToStorage = async (companyId: string) => {
+    const uploadedFiles: { avatar?: string; logo?: string; documents: string[] } = {
+      documents: []
+    };
+
+    if (!storage) {
+      throw new Error('Firebase Storage not initialized');
+    }
+
+    try {
+      setUploadingFiles(true);
+
+      // Upload avatar
+      if (avatarFile) {
+        const avatarRef = ref(storage, `companies/${companyId}/avatar/${avatarFile.name}`);
+        await uploadBytes(avatarRef, avatarFile);
+        uploadedFiles.avatar = await getDownloadURL(avatarRef);
+      }
+
+      // Upload logo
+      if (logoFile) {
+        const logoRef = ref(storage, `companies/${companyId}/logo/${logoFile.name}`);
+        await uploadBytes(logoRef, logoFile);
+        uploadedFiles.logo = await getDownloadURL(logoRef);
+      }
+
+      // Upload documents
+      for (const docFile of documentFiles) {
+        const docRef = ref(storage, `companies/${companyId}/documents/${docFile.name}`);
+        await uploadBytes(docRef, docFile);
+        const docUrl = await getDownloadURL(docRef);
+        uploadedFiles.documents.push(docUrl);
+      }
+
+      return uploadedFiles;
+    } catch (error) {
+      console.error('Error uploading files:', error);
+      throw error;
+    } finally {
+      setUploadingFiles(false);
+    }
   };
 
   const handleCreateCompanyWithAdmins = async () => {
@@ -191,7 +417,20 @@ export default function CompaniesPage() {
     try {
       setAddingCompany(true);
 
-      // Transform BRRG data to our company format
+      // Upload files first
+      let uploadedFiles: { avatar?: string; logo?: string; documents: string[] } = { documents: [] };
+      if (avatarFile || logoFile || documentFiles.length > 0) {
+        try {
+          // Create a temporary company ID for file upload
+          const tempCompanyId = `temp_${Date.now()}`;
+          uploadedFiles = await uploadFilesToStorage(tempCompanyId);
+        } catch (error) {
+          console.error('Error uploading files:', error);
+          alert('Advarsel: Kunne ikke laste opp filer. Bedriften vil opprettes uten filer.');
+        }
+      }
+
+      // Transform BRRG data to our company format with additional fields
       const newCompany: Omit<Company, 'id' | 'createdAt' | 'updatedAt'> = {
         name: selectedBRRGCompany.navn,
         industry: selectedBRRGCompany.naeringskode1?.beskrivelse || 'Ukjent',
@@ -204,7 +443,23 @@ export default function CompaniesPage() {
         joinedDate: new Date().toISOString(),
         revenue: 'Ikke tilgjengelig',
         description: `${selectedBRRGCompany.navn} - ${selectedBRRGCompany.organisasjonsform?.beskrivelse || 'Bedrift'}`,
-        adminUserId: userProfile?.id || ''
+        adminUserId: userProfile?.id || '',
+        // Additional fields - only include if they have values
+        ...(selectedBRRGCompany.organisasjonsnummer || companyDetails.orgNumber ? { orgNumber: selectedBRRGCompany.organisasjonsnummer || companyDetails.orgNumber } : {}),
+        ...(uploadedFiles.avatar ? { avatar: uploadedFiles.avatar } : {}),
+        ...(uploadedFiles.logo ? { logo: uploadedFiles.logo } : {}),
+        ...(uploadedFiles.documents.length > 0 ? { documents: uploadedFiles.documents } : {}),
+        ...(companyDetails.address.street || companyDetails.address.city ? { address: companyDetails.address } : {}),
+        ...(companyDetails.contactPerson.name || companyDetails.contactPerson.email ? { contactPerson: companyDetails.contactPerson } : {}),
+        ...(Object.values(companyDetails.businessHours).some(hours => hours !== '08:00-17:00' && hours !== 'Stengt') ? { businessHours: companyDetails.businessHours } : {}),
+        ...(Object.values(companyDetails.socialMedia).some(url => url) ? { socialMedia: companyDetails.socialMedia } : {}),
+        ...(companyDetails.foundedYear !== new Date().getFullYear() ? { foundedYear: companyDetails.foundedYear } : {}),
+        ...(companyDetails.companySize !== 'small' ? { companySize: companyDetails.companySize } : {}),
+        ...(companyDetails.sector ? { sector: companyDetails.sector } : {}),
+        ...(companyDetails.certifications.length > 0 ? { certifications: companyDetails.certifications } : {}),
+        ...(companyDetails.insurance.policyNumber || companyDetails.insurance.provider ? { insurance: companyDetails.insurance } : {}),
+        ...(companyDetails.notes ? { notes: companyDetails.notes } : {}),
+        ...(companyDetails.tags.length > 0 ? { tags: companyDetails.tags } : {})
       };
 
       // Add company to Firebase
@@ -242,10 +497,63 @@ export default function CompaniesPage() {
       // Close modals and reset state
       setShowAdminSetupModal(false);
       setSelectedBRRGCompany(null);
-      setAdmins([{name: '', email: '', phone: ''}]);
+      setAdmins([{
+        name: '', 
+        email: '', 
+        phone: '',
+        position: '',
+        department: '',
+        accessLevel: 'full',
+        notes: ''
+      }]);
       setBrrgResults([]);
       setBrrgSearchTerm('');
       setBrrgOrgNumber('');
+      setAvatarFile(null);
+      setLogoFile(null);
+      setDocumentFiles([]);
+      setCompanyDetails({
+        orgNumber: '',
+        vatNumber: '',
+        contactPerson: {
+          name: '',
+          email: '',
+          phone: '',
+          position: ''
+        },
+        address: {
+          street: '',
+          city: '',
+          postalCode: '',
+          country: 'Norge'
+        },
+        businessHours: {
+          monday: '08:00-17:00',
+          tuesday: '08:00-17:00',
+          wednesday: '08:00-17:00',
+          thursday: '08:00-17:00',
+          friday: '08:00-17:00',
+          saturday: 'Stengt',
+          sunday: 'Stengt'
+        },
+        socialMedia: {
+          linkedin: '',
+          facebook: '',
+          twitter: '',
+          instagram: ''
+        },
+        foundedYear: new Date().getFullYear(),
+        companySize: 'small',
+        sector: '',
+        certifications: [],
+        insurance: {
+          provider: '',
+          policyNumber: '',
+          expiryDate: ''
+        },
+        notes: '',
+        tags: []
+      });
       
       // Show detailed results
       const successfulAdmins = adminResults.filter(r => r.success);
@@ -333,10 +641,7 @@ export default function CompaniesPage() {
     }
   };
 
-  const handleDeleteCompany = (company: Company) => {
-    setSelectedCompany(company);
-    setShowDeleteModal(true);
-  };
+
 
   const confirmDeleteCompany = async () => {
     if (!selectedCompany) return;
@@ -388,6 +693,79 @@ export default function CompaniesPage() {
       case 'pending': return <AlertTriangle style={{ width: '16px', height: '16px', color: '#f59e0b' }} />;
     }
   };
+
+  const handleCompanySettings = (company: Company) => {
+    setSelectedCompanyForSettings(company);
+    setShowSettingsModal(true);
+  };
+
+  const handleResetAdminPassword = async (company: Company) => {
+    if (!company.adminUserId) {
+      alert('Ingen admin bruker funnet for denne bedriften.');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      const response = await fetch('/api/send-password-setup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          companyId: company.id,
+          adminUserId: company.adminUserId,
+        }),
+      });
+
+      if (response.ok) {
+        alert(`Passord-tilbakestilling sendt til admin for ${company.name}`);
+      } else {
+        const error = await response.json();
+        alert(`Feil: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error resetting admin password:', error);
+      alert('Feil ved tilbakestilling av passord');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleDeactivateCompany = async (company: Company) => {
+    if (!confirm(`Er du sikker på at du vil deaktivere ${company.name}?`)) {
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Update company status to inactive
+      await firebaseService.updateCompany(company.id, { status: 'inactive' });
+      
+      // Update local state
+      setCompanies(companies.map(c => 
+        c.id === company.id ? { ...c, status: 'inactive' } : c
+      ));
+      
+      alert(`Bedrift ${company.name} er nå deaktivert.`);
+    } catch (error) {
+      console.error('Error deactivating company:', error);
+      alert('Feil ved deaktivering av bedrift: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleViewEmployees = (company: Company) => {
+    // Store selected company in localStorage for employees page
+    localStorage.setItem('selectedCompanyForEmployees', JSON.stringify(company));
+    // Navigate to employees page
+    window.location.href = '/dashboard/employees';
+  };
+
+
 
   return (
     <div>
@@ -443,11 +821,11 @@ export default function CompaniesPage() {
             value={selectedIndustry}
             onChange={(e) => setSelectedIndustry(e.target.value)}
           >
-            {industries.map(industry => (
-              <option key={industry} value={industry}>
-                {industry === 'all' ? 'Alle bransjer' : industry}
-              </option>
-            ))}
+                            {industries.map((industry, index) => (
+                  <option key={industry || `industry-${index}`} value={industry}>
+                    {industry === 'all' ? 'Alle bransjer' : industry}
+                  </option>
+                ))}
           </select>
 
           <select
@@ -456,8 +834,8 @@ export default function CompaniesPage() {
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
           >
-            {statuses.map(status => (
-              <option key={status} value={status}>
+            {statuses.map((status, index) => (
+              <option key={status || `status-${index}`} value={status}>
                 {status === 'all' ? 'Alle statuser' : 
                  status === 'active' ? 'Aktive' :
                  status === 'inactive' ? 'Inaktive' : 'Ventende'}
@@ -469,8 +847,8 @@ export default function CompaniesPage() {
 
       {/* Companies Grid */}
       <div className="grid grid-cols-3">
-        {filteredCompanies.map((company) => (
-          <div key={company.id} className="card">
+                        {filteredCompanies.map((company, index) => (
+                  <div key={company.id || `company-${index}`} className="card">
             <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
               <div className="card-icon">
                 <Building />
@@ -488,9 +866,19 @@ export default function CompaniesPage() {
                   {company.description}
                 </p>
               </div>
-              <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
-                <MoreHorizontal style={{ width: '16px', height: '16px' }} />
-              </button>
+                              <div className="flex gap-2">
+                  <button
+                    className="btn btn-secondary"
+                    style={{
+                      fontSize: '0.75rem',
+                      padding: '0.25rem 0.5rem'
+                    }}
+                    onClick={() => handleCompanySettings(company)}
+                  >
+                    <Settings style={{ width: '14px', height: '14px' }} />
+                    Innstillinger
+                  </button>
+                </div>
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
@@ -556,22 +944,15 @@ export default function CompaniesPage() {
                 <Edit style={{ width: '14px', height: '14px' }} />
                 Rediger
               </button>
-              <button className="btn btn-secondary" style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}>
+              <button 
+                className="btn btn-secondary" 
+                style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                onClick={() => handleViewEmployees(company)}
+              >
                 <Users style={{ width: '14px', height: '14px' }} />
                 Ansatte
               </button>
-              <button 
-                className="btn btn-secondary" 
-                style={{ 
-                  fontSize: '0.75rem', 
-                  padding: '0.25rem 0.5rem',
-                  color: '#ef4444',
-                  borderColor: '#ef4444'
-                }}
-                onClick={() => handleDeleteCompany(company)}
-              >
-                <Trash2 style={{ width: '14px', height: '14px' }} />
-              </button>
+
             </div>
           </div>
         ))}
@@ -770,7 +1151,7 @@ export default function CompaniesPage() {
                 </h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                   {brrgResults.map((company, index) => (
-                    <div key={index} style={{
+                    <div key={company.organisasjonsnummer || `brrg-${index}`} style={{
                       border: '1px solid var(--gray-200)',
                       borderRadius: 'var(--radius-lg)',
                       padding: '1.5rem',
@@ -869,7 +1250,7 @@ export default function CompaniesPage() {
             background: 'var(--white)',
             borderRadius: 'var(--radius-lg)',
             padding: '2rem',
-            maxWidth: '600px',
+            maxWidth: '800px',
             width: '90%',
             maxHeight: '90vh',
             overflow: 'auto'
@@ -877,11 +1258,11 @@ export default function CompaniesPage() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <div>
                 <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
-                  <Users style={{ width: '24px', height: '24px', marginRight: '0.5rem' }} />
-                  Legg til admin for {selectedBRRGCompany.navn}
+                  <Building style={{ width: '24px', height: '24px', marginRight: '0.5rem' }} />
+                  Opprett bedrift: {selectedBRRGCompany.navn}
                 </h2>
                 <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)' }}>
-                  Velg hvem som skal være admin for denne bedriften.
+                  Fyll ut bedriftsinformasjon og legg til administratorer.
                 </p>
               </div>
               <button
@@ -890,51 +1271,373 @@ export default function CompaniesPage() {
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
-                  padding: '0.5rem'
+                  padding: '0.5rem',
+                  fontSize: '1.5rem',
+                  color: 'var(--gray-400)'
                 }}
               >
-                <MoreHorizontal style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
+                ✕
               </button>
             </div>
 
+            {/* Company Information Section */}
             <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', marginBottom: '1rem' }}>
-                Administrerte personer ({admins.length})
+              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Building style={{ width: '20px', height: '20px' }} />
+                Bedriftsinformasjon
               </h3>
-              {admins.map((admin, index) => (
-                <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.75rem' }}>
+              
+              {/* File Upload Section */}
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h4 style={{ fontSize: 'var(--font-size-base)', fontWeight: '600', marginBottom: '0.75rem' }}>Logo og bilder</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>
+                      <Image style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
+                      Bedriftslogo
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload('logo', e.target.files[0])}
+                      style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>
+                      <FileImage style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
+                      Profilbilde
+                    </label>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={(e) => e.target.files?.[0] && handleFileUpload('avatar', e.target.files[0])}
+                      style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    />
+                  </div>
+                </div>
+                
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>
+                    <FileText style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
+                    Dokumenter (PDF, DOC, etc.)
+                  </label>
+                  <input
+                    type="file"
+                    multiple
+                    accept=".pdf,.doc,.docx,.txt,.jpg,.jpeg,.png"
+                    onChange={(e) => {
+                      if (e.target.files) {
+                        Array.from(e.target.files).forEach(file => handleFileUpload('document', file));
+                      }
+                    }}
+                    style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  {documentFiles.length > 0 && (
+                    <div style={{ marginTop: '0.5rem' }}>
+                      <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Valgte filer:</p>
+                      {documentFiles.map((file, index) => (
+                        <div key={`file-${file.name}-${index}`} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                          <FileText style={{ width: '14px', height: '14px', color: 'var(--gray-500)' }} />
+                          <span style={{ fontSize: 'var(--font-size-sm)' }}>{file.name}</span>
+                          <button
+                            onClick={() => removeDocument(index)}
+                            style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer', fontSize: 'var(--font-size-sm)' }}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Basic Information */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>
+                    <Hash style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
+                    Organisasjonsnummer
+                  </label>
+                  <input
+                    type="text"
+                    value={companyDetails.orgNumber}
+                    onChange={(e) => handleCompanyDetailsChange('orgNumber', e.target.value)}
+                    placeholder="123456789"
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>
+                    <Hash style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
+                    MVA-nummer
+                  </label>
+                  <input
+                    type="text"
+                    value={companyDetails.vatNumber}
+                    onChange={(e) => handleCompanyDetailsChange('vatNumber', e.target.value)}
+                    placeholder="MVA 123456789"
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                </div>
+              </div>
+
+              {/* Contact Person */}
+              <div style={{ marginBottom: '1rem' }}>
+                <h4 style={{ fontSize: 'var(--font-size-base)', fontWeight: '600', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <User style={{ width: '16px', height: '16px' }} />
+                  Kontaktperson
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
                   <input
                     type="text"
                     placeholder="Navn"
-                    value={admin.name}
-                    onChange={(e) => handleAdminChange(index, 'name', e.target.value)}
-                    style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    value={companyDetails.contactPerson.name}
+                    onChange={(e) => handleContactPersonChange('name', e.target.value)}
+                    style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Stilling"
+                    value={companyDetails.contactPerson.position}
+                    onChange={(e) => handleContactPersonChange('position', e.target.value)}
+                    style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
                   />
                   <input
                     type="email"
                     placeholder="E-post"
-                    value={admin.email}
-                    onChange={(e) => handleAdminChange(index, 'email', e.target.value)}
-                    style={{ flex: 1, padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    value={companyDetails.contactPerson.email}
+                    onChange={(e) => handleContactPersonChange('email', e.target.value)}
+                    style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
                   />
-                  <button
-                    onClick={() => handleRemoveAdmin(index)}
-                    style={{
-                      padding: '0.5rem 1rem',
-                      background: 'var(--danger)',
-                      color: 'var(--white)',
-                      border: 'none',
-                      borderRadius: 'var(--radius-md)',
-                      cursor: 'pointer',
-                      fontSize: 'var(--font-size-sm)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.5rem'
-                    }}
+                  <input
+                    type="tel"
+                    placeholder="Telefon"
+                    value={companyDetails.contactPerson.phone}
+                    onChange={(e) => handleContactPersonChange('phone', e.target.value)}
+                    style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                </div>
+              </div>
+
+              {/* Address */}
+              <div style={{ marginBottom: '1rem' }}>
+                <h4 style={{ fontSize: 'var(--font-size-base)', fontWeight: '600', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <MapPin style={{ width: '16px', height: '16px' }} />
+                  Adresse
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <input
+                    type="text"
+                    placeholder="Gateadresse"
+                    value={companyDetails.address.street}
+                    onChange={(e) => handleAddressChange('street', e.target.value)}
+                    style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Postnummer"
+                    value={companyDetails.address.postalCode}
+                    onChange={(e) => handleAddressChange('postalCode', e.target.value)}
+                    style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="By"
+                    value={companyDetails.address.city}
+                    onChange={(e) => handleAddressChange('city', e.target.value)}
+                    style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                  <input
+                    type="text"
+                    placeholder="Land"
+                    value={companyDetails.address.country}
+                    onChange={(e) => handleAddressChange('country', e.target.value)}
+                    style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                </div>
+              </div>
+
+              {/* Business Hours */}
+              <div style={{ marginBottom: '1rem' }}>
+                <h4 style={{ fontSize: 'var(--font-size-base)', fontWeight: '600', marginBottom: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Clock style={{ width: '16px', height: '16px' }} />
+                  Åpningstider
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: '0.75rem' }}>
+                  {Object.entries(companyDetails.businessHours).map(([day, hours]) => (
+                    <div key={day}>
+                      <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: 'var(--font-size-sm)', fontWeight: '500', textTransform: 'capitalize' }}>
+                        {day === 'monday' ? 'Mandag' : 
+                         day === 'tuesday' ? 'Tirsdag' :
+                         day === 'wednesday' ? 'Onsdag' :
+                         day === 'thursday' ? 'Torsdag' :
+                         day === 'friday' ? 'Fredag' :
+                         day === 'saturday' ? 'Lørdag' : 'Søndag'}
+                      </label>
+                      <input
+                        type="text"
+                        value={hours}
+                        onChange={(e) => handleBusinessHoursChange(day, e.target.value)}
+                        placeholder="08:00-17:00"
+                        style={{ width: '100%', padding: '0.5rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)', fontSize: 'var(--font-size-sm)' }}
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>
+                    <Calendar style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
+                    Etableringsår
+                  </label>
+                  <input
+                    type="number"
+                    value={companyDetails.foundedYear}
+                    onChange={(e) => handleCompanyDetailsChange('foundedYear', parseInt(e.target.value))}
+                    min="1900"
+                    max={new Date().getFullYear()}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>
+                    <Building style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
+                    Bedriftsstørrelse
+                  </label>
+                  <select
+                    value={companyDetails.companySize}
+                    onChange={(e) => handleCompanyDetailsChange('companySize', e.target.value)}
+                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
                   >
-                    <Trash2 style={{ width: '14px', height: '14px' }} />
-                    Fjern
-                  </button>
+                    <option value="micro">Mikro (1-9 ansatte)</option>
+                    <option value="small">Liten (10-49 ansatte)</option>
+                    <option value="medium">Mellomstor (50-249 ansatte)</option>
+                    <option value="large">Stor (250+ ansatte)</option>
+                  </select>
+                </div>
+              </div>
+
+              {/* Notes */}
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>
+                  <FileText style={{ width: '16px', height: '16px', marginRight: '0.25rem' }} />
+                  Notater
+                </label>
+                <textarea
+                  value={companyDetails.notes}
+                  onChange={(e) => handleCompanyDetailsChange('notes', e.target.value)}
+                  placeholder="Ekstra informasjon om bedriften..."
+                  rows={3}
+                  style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)', resize: 'vertical' }}
+                />
+              </div>
+            </div>
+
+            {/* Administrators Section */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Users style={{ width: '20px', height: '20px' }} />
+                Administratorer ({admins.length})
+              </h3>
+              {admins.map((admin, index) => (
+                <div key={`admin-${index}`} style={{ 
+                  border: '1px solid var(--gray-200)', 
+                  borderRadius: 'var(--radius-md)', 
+                  padding: '1rem', 
+                  marginBottom: '1rem',
+                  background: 'var(--gray-50)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem' }}>
+                    <h4 style={{ fontSize: 'var(--font-size-base)', fontWeight: '600', color: 'var(--gray-700)' }}>
+                      Administrator {index + 1}
+                    </h4>
+                    <button
+                      onClick={() => handleRemoveAdmin(index)}
+                      style={{
+                        padding: '0.5rem',
+                        background: 'var(--danger)',
+                        color: 'var(--white)',
+                        border: 'none',
+                        borderRadius: 'var(--radius-md)',
+                        cursor: 'pointer',
+                        fontSize: 'var(--font-size-sm)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem'
+                      }}
+                    >
+                      <Trash2 style={{ width: '14px', height: '14px' }} />
+                      Fjern
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                    <input
+                      type="text"
+                      placeholder="Navn *"
+                      value={admin.name}
+                      onChange={(e) => handleAdminChange(index, 'name', e.target.value)}
+                      style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    />
+                    <input
+                      type="email"
+                      placeholder="E-post *"
+                      value={admin.email}
+                      onChange={(e) => handleAdminChange(index, 'email', e.target.value)}
+                      style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    />
+                    <input
+                      type="tel"
+                      placeholder="Telefon"
+                      value={admin.phone}
+                      onChange={(e) => handleAdminChange(index, 'phone', e.target.value)}
+                      style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Stilling"
+                      value={admin.position}
+                      onChange={(e) => handleAdminChange(index, 'position', e.target.value)}
+                      style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    />
+                    <input
+                      type="text"
+                      placeholder="Avdeling"
+                      value={admin.department}
+                      onChange={(e) => handleAdminChange(index, 'department', e.target.value)}
+                      style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    />
+                    <select
+                      value={admin.accessLevel}
+                      onChange={(e) => handleAdminChange(index, 'accessLevel', e.target.value)}
+                      style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    >
+                      <option value="full">Full tilgang</option>
+                      <option value="limited">Begrenset tilgang</option>
+                      <option value="readonly">Kun lese</option>
+                    </select>
+                  </div>
+                  
+                  <div>
+                    <textarea
+                      placeholder="Notater om administrator (valgfritt)"
+                      value={admin.notes}
+                      onChange={(e) => handleAdminChange(index, 'notes', e.target.value)}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        border: '1px solid var(--gray-300)', 
+                        borderRadius: 'var(--radius-md)',
+                        minHeight: '80px',
+                        resize: 'vertical'
+                      }}
+                    />
+                  </div>
                 </div>
               ))}
               <button
@@ -952,32 +1655,46 @@ export default function CompaniesPage() {
                 }}
               >
                 <Plus style={{ width: '16px', height: '16px' }} />
-                Legg til ny admin
+                Legg til ny administrator
               </button>
             </div>
 
-            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem' }}>
+            {/* Action Buttons */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '2rem' }}>
               <button
-                onClick={handleCreateCompanyWithAdmins}
-                disabled={addingCompany}
+                onClick={() => setShowAdminSetupModal(false)}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: addingCompany ? 'var(--gray-300)' : 'var(--primary)',
-                  color: addingCompany ? 'var(--gray-600)' : 'var(--white)',
+                  background: 'var(--gray-200)',
+                  color: 'var(--gray-700)',
                   border: 'none',
                   borderRadius: 'var(--radius-md)',
-                  cursor: addingCompany ? 'not-allowed' : 'pointer',
+                  cursor: 'pointer'
+                }}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleCreateCompanyWithAdmins}
+                disabled={addingCompany || uploadingFiles}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: (addingCompany || uploadingFiles) ? 'var(--gray-300)' : 'var(--primary)',
+                  color: (addingCompany || uploadingFiles) ? 'var(--gray-600)' : 'var(--white)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: (addingCompany || uploadingFiles) ? 'not-allowed' : 'pointer',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem'
                 }}
               >
-                {addingCompany ? (
+                {(addingCompany || uploadingFiles) ? (
                   <RefreshCw style={{ width: '16px', height: '16px' }} />
                 ) : (
                   <CheckCircle style={{ width: '16px', height: '16px' }} />
                 )}
-                {addingCompany ? 'Oppretter bedrift...' : 'Opprett bedrift med admin'}
+                {(addingCompany || uploadingFiles) ? 'Oppretter bedrift...' : 'Opprett bedrift'}
               </button>
             </div>
           </div>
@@ -1311,7 +2028,24 @@ export default function CompaniesPage() {
                 Er du sikker på at du vil slette <strong>{selectedCompany.name}</strong>?
               </p>
               <p style={{ color: 'var(--danger)', fontSize: 'var(--font-size-sm)', marginTop: '1rem', fontWeight: '500' }}>
-                ⚠️ Dette vil også slette alle brukere, dokumenter, avvik, chat-meldinger og annen data tilknyttet denne bedriften fra Firebase.
+                ⚠️ Dette vil slette ALL data tilknyttet denne bedriften fra Firebase:
+              </p>
+              <ul style={{ color: 'var(--danger)', fontSize: 'var(--font-size-sm)', marginTop: '0.5rem', textAlign: 'left', paddingLeft: '1rem' }}>
+                <li>Brukere og ansatte</li>
+                <li>Avdelinger</li>
+                <li>Dokumenter</li>
+                <li>Avvik og rapporter</li>
+                <li>Vakter og timeclock</li>
+                <li>Ferie og fravær</li>
+                <li>Chat-meldinger</li>
+                <li>Undersøkelser og svar</li>
+                <li>Partnere</li>
+                <li>Innstillinger</li>
+                <li>Aktiviteter og varsler</li>
+                <li>Admin tokens</li>
+              </ul>
+              <p style={{ color: 'var(--danger)', fontSize: 'var(--font-size-sm)', marginTop: '1rem', fontWeight: '700' }}>
+                🚨 DETTE KAN IKKE ANGREES!
               </p>
             </div>
 
@@ -1364,6 +2098,182 @@ export default function CompaniesPage() {
                 }}
               >
                 Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Settings Modal */}
+      {showSettingsModal && selectedCompanyForSettings && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '90%'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                  <Settings style={{ width: '24px', height: '24px', marginRight: '0.5rem' }} />
+                  Innstillinger for {selectedCompanyForSettings.name}
+                </h2>
+                <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)' }}>
+                  Administrer bedriftsinnstillinger og handlinger
+                </p>
+              </div>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  fontSize: '1.5rem',
+                  color: 'var(--gray-400)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <button
+                onClick={() => {
+                  handleResetAdminPassword(selectedCompanyForSettings);
+                  setShowSettingsModal(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  background: 'var(--blue-50)',
+                  border: '1px solid var(--blue-200)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--blue-700)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all var(--transition-normal)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--blue-100)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--blue-50)';
+                }}
+              >
+                🔑 Tilbakestill admin passord
+              </button>
+              
+              <button
+                onClick={() => {
+                  handleDeactivateCompany(selectedCompanyForSettings);
+                  setShowSettingsModal(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  background: 'var(--yellow-50)',
+                  border: '1px solid var(--yellow-200)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--yellow-700)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all var(--transition-normal)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--yellow-100)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--yellow-50)';
+                }}
+              >
+                ⚠️ Deaktiver bedrift
+              </button>
+              
+              <button
+                onClick={() => {
+                  setSelectedCompany(selectedCompanyForSettings);
+                  setShowDeleteModal(true);
+                  setShowSettingsModal(false);
+                }}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  background: 'var(--red-50)',
+                  border: '1px solid var(--red-200)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--red-700)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all var(--transition-normal)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--red-100)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--red-50)';
+                }}
+              >
+                🗑️ Slett bedrift
+              </button>
+              
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                style={{
+                  width: '100%',
+                  padding: '1rem',
+                  background: 'var(--gray-50)',
+                  border: '1px solid var(--gray-200)',
+                  borderRadius: 'var(--radius-md)',
+                  color: 'var(--gray-700)',
+                  cursor: 'pointer',
+                  textAlign: 'left',
+                  fontSize: 'var(--font-size-base)',
+                  fontWeight: '500',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  transition: 'all var(--transition-normal)'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'var(--gray-100)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'var(--gray-50)';
+                }}
+              >
+                ❌ Avbryt
               </button>
             </div>
           </div>

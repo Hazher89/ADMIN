@@ -86,7 +86,7 @@ export interface Deviation {
   id: string;
   title: string;
   description: string;
-  type: 'safety' | 'quality' | 'security' | 'process' | 'other';
+  type: 'safety' | 'quality' | 'security' | 'process' | 'environmental' | 'health' | 'other';
   severity: 'low' | 'medium' | 'high' | 'critical';
   status: 'reported' | 'investigating' | 'resolved' | 'closed';
   reportedBy: string;
@@ -94,6 +94,16 @@ export interface Deviation {
   departmentId: string;
   companyId: string;
   location?: string;
+  equipment?: string;
+  cost?: number;
+  riskAssessment?: string;
+  immediateActions?: string;
+  rootCause?: string;
+  correctiveActions?: string;
+  preventiveActions?: string;
+  witnesses?: string[];
+  investigationRequired?: boolean;
+  regulatoryReport?: boolean;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
@@ -185,6 +195,50 @@ export interface Company {
   adminUserId: string;
   createdAt: string;
   updatedAt: string;
+  // New optional fields
+  avatar?: string;
+  logo?: string;
+  orgNumber?: string;
+  vatNumber?: string;
+  address?: {
+    street: string;
+    city: string;
+    postalCode: string;
+    country: string;
+  };
+  contactPerson?: {
+    name: string;
+    email: string;
+    phone: string;
+    position: string;
+  };
+  businessHours?: {
+    monday: string;
+    tuesday: string;
+    wednesday: string;
+    thursday: string;
+    friday: string;
+    saturday: string;
+    sunday: string;
+  };
+  socialMedia?: {
+    linkedin?: string;
+    facebook?: string;
+    twitter?: string;
+    instagram?: string;
+  };
+  documents?: string[]; // Array of document IDs
+  tags?: string[];
+  notes?: string;
+  foundedYear?: number;
+  companySize?: 'micro' | 'small' | 'medium' | 'large';
+  sector?: string;
+  certifications?: string[];
+  insurance?: {
+    provider: string;
+    policyNumber: string;
+    expiryDate: string;
+  };
 }
 
 export interface Activity {
@@ -1127,6 +1181,50 @@ class FirebaseService {
         return deleteDoc(doc(db, 'activities', activityDoc.id));
       });
 
+      // Delete all chats associated with this company
+      const chatsQuery = query(collection(db, 'chats'), where('companyId', '==', id));
+      const chatsSnapshot = await getDocs(chatsQuery);
+      const chatDeletePromises = chatsSnapshot.docs.map(async (chatDoc) => {
+        // Delete all messages in this chat first
+        const messagesQuery = query(collection(db, `chats/${chatDoc.id}/messages`));
+        const messagesSnapshot = await getDocs(messagesQuery);
+        const messageDeletePromises = messagesSnapshot.docs.map(async (messageDoc) => {
+          return deleteDoc(doc(db, `chats/${chatDoc.id}/messages`, messageDoc.id));
+        });
+        await Promise.all(messageDeletePromises);
+        
+        // Then delete the chat itself
+        return deleteDoc(doc(db, 'chats', chatDoc.id));
+      });
+
+      // Delete all survey responses associated with this company
+      const surveyResponsesQuery = query(collection(db, 'surveyResponses'), where('companyId', '==', id));
+      const surveyResponsesSnapshot = await getDocs(surveyResponsesQuery);
+      const surveyResponseDeletePromises = surveyResponsesSnapshot.docs.map(async (responseDoc) => {
+        return deleteDoc(doc(db, 'surveyResponses', responseDoc.id));
+      });
+
+      // Delete all admin setup tokens associated with this company
+      const adminSetupTokensQuery = query(collection(db, 'adminSetupTokens'), where('companyId', '==', id));
+      const adminSetupTokensSnapshot = await getDocs(adminSetupTokensQuery);
+      const adminSetupTokenDeletePromises = adminSetupTokensSnapshot.docs.map(async (tokenDoc) => {
+        return deleteDoc(doc(db, 'adminSetupTokens', tokenDoc.id));
+      });
+
+      // Delete all absences associated with this company
+      const absencesQuery = query(collection(db, 'absences'), where('companyId', '==', id));
+      const absencesSnapshot = await getDocs(absencesQuery);
+      const absenceDeletePromises = absencesSnapshot.docs.map(async (absenceDoc) => {
+        return deleteDoc(doc(db, 'absences', absenceDoc.id));
+      });
+
+      // Delete all notifications associated with this company
+      const notificationsQuery = query(collection(db, 'notifications'), where('companyId', '==', id));
+      const notificationsSnapshot = await getDocs(notificationsQuery);
+      const notificationDeletePromises = notificationsSnapshot.docs.map(async (notificationDoc) => {
+        return deleteDoc(doc(db, 'notifications', notificationDoc.id));
+      });
+
       // Execute all delete operations
       await Promise.all([
         ...userDeletePromises,
@@ -1139,7 +1237,12 @@ class FirebaseService {
         ...surveyDeletePromises,
         ...partnerDeletePromises,
         ...settingDeletePromises,
-        ...activityDeletePromises
+        ...activityDeletePromises,
+        ...chatDeletePromises,
+        ...surveyResponseDeletePromises,
+        ...adminSetupTokenDeletePromises,
+        ...absenceDeletePromises,
+        ...notificationDeletePromises
       ]);
 
       // Finally, delete the company itself

@@ -1,5 +1,5 @@
 import { addDoc, collection, doc, setDoc, getDoc, updateDoc, getDocs, getFirestore } from 'firebase/firestore';
-import { db } from './firebase';
+import { getApps, initializeApp } from 'firebase/app';
 import { emailService } from './email-service';
 
 export interface AdminSetupToken {
@@ -19,17 +19,13 @@ export class AdminEmailService {
    * Get Firebase database instance with fallback
    */
   private getDb() {
-    if (db) {
-      return db;
-    }
-    
-    // Try to get Firestore directly if db is not available
     try {
-      const { getApps, initializeApp } = require('firebase/app');
-      const apps = getApps();
+      // Check if Firebase is already initialized
+      let apps = getApps();
       
+      // If no apps exist, initialize Firebase
       if (apps.length === 0) {
-        // Initialize Firebase if not already done
+        console.log('Initializing Firebase in admin-email-service...');
         const firebaseConfig = {
           apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
           authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
@@ -38,13 +34,31 @@ export class AdminEmailService {
           messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
           appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
         };
-        initializeApp(firebaseConfig);
+        
+        try {
+          initializeApp(firebaseConfig);
+          console.log('Firebase initialized successfully in admin-email-service');
+        } catch (initError) {
+          console.error('Error initializing Firebase in admin-email-service:', initError);
+          // If initialization fails, try to get existing app
+          apps = getApps();
+          if (apps.length === 0) {
+            throw new Error('Failed to initialize Firebase and no existing apps found');
+          }
+        }
       }
       
-      return getFirestore();
+      // Get Firestore instance
+      const firestoreDb = getFirestore();
+      if (!firestoreDb) {
+        throw new Error('Failed to get Firestore instance');
+      }
+      
+      console.log('Firestore instance obtained successfully in admin-email-service');
+      return firestoreDb;
     } catch (error) {
-      console.error('Error getting Firestore instance:', error);
-      throw new Error('Firebase database not available. Please check Firebase configuration.');
+      console.error('Error getting Firestore instance in admin-email-service:', error);
+      return null;
     }
   }
 
@@ -69,6 +83,9 @@ export class AdminEmailService {
   ): Promise<string> {
     try {
       const firestoreDb = this.getDb();
+      if (!firestoreDb) {
+        throw new Error('Firebase database not available. Please check Firebase configuration.');
+      }
 
       const token = this.generateToken();
       const expiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours from now
@@ -99,6 +116,9 @@ export class AdminEmailService {
   async validateSetupToken(token: string): Promise<AdminSetupToken | null> {
     try {
       const firestoreDb = this.getDb();
+      if (!firestoreDb) {
+        throw new Error('Firebase database not available. Please check Firebase configuration.');
+      }
 
       const tokensQuery = collection(firestoreDb, 'adminSetupTokens');
       const tokenDocs = await getDocs(tokensQuery);
@@ -137,6 +157,9 @@ export class AdminEmailService {
   async markTokenAsUsed(tokenId: string): Promise<void> {
     try {
       const firestoreDb = this.getDb();
+      if (!firestoreDb) {
+        throw new Error('Firebase database not available. Please check Firebase configuration.');
+      }
 
       await updateDoc(doc(firestoreDb, 'adminSetupTokens', tokenId), {
         used: true,
@@ -183,6 +206,9 @@ export class AdminEmailService {
       }
 
       const firestoreDb = this.getDb();
+      if (!firestoreDb) {
+        throw new Error('Firebase database not available. Please check Firebase configuration.');
+      }
 
       // Update user with password
       const usersQuery = collection(firestoreDb, 'users');

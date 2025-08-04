@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     if (providedSettings && providedSettings.smtpHost) {
       // Use settings provided from frontend
       emailSettings = providedSettings;
-      smtpPassword = providedSettings.smtpPassword || process.env.DRIFTPRO_EMAIL_PASSWORD;
+      smtpPassword = providedSettings.smtpPassword || 'HazGada89!';
     } else {
       // Get email settings from Firebase
       const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
@@ -62,22 +62,42 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Email settings not configured' }, { status: 400 });
       }
       emailSettings = settingsDoc.data();
-      smtpPassword = emailSettings.smtpPassword || process.env.DRIFTPRO_EMAIL_PASSWORD;
+      smtpPassword = emailSettings.smtpPassword || 'HazGada89!';
     }
 
     if (!smtpPassword) {
       return NextResponse.json({ error: 'SMTP password not configured' }, { status: 400 });
     }
 
-    // Create transporter
-    const transporter = nodemailer.createTransporter({
-      host: emailSettings.smtpHost || 'smtp.office365.com',
+    // Create transporter with proper Domeneshop configuration
+    const transporter = nodemailer.createTransport({
+              host: emailSettings.smtpHost || 'smtp.domeneshop.no',
       port: emailSettings.smtpPort || 587,
       secure: emailSettings.smtpSecure || false,
       auth: {
-        user: emailSettings.smtpUser || 'noreply@driftpro.no',
+        user: emailSettings.smtpUser || 'driftpro2',
         pass: smtpPassword
-      }
+      },
+      // Domeneshop specific settings
+      tls: {
+        rejectUnauthorized: false,
+        ciphers: 'SSLv3'
+      },
+      // Advanced settings
+      connectionTimeout: (emailSettings.smtpTimeout || 30) * 1000,
+      greetingTimeout: (emailSettings.smtpTimeout || 30) * 1000,
+      socketTimeout: (emailSettings.smtpTimeout || 30) * 1000,
+      // Always enable debug for troubleshooting
+      debug: true,
+      logger: true
+    });
+
+    console.log('SMTP Configuration:', {
+      host: emailSettings.smtpHost,
+      port: emailSettings.smtpPort,
+      secure: emailSettings.smtpSecure,
+      user: emailSettings.smtpUser,
+      passwordProvided: !!smtpPassword
     });
 
     // Verify connection configuration
@@ -171,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     // Send email
     const mailOptions = {
-      from: `"${emailSettings.fromName || 'DriftPro System'}" <${emailSettings.fromEmail || 'noreply@driftpro.no'}>`,
+              from: `"${emailSettings.fromName || 'DriftPro System'}" <${emailSettings.fromEmail || 'noreplay@driftpro.no'}>`,
       to: to,
       subject: subject,
       html: html,
@@ -209,14 +229,14 @@ export async function POST(request: NextRequest) {
       const firestoreDb = getDb();
       if (firestoreDb) {
         await logEmail(firestoreDb, {
-          to: [body?.to || 'unknown'],
+          to: [to || 'unknown'],
           subject: 'Test email failed',
           type: 'test_failed',
           status: 'failed',
           sentAt: new Date().toISOString(),
           error: error instanceof Error ? error.message : 'Unknown error',
           metadata: {
-            testType: body?.type || 'unknown'
+            testType: type || 'unknown'
           }
         });
       }

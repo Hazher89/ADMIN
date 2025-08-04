@@ -1,5 +1,5 @@
-import { addDoc, collection, getFirestore } from 'firebase/firestore';
-import { db } from './firebase';
+import { addDoc, collection, getFirestore, doc, getDoc } from 'firebase/firestore';
+import { getApps, initializeApp } from 'firebase/app';
 
 export interface EmailData {
   to: string;
@@ -32,14 +32,18 @@ export class EmailService {
   };
 
   constructor() {
-    this.baseUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    // Use production URL if available, otherwise fallback to localhost
+    this.baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
+                   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
+                   process.env.NETLIFY_URL ? `https://${process.env.NETLIFY_URL}` :
+                   'http://localhost:3001';
     
-    // Automatic SMTP configuration for noreply@driftpro.no
+    // Default SMTP configuration - will be overridden by settings from Firebase
     this.smtpConfig = {
-      host: 'smtp.office365.com', // Microsoft 365/Outlook
+      host: 'smtp.domeneshop.no',
       port: 587,
-      user: 'noreply@driftpro.no',
-      pass: process.env.DRIFTPRO_EMAIL_PASSWORD || '',
+      user: 'driftpro2',
+      pass: 'HazGada89!',
       secure: false
     };
   }
@@ -48,17 +52,13 @@ export class EmailService {
    * Get Firebase database instance with fallback
    */
   private getDb() {
-    if (db) {
-      return db;
-    }
-    
-    // Try to get Firestore directly if db is not available
     try {
-      const { getApps, initializeApp } = require('firebase/app');
-      const apps = getApps();
+      // Check if Firebase is already initialized
+      let apps = getApps();
       
+      // If no apps exist, initialize Firebase
       if (apps.length === 0) {
-        // Initialize Firebase if not already done
+        console.log('Initializing Firebase in email-service...');
         const firebaseConfig = {
           apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
           authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
@@ -67,13 +67,31 @@ export class EmailService {
           messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
           appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
         };
-        initializeApp(firebaseConfig);
+        
+        try {
+          initializeApp(firebaseConfig);
+          console.log('Firebase initialized successfully in email-service');
+        } catch (initError) {
+          console.error('Error initializing Firebase in email-service:', initError);
+          // If initialization fails, try to get existing app
+          apps = getApps();
+          if (apps.length === 0) {
+            throw new Error('Failed to initialize Firebase and no existing apps found');
+          }
+        }
       }
       
-      return getFirestore();
+      // Get Firestore instance
+      const firestoreDb = getFirestore();
+      if (!firestoreDb) {
+        throw new Error('Failed to get Firestore instance');
+      }
+      
+      console.log('Firestore instance obtained successfully in email-service');
+      return firestoreDb;
     } catch (error) {
-      console.error('Error getting Firestore instance:', error);
-      return null; // Return null instead of throwing to allow graceful fallback
+      console.error('Error getting Firestore instance in email-service:', error);
+      return null;
     }
   }
 
@@ -82,17 +100,42 @@ export class EmailService {
    */
   async sendEmail(emailData: EmailData): Promise<boolean> {
     try {
+      // Always get fresh email settings from Firebase for maximum control
+      const settings = await this.getEmailSettings();
+      
+      // Ensure password is available
+      if (!settings.smtpPassword) {
+        throw new Error('SMTP password not configured. Please set up email settings first.');
+      }
+      
+      // Use settings from Firebase with full control
+      const smtpConfig = {
+        host: settings.smtpHost || this.smtpConfig.host,
+        port: settings.smtpPort || this.smtpConfig.port,
+        user: settings.smtpUser || this.smtpConfig.user,
+        pass: settings.smtpPassword || this.smtpConfig.pass,
+        secure: settings.smtpSecure || this.smtpConfig.secure
+      };
+
+      console.log('Using email settings from Firebase:', {
+        host: smtpConfig.host,
+        port: smtpConfig.port,
+        user: smtpConfig.user,
+        secure: smtpConfig.secure,
+        passwordProvided: !!smtpConfig.pass
+      });
+
       // Log email attempt
       const emailLogId = await this.logEmailAttempt(emailData, 'pending');
 
-      const response = await fetch('/api/send-email', {
+      const response = await fetch(`${this.baseUrl}/api/send-email`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
           ...emailData,
-          smtpConfig: this.smtpConfig
+          smtpConfig
         }),
       });
 
@@ -146,37 +189,167 @@ export class EmailService {
       <head>
         <meta charset="utf-8">
         <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Velkommen til DriftPro</title>
+        <title>Velkommen til DriftPro - Sett opp passord</title>
         <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
-          .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
-          .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
-          .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
-          .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          body { 
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif; 
+            line-height: 1.6; 
+            color: #333; 
+            margin: 0; 
+            padding: 0; 
+            background-color: #f5f5f5;
+          }
+          .container { 
+            max-width: 600px; 
+            margin: 20px auto; 
+            background: white; 
+            border-radius: 12px; 
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1); 
+            overflow: hidden;
+          }
+          .header { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 40px 30px; 
+            text-align: center; 
+          }
+          .header h1 { 
+            margin: 0; 
+            font-size: 28px; 
+            font-weight: 600;
+          }
+          .header .subtitle {
+            margin: 10px 0 0 0;
+            font-size: 16px;
+            opacity: 0.9;
+          }
+          .content { 
+            padding: 40px 30px; 
+          }
+          .welcome-text {
+            font-size: 18px;
+            margin-bottom: 25px;
+            color: #2c3e50;
+          }
+          .company-info {
+            background: #f8f9fa;
+            border-left: 4px solid #667eea;
+            padding: 20px;
+            margin: 25px 0;
+            border-radius: 0 8px 8px 0;
+          }
+          .button-container {
+            text-align: center;
+            margin: 35px 0;
+          }
+          .button { 
+            display: inline-block; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            color: white; 
+            padding: 18px 36px; 
+            text-decoration: none; 
+            border-radius: 8px; 
+            font-weight: 600;
+            font-size: 16px;
+            box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);
+            transition: all 0.3s ease;
+          }
+          .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 16px rgba(102, 126, 234, 0.4);
+          }
+          .warning { 
+            background: #fff3cd; 
+            border: 1px solid #ffeaa7; 
+            padding: 20px; 
+            border-radius: 8px; 
+            margin: 25px 0;
+            border-left: 4px solid #ffc107;
+          }
+          .warning strong {
+            color: #856404;
+          }
+          .footer { 
+            text-align: center; 
+            margin-top: 40px; 
+            padding-top: 30px;
+            border-top: 1px solid #eee;
+            color: #666; 
+            font-size: 14px; 
+          }
+          .footer .logo {
+            font-size: 20px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 10px;
+          }
+          .security-note {
+            background: #e8f5e8;
+            border: 1px solid #c3e6c3;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+            font-size: 14px;
+            color: #2d5a2d;
+          }
+          .manual-link {
+            margin-top: 20px;
+            padding: 15px;
+            background: #f8f9fa;
+            border-radius: 8px;
+            font-size: 14px;
+            word-break: break-all;
+          }
         </style>
       </head>
       <body>
         <div class="container">
           <div class="header">
             <h1>🚀 Velkommen til DriftPro</h1>
+            <p class="subtitle">Din bedriftsadministrasjonsplattform</p>
           </div>
           <div class="content">
-            <h2>Hei ${adminName}!</h2>
-            <p>Du har blitt utnevnt som administrator for <strong>${companyName}</strong> på DriftPro.</p>
-            <p>For å komme i gang, må du sette opp passordet ditt:</p>
-            <div style="text-align: center;">
-              <a href="${setupUrl}" class="button">🔐 Sett opp passord</a>
+            <div class="welcome-text">
+              <strong>Hei ${adminName}!</strong>
             </div>
+            
+            <p>Du har blitt utnevnt som <strong>administrator</strong> for bedriften din på DriftPro.</p>
+            
+            <div class="company-info">
+              <strong>Bedrift:</strong> ${companyName}<br>
+              <strong>Rolle:</strong> Administrator<br>
+              <strong>E-post:</strong> ${email}
+            </div>
+            
+            <p>For å komme i gang med å administrere bedriften din, må du først sette opp et sikkert passord:</p>
+            
+            <div class="button-container">
+              <a href="${setupUrl}" class="button">🔐 Sett opp passord nå</a>
+            </div>
+            
             <div class="warning">
-              <strong>⚠️ Viktig:</strong> Denne lenken utløper om 24 timer av sikkerhetsgrunner.
+              <strong>⚠️ Viktig:</strong> Denne lenken utløper om <strong>24 timer</strong> av sikkerhetsgrunner.
             </div>
-            <p>Hvis du ikke forventet denne e-posten, kan du trygt ignorere den.</p>
+            
+            <div class="security-note">
+              <strong>🔒 Sikkerhet:</strong> Passordet ditt vil bli kryptert og lagret sikkert i vårt system.
+            </div>
+            
+            <div class="manual-link">
+              <strong>Hvis knappen ikke fungerer,</strong> kopier og lim inn denne lenken i nettleseren din:<br>
+              <a href="${setupUrl}" style="color: #667eea;">${setupUrl}</a>
+            </div>
+            
+            <p style="margin-top: 30px; color: #666;">
+              Hvis du ikke forventet denne e-posten eller har spørsmål, kan du trygt ignorere den eller kontakte vår support.
+            </p>
+            
             <div class="footer">
-              <p>Med vennlig hilsen,<br><strong>DriftPro Team</strong></p>
-              <p style="font-size: 12px; color: #999;">
-                Dette er en automatisk e-post. Vennligst ikke svar på denne meldingen.
+              <div class="logo">DriftPro</div>
+              <p>Din bedriftsadministrasjonsplattform</p>
+              <p style="font-size: 12px; color: #999; margin-top: 20px;">
+                Dette er en automatisk e-post. Vennligst ikke svar på denne meldingen.<br>
+                © 2025 DriftPro. Alle rettigheter forbeholdt.
               </p>
             </div>
           </div>
@@ -185,10 +358,18 @@ export class EmailService {
       </html>
     `;
 
-    // Replace template variables
+    // Replace template variables - handle all syntax formats
+    html = html.replace(/\$\{adminName\}/g, adminName);
+    html = html.replace(/\$\{companyName\}/g, companyName);
+    html = html.replace(/\$\{email\}/g, email);
+    html = html.replace(/\$\{setupUrl\}/g, setupUrl);
     html = html.replace(/\{\{adminName\}\}/g, adminName);
     html = html.replace(/\{\{companyName\}\}/g, companyName);
     html = html.replace(/\{\{setupUrl\}\}/g, setupUrl);
+    html = html.replace(/\[adminName\]/g, adminName);
+    html = html.replace(/\[companyName\]/g, companyName);
+    html = html.replace(/\[email\]/g, email);
+    html = html.replace(/\[setupUrl\]/g, setupUrl);
 
     const emailData: EmailData = {
       to: email,
@@ -260,6 +441,89 @@ export class EmailService {
       subject: subject,
       type: 'notification',
       html: html
+    };
+
+    return this.sendEmail(emailData);
+  }
+
+  /**
+   * Send password reset email
+   */
+  async sendPasswordResetEmail(
+    email: string,
+    resetToken: string
+  ): Promise<boolean> {
+    // Check if password reset emails are enabled
+    const settings = await this.getEmailSettings();
+    if (!settings.enabled || !settings.notifications) {
+      console.log('Password reset emails are disabled');
+      return false;
+    }
+
+    const resetUrl = `${this.baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    
+    const emailData: EmailData = {
+      to: email,
+      subject: 'Tilbakestill passord - DriftPro',
+      type: 'notification',
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Tilbakestill passord - DriftPro</title>
+          <style>
+            body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+            .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+            .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; border-radius: 10px 10px 0 0; }
+            .content { background: #f9f9f9; padding: 30px; border-radius: 0 0 10px 10px; }
+            .button { display: inline-block; background: #667eea; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; margin: 20px 0; }
+            .footer { text-align: center; margin-top: 30px; color: #666; font-size: 14px; }
+            .warning { background: #fff3cd; border: 1px solid #ffeaa7; padding: 15px; border-radius: 5px; margin: 20px 0; }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="header">
+              <h1>🔐 Tilbakestill passord</h1>
+            </div>
+            <div class="content">
+              <h2>Hei!</h2>
+              <p>Du har bedt om å tilbakestille passordet ditt for DriftPro.</p>
+              <p>Klikk på knappen nedenfor for å sette et nytt passord:</p>
+              <div style="text-align: center;">
+                <a href="${resetUrl}" class="button">Tilbakestill passord</a>
+              </div>
+              <div class="warning">
+                <strong>⚠️ Viktig:</strong> Denne lenken utløper om 1 time av sikkerhetsgrunner.
+              </div>
+              <p>Hvis du ikke ba om å tilbakestille passordet, kan du trygt ignorere denne e-posten.</p>
+              <div class="footer">
+                <p>Med vennlig hilsen,<br>DriftPro Team</p>
+              </div>
+            </div>
+          </div>
+        </body>
+        </html>
+      `,
+      text: `
+        Tilbakestill passord - DriftPro
+
+        Hei!
+
+        Du har bedt om å tilbakestille passordet ditt for DriftPro.
+
+        Klikk på lenken nedenfor for å sette et nytt passord:
+        ${resetUrl}
+
+        ⚠️ Viktig: Denne lenken utløper om 1 time av sikkerhetsgrunner.
+
+        Hvis du ikke ba om å tilbakestille passordet, kan du trygt ignorere denne e-posten.
+
+        Med vennlig hilsen,
+        DriftPro Team
+      `
     };
 
     return this.sendEmail(emailData);
@@ -440,7 +704,7 @@ export class EmailService {
         status,
         sentAt: new Date().toISOString(),
         metadata: {
-          textVersion: emailData.text
+          textVersion: emailData.text || null
         }
       };
 
@@ -508,11 +772,15 @@ export class EmailService {
         return { enabled: true, adminSetup: true, notifications: true, userWelcome: true, deviationReports: true };
       }
 
-      const { doc, getDoc } = require('firebase/firestore');
       const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
       
       if (settingsDoc.exists()) {
-        return settingsDoc.data();
+        const data = settingsDoc.data();
+        // Include SMTP password for internal use
+        return {
+          ...data,
+          smtpPassword: data.smtpPassword || ''
+        };
       } else {
         // Return default settings
         return {
@@ -523,7 +791,12 @@ export class EmailService {
           deviationReports: true,
           deviationResolved: true,
           warnings: true,
-          systemAlerts: true
+          systemAlerts: true,
+          smtpHost: 'smtp.domeneshop.no',
+          smtpPort: 587,
+          smtpUser: 'driftpro2',
+          smtpSecure: false,
+          smtpPassword: 'HazGada89!'
         };
       }
     } catch (error) {
@@ -537,7 +810,12 @@ export class EmailService {
         deviationReports: true,
         deviationResolved: true,
         warnings: true,
-        systemAlerts: true
+        systemAlerts: true,
+        smtpHost: 'smtp.domeneshop.no',
+        smtpPort: 587,
+        smtpUser: 'driftpro2',
+        smtpSecure: false,
+        smtpPassword: 'HazGada89!'
       };
     }
   }

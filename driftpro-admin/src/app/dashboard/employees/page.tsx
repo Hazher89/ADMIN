@@ -422,6 +422,36 @@ export default function EmployeesPage() {
     admins: employees.filter(emp => emp.role === 'admin').length
   };
 
+  // Add this function after the existing functions
+  const sendPasswordSetupEmail = async (employeeId: string, employeeEmail: string) => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch('/api/send-password-setup', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          employeeId,
+          employeeEmail,
+        }),
+      });
+
+      if (response.ok) {
+        alert(`E-post for passord-oppsett sendt til ${employeeEmail}`);
+      } else {
+        const error = await response.json();
+        alert(`Feil: ${error.error}`);
+      }
+    } catch (error) {
+      console.error('Error sending password setup email:', error);
+      alert('Feil ved sending av e-post');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (authLoading || loading) {
     return (
       <div className="flex items-center justify-center min-h-screen p-4">
@@ -650,18 +680,6 @@ export default function EmployeesPage() {
                 >
                   <Settings style={{ width: '14px', height: '14px' }} />
                   Innstillinger
-                </button>
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ 
-                    fontSize: '0.75rem', 
-                    padding: '0.25rem 0.5rem',
-                    color: '#ef4444',
-                    borderColor: '#ef4444'
-                  }}
-                  onClick={() => handleDeleteEmployee(employee.id)}
-                >
-                  <Trash2 style={{ width: '14px', height: '14px' }} />
                 </button>
               </div>
             </div>

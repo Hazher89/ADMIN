@@ -37,16 +37,29 @@ export default function DeviationsPage() {
   const [selectedSeverity, setSelectedSeverity] = useState('all');
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [showDetailModal, setShowDetailModal] = useState(false);
   const [selectedDeviation, setSelectedDeviation] = useState<FirestoreDeviation | null>(null);
   const [isMobile, setIsMobile] = useState(false);
   const [showFilters, setShowFilters] = useState(false);
+  const [activeTab, setActiveTab] = useState('overview');
   const [newDeviation, setNewDeviation] = useState({
     title: '',
     description: '',
-    type: 'safety' as 'safety' | 'quality' | 'security' | 'process' | 'other',
+    type: 'safety' as 'safety' | 'quality' | 'security' | 'process' | 'environmental' | 'health' | 'other',
     severity: 'medium' as 'low' | 'medium' | 'high' | 'critical',
     departmentId: '',
-    location: ''
+    location: '',
+    equipment: '',
+    cost: 0,
+    riskAssessment: '',
+    immediateActions: '',
+    rootCause: '',
+    correctiveActions: '',
+    preventiveActions: '',
+    attachments: [] as string[],
+    witnesses: [] as string[],
+    investigationRequired: false,
+    regulatoryReport: false
   });
 
   useEffect(() => {
@@ -124,7 +137,18 @@ export default function DeviationsPage() {
         type: 'safety',
         severity: 'medium',
         departmentId: '',
-        location: ''
+        location: '',
+        equipment: '',
+        cost: 0,
+        riskAssessment: '',
+        immediateActions: '',
+        rootCause: '',
+        correctiveActions: '',
+        preventiveActions: '',
+        attachments: [],
+        witnesses: [],
+        investigationRequired: false,
+        regulatoryReport: false
       });
       loadDeviations();
     } catch (error) {
@@ -490,6 +514,16 @@ export default function DeviationsPage() {
                       <button
                         onClick={() => {
                           setSelectedDeviation(deviation);
+                          setShowDetailModal(true);
+                        }}
+                        style={{ padding: '0.5rem', color: 'var(--blue-600)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)' }}
+                        title="Se detaljer"
+                      >
+                        <Eye style={{ width: '16px', height: '16px' }} />
+                      </button>
+                      <button
+                        onClick={() => {
+                          setSelectedDeviation(deviation);
                           setShowEditModal(true);
                         }}
                         style={{ padding: '0.5rem', color: 'var(--gray-400)', background: 'none', border: 'none', cursor: 'pointer', borderRadius: 'var(--radius-md)' }}
@@ -547,13 +581,15 @@ export default function DeviationsPage() {
                   <label className="form-label">Type</label>
                   <select
                     value={newDeviation.type}
-                    onChange={(e) => setNewDeviation({ ...newDeviation, type: e.target.value as 'safety' | 'quality' | 'security' | 'process' | 'other' })}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, type: e.target.value as 'safety' | 'quality' | 'security' | 'process' | 'environmental' | 'health' | 'other' })}
                     className="form-select-modal"
                   >
                     <option value="safety">Sikkerhet</option>
                     <option value="quality">Kvalitet</option>
                     <option value="security">Sikkerhet</option>
                     <option value="process">Prosess</option>
+                    <option value="environmental">Miljø</option>
+                    <option value="health">Helse</option>
                     <option value="other">Annet</option>
                   </select>
                 </div>
@@ -591,6 +627,26 @@ export default function DeviationsPage() {
                     onChange={(e) => setNewDeviation({ ...newDeviation, location: e.target.value })}
                     className="form-input-modal"
                     placeholder="Hvor skjedde avviket?"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Utstyr</label>
+                  <input
+                    type="text"
+                    value={newDeviation.equipment}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, equipment: e.target.value })}
+                    className="form-input-modal"
+                    placeholder="Hvilket utstyr var involvert?"
+                  />
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Estimert kostnad (kr)</label>
+                  <input
+                    type="number"
+                    value={newDeviation.cost}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, cost: parseInt(e.target.value) || 0 })}
+                    className="form-input-modal"
+                    placeholder="0"
                   />
                 </div>
               </div>
@@ -661,6 +717,209 @@ export default function DeviationsPage() {
             </div>
             <div className="modal-footer">
               <button onClick={() => setShowEditModal(false)} className="btn btn-secondary">Avbryt</button>
+              <button onClick={handleEditDeviation} className="btn btn-primary">Lagre endringer</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Detailed Deviation Modal */}
+      {showDetailModal && selectedDeviation && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '800px', maxHeight: '90vh', overflow: 'auto' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Avvik Detaljer - {selectedDeviation.title}</h2>
+              <button onClick={() => setShowDetailModal(false)} className="modal-close">×</button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                <button
+                  onClick={() => setActiveTab('overview')}
+                  className={`tab-button ${activeTab === 'overview' ? 'active' : ''}`}
+                >
+                  Oversikt
+                </button>
+                <button
+                  onClick={() => setActiveTab('investigation')}
+                  className={`tab-button ${activeTab === 'investigation' ? 'active' : ''}`}
+                >
+                  Undersøkelse
+                </button>
+                <button
+                  onClick={() => setActiveTab('actions')}
+                  className={`tab-button ${activeTab === 'actions' ? 'active' : ''}`}
+                >
+                  Handlinger
+                </button>
+                <button
+                  onClick={() => setActiveTab('attachments')}
+                  className={`tab-button ${activeTab === 'attachments' ? 'active' : ''}`}
+                >
+                  Vedlegg
+                </button>
+              </div>
+
+              {activeTab === 'overview' && (
+                <div className="space-y-4">
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="card">
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Grunnleggende Info</h3>
+                      <div className="space-y-2">
+                        <div><strong>Status:</strong> <span className={getStatusColor(selectedDeviation.status)}>{selectedDeviation.status}</span></div>
+                        <div><strong>Type:</strong> <span className={getTypeColor(selectedDeviation.type)}>{selectedDeviation.type}</span></div>
+                        <div><strong>Alvorlighetsgrad:</strong> <span className={getSeverityColor(selectedDeviation.severity)}>{selectedDeviation.severity}</span></div>
+                        <div><strong>Avdeling:</strong> {getDepartmentName(selectedDeviation.departmentId)}</div>
+                        <div><strong>Lokasjon:</strong> {selectedDeviation.location || 'Ikke spesifisert'}</div>
+                        <div><strong>Utstyr:</strong> {selectedDeviation.equipment || 'Ikke spesifisert'}</div>
+                      </div>
+                    </div>
+                    <div className="card">
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Personell</h3>
+                      <div className="space-y-2">
+                        <div><strong>Rapportert av:</strong> {getReporterName(selectedDeviation.reportedBy)}</div>
+                        <div><strong>Tildelt til:</strong> {getAssignedName(selectedDeviation.assignedTo)}</div>
+                        <div><strong>Rapportert:</strong> {formatDate(selectedDeviation.createdAt)}</div>
+                        <div><strong>Sist oppdatert:</strong> {formatDate(selectedDeviation.updatedAt)}</div>
+                        {selectedDeviation.resolvedAt && (
+                          <div><strong>Løst:</strong> {formatDate(selectedDeviation.resolvedAt)}</div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <div className="card">
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Beskrivelse</h3>
+                    <p style={{ lineHeight: '1.6' }}>{selectedDeviation.description}</p>
+                  </div>
+                  {selectedDeviation.cost && selectedDeviation.cost > 0 && (
+                    <div className="card">
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Økonomisk Påvirkning</h3>
+                      <div><strong>Estimert kostnad:</strong> {selectedDeviation.cost.toLocaleString('nb-NO')} kr</div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {activeTab === 'investigation' && (
+                <div className="space-y-4">
+                  <div className="card">
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Risikovurdering</h3>
+                    <textarea
+                      value={selectedDeviation.riskAssessment || ''}
+                      onChange={(e) => setSelectedDeviation({ ...selectedDeviation, riskAssessment: e.target.value })}
+                      rows={4}
+                      className="form-textarea-modal"
+                      placeholder="Beskriv risikovurderingen..."
+                    />
+                  </div>
+                  <div className="card">
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Rårsaksanalyse</h3>
+                    <textarea
+                      value={selectedDeviation.rootCause || ''}
+                      onChange={(e) => setSelectedDeviation({ ...selectedDeviation, rootCause: e.target.value })}
+                      rows={4}
+                      className="form-textarea-modal"
+                      placeholder="Identifiser roten til problemet..."
+                    />
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div className="card">
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Undersøkelse Påkrevd</h3>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedDeviation.investigationRequired || false}
+                          onChange={(e) => setSelectedDeviation({ ...selectedDeviation, investigationRequired: e.target.checked })}
+                        />
+                        Krever formell undersøkelse
+                      </label>
+                    </div>
+                    <div className="card">
+                      <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Regulatorisk Rapportering</h3>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={selectedDeviation.regulatoryReport || false}
+                          onChange={(e) => setSelectedDeviation({ ...selectedDeviation, regulatoryReport: e.target.checked })}
+                        />
+                        Krever regulatorisk rapportering
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'actions' && (
+                <div className="space-y-4">
+                  <div className="card">
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Umiddelbare Handlinger</h3>
+                    <textarea
+                      value={selectedDeviation.immediateActions || ''}
+                      onChange={(e) => setSelectedDeviation({ ...selectedDeviation, immediateActions: e.target.value })}
+                      rows={4}
+                      className="form-textarea-modal"
+                      placeholder="Hvilke umiddelbare handlinger ble tatt?"
+                    />
+                  </div>
+                  <div className="card">
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Korrigerende Handlinger</h3>
+                    <textarea
+                      value={selectedDeviation.correctiveActions || ''}
+                      onChange={(e) => setSelectedDeviation({ ...selectedDeviation, correctiveActions: e.target.value })}
+                      rows={4}
+                      className="form-textarea-modal"
+                      placeholder="Hvilke korrigerende handlinger skal implementeres?"
+                    />
+                  </div>
+                  <div className="card">
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Forebyggende Handlinger</h3>
+                    <textarea
+                      value={selectedDeviation.preventiveActions || ''}
+                      onChange={(e) => setSelectedDeviation({ ...selectedDeviation, preventiveActions: e.target.value })}
+                      rows={4}
+                      className="form-textarea-modal"
+                      placeholder="Hvilke forebyggende handlinger skal implementeres?"
+                    />
+                  </div>
+                </div>
+              )}
+
+              {activeTab === 'attachments' && (
+                <div className="space-y-4">
+                  <div className="card">
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Vedlegg</h3>
+                    {selectedDeviation.attachments && selectedDeviation.attachments.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedDeviation.attachments.map((attachment, index) => (
+                          <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}>
+                            <FileText style={{ width: '16px', height: '16px' }} />
+                            <span>{attachment}</span>
+                            <button className="btn btn-sm btn-secondary">Last ned</button>
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ color: '#6b7280' }}>Ingen vedlegg lastet opp</p>
+                    )}
+                  </div>
+                  <div className="card">
+                    <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>Vitner</h3>
+                    {selectedDeviation.witnesses && selectedDeviation.witnesses.length > 0 ? (
+                      <div className="space-y-2">
+                        {selectedDeviation.witnesses.map((witness, index) => (
+                          <div key={index} style={{ padding: '0.5rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}>
+                            {witness}
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <p style={{ color: '#6b7280' }}>Ingen vitner registrert</p>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowDetailModal(false)} className="btn btn-secondary">Lukk</button>
               <button onClick={handleEditDeviation} className="btn btn-primary">Lagre endringer</button>
             </div>
           </div>

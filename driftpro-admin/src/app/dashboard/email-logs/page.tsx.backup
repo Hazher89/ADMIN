@@ -1,0 +1,1401 @@
+'use client';
+
+import { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  Search, Filter, Mail, Clock, CheckCircle, AlertTriangle, XCircle,
+  Eye, Download, RefreshCw, Send, User, Calendar, FileText,
+  Settings, Bell, UserPlus, Save, TestTube, EyeOff, TrendingUp,
+  MessageSquare, Users, Key, Wrench, Shield
+} from 'lucide-react';
+
+interface EmailLog {
+  id: string;
+  to: string;
+  subject: string;
+  type: string;
+  status: 'sent' | 'failed' | 'pending';
+  sentAt: string;
+  error?: string;
+}
+
+interface EmailSettings {
+  // General settings
+  enabled: boolean;
+  fromEmail: string;
+  fromName: string;
+  
+  // Email type toggles
+  adminSetup: boolean;
+  deviationReports: boolean;
+  deviationResolved: boolean;
+  userWelcome: boolean;
+  notifications: boolean;
+  warnings: boolean;
+  systemAlerts: boolean;
+  vacationRequests: boolean;
+  absenceRequests: boolean;
+  shiftChanges: boolean;
+  documentShares: boolean;
+  chatNotifications: boolean;
+  employeeUpdates: boolean;
+  passwordResets: boolean;
+  maintenanceAlerts: boolean;
+  securityAlerts: boolean;
+  
+  // Advanced email settings
+  emailQueueEnabled: boolean;
+  maxRetryAttempts: number;
+  retryDelayMinutes: number;
+  maxEmailsPerHour: number;
+  maxEmailsPerDay: number;
+  emailTimeoutSeconds: number;
+  logAllEmails: boolean;
+  enableEmailTracking: boolean;
+  enableReadReceipts: boolean;
+  enableDeliveryReports: boolean;
+  
+  // Notification preferences
+  notificationSchedule: {
+    enabled: boolean;
+    startTime: string;
+    endTime: string;
+    timezone: string;
+    quietHours: boolean;
+  };
+  
+  // Templates
+  adminSetupTemplate: string;
+  deviationReportTemplate: string;
+  deviationResolvedTemplate: string;
+  userWelcomeTemplate: string;
+  notificationTemplate: string;
+  warningTemplate: string;
+  systemAlertTemplate: string;
+  vacationRequestTemplate: string;
+  absenceRequestTemplate: string;
+  shiftChangeTemplate: string;
+  documentShareTemplate: string;
+  chatNotificationTemplate: string;
+  employeeUpdateTemplate: string;
+  passwordResetTemplate: string;
+  maintenanceAlertTemplate: string;
+  securityAlertTemplate: string;
+  
+  // SMTP settings
+  smtpHost: string;
+  smtpPort: number;
+  smtpUser: string;
+  smtpSecure: boolean;
+  smtpRequireTLS: boolean;
+  smtpAllowInsecure: boolean;
+  
+  // Backup SMTP settings
+  backupSmtpEnabled: boolean;
+  backupSmtpHost: string;
+  backupSmtpPort: number;
+  backupSmtpUser: string;
+  backupSmtpSecure: boolean;
+  
+  // Email routing
+  emailRouting: {
+    enabled: boolean;
+    rules: Array<{
+      id: string;
+      name: string;
+      condition: string;
+      action: string;
+      priority: number;
+      enabled: boolean;
+    }>;
+  };
+  
+  // Email analytics
+  analyticsEnabled: boolean;
+  trackOpenRates: boolean;
+  trackClickRates: boolean;
+  trackBounceRates: boolean;
+  
+  // Spam protection
+  spamProtection: {
+    enabled: boolean;
+    maxRecipients: number;
+    contentFiltering: boolean;
+    rateLimiting: boolean;
+  };
+}
+
+export default function EmailLogsPage() {
+  const { userProfile } = useAuth();
+  const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+  const [activeTab, setActiveTab] = useState('logs');
+  const [settings, setSettings] = useState<EmailSettings>({
+    enabled: true,
+    fromEmail: 'noreply@driftpro.no',
+    fromName: 'DriftPro System',
+    adminSetup: true,
+    deviationReports: true,
+    deviationResolved: true,
+    userWelcome: true,
+    notifications: true,
+    warnings: true,
+    systemAlerts: true,
+    vacationRequests: true,
+    absenceRequests: true,
+    shiftChanges: true,
+    documentShares: true,
+    chatNotifications: true,
+    employeeUpdates: true,
+    passwordResets: true,
+    maintenanceAlerts: true,
+    securityAlerts: true,
+    
+    // Advanced email settings
+    emailQueueEnabled: true,
+    maxRetryAttempts: 3,
+    retryDelayMinutes: 5,
+    maxEmailsPerHour: 100,
+    maxEmailsPerDay: 1000,
+    emailTimeoutSeconds: 30,
+    logAllEmails: true,
+    enableEmailTracking: true,
+    enableReadReceipts: false,
+    enableDeliveryReports: true,
+    
+    // Notification schedule
+    notificationSchedule: {
+      enabled: true,
+      startTime: '08:00',
+      endTime: '18:00',
+      timezone: 'Europe/Oslo',
+      quietHours: false
+    },
+    
+    // Templates
+    adminSetupTemplate: 'Admin setup template',
+    deviationReportTemplate: 'Deviation report template',
+    deviationResolvedTemplate: 'Deviation resolved template',
+    userWelcomeTemplate: 'User welcome template',
+    notificationTemplate: 'Notification template',
+    warningTemplate: 'Warning template',
+    systemAlertTemplate: 'System alert template',
+    vacationRequestTemplate: 'Vacation request template',
+    absenceRequestTemplate: 'Absence request template',
+    shiftChangeTemplate: 'Shift change template',
+    documentShareTemplate: 'Document share template',
+    chatNotificationTemplate: 'Chat notification template',
+    employeeUpdateTemplate: 'Employee update template',
+    passwordResetTemplate: 'Password reset template',
+    maintenanceAlertTemplate: 'Maintenance alert template',
+    securityAlertTemplate: 'Security alert template',
+    
+    // SMTP settings
+    smtpHost: 'smtp.office365.com',
+    smtpPort: 587,
+    smtpUser: 'noreply@driftpro.no',
+    smtpSecure: false,
+    smtpRequireTLS: true,
+    smtpAllowInsecure: false,
+    
+    // Backup SMTP settings
+    backupSmtpEnabled: false,
+    backupSmtpHost: '',
+    backupSmtpPort: 587,
+    backupSmtpUser: '',
+    backupSmtpSecure: false,
+    
+    // Email routing
+    emailRouting: {
+      enabled: false,
+      rules: []
+    },
+    
+    // Email analytics
+    analyticsEnabled: true,
+    trackOpenRates: true,
+    trackClickRates: true,
+    trackBounceRates: true,
+    
+    // Spam protection
+    spamProtection: {
+      enabled: true,
+      maxRecipients: 50,
+      contentFiltering: true,
+      rateLimiting: true
+    }
+  });
+  const [saving, setSaving] = useState(false);
+  const [testing, setTesting] = useState(false);
+  const [testEmail, setTestEmail] = useState('');
+  const [testType, setTestType] = useState('admin_setup');
+  const [message, setMessage] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [smtpPassword, setSmtpPassword] = useState('');
+  const [testingSmtp, setTestingSmtp] = useState(false);
+
+  const canAccessEmailControl = userProfile?.role === 'admin';
+
+  useEffect(() => {
+    loadEmailLogs();
+    if (canAccessEmailControl) {
+      loadEmailSettings();
+    }
+  }, [canAccessEmailControl]);
+
+  const loadEmailLogs = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('/api/email-logs');
+      if (response.ok) {
+        const data = await response.json();
+        setEmailLogs(data);
+      }
+    } catch (error) {
+      console.error('Error loading email logs:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const loadEmailSettings = async () => {
+    try {
+      const response = await fetch('/api/email-settings');
+      if (response.ok) {
+        const data = await response.json();
+        setSettings(data);
+      }
+    } catch (error) {
+      console.error('Error loading email settings:', error);
+    }
+  };
+
+  const saveSettings = async () => {
+    try {
+      setSaving(true);
+      const response = await fetch('/api/email-settings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...settings, smtpPassword })
+      });
+      
+      if (response.ok) {
+        setMessage('Innstillinger lagret!');
+        setSmtpPassword('');
+        await loadEmailSettings();
+      } else {
+        const errorData = await response.json();
+        setMessage(`Feil: ${errorData.error}`);
+      }
+    } catch (error) {
+      setMessage('Feil ved lagring av innstillinger');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const sendTestEmail = async () => {
+    try {
+      setTesting(true);
+      const response = await fetch('/api/send-test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: testEmail, type: testType })
+      });
+      
+      if (response.ok) {
+        setMessage('Test-e-post sendt!');
+        setTestEmail('');
+      } else {
+        const errorData = await response.json();
+        setMessage(`Feil: ${errorData.error}`);
+      }
+    } catch (error) {
+      setMessage('Feil ved sending av test-e-post');
+    } finally {
+      setTesting(false);
+    }
+  };
+
+  const testSmtpConnection = async () => {
+    try {
+      setTestingSmtp(true);
+      const response = await fetch('/api/send-test-email', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ 
+          email: testEmail || 'test@example.com', 
+          type: 'test',
+          settings: { ...settings, smtpPassword }
+        })
+      });
+      
+      if (response.ok) {
+        setMessage('SMTP-tilkobling fungerer!');
+      } else {
+        const errorData = await response.json();
+        setMessage(`SMTP-feil: ${errorData.error}`);
+      }
+    } catch (error) {
+      setMessage('Feil ved testing av SMTP');
+    } finally {
+      setTestingSmtp(false);
+    }
+  };
+
+  const toggleEmailType = (type: keyof EmailSettings) => {
+    setSettings(prev => ({ ...prev, [type]: !prev[type] }));
+  };
+
+  const updateTemplate = (templateKey: keyof EmailSettings, value: string) => {
+    setSettings(prev => ({ ...prev, [templateKey]: value }));
+  };
+
+  const getStatusColor = (status: EmailLog['status']) => {
+    switch (status) {
+      case 'sent': return 'text-green-600';
+      case 'failed': return 'text-red-600';
+      case 'pending': return 'text-yellow-600';
+      default: return 'text-gray-600';
+    }
+  };
+
+  const getStatusIcon = (status: EmailLog['status']) => {
+    switch (status) {
+      case 'sent': return <CheckCircle style={{ width: '16px', height: '16px' }} />;
+      case 'failed': return <XCircle style={{ width: '16px', height: '16px' }} />;
+      case 'pending': return <Clock style={{ width: '16px', height: '16px' }} />;
+      default: return <Mail style={{ width: '16px', height: '16px' }} />;
+    }
+  };
+
+  const getStatusLabel = (status: EmailLog['status']) => {
+    switch (status) {
+      case 'sent': return 'Sendt';
+      case 'failed': return 'Feilet';
+      case 'pending': return 'Venter';
+      default: return 'Ukjent';
+    }
+  };
+
+  const getTypeLabel = (type: string) => {
+    switch (type) {
+      case 'admin_setup': return 'Admin-oppsett';
+      case 'deviation_report': return 'Avviksrapport';
+      case 'notification': return 'Varsel';
+      case 'warning': return 'Advarsel';
+      case 'welcome': return 'Velkomst';
+      default: return type;
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    return new Date(dateString).toLocaleDateString('nb-NO');
+  };
+
+  const formatTime = (dateString: string) => {
+    return new Date(dateString).toLocaleTimeString('nb-NO');
+  };
+
+  const resendEmail = async (emailLog: EmailLog) => {
+    setMessage('Funksjonen kommer snart');
+  };
+
+  const exportLogs = async () => {
+    const csvContent = [
+      ['Dato', 'Tid', 'Mottaker', 'Emne', 'Type', 'Status'],
+      ...emailLogs.map(log => [
+        formatDate(log.sentAt),
+        formatTime(log.sentAt),
+        log.to,
+        log.subject,
+        getTypeLabel(log.type),
+        getStatusLabel(log.status)
+      ])
+    ].map(row => row.join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `email-logs-${new Date().toISOString().split('T')[0]}.csv`;
+    a.click();
+    window.URL.revokeObjectURL(url);
+  };
+
+  const filteredLogs = emailLogs.filter(log => {
+    const matchesSearch = log.to.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         log.subject.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = filterStatus === 'all' || log.status === filterStatus;
+    return matchesSearch && matchesStatus;
+  });
+
+  if (!userProfile) {
+    return (
+      <div className="page-header">
+        <h1>Laster...</h1>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-6">
+      <div className="page-header">
+        <h1>E-post-logger</h1>
+        <p>Administrer e-post-innstillinger og se e-post-logger</p>
+      </div>
+
+      {message && (
+        <div className={`alert ${message.includes('Feil') ? 'alert-error' : 'alert-success'}`}>
+          {message}
+        </div>
+      )}
+
+      {/* Tab Navigation */}
+      <div className="card">
+        <div style={{ display: 'flex', borderBottom: '1px solid #e5e7eb' }}>
+          {[
+            { id: 'logs', label: 'E-post-logger', icon: Mail },
+            ...(canAccessEmailControl ? [
+              { id: 'settings', label: 'Innstillinger', icon: Settings },
+              { id: 'notifications', label: 'Varsler', icon: Bell },
+              { id: 'templates', label: 'Maler', icon: FileText },
+              { id: 'smtp', label: 'SMTP', icon: Settings },
+              { id: 'advanced', label: 'Avansert', icon: Settings },
+              { id: 'analytics', label: 'Analyser', icon: TrendingUp },
+              { id: 'test', label: 'Test', icon: TestTube }
+            ] : [])
+          ].map((tab) => (
+            <button
+              key={tab.id}
+              onClick={() => setActiveTab(tab.id)}
+              className={`tab-button ${activeTab === tab.id ? 'active' : ''}`}
+            >
+              <tab.icon style={{ width: '16px', height: '16px' }} />
+              {tab.label}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Logs Tab */}
+      {activeTab === 'logs' && (
+        <div className="space-y-4">
+          <div className="card">
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h2 className="card-title">E-post-logger</h2>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button onClick={loadEmailLogs} className="btn btn-secondary">
+                  <RefreshCw style={{ width: '16px', height: '16px' }} />
+                  Oppdater
+                </button>
+                <button onClick={exportLogs} className="btn btn-secondary">
+                  <Download style={{ width: '16px', height: '16px' }} />
+                  Eksporter
+                </button>
+              </div>
+            </div>
+
+            <div className="search-container">
+              <div style={{ position: 'relative' }}>
+                <Search style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)', width: '16px', height: '16px', color: '#6b7280' }} />
+                <input
+                  type="text"
+                  placeholder="Søk i e-post-logger..."
+                  value={searchTerm}
+                  onChange={(e) => setSearchTerm(e.target.value)}
+                  className="search-input"
+                />
+              </div>
+              <select
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="form-input"
+                style={{ width: 'auto' }}
+              >
+                <option value="all">Alle statuser</option>
+                <option value="sent">Sendt</option>
+                <option value="failed">Feilet</option>
+                <option value="pending">Venter</option>
+              </select>
+            </div>
+
+            {loading ? (
+              <div style={{ textAlign: 'center', padding: '2rem' }}>
+                <div>Laster e-post-logger...</div>
+              </div>
+            ) : filteredLogs.length === 0 ? (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                Ingen e-post-logger funnet
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {filteredLogs.map((log) => (
+                  <div key={log.id} className="card" style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                        <div className={getStatusColor(log.status)}>
+                          {getStatusIcon(log.status)}
+                        </div>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>{log.subject}</div>
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                            {log.to} • {getTypeLabel(log.type)}
+                          </div>
+                        </div>
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        <div style={{ fontSize: '0.875rem' }}>{formatDate(log.sentAt)}</div>
+                        <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>{formatTime(log.sentAt)}</div>
+                      </div>
+                    </div>
+                    {log.error && (
+                      <div style={{ marginTop: '0.5rem', fontSize: '0.875rem', color: '#dc2626' }}>
+                        Feil: {log.error}
+                      </div>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Settings Tab */}
+      {activeTab === 'settings' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">
+              <Settings style={{ width: '20px', height: '20px' }} />
+              Generelle innstillinger
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver e-post-system</label>
+                  <p className="form-help">Slå av/på hele e-post-systemet</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, enabled: !prev.enabled }))}
+                  className={`toggle-switch ${settings.enabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="form-label">Avsender e-post</label>
+                  <input
+                    type="email"
+                    value={settings.fromEmail}
+                    onChange={(e) => setSettings(prev => ({ ...prev, fromEmail: e.target.value }))}
+                    className="form-input"
+                    placeholder="noreply@driftpro.no"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Avsender navn</label>
+                  <input
+                    type="text"
+                    value={settings.fromName}
+                    onChange={(e) => setSettings(prev => ({ ...prev, fromName: e.target.value }))}
+                    className="form-input"
+                    placeholder="DriftPro System"
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">
+              <Settings style={{ width: '20px', height: '20px' }} />
+              Avanserte e-post-innstillinger
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Maks e-poster per time</label>
+                <input
+                  type="number"
+                  value={settings.maxEmailsPerHour}
+                  onChange={(e) => setSettings(prev => ({ ...prev, maxEmailsPerHour: parseInt(e.target.value) }))}
+                  className="form-input"
+                  min="1"
+                  max="1000"
+                />
+              </div>
+              <div>
+                <label className="form-label">Maks e-poster per dag</label>
+                <input
+                  type="number"
+                  value={settings.maxEmailsPerDay}
+                  onChange={(e) => setSettings(prev => ({ ...prev, maxEmailsPerDay: parseInt(e.target.value) }))}
+                  className="form-input"
+                  min="1"
+                  max="10000"
+                />
+              </div>
+              <div>
+                <label className="form-label">Maks forsøk ved feil</label>
+                <input
+                  type="number"
+                  value={settings.maxRetryAttempts}
+                  onChange={(e) => setSettings(prev => ({ ...prev, maxRetryAttempts: parseInt(e.target.value) }))}
+                  className="form-input"
+                  min="1"
+                  max="10"
+                />
+              </div>
+              <div>
+                <label className="form-label">Forsinkelse mellom forsøk (minutter)</label>
+                <input
+                  type="number"
+                  value={settings.retryDelayMinutes}
+                  onChange={(e) => setSettings(prev => ({ ...prev, retryDelayMinutes: parseInt(e.target.value) }))}
+                  className="form-input"
+                  min="1"
+                  max="60"
+                />
+              </div>
+            </div>
+            
+            <div className="space-y-4 mt-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver e-post-kø</label>
+                  <p className="form-help">Bruk kø for bedre ytelse</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, emailQueueEnabled: !prev.emailQueueEnabled }))}
+                  className={`toggle-switch ${settings.emailQueueEnabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Logg alle e-poster</label>
+                  <p className="form-help">Lagre alle e-poster i loggen</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, logAllEmails: !prev.logAllEmails }))}
+                  className={`toggle-switch ${settings.logAllEmails ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver e-post-sporing</label>
+                  <p className="form-help">Spor åpning og klikk</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, enableEmailTracking: !prev.enableEmailTracking }))}
+                  className={`toggle-switch ${settings.enableEmailTracking ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={saveSettings}
+              disabled={saving}
+              className="btn btn-primary"
+            >
+              <Save style={{ width: '16px', height: '16px' }} />
+              {saving ? 'Lagrer...' : 'Lagre innstillinger'}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Notifications Tab */}
+      {activeTab === 'notifications' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">
+              <Bell style={{ width: '20px', height: '20px' }} />
+              E-post-typer
+            </h2>
+            <div className="grid grid-cols-2 gap-4">
+              {[
+                { key: 'adminSetup', label: 'Admin-oppsett', description: 'E-post til nye administratorer', icon: UserPlus, color: 'blue' },
+                { key: 'deviationReports', label: 'Avviksrapporter', description: 'Nye avviksrapporter', icon: AlertTriangle, color: 'red' },
+                { key: 'deviationResolved', label: 'Avvik løst', description: 'Når avvik blir løst', icon: CheckCircle, color: 'green' },
+                { key: 'userWelcome', label: 'Velkomstmeldinger', description: 'Velkomst til nye brukere', icon: Mail, color: 'purple' },
+                { key: 'notifications', label: 'Varsler', description: 'Generelle varsler', icon: Bell, color: 'orange' },
+                { key: 'warnings', label: 'Advarsler', description: 'Systemadvarsler', icon: AlertTriangle, color: 'yellow' },
+                { key: 'vacationRequests', label: 'Ferieforespørsler', description: 'Nye ferieforespørsler', icon: Calendar, color: 'indigo' },
+                { key: 'absenceRequests', label: 'Fraværsforespørsler', description: 'Nye fraværsforespørsler', icon: User, color: 'pink' },
+                { key: 'shiftChanges', label: 'Skiftendringer', description: 'Endringer i skiftplan', icon: Clock, color: 'cyan' },
+                { key: 'documentShares', label: 'Dokumentdeling', description: 'Dokumenter som deles', icon: FileText, color: 'gray' },
+                { key: 'chatNotifications', label: 'Chat-meldinger', description: 'Nye chat-meldinger', icon: MessageSquare, color: 'teal' },
+                { key: 'employeeUpdates', label: 'Ansatt-oppdateringer', description: 'Endringer i ansattdata', icon: Users, color: 'violet' },
+                { key: 'passwordResets', label: 'Passord-tilbakestilling', description: 'Passord-tilbakestillinger', icon: Key, color: 'amber' },
+                { key: 'maintenanceAlerts', label: 'Vedlikeholdsadvarsler', description: 'System-vedlikehold', icon: Wrench, color: 'slate' },
+                { key: 'securityAlerts', label: 'Sikkerhetsadvarsler', description: 'Sikkerhetsvarsler', icon: Shield, color: 'rose' }
+              ].map((item) => (
+                <div key={item.key} className="card">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div className="card-icon">
+                        <item.icon />
+                      </div>
+                      <div>
+                        <label className="form-label">{item.label}</label>
+                        <p className="form-help">{item.description}</p>
+                      </div>
+                    </div>
+                    <button
+                      onClick={() => toggleEmailType(item.key as keyof EmailSettings)}
+                      className={`toggle-switch ${settings[item.key as keyof EmailSettings] ? 'active' : ''}`}
+                    >
+                      <span className="toggle-slider"></span>
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">
+              <Clock style={{ width: '20px', height: '20px' }} />
+              Varslingsplan
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver varslingsplan</label>
+                  <p className="form-help">Send varsler kun i arbeidstiden</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ 
+                    ...prev, 
+                    notificationSchedule: { 
+                      ...prev.notificationSchedule, 
+                      enabled: !prev.notificationSchedule.enabled 
+                    } 
+                  }))}
+                  className={`toggle-switch ${settings.notificationSchedule.enabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+
+              <div className="grid grid-cols-3 gap-4">
+                <div>
+                  <label className="form-label">Starttid</label>
+                  <input
+                    type="time"
+                    value={settings.notificationSchedule.startTime}
+                    onChange={(e) => setSettings(prev => ({ 
+                      ...prev, 
+                      notificationSchedule: { 
+                        ...prev.notificationSchedule, 
+                        startTime: e.target.value 
+                      } 
+                    }))}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Sluttid</label>
+                  <input
+                    type="time"
+                    value={settings.notificationSchedule.endTime}
+                    onChange={(e) => setSettings(prev => ({ 
+                      ...prev, 
+                      notificationSchedule: { 
+                        ...prev.notificationSchedule, 
+                        endTime: e.target.value 
+                      } 
+                    }))}
+                    className="form-input"
+                  />
+                </div>
+                <div>
+                  <label className="form-label">Tidssone</label>
+                  <select
+                    value={settings.notificationSchedule.timezone}
+                    onChange={(e) => setSettings(prev => ({ 
+                      ...prev, 
+                      notificationSchedule: { 
+                        ...prev.notificationSchedule, 
+                        timezone: e.target.value 
+                      } 
+                    }))}
+                    className="form-input"
+                  >
+                    <option value="Europe/Oslo">Europe/Oslo</option>
+                    <option value="Europe/Stockholm">Europe/Stockholm</option>
+                    <option value="Europe/Copenhagen">Europe/Copenhagen</option>
+                    <option value="UTC">UTC</option>
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Stille timer</label>
+                  <p className="form-help">Ikke send varsler i stille timer</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ 
+                    ...prev, 
+                    notificationSchedule: { 
+                      ...prev.notificationSchedule, 
+                      quietHours: !prev.notificationSchedule.quietHours 
+                    } 
+                  }))}
+                  className={`toggle-switch ${settings.notificationSchedule.quietHours ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+            <button
+              onClick={saveSettings}
+              disabled={saving}
+              className="btn btn-primary"
+            >
+              <Save style={{ width: '16px', height: '16px' }} />
+              {saving ? 'Lagrer...' : 'Lagre varslingsinnstillinger'}
+            </button>
+          </div>
+
+
+      {/* Templates Tab */}
+      {activeTab === 'templates' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">
+              <FileText style={{ width: '20px', height: '20px' }} />
+              E-post-maler
+            </h2>
+            <div className="space-y-4">
+              <div>
+                <label className="form-label">Admin-oppsett mal</label>
+                <textarea
+                  value={settings.adminSetupTemplate}
+                  onChange={(e) => updateTemplate('adminSetupTemplate', e.target.value)}
+                  rows={10}
+                  className="form-input"
+                  placeholder="HTML-mal for admin-oppsett e-post..."
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Avviksrapport mal</label>
+                <textarea
+                  value={settings.deviationReportTemplate}
+                  onChange={(e) => updateTemplate('deviationReportTemplate', e.target.value)}
+                  rows={10}
+                  className="form-input"
+                  placeholder="HTML-mal for avviksrapport e-post..."
+                />
+              </div>
+
+              <div>
+                <label className="form-label">Varsel mal</label>
+                <textarea
+                  value={settings.notificationTemplate}
+                  onChange={(e) => updateTemplate('notificationTemplate', e.target.value)}
+                  rows={8}
+                  className="form-input"
+                  placeholder="HTML-mal for varsel e-post..."
+                />
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Tab */}
+      {activeTab === 'advanced' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">
+              <Settings style={{ width: '20px', height: '20px' }} />
+              Backup SMTP
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver backup SMTP</label>
+                  <p className="form-help">Bruk backup SMTP-server hvis hovedserveren feiler</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, backupSmtpEnabled: !prev.backupSmtpEnabled }))}
+                  className={`toggle-switch ${settings.backupSmtpEnabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+
+              {settings.backupSmtpEnabled && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Backup SMTP-server</label>
+                    <input
+                      type="text"
+                      value={settings.backupSmtpHost}
+                      onChange={(e) => setSettings(prev => ({ ...prev, backupSmtpHost: e.target.value }))}
+                      className="form-input"
+                      placeholder="smtp.gmail.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Port</label>
+                    <input
+                      type="number"
+                      value={settings.backupSmtpPort}
+                      onChange={(e) => setSettings(prev => ({ ...prev, backupSmtpPort: parseInt(e.target.value) }))}
+                      className="form-input"
+                      placeholder="587"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">
+              <Shield style={{ width: '20px', height: '20px' }} />
+              Spam-beskyttelse
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver spam-beskyttelse</label>
+                  <p className="form-help">Beskytt mot spam og misbruk</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ 
+                    ...prev, 
+                    spamProtection: { 
+                      ...prev.spamProtection, 
+                      enabled: !prev.spamProtection.enabled 
+                    } 
+                  }))}
+                  className={`toggle-switch ${settings.spamProtection.enabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+
+              {settings.spamProtection.enabled && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Maks mottakere per e-post</label>
+                    <input
+                      type="number"
+                      value={settings.spamProtection.maxRecipients}
+                      onChange={(e) => setSettings(prev => ({ 
+                        ...prev, 
+                        spamProtection: { 
+                          ...prev.spamProtection, 
+                          maxRecipients: parseInt(e.target.value) 
+                        } 
+                      }))}
+                      className="form-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">
+              <TrendingUp style={{ width: '20px', height: '20px' }} />
+              E-post-analyser
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver e-post-analyser</label>
+                  <p className="form-help">Spor e-post-ytelse og statistikk</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, analyticsEnabled: !prev.analyticsEnabled }))}
+                  className={`toggle-switch ${settings.analyticsEnabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+
+              {settings.analyticsEnabled && (
+                <div className="space-y-4">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <label className="form-label">Spor åpningsrater</label>
+                      <p className="form-help">Spor hvor mange som åpner e-postene</p>
+                    </div>
+                    <button
+                      onClick={() => setSettings(prev => ({ ...prev, trackOpenRates: !prev.trackOpenRates }))}
+                      className={`toggle-switch ${settings.trackOpenRates ? 'active' : ''}`}
+                    >
+                      <span className="toggle-slider"></span>
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <label className="form-label">Spor klikk-rater</label>
+                      <p className="form-help">Spor klikk på lenker i e-postene</p>
+                    </div>
+                    <button
+                      onClick={() => setSettings(prev => ({ ...prev, trackClickRates: !prev.trackClickRates }))}
+                      className={`toggle-switch ${settings.trackClickRates ? 'active' : ''}`}
+                    >
+                      <span className="toggle-slider"></span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">Statistikker</h2>
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+              <TrendingUp style={{ width: '48px', height: '48px', margin: '0 auto 1rem' }} />
+              <p>E-post-statistikker kommer snart</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMTP Tab */}
+      {activeTab === 'smtp' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">SMTP-innstillinger</h2>
+            <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">SMTP-server</label>
+                <input
+                  type="text"
+                  value={settings.smtpHost}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
+                  className="form-input"
+                  placeholder="smtp.office365.com"
+                />
+              </div>
+              <div>
+                <label className="form-label">Port</label>
+                <input
+                  type="number"
+                  value={settings.smtpPort}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpPort: parseInt(e.target.value) }))}
+                  className="form-input"
+                  placeholder="587"
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Brukernavn</label>
+                <input
+                  type="text"
+                  value={settings.smtpUser}
+                  onChange={(e) => setSettings(prev => ({ ...prev, smtpUser: e.target.value }))}
+                  className="form-input"
+                  placeholder="noreply@driftpro.no"
+                />
+              </div>
+              <div>
+                <label className="form-label">Passord</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                    className="form-input"
+                    placeholder="SMTP-passord"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    style={{ 
+                      position: 'absolute', 
+                      right: '0.75rem', 
+                      top: '50%', 
+                      transform: 'translateY(-50%)',
+                      background: 'none',
+                      border: 'none',
+                      color: '#6b7280',
+                      cursor: 'pointer'
+                    }}
+                  >
+                    {showPassword ? <EyeOff style={{ width: '16px', height: '16px' }} /> : <Eye style={{ width: '16px', height: '16px' }} />}
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button
+                onClick={() => setSettings(prev => ({ ...prev, smtpSecure: !prev.smtpSecure }))}
+                className={`toggle-switch ${settings.smtpSecure ? 'active' : ''}`}
+              >
+                <span className="toggle-slider"></span>
+              </button>
+              <label className="form-label">Bruk SSL/TLS</label>
+            </div>
+
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={testSmtpConnection}
+                disabled={testingSmtp || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !smtpPassword}
+                className="btn btn-secondary"
+              >
+                <TestTube style={{ width: '16px', height: '16px' }} />
+                {testingSmtp ? 'Tester...' : 'Test SMTP'}
+              </button>
+              <button
+                onClick={saveSettings}
+                disabled={saving}
+                className="btn btn-primary"
+              >
+                <Save style={{ width: '16px', height: '16px' }} />
+                {saving ? 'Lagrer...' : 'Lagre SMTP-innstillinger'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Advanced Tab */}
+      {activeTab === 'advanced' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">
+              <Settings style={{ width: '20px', height: '20px' }} />
+              Backup SMTP
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver backup SMTP</label>
+                  <p className="form-help">Bruk backup SMTP-server hvis hovedserveren feiler</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, backupSmtpEnabled: !prev.backupSmtpEnabled }))}
+                  className={`toggle-switch ${settings.backupSmtpEnabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+
+              {settings.backupSmtpEnabled && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Backup SMTP-server</label>
+                    <input
+                      type="text"
+                      value={settings.backupSmtpHost}
+                      onChange={(e) => setSettings(prev => ({ ...prev, backupSmtpHost: e.target.value }))}
+                      className="form-input"
+                      placeholder="smtp.gmail.com"
+                    />
+                  </div>
+                  <div>
+                    <label className="form-label">Port</label>
+                    <input
+                      type="number"
+                      value={settings.backupSmtpPort}
+                      onChange={(e) => setSettings(prev => ({ ...prev, backupSmtpPort: parseInt(e.target.value) }))}
+                      className="form-input"
+                      placeholder="587"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">
+              <Shield style={{ width: '20px', height: '20px' }} />
+              Spam-beskyttelse
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver spam-beskyttelse</label>
+                  <p className="form-help">Beskytt mot spam og misbruk</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ 
+                    ...prev, 
+                    spamProtection: { 
+                      ...prev.spamProtection, 
+                      enabled: !prev.spamProtection.enabled 
+                    } 
+                  }))}
+                  className={`toggle-switch ${settings.spamProtection.enabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+
+              {settings.spamProtection.enabled && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="form-label">Maks mottakere per e-post</label>
+                    <input
+                      type="number"
+                      value={settings.spamProtection.maxRecipients}
+                      onChange={(e) => setSettings(prev => ({ 
+                        ...prev, 
+                        spamProtection: { 
+                          ...prev.spamProtection, 
+                          maxRecipients: parseInt(e.target.value) 
+                        } 
+                      }))}
+                      className="form-input"
+                      min="1"
+                      max="100"
+                    />
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Analytics Tab */}
+      {activeTab === 'analytics' && canAccessEmailControl && (
+        <div className="space-y-6">
+          <div className="card">
+            <h2 className="card-title">
+              <TrendingUp style={{ width: '20px', height: '20px' }} />
+              E-post-analyser
+            </h2>
+            <div className="space-y-4">
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label className="form-label">Aktiver e-post-analyser</label>
+                  <p className="form-help">Spor e-post-ytelse og statistikk</p>
+                </div>
+                <button
+                  onClick={() => setSettings(prev => ({ ...prev, analyticsEnabled: !prev.analyticsEnabled }))}
+                  className={`toggle-switch ${settings.analyticsEnabled ? 'active' : ''}`}
+                >
+                  <span className="toggle-slider"></span>
+                </button>
+              </div>
+
+              {settings.analyticsEnabled && (
+                <div className="space-y-4">
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <label className="form-label">Spor åpningsrater</label>
+                      <p className="form-help">Spor hvor mange som åpner e-postene</p>
+                    </div>
+                    <button
+                      onClick={() => setSettings(prev => ({ ...prev, trackOpenRates: !prev.trackOpenRates }))}
+                      className={`toggle-switch ${settings.trackOpenRates ? 'active' : ''}`}
+                    >
+                      <span className="toggle-slider"></span>
+                    </button>
+                  </div>
+                  
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                    <div>
+                      <label className="form-label">Spor klikk-rater</label>
+                      <p className="form-help">Spor klikk på lenker i e-postene</p>
+                    </div>
+                    <button
+                      onClick={() => setSettings(prev => ({ ...prev, trackClickRates: !prev.trackClickRates }))}
+                      className={`toggle-switch ${settings.trackClickRates ? 'active' : ''}`}
+                    >
+                      <span className="toggle-slider"></span>
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div className="card">
+            <h2 className="card-title">Statistikker</h2>
+            <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+              <TrendingUp style={{ width: '48px', height: '48px', margin: '0 auto 1rem' }} />
+              <p>E-post-statistikker kommer snart</p>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Test Tab */}
+      {activeTab === 'test' && canAccessEmailControl && (
+        <div className="card">
+          <h2 className="card-title">Test e-post</h2>
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="form-label">Mottaker e-post</label>
+                <input
+                  type="email"
+                  value={testEmail}
+                  onChange={(e) => setTestEmail(e.target.value)}
+                  className="form-input"
+                  placeholder="test@example.com"
+                />
+              </div>
+              <div>
+                <label className="form-label">E-post-type</label>
+                <select
+                  value={testType}
+                  onChange={(e) => setTestType(e.target.value)}
+                  className="form-input"
+                >
+                  <option value="admin_setup">Admin-oppsett</option>
+                  <option value="deviation_report">Avviksrapport</option>
+                  <option value="notification">Varsel</option>
+                  <option value="warning">Advarsel</option>
+                  <option value="welcome">Velkomst</option>
+                </select>
+              </div>
+            </div>
+
+            <button
+              onClick={sendTestEmail}
+              disabled={testing || !testEmail}
+              className="btn btn-primary"
+            >
+              <Send style={{ width: '16px', height: '16px' }} />
+              {testing ? 'Sender...' : 'Send test-e-post'}
+            </button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
