@@ -18,28 +18,11 @@ const db = getFirestore(app);
 
 export class EmailService {
   private baseUrl: string;
-  private smtpConfig: any;
 
   constructor() {
     // Use Netlify domain for emails
     this.baseUrl = 'https://driftpro-admin.netlify.app';
-
     console.log('📧 EMAIL SERVICE: Base URL set to:', this.baseUrl);
-    
-    // Gmail SMTP configuration (easier to set up)
-    this.smtpConfig = {
-      host: 'smtp.gmail.com',
-      port: 587,
-      user: 'your-email@gmail.com', // Replace with your Gmail
-      pass: 'your-app-password', // Replace with Gmail App Password
-      secure: false,
-      tls: {
-        rejectUnauthorized: false
-      },
-      connectionTimeout: 60000,
-      greetingTimeout: 30000,
-      socketTimeout: 60000
-    };
   }
 
   private async getEmailSettings() {
@@ -49,11 +32,18 @@ export class EmailService {
       
       if (emailSettingsDoc.exists()) {
         const data = emailSettingsDoc.data();
+        console.log('📧 Found email settings in Firestore:', {
+          smtpHost: data.smtpHost,
+          smtpUser: data.smtpUser,
+          fromEmail: data.fromEmail,
+          provider: 'cloudflare_email_routing'
+        });
+        
         return {
           smtpHost: data.smtpHost || 'smtp.cloudflare.com',
           smtpPort: data.smtpPort || 587,
           smtpUser: data.smtpUser || 'noreplay@driftpro.no',
-          smtpPassword: data.smtpPassword || 'your-cloudflare-api-key',
+          smtpPassword: data.smtpPassword || process.env.CLOUDFLARE_API_KEY,
           smtpSecure: data.smtpSecure || false,
           fromEmail: data.fromEmail || 'noreplay@driftpro.no',
           fromName: data.fromName || 'DriftPro System',
@@ -64,12 +54,13 @@ export class EmailService {
         };
       }
       
+      console.log('📧 Using default Cloudflare Email Routing settings');
       // Return default Cloudflare Email Routing settings
       return {
         smtpHost: 'smtp.cloudflare.com',
         smtpPort: 587,
         smtpUser: 'noreplay@driftpro.no',
-        smtpPassword: 'your-cloudflare-api-key',
+        smtpPassword: process.env.CLOUDFLARE_API_KEY || 'your-cloudflare-api-key',
         smtpSecure: false,
         fromEmail: 'noreplay@driftpro.no',
         fromName: 'DriftPro System',
@@ -79,13 +70,13 @@ export class EmailService {
         socketTimeout: 60000
       };
     } catch (error) {
-      console.error('Error getting email settings:', error);
+      console.error('❌ Error getting email settings:', error);
       // Return default Cloudflare Email Routing settings
       return {
         smtpHost: 'smtp.cloudflare.com',
         smtpPort: 587,
         smtpUser: 'noreplay@driftpro.no',
-        smtpPassword: 'your-cloudflare-api-key',
+        smtpPassword: process.env.CLOUDFLARE_API_KEY || 'your-cloudflare-api-key',
         smtpSecure: false,
         fromEmail: 'noreplay@driftpro.no',
         fromName: 'DriftPro System',
@@ -101,6 +92,15 @@ export class EmailService {
     try {
       const emailSettings = await this.getEmailSettings();
       
+      console.log('📧 Attempting to send email via Cloudflare Email Routing:', {
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        smtpHost: emailSettings.smtpHost,
+        smtpUser: emailSettings.smtpUser,
+        fromEmail: emailSettings.fromEmail,
+        provider: 'cloudflare_email_routing'
+      });
+      
       // Create transporter with Cloudflare Email Routing
       const transporter = nodemailer.createTransport({
         host: emailSettings.smtpHost,
@@ -115,6 +115,10 @@ export class EmailService {
         greetingTimeout: emailSettings.greetingTimeout,
         socketTimeout: emailSettings.socketTimeout
       });
+
+      // Verify connection configuration
+      await transporter.verify();
+      console.log('✅ SMTP connection verified successfully');
 
       // Send email
       const result = await transporter.sendMail({
@@ -136,14 +140,27 @@ export class EmailService {
         messageId: result?.messageId || 'unknown',
         metadata: {
           provider: 'cloudflare_email_routing',
-          timestamp: new Date().toISOString()
+          timestamp: new Date().toISOString(),
+          smtpHost: emailSettings.smtpHost,
+          fromEmail: emailSettings.fromEmail
         }
       });
 
-      console.log('✅ Email sent successfully via Cloudflare Email Routing:', result?.messageId);
+      console.log('✅ Email sent successfully via Cloudflare Email Routing:', {
+        messageId: result?.messageId,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        provider: 'cloudflare_email_routing'
+      });
+      
       return { success: true, messageId: result?.messageId || 'unknown' };
     } catch (error) {
-      console.error('❌ Email sending failed:', error);
+      console.error('❌ Email sending failed:', {
+        error: error instanceof Error ? error.message : 'Unknown error',
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        provider: 'cloudflare_email_routing'
+      });
       
       // Log error to Firestore
       await addDoc(collection(db, 'emailLogs'), {
