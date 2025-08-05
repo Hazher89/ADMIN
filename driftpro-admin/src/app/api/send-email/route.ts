@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
               host: settings.smtpHost || 'smtp.domeneshop.no',
               port: settings.smtpPort || 587,
               user: settings.smtpUser || 'driftpro2',
-              pass: settings.smtpPassword || 'HazGada89!',
+              pass: settings.smtpPassword || 'HazhaGada89!',
               secure: settings.smtpSecure || false
             };
           } else {
@@ -103,8 +103,8 @@ export async function POST(request: NextRequest) {
             smtpConfig = {
               host: 'smtp.domeneshop.no',
               port: 587,
-              user: 'noreplay@driftpro.no',
-              pass: 'HazGada89!',
+              user: 'driftpro2',
+              pass: 'HazhaGada89!',
               secure: false
             };
           }
@@ -113,8 +113,8 @@ export async function POST(request: NextRequest) {
             smtpConfig = {
               host: 'smtp.domeneshop.no',
               port: 587,
-              user: 'noreplay@driftpro.no',
-              pass: 'HazGada89!',
+              user: 'driftpro2',
+              pass: 'HazhaGada89!',
               secure: false
             };
           }
@@ -124,8 +124,8 @@ export async function POST(request: NextRequest) {
         smtpConfig = {
           host: 'smtp.domeneshop.no',
           port: 587,
-          user: 'noreplay@driftpro.no',
-          pass: 'HazGada89!',
+          user: 'driftpro2',
+          pass: 'HazhaGada89!',
           secure: false
         };
       }
@@ -179,7 +179,7 @@ export async function POST(request: NextRequest) {
 
     // Prepare email
     const mailOptions = {
-      from: `DriftPro <noreply@driftpro.no>`,
+      from: `DriftPro <${smtpConfig.user.includes('@') ? smtpConfig.user : 'noreply@driftpro.no'}>`,
       to: emailData.to,
       subject: emailData.subject,
       html: emailData.html,

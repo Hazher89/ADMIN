@@ -24,6 +24,53 @@ export interface BRRGCompany {
     telefon?: string;
     epost?: string;
   };
+  // Extended BRRG information
+  stiftelsesdato?: string;
+  konkurs?: boolean;
+  underAvvikling?: boolean;
+  underTvangsavviklingEllerTvangsopplosning?: boolean;
+  maalform?: string;
+  institusjonellSektorkode?: {
+    kode: string;
+    beskrivelse: string;
+  };
+  naeringskode2?: {
+    kode: string;
+    beskrivelse: string;
+  };
+  naeringskode3?: {
+    kode: string;
+    beskrivelse: string;
+  };
+  hjemmeside?: string;
+  ansatte?: {
+    interval: string;
+    antall: number;
+  };
+  registreringIMvaregisteret?: {
+    registrertIMvaregisteret: boolean;
+    varemerkebeskyttelse: string[];
+  };
+  rolleregister?: {
+    enheter?: Array<{
+      organisasjonsnummer: string;
+      navn: string;
+      rolle: string;
+    }>;
+  };
+  registre?: {
+    enhetsregisteret?: boolean;
+    foretaksregisteret?: boolean;
+    mvaregisteret?: boolean;
+    frivillighetsregisteret?: boolean;
+    stiftelsesregisteret?: boolean;
+  };
+  tilknyttedeVirksomheter?: Array<{
+    organisasjonsnummer: string;
+    navn: string;
+    organisasjonsform: string;
+    rolle: string;
+  }>;
 }
 
 export interface BRRGAdmin {
@@ -92,7 +139,22 @@ class BRRGService {
       kontaktinformasjon: {
         telefon: data.kontaktinformasjon?.telefon || '',
         epost: data.kontaktinformasjon?.epost || ''
-      }
+      },
+      // Extended BRRG information
+      stiftelsesdato: data.stiftelsesdato,
+      konkurs: data.konkurs,
+      underAvvikling: data.underAvvikling,
+      underTvangsavviklingEllerTvangsopplosning: data.underTvangsavviklingEllerTvangsopplosning,
+      maalform: data.maalform,
+      institusjonellSektorkode: data.institusjonellSektorkode,
+      naeringskode2: data.naeringskode2,
+      naeringskode3: data.naeringskode3,
+      hjemmeside: data.hjemmeside,
+      ansatte: data.ansatte,
+      registreringIMvaregisteret: data.registreringIMvaregisteret,
+      rolleregister: data.rolleregister,
+      registre: data.registre,
+      tilknyttedeVirksomheter: data.tilknyttedeVirksomheter
     };
   }
 

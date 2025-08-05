@@ -1,5 +1,6 @@
 import { addDoc, collection, doc, setDoc, getDoc, updateDoc, getDocs, getFirestore } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
+import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
 import { emailService } from './email-service';
 
 export interface AdminSetupToken {
@@ -210,7 +211,13 @@ export class AdminEmailService {
         throw new Error('Firebase database not available. Please check Firebase configuration.');
       }
 
-      // Update user with password
+      // Get Firebase Auth instance
+      const auth = getAuth();
+      if (!auth) {
+        throw new Error('Firebase Auth not available. Please check Firebase configuration.');
+      }
+
+      // Find existing user in Firestore
       const usersQuery = collection(firestoreDb, 'users');
       const userDocs = await getDocs(usersQuery);
       const userDoc = userDocs.docs.find(doc => 
@@ -218,17 +225,58 @@ export class AdminEmailService {
         doc.data().companyId === tokenData.companyId
       );
 
+      console.log('🔍 SETUP DEBUG: Looking for user with:', {
+        email: tokenData.email,
+        companyId: tokenData.companyId
+      });
+      console.log('🔍 SETUP DEBUG: Found users:', userDocs.docs.map(doc => ({
+        email: doc.data().email,
+        companyId: doc.data().companyId,
+        status: doc.data().status,
+        hasId: !!doc.data().id
+      })));
+
       if (!userDoc) {
+        console.error('User not found for setup:', {
+          email: tokenData.email,
+          companyId: tokenData.companyId,
+          availableUsers: userDocs.docs.map(doc => ({
+            email: doc.data().email,
+            companyId: doc.data().companyId
+          }))
+        });
         return { success: false, error: 'Bruker ikke funnet' };
       }
 
-      // Update user with password and mark as active
-      await updateDoc(doc(firestoreDb, 'users', userDoc.id), {
-        password: password, // In production, this should be hashed
+      console.log('Found user for setup:', {
+        userId: userDoc.id,
+        email: userDoc.data().email,
+        companyId: userDoc.data().companyId,
+        status: userDoc.data().status
+      });
+
+      // Create user in Firebase Authentication
+      console.log('Creating user in Firebase Authentication:', tokenData.email);
+      const userCredential = await createUserWithEmailAndPassword(auth, tokenData.email, password);
+      const firebaseUser = userCredential.user;
+
+      // Update display name in Firebase Auth
+      await updateProfile(firebaseUser, {
+        displayName: tokenData.adminName
+      });
+
+      // Update user in Firestore with Firebase UID and mark as active
+      const updateData = {
+        id: firebaseUser.uid, // Update with Firebase UID
+        companyId: tokenData.companyId, // Ensure companyId is set correctly
         status: 'active',
         passwordSetAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
-      });
+      };
+
+      console.log('🔧 SETUP DEBUG: Updating user with:', updateData);
+      
+      await updateDoc(doc(firestoreDb, 'users', userDoc.id), updateData);
 
       // Mark token as used
       await this.markTokenAsUsed(tokenData.id);
@@ -241,9 +289,16 @@ export class AdminEmailService {
         // Don't fail the setup process if welcome email fails
       }
 
+      console.log('Admin setup completed successfully for:', tokenData.email);
       return { success: true };
     } catch (error) {
       console.error('Error setting up admin password:', error);
+      
+      // Check if it's a Firebase Auth error
+      if (error instanceof Error && error.message.includes('auth/email-already-in-use')) {
+        return { success: false, error: 'Brukeren eksisterer allerede i systemet. Prøv å logge inn i stedet.' };
+      }
+      
       return { success: false, error: `Feil ved oppsett av passord: ${error instanceof Error ? error.message : 'Unknown error'}` };
     }
   }

@@ -32,18 +32,19 @@ export class EmailService {
   };
 
   constructor() {
-    // Use production URL if available, otherwise fallback to localhost
-    this.baseUrl = process.env.NEXT_PUBLIC_APP_URL || 
-                   process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` :
-                   process.env.NETLIFY_URL ? `https://${process.env.NETLIFY_URL}` :
-                   'http://localhost:3001';
+    // Always use production URL for emails - never localhost
+    this.baseUrl = 'https://driftpro-admin.netlify.app'; // Use Netlify domain for emails
+    
+    console.log('📧 EMAIL SERVICE: Base URL set to:', this.baseUrl);
+    
+    console.log('📧 EMAIL SERVICE: Base URL set to:', this.baseUrl);
     
     // Default SMTP configuration - will be overridden by settings from Firebase
     this.smtpConfig = {
       host: 'smtp.domeneshop.no',
       port: 587,
       user: 'driftpro2',
-      pass: 'HazGada89!',
+      pass: 'HazhaGada89!',
       secure: false
     };
   }
@@ -128,32 +129,29 @@ export class EmailService {
       // Log email attempt
       const emailLogId = await this.logEmailAttempt(emailData, 'pending');
 
-      const response = await fetch(`${this.baseUrl}/api/send-email`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...emailData,
-          smtpConfig
-        }),
+      // Send email directly using nodemailer instead of calling API
+      const nodemailer = require('nodemailer');
+      
+      const transporter = nodemailer.createTransport({
+        host: smtpConfig.host,
+        port: smtpConfig.port,
+        secure: smtpConfig.secure,
+        auth: {
+          user: smtpConfig.user,
+          pass: smtpConfig.pass
+        }
       });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        console.error('Email API response:', {
-          status: response.status,
-          statusText: response.statusText,
-          errorData
-        });
-        
-        // Update log with error
-        await this.updateEmailLog(emailLogId, 'failed', errorData.error || response.statusText);
-        throw new Error(`Failed to send email: ${response.status} - ${errorData.error || response.statusText}`);
-      }
+      const mailOptions = {
+        from: `"DriftPro System" <${smtpConfig.user.includes('@') ? smtpConfig.user : 'noreply@driftpro.no'}>`,
+        to: emailData.to,
+        subject: emailData.subject,
+        html: emailData.html,
+        text: emailData.text
+      };
 
-      const result = await response.json();
-      console.log('Email sent successfully:', result);
+      const result = await transporter.sendMail(mailOptions);
+      console.log('Email sent successfully:', result.messageId);
       
       // Update log with success
       await this.updateEmailLog(emailLogId, 'sent', undefined, result.messageId);
@@ -451,16 +449,15 @@ export class EmailService {
    */
   async sendPasswordResetEmail(
     email: string,
-    resetToken: string
-  ): Promise<boolean> {
-    // Check if password reset emails are enabled
-    const settings = await this.getEmailSettings();
-    if (!settings.enabled || !settings.notifications) {
-      console.log('Password reset emails are disabled');
-      return false;
-    }
-
-    const resetUrl = `${this.baseUrl}/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    resetUrl: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Check if password reset emails are enabled
+      const settings = await this.getEmailSettings();
+      if (!settings.enabled || !settings.notifications) {
+        console.log('Password reset emails are disabled');
+        return { success: false, error: 'Password reset emails are disabled' };
+      }
     
     const emailData: EmailData = {
       to: email,
@@ -526,7 +523,12 @@ export class EmailService {
       `
     };
 
-    return this.sendEmail(emailData);
+    const result = await this.sendEmail(emailData);
+    return { success: result };
+  } catch (error) {
+    console.error('Error sending password reset email:', error);
+    return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+  }
   }
 
   /**
@@ -796,7 +798,7 @@ export class EmailService {
           smtpPort: 587,
           smtpUser: 'driftpro2',
           smtpSecure: false,
-          smtpPassword: 'HazGada89!'
+          smtpPassword: 'HazhaGada89!'
         };
       }
     } catch (error) {
@@ -815,7 +817,7 @@ export class EmailService {
         smtpPort: 587,
         smtpUser: 'driftpro2',
         smtpSecure: false,
-        smtpPassword: 'HazGada89!'
+        smtpPassword: 'HazhaGada89!'
       };
     }
   }

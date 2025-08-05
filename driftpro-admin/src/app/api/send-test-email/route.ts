@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
     if (providedSettings && providedSettings.smtpHost) {
       // Use settings provided from frontend
       emailSettings = providedSettings;
-      smtpPassword = providedSettings.smtpPassword || 'HazGada89!';
+      smtpPassword = providedSettings.smtpPassword || 'HazhaGada89!';
     } else {
       // Get email settings from Firebase
       const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
         return NextResponse.json({ error: 'Email settings not configured' }, { status: 400 });
       }
       emailSettings = settingsDoc.data();
-      smtpPassword = emailSettings.smtpPassword || 'HazGada89!';
+      smtpPassword = emailSettings.smtpPassword || 'HazhaGada89!';
     }
 
     if (!smtpPassword) {
@@ -191,7 +191,7 @@ export async function POST(request: NextRequest) {
 
     // Send email
     const mailOptions = {
-              from: `"${emailSettings.fromName || 'DriftPro System'}" <${emailSettings.fromEmail || 'noreplay@driftpro.no'}>`,
+              from: `"${emailSettings.fromName || 'DriftPro System'}" <${emailSettings.fromEmail || 'noreply@driftpro.no'}>`,
       to: to,
       subject: subject,
       html: html,

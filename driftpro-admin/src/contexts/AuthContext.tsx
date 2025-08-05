@@ -161,6 +161,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔒 PRE-LOGIN VALIDATION: User data found:', userData);
       console.log('🔒 PRE-LOGIN VALIDATION: User companyId:', userData.companyId);
       console.log('🔒 PRE-LOGIN VALIDATION: Expected companyId:', companyId);
+      console.log('🔒 PRE-LOGIN VALIDATION: CompanyId match:', userData.companyId === companyId);
+      console.log('🔒 PRE-LOGIN VALIDATION: User status:', userData.status);
+      console.log('🔒 PRE-LOGIN VALIDATION: User has ID:', !!userData.id);
+      console.log('🔒 PRE-LOGIN VALIDATION: User ID value:', userData.id);
+      console.log('🔒 PRE-LOGIN VALIDATION: User ID type:', typeof userData.id);
       
       // Check if user has a companyId
       if (!userData.companyId) {
@@ -175,7 +180,28 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           userCompanyId: userData.companyId,
           requestedCompanyId: companyId
         });
-        throw new Error('Du har ikke tilgang til denne bedriften. Kontakt administrator.');
+        throw new Error(`Sikkerhetsbrudd: Du har ikke tilgang til ${companyId}. Du blir logget ut umiddelbart.`);
+      }
+      
+      // Check if user has been set up with Firebase Authentication
+      if (!userData.id) {
+        console.error('🚨 PRE-LOGIN SETUP ERROR: User missing Firebase UID:', {
+          userEmail: email,
+          hasId: !!userData.id,
+          status: userData.status,
+          companyId: userData.companyId
+        });
+        throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
+      }
+      
+      if (userData.status !== 'active') {
+        console.error('🚨 PRE-LOGIN SETUP ERROR: User status not active:', {
+          userEmail: email,
+          hasId: !!userData.id,
+          status: userData.status,
+          companyId: userData.companyId
+        });
+        throw new Error(`Brukeren er ikke aktivert (status: ${userData.status || 'unknown'}). Kontakt administrator for å få nytt passord.`);
       }
       
       console.log('✅ PRE-LOGIN VALIDATION: User access validated - proceeding with authentication');

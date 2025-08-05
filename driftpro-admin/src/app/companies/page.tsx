@@ -47,6 +47,28 @@ export default function CompaniesPage() {
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [error, setError] = useState<string | null>(null);
 
+  // Helper function to format address
+  const formatAddress = (address: any): string => {
+    if (!address) return '';
+    
+    // If address is already a string, return it
+    if (typeof address === 'string') return address;
+    
+    // If address is an object, format it
+    if (typeof address === 'object') {
+      const parts = [
+        address.street,
+        address.postalCode,
+        address.city,
+        address.country
+      ].filter(Boolean);
+      
+      return parts.join(', ');
+    }
+    
+    return '';
+  };
+
   const loadCompanies = async () => {
     try {
       setLoading(true);
@@ -398,7 +420,7 @@ export default function CompaniesPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                     <MapPin style={{ width: '16px', height: '16px', color: 'var(--gray-400)' }} />
                     <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
-                      {company.address}
+                      {formatAddress(company.address)}
                     </span>
                   </div>
                 )}

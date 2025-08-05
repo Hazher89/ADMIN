@@ -338,13 +338,7 @@ export default function DashboardLayout({
         category: 'admin',
         isAdmin: true
       },
-      {
-        name: 'E-post-konfigurasjon',
-        href: '/dashboard/email-config',
-        icon: <Settings size={20} />,
-        category: 'admin',
-        isAdmin: true
-      },
+
 
     ] : [])
   ];

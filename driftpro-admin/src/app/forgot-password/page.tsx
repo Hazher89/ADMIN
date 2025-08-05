@@ -22,34 +22,29 @@ export default function ForgotPasswordPage() {
     setSuccess('');
 
     try {
-      if (!auth) {
-        throw new Error('Firebase not initialized');
-      }
-
-      // Generate a custom reset token
-      const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      console.log('🔧 FORGOT PASSWORD: Submitting request for email:', email);
       
-      // Store the reset token in Firebase (you might want to add this to a separate collection)
-      if (db) {
-        await addDoc(collection(db, 'passwordResetTokens'), {
-          email,
-          token: resetToken,
-          createdAt: serverTimestamp(),
-          expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000) // 24 hours
-        });
-      }
+      const response = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
 
-      // Send password reset email using our custom service
-      const success = await emailService.sendPasswordResetEmail(email, resetToken);
+      const result = await response.json();
       
-      if (success) {
-        setSuccess('E-post for tilbakestilling av passord er sendt! Sjekk innboksen din.');
+      console.log('🔧 FORGOT PASSWORD: Response:', result);
+
+      if (response.ok) {
+        setSuccess(result.message || 'E-post for tilbakestilling av passord er sendt! Sjekk innboksen din.');
         setEmail('');
       } else {
-        setError('Kunne ikke sende e-post. Prøv igjen senere.');
+        setError(result.error || 'Kunne ikke sende e-post. Prøv igjen senere.');
       }
     } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : 'En feil oppstod');
+      console.error('🔧 FORGOT PASSWORD: Error:', error);
+      setError('Kunne ikke sende e-post. Prøv igjen senere.');
     } finally {
       setLoading(false);
     }

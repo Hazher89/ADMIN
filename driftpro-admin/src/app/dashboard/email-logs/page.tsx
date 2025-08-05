@@ -697,6 +697,37 @@ ${detailedError}`,
     }
   };
 
+  const forceUpdateEmailSettings = async () => {
+    try {
+      setMessage('');
+      setSaving(true);
+      
+      // Force update email settings with correct SMTP credentials
+      const response = await fetch('/api/email-settings', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+        }
+      });
+      
+      if (response.ok) {
+        const result = await response.json();
+        setMessage('✅ E-post-innstillinger tvangs-oppdatert med riktige SMTP-opplysninger! (driftpro2)');
+        
+        // Reload the configuration
+        await loadEmailSettings();
+      } else {
+        const error = await response.json();
+        setMessage(`❌ Feil ved tvangs-oppdatering: ${error.error || 'Ukjent feil'}`);
+      }
+    } catch (error) {
+      console.error('Error force updating email settings:', error);
+      setMessage('❌ Feil ved tvangs-oppdatering av e-post-innstillinger');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const exportEmailLogs = async () => {
     setExporting(true);
     try {
@@ -1373,7 +1404,7 @@ ${detailedError}`,
                     className="form-input"
                     placeholder="driftpro2"
                   />
-                  <p className="form-help">Din e-post-adresse</p>
+                  <p className="form-help">For Domeneshop: driftpro2 (ikke e-post-adresse)</p>
                 </div>
                 <div>
                   <label className="form-label">Passord</label>
@@ -1404,7 +1435,7 @@ ${detailedError}`,
                   </div>
                   <p className="form-help">
                     <strong>Viktig:</strong> Dette må være passordet for driftpro2 fra Domeneshop. 
-                    Hvis du ikke har dette passordet, kontakt Domeneshop support.
+                    Brukernavn: driftpro2, Passord: HazhaGada89!
                     {smtpPassword && smtpPassword.trim() !== '' && (
                       <span style={{ color: '#059669', fontWeight: '600' }}> ✅ Passord lagret</span>
                     )}
@@ -1473,6 +1504,16 @@ ${detailedError}`,
               </div>
 
               <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+                <button
+                  onClick={forceUpdateEmailSettings}
+                  disabled={saving}
+                  className="btn btn-danger"
+                  style={{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}
+                >
+                  <Settings style={{ width: '16px', height: '16px' }} />
+                  {saving ? 'Oppdaterer...' : '🔧 TVANGS-OPPDATER SMTP'}
+                </button>
+                
                 {isSmtpLoggedIn ? (
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem 1rem', backgroundColor: '#d1fae5', border: '1px solid #10b981', borderRadius: '0.5rem', color: '#065f46' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
@@ -1537,7 +1578,7 @@ ${detailedError}`,
                   borderRadius: '0.5rem',
                   color: '#92400e'
                 }}>
-                  <strong>⚠️ Advarsel:</strong> SMTP-passord mangler! Gå til <a href="/dashboard/email-config" style={{ color: '#92400e', textDecoration: 'underline' }}>E-post-konfigurasjon</a> for å sette opp passordet.
+                  <strong>⚠️ Advarsel:</strong> SMTP-passord mangler! Bruk "🔧 TVANGS-OPPDATER SMTP" knappen ovenfor for å sette opp riktig passord.
                 </div>
               )}
 

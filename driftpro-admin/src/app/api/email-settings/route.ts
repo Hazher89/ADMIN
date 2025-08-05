@@ -58,7 +58,7 @@ export async function GET(request: NextRequest) {
       // Return default settings
       const defaultSettings = {
         enabled: true,
-        fromEmail: 'noreplay@driftpro.no',
+        fromEmail: 'noreply@driftpro.no',
         fromName: 'DriftPro System',
         adminSetup: true,
         deviationReports: true,
@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
         smtpHost: 'smtp.domeneshop.no',
         smtpPort: 587,
         smtpUser: 'driftpro2',
-        smtpPassword: 'HazGada89!',
+        smtpPassword: 'HazhaGada89!',
         smtpSecure: false,
         retryAttempts: 3,
         retryDelay: 5000,
@@ -146,6 +146,59 @@ export async function POST(request: NextRequest) {
     });
     return NextResponse.json({ 
       error: 'Failed to save email settings',
+      details: error instanceof Error ? error.message : 'Unknown error'
+    }, { status: 500 });
+  }
+} 
+
+export async function PUT(request: NextRequest) {
+  try {
+    console.log('Force updating email settings with correct SMTP credentials...');
+    
+    const firestoreDb = getDb();
+    if (!firestoreDb) {
+      console.error('Firestore database not available');
+      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
+    }
+
+    // Force update with correct SMTP settings
+    const correctSettings = {
+      enabled: true,
+      fromEmail: 'noreply@driftpro.no',
+      fromName: 'DriftPro System',
+      adminSetup: true,
+      deviationReports: true,
+      deviationResolved: true,
+      userWelcome: true,
+      notifications: true,
+      warnings: true,
+      systemAlerts: true,
+      smtpHost: 'smtp.domeneshop.no',
+      smtpPort: 587,
+      smtpUser: 'driftpro2', // CORRECT username
+      smtpPassword: 'HazhaGada89!', // CORRECT password
+      smtpSecure: false,
+      retryAttempts: 3,
+      retryDelay: 5000,
+      maxEmailsPerHour: 100,
+      logAllEmails: true,
+      updatedAt: new Date().toISOString(),
+      updatedBy: 'system'
+    };
+
+    console.log('Force updating with correct settings:', { ...correctSettings, smtpPassword: '[HIDDEN]' });
+
+    await setDoc(doc(firestoreDb, 'system', 'emailSettings'), correctSettings);
+
+    console.log('Email settings force updated successfully');
+    return NextResponse.json({ 
+      success: true, 
+      message: 'Email settings force updated with correct SMTP credentials' 
+    });
+  } catch (error) {
+    console.error('Error force updating email settings:', error);
+    return NextResponse.json({ 
+      error: 'Failed to force update email settings',
       details: error instanceof Error ? error.message : 'Unknown error'
     }, { status: 500 });
   }
