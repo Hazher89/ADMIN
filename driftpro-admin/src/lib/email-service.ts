@@ -164,7 +164,7 @@ export class EmailService {
       });
 
       const mailOptions = {
-        from: `"DriftPro System" <${smtpConfig.user.includes('@') ? smtpConfig.user : 'noreply@driftpro.no'}>`,
+        from: `"DriftPro System" <noreplay@driftpro.no>`,
         to: emailData.to,
         subject: emailData.subject,
         html: emailData.html,
@@ -517,9 +517,9 @@ export class EmailService {
                 <strong>⚠️ Viktig:</strong> Denne lenken utløper om 1 time av sikkerhetsgrunner.
               </div>
               <p>Hvis du ikke ba om å tilbakestille passordet, kan du trygt ignorere denne e-posten.</p>
-              <div class="footer">
-                <p>Med vennlig hilsen,<br>DriftPro Team</p>
-              </div>
+                      <div class="footer">
+          <p>Med vennlig hilsen,<br>DriftPro Team<br>noreplay@driftpro.no</p>
+        </div>
             </div>
           </div>
         </body>
