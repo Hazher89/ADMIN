@@ -163,9 +163,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       console.log('🔒 PRE-LOGIN VALIDATION: Expected companyId:', companyId);
       console.log('🔒 PRE-LOGIN VALIDATION: CompanyId match:', userData.companyId === companyId);
       console.log('🔒 PRE-LOGIN VALIDATION: User status:', userData.status);
-      console.log('🔒 PRE-LOGIN VALIDATION: User has ID:', !!userData.id);
-      console.log('🔒 PRE-LOGIN VALIDATION: User ID value:', userData.id);
-      console.log('🔒 PRE-LOGIN VALIDATION: User ID type:', typeof userData.id);
+      console.log('🔒 PRE-LOGIN VALIDATION: User has UID:', !!userData.uid);
+      console.log('🔒 PRE-LOGIN VALIDATION: User UID value:', userData.uid);
+      console.log('🔒 PRE-LOGIN VALIDATION: User UID type:', typeof userData.uid);
       
       // Check if user has a companyId
       if (!userData.companyId) {
@@ -184,10 +184,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       
       // Check if user has been set up with Firebase Authentication
-      if (!userData.id) {
+      if (!userData.uid) {
         console.error('🚨 PRE-LOGIN SETUP ERROR: User missing Firebase UID:', {
           userEmail: email,
-          hasId: !!userData.id,
+          hasUid: !!userData.uid,
           status: userData.status,
           companyId: userData.companyId
         });
@@ -197,7 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (userData.status !== 'active') {
         console.error('🚨 PRE-LOGIN SETUP ERROR: User status not active:', {
           userEmail: email,
-          hasId: !!userData.id,
+          hasUid: !!userData.uid,
           status: userData.status,
           companyId: userData.companyId
         });

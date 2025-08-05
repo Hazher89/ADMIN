@@ -158,7 +158,7 @@ export async function POST(request: NextRequest) {
 
     // Update user in Firestore with Firebase UID and mark as active
     const updateData = {
-      id: firebaseUser.uid,
+      uid: firebaseUser.uid, // Store Firebase UID correctly
       companyId: tokenData.companyId,
       status: 'active',
       passwordSetAt: new Date().toISOString(),
