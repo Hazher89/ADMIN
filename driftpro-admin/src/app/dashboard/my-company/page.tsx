@@ -12,7 +12,6 @@ import {
   Settings, 
   Shield, 
   Wrench, 
-  Workflow, 
   BarChart3,
   Plus,
   Search,
@@ -111,11 +110,6 @@ import {
   Hexagon,
   Octagon,
   Diamond,
-  Star as StarIcon,
-  Heart as HeartIcon,
-  Zap as ZapIcon,
-  Target as TargetIcon,
-  Award as AwardIcon,
   Trophy,
   Medal,
   Crown,
@@ -144,7 +138,8 @@ import {
   Phi,
   Chi,
   Psi,
-  Omega as OmegaIcon
+  Grid,
+  List
 } from 'lucide-react';
 
 export default function MyCompanyPage() {
@@ -242,11 +237,19 @@ export default function MyCompanyPage() {
 
   const service = userProfile?.companyId ? companyService(userProfile.companyId) : null;
 
+  // Add error boundary for missing data
+  const [error, setError] = useState<string | null>(null);
+
   const loadCompanyData = async () => {
-    if (!service) return;
+    if (!service) {
+      console.log('No service available, skipping data load');
+      setLoading(false);
+      return;
+    }
     
     try {
       setLoading(true);
+      setError(null);
       setSyncStatus('syncing');
       
       console.log('🚀 Loading super advanced company data...');
@@ -261,24 +264,23 @@ export default function MyCompanyPage() {
         processesData, 
         orgChartData, 
         statsData, 
-        activityData,
-        analyticsData,
-        performanceData,
-        optimizationData
+        activityData
       ] = await Promise.all([
-        service.getProtocols(),
-        service.getManagementReviews(),
-        service.getCompliance(),
-        service.getJSAs(),
-        service.getEquipment(),
-        service.getWorkProcesses(),
-        service.getOrgChart(),
-        service.getDashboardStats(),
-        service.getRecentActivity(),
-        service.getAnalytics(),
-        getPerformanceMetrics(),
-        getOptimizationSuggestions()
+        service.getProtocols().catch(() => []),
+        service.getManagementReviews().catch(() => []),
+        service.getCompliance().catch(() => []),
+        service.getJSAs().catch(() => []),
+        service.getEquipment().catch(() => []),
+        service.getWorkProcesses().catch(() => []),
+        service.getOrgChart().catch(() => []),
+        service.getDashboardStats().catch(() => null),
+        service.getRecentActivity().catch(() => [])
       ]);
+
+      // Get additional data safely
+      const analyticsData = await service.getAnalytics?.().catch(() => null) || null;
+      const performanceData = await getPerformanceMetrics().catch(() => null) || null;
+      const optimizationData = await getOptimizationSuggestions().catch(() => []) || [];
 
       // SUPER AVANSERTE DATA-PROSESSERING
       const processedProtocols = processProtocolsData(protocolsData);
@@ -316,6 +318,7 @@ export default function MyCompanyPage() {
     } catch (error) {
       console.error('❌ Error loading super advanced company data:', error);
       setSyncStatus('error');
+      setError('Kunne ikke laste bedriftsdata. Vennligst prøv igjen senere.');
       generateErrorNotifications(error);
     } finally {
       setLoading(false);
@@ -951,6 +954,78 @@ export default function MyCompanyPage() {
     );
   }
 
+  if (error) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: '500px', padding: '2rem' }}>
+          <div style={{ 
+            width: '80px', 
+            height: '80px', 
+            background: 'var(--red-100)', 
+            borderRadius: '50%', 
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.5rem'
+          }}>
+            <AlertTriangle style={{ width: '40px', height: '40px', color: 'var(--red-600)' }} />
+          </div>
+          <h2 style={{ color: 'var(--red-800)', fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem' }}>
+            Oops! Noe gikk galt
+          </h2>
+          <p style={{ color: 'var(--gray-600)', fontSize: '1rem', marginBottom: '1.5rem' }}>
+            {error}
+          </p>
+          <button 
+            onClick={() => {
+              setError(null);
+              loadCompanyData();
+            }}
+            style={{
+              background: 'var(--blue-600)',
+              color: 'white',
+              border: 'none',
+              padding: '0.75rem 1.5rem',
+              borderRadius: 'var(--radius-lg)',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer'
+            }}
+          >
+            Prøv igjen
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center', maxWidth: '500px', padding: '2rem' }}>
+          <div style={{ 
+            width: '80px', 
+            height: '80px', 
+            background: 'var(--yellow-100)', 
+            borderRadius: '50%', 
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            margin: '0 auto 1.5rem'
+          }}>
+            <UserCheck style={{ width: '40px', height: '40px', color: 'var(--yellow-600)' }} />
+          </div>
+          <h2 style={{ color: 'var(--yellow-800)', fontSize: '1.5rem', fontWeight: '700', marginBottom: '1rem' }}>
+            Ingen brukerinformasjon
+          </h2>
+          <p style={{ color: 'var(--gray-600)', fontSize: '1rem' }}>
+            Vennligst logg inn på nytt for å få tilgang til Min Bedrift.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
       {/* SUPER AVANSERT HEADER */}
@@ -1063,7 +1138,7 @@ export default function MyCompanyPage() {
               { id: 'compliance', label: '🛡️ Samsvar', icon: Shield, count: compliance.length, color: 'var(--orange-600)' },
               { id: 'jsa', label: '⚠️ SJA', icon: Clipboard, count: jsa.length, color: 'var(--red-600)' },
               { id: 'equipment', label: '🔧 Utstyr & FDV', icon: Wrench, count: equipment.length, color: 'var(--indigo-600)' },
-              { id: 'processes', label: '⚙️ Arbeidsprosesser', icon: Workflow, count: workProcesses.length, color: 'var(--pink-600)' },
+              { id: 'processes', label: '⚙️ Arbeidsprosesser', icon: Settings, count: workProcesses.length, color: 'var(--pink-600)' },
               { id: 'orgchart', label: '📊 Org. Kart', icon: BarChart3, count: orgChart.length, color: 'var(--teal-600)' }
             ].map((tab) => {
               const IconComponent = tab.icon;
