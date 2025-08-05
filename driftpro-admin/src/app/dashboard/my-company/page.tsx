@@ -3,6 +3,8 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { companyService, type Protocol, type ManagementReview, type Compliance, type JSA, type Equipment, type WorkProcess, type OrgChart } from '@/lib/company-service';
+import ProtocolModal from '@/components/ProtocolModal';
+import JSAModal from '@/components/JSAModal';
 import { 
   Building, 
   FileText, 
@@ -53,6 +55,7 @@ export default function MyCompanyPage() {
   const [showEquipmentModal, setShowEquipmentModal] = useState(false);
   const [showProcessModal, setShowProcessModal] = useState(false);
   const [showOrgChartModal, setShowOrgChartModal] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -157,6 +160,7 @@ export default function MyCompanyPage() {
     if (!service || !userProfile) return;
     
     try {
+      setIsCreating(true);
       await service.createProtocol({
         ...protocolData,
         companyId: userProfile.companyId,
@@ -166,6 +170,8 @@ export default function MyCompanyPage() {
       setShowProtocolModal(false);
     } catch (error) {
       console.error('Error creating protocol:', error);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -205,6 +211,7 @@ export default function MyCompanyPage() {
     if (!service || !userProfile) return;
     
     try {
+      setIsCreating(true);
       await service.createJSA({
         ...jsaData,
         companyId: userProfile.companyId,
@@ -214,6 +221,8 @@ export default function MyCompanyPage() {
       setShowJSAModal(false);
     } catch (error) {
       console.error('Error creating JSA:', error);
+    } finally {
+      setIsCreating(false);
     }
   };
 
@@ -273,6 +282,7 @@ export default function MyCompanyPage() {
           <p className="mt-4 text-gray-600">Laster bedriftsdata...</p>
         </div>
       </div>
+
     );
   }
 
@@ -909,6 +919,21 @@ export default function MyCompanyPage() {
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      <ProtocolModal
+        isOpen={showProtocolModal}
+        onClose={() => setShowProtocolModal(false)}
+        onSubmit={handleCreateProtocol}
+        loading={isCreating}
+      />
+
+      <JSAModal
+        isOpen={showJSAModal}
+        onClose={() => setShowJSAModal(false)}
+        onSubmit={handleCreateJSA}
+        loading={isCreating}
+      />
     </div>
   );
 } 
