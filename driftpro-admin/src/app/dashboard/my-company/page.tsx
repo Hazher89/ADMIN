@@ -909,48 +909,162 @@ export default function MyCompanyPage() {
 
   if (loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Laster bedriftsdata...</p>
+      <div style={{ minHeight: '100vh', background: 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ 
+            width: '80px', 
+            height: '80px', 
+            border: '4px solid var(--blue-600)', 
+            borderTop: '4px solid transparent', 
+            borderRadius: '50%', 
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto'
+          }}></div>
+          <h2 style={{ marginTop: '1.5rem', color: 'var(--blue-800)', fontSize: '2rem', fontWeight: '700' }}>
+            🚀 SUPER AVANSERT Min Bedrift
+          </h2>
+          <p style={{ marginTop: '0.5rem', color: 'var(--gray-600)', fontSize: '1.1rem' }}>
+            Initialiserer enterprise-funksjoner og analytics...
+          </p>
+          <div style={{ marginTop: '1.5rem', display: 'flex', justifyContent: 'center', gap: '0.75rem' }}>
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--blue-500)', animation: 'pulse 1.5s infinite' }}></div>
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--green-500)', animation: 'pulse 1.5s infinite 0.2s' }}></div>
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--purple-500)', animation: 'pulse 1.5s infinite 0.4s' }}></div>
+            <div style={{ width: '12px', height: '12px', borderRadius: '50%', background: 'var(--orange-500)', animation: 'pulse 1.5s infinite 0.6s' }}></div>
+          </div>
+          <div style={{ marginTop: '2rem', display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', maxWidth: '400px', margin: '2rem auto 0' }}>
+            <div style={{ background: 'var(--blue-100)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--blue-200)' }}>
+              <Database style={{ width: '24px', height: '24px', color: 'var(--blue-600)', margin: '0 auto 0.5rem', display: 'block' }} />
+              <p style={{ fontSize: '0.875rem', color: 'var(--blue-700)', fontWeight: '600' }}>Data Loading</p>
+            </div>
+            <div style={{ background: 'var(--green-100)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--green-200)' }}>
+              <BarChart3 style={{ width: '24px', height: '24px', color: 'var(--green-600)', margin: '0 auto 0.5rem', display: 'block' }} />
+              <p style={{ fontSize: '0.875rem', color: 'var(--green-700)', fontWeight: '600' }}>Analytics</p>
+            </div>
+            <div style={{ background: 'var(--purple-100)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--purple-200)' }}>
+              <Settings style={{ width: '24px', height: '24px', color: 'var(--purple-600)', margin: '0 auto 0.5rem', display: 'block' }} />
+              <p style={{ fontSize: '0.875rem', color: 'var(--purple-700)', fontWeight: '600' }}>Config</p>
+            </div>
+          </div>
         </div>
       </div>
-
     );
   }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Min Bedrift</h1>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button className="btn btn-secondary">
-              <RefreshCw style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-              Oppdater
-            </button>
-            <button className="btn btn-primary">
-              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-              Ny modul
-            </button>
+      {/* SUPER AVANSERT HEADER */}
+      <div style={{ background: 'linear-gradient(135deg, var(--blue-600) 0%, var(--purple-600) 100%)', boxShadow: 'var(--shadow-lg)', borderBottom: '1px solid var(--gray-200)', padding: '2rem' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
+                <Building style={{ width: '32px', height: '32px', color: 'white' }} />
+              </div>
+              <div>
+                <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'white', margin: '0' }}>
+                  🚀 SUPER AVANSERT Min Bedrift
+                </h1>
+                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.1rem', margin: '0.25rem 0 0 0' }}>
+                  Enterprise Management Platform
+                </p>
+              </div>
+            </div>
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                className="btn btn-outline" 
+                style={{ 
+                  background: 'rgba(255,255,255,0.1)', 
+                  border: '1px solid rgba(255,255,255,0.3)', 
+                  color: 'white',
+                  padding: '0.75rem 1.5rem'
+                }}
+                onClick={() => loadCompanyData()}
+              >
+                <RefreshCw style={{ width: '18px', height: '18px', marginRight: '0.5rem' }} />
+                Oppdater Data
+              </button>
+              <button 
+                className="btn btn-primary" 
+                style={{ 
+                  background: 'var(--green-600)', 
+                  border: 'none', 
+                  color: 'white',
+                  padding: '0.75rem 1.5rem'
+                }}
+              >
+                <Plus style={{ width: '18px', height: '18px', marginRight: '0.5rem' }} />
+                Ny Enterprise Modul
+              </button>
+            </div>
+          </div>
+          
+          {/* SUPER AVANSERTE STATUS INDICATORS */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: syncStatus === 'synced' ? 'var(--green-400)' : syncStatus === 'syncing' ? 'var(--yellow-400)' : 'var(--red-400)' }}></div>
+                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                  {syncStatus === 'synced' ? 'Synkronisert' : syncStatus === 'syncing' ? 'Synkroniserer...' : 'Feil'}
+                </span>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
+                Sist oppdatert: {lastUpdate.toLocaleTimeString()}
+              </p>
+            </div>
+            
+            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <Bell style={{ width: '16px', height: '16px', color: 'white' }} />
+                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                  {unreadCount} nye varsler
+                </span>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
+                {approvalQueue.length} venter på godkjenning
+              </p>
+            </div>
+            
+            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <TrendingUp style={{ width: '16px', height: '16px', color: 'white' }} />
+                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                  {performanceMetrics?.businessMetrics?.productivity?.toFixed(1) || '0'}% produktivitet
+                </span>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
+                {performanceMetrics?.businessMetrics?.costSavings?.toLocaleString() || '0'} kr bespart
+              </p>
+            </div>
+            
+            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                <ShieldCheck style={{ width: '16px', height: '16px', color: 'white' }} />
+                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                  {dashboardStats?.compliance?.compliant || 0} compliant
+                </span>
+              </div>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
+                {dashboardStats?.compliance?.atRisk || 0} at risk
+              </p>
+            </div>
           </div>
         </div>
       </div>
 
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
-        {/* Tab Navigation */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', flexWrap: 'wrap', borderBottom: '2px solid var(--gray-200)', gap: '0' }}>
+        {/* SUPER AVANSERT TAB NAVIGATION */}
+        <div style={{ marginBottom: '2rem', background: 'var(--white)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-md)', padding: '1rem' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             {[
-              { id: 'overview', label: 'Oversikt', icon: Building },
-              { id: 'protocols', label: 'Protokoller', icon: FileText },
-              { id: 'management', label: 'Ledelsesgjennomgang', icon: Users },
-              { id: 'compliance', label: 'Samsvar', icon: Shield },
-              { id: 'jsa', label: 'SJA', icon: Clipboard },
-              { id: 'equipment', label: 'Utstyr & FDV', icon: Wrench },
-              { id: 'processes', label: 'Arbeidsprosesser', icon: Workflow },
-              { id: 'orgchart', label: 'Org. Kart', icon: BarChart3 }
+              { id: 'overview', label: '🚀 Oversikt', icon: Building, count: dashboardStats?.protocols?.total || 0, color: 'var(--blue-600)' },
+              { id: 'protocols', label: '📋 Protokoller', icon: FileText, count: protocols.length, color: 'var(--green-600)' },
+              { id: 'management', label: '👥 Ledelsesgjennomgang', icon: Users, count: managementReviews.length, color: 'var(--purple-600)' },
+              { id: 'compliance', label: '🛡️ Samsvar', icon: Shield, count: compliance.length, color: 'var(--orange-600)' },
+              { id: 'jsa', label: '⚠️ SJA', icon: Clipboard, count: jsa.length, color: 'var(--red-600)' },
+              { id: 'equipment', label: '🔧 Utstyr & FDV', icon: Wrench, count: equipment.length, color: 'var(--indigo-600)' },
+              { id: 'processes', label: '⚙️ Arbeidsprosesser', icon: Workflow, count: workProcesses.length, color: 'var(--pink-600)' },
+              { id: 'orgchart', label: '📊 Org. Kart', icon: BarChart3, count: orgChart.length, color: 'var(--teal-600)' }
             ].map((tab) => {
               const IconComponent = tab.icon;
               return (
@@ -960,20 +1074,148 @@ export default function MyCompanyPage() {
                   style={{
                     padding: '1rem 1.5rem',
                     border: 'none',
-                    background: 'transparent',
+                    background: activeTab === tab.id ? tab.color : 'var(--gray-50)',
                     cursor: 'pointer',
-                    borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
-                    color: activeTab === tab.id ? 'var(--primary)' : 'var(--gray-600)',
-                    fontWeight: activeTab === tab.id ? '600' : '500',
+                    borderRadius: 'var(--radius-lg)',
+                    color: activeTab === tab.id ? 'white' : 'var(--gray-700)',
+                    fontWeight: activeTab === tab.id ? '700' : '600',
                     fontSize: 'var(--font-size-sm)',
-                    whiteSpace: 'nowrap'
+                    whiteSpace: 'nowrap',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s ease',
+                    boxShadow: activeTab === tab.id ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
+                    transform: activeTab === tab.id ? 'translateY(-2px)' : 'none'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.background = 'var(--gray-100)';
+                      e.currentTarget.style.transform = 'translateY(-1px)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (activeTab !== tab.id) {
+                      e.currentTarget.style.background = 'var(--gray-50)';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }
                   }}
                 >
-                  <IconComponent style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
-                  {tab.label}
+                  <IconComponent style={{ width: '18px', height: '18px' }} />
+                  <span>{tab.label}</span>
+                  <div style={{ 
+                    background: activeTab === tab.id ? 'rgba(255,255,255,0.2)' : 'var(--gray-200)', 
+                    color: activeTab === tab.id ? 'white' : 'var(--gray-600)',
+                    padding: '0.25rem 0.5rem', 
+                    borderRadius: 'var(--radius-full)', 
+                    fontSize: '0.75rem', 
+                    fontWeight: '700',
+                    minWidth: '20px',
+                    textAlign: 'center'
+                  }}>
+                    {tab.count}
+                  </div>
                 </button>
               );
             })}
+          </div>
+          
+          {/* SUPER AVANSERTE FILTER OG SØK */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--gray-200)' }}>
+            <div style={{ position: 'relative', flex: '1' }}>
+              <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: 'var(--gray-400)' }} />
+              <input
+                type="text"
+                placeholder="🔍 Søk i alle moduler..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 1rem 0.75rem 2.5rem',
+                  border: '1px solid var(--gray-300)',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-sm)',
+                  background: 'var(--white)'
+                }}
+              />
+            </div>
+            
+            <select
+              value={selectedCategory}
+              onChange={(e) => setSelectedCategory(e.target.value)}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid var(--gray-300)',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--font-size-sm)',
+                background: 'var(--white)',
+                minWidth: '150px'
+              }}
+            >
+              <option value="all">📂 Alle kategorier</option>
+              <option value="Sikkerhet">🛡️ Sikkerhet</option>
+              <option value="Miljø">🌱 Miljø</option>
+              <option value="Kvalitet">✅ Kvalitet</option>
+              <option value="HMS">⚡ HMS</option>
+              <option value="Prosess">⚙️ Prosess</option>
+            </select>
+            
+            <select
+              value={selectedStatus}
+              onChange={(e) => setSelectedStatus(e.target.value)}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid var(--gray-300)',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--font-size-sm)',
+                background: 'var(--white)',
+                minWidth: '150px'
+              }}
+            >
+              <option value="all">📊 Alle statuser</option>
+              <option value="active">✅ Aktiv</option>
+              <option value="draft">📝 Kladd</option>
+              <option value="review">👀 Under gjennomgang</option>
+              <option value="approved">✅ Godkjent</option>
+              <option value="archived">📦 Arkivert</option>
+            </select>
+            
+            <button
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid var(--gray-300)',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--font-size-sm)',
+                background: showAdvancedFilters ? 'var(--blue-50)' : 'var(--white)',
+                color: showAdvancedFilters ? 'var(--blue-700)' : 'var(--gray-700)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Filter style={{ width: '16px', height: '16px' }} />
+              Avanserte filtre
+            </button>
+            
+            <button
+              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+              style={{
+                padding: '0.75rem 1rem',
+                border: '1px solid var(--gray-300)',
+                borderRadius: 'var(--radius-lg)',
+                fontSize: 'var(--font-size-sm)',
+                background: 'var(--white)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              {viewMode === 'grid' ? <List style={{ width: '16px', height: '16px' }} /> : <Grid style={{ width: '16px', height: '16px' }} />}
+              {viewMode === 'grid' ? 'Liste' : 'Grid'}
+            </button>
           </div>
         </div>
 
