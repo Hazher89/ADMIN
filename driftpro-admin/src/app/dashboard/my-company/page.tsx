@@ -8,62 +8,23 @@ import {
   Users, 
   Settings, 
   Shield, 
-  Tool, 
+  Wrench, 
   Workflow, 
   BarChart3,
   Plus,
   Search,
   Filter,
   Download,
-  Upload,
   Edit,
-  Trash2,
   Eye,
-  CheckCircle,
-  AlertTriangle,
-  Clock,
   Calendar,
-  MapPin,
-  User,
   ChevronDown,
-  ChevronRight,
   Save,
   RefreshCw,
-  TrendingUp,
-  Database,
-  Lock,
-  Unlock,
-  Star,
-  BookOpen,
-  Clipboard,
-  Target,
-  Zap,
   Activity,
-  Layers,
-  Grid,
-  List,
-  MoreHorizontal,
   Info,
-  HelpCircle,
-  ExternalLink,
-  Link,
-  Folder,
-  File,
-  Image,
-  Video,
-  Archive,
-  Tag,
-  Hash,
-  Hash as HashIcon,
-  Hash as HashIcon2,
-  Hash as HashIcon3,
-  Hash as HashIcon4,
-  Hash as HashIcon5,
-  Hash as HashIcon6,
-  Hash as HashIcon7,
-  Hash as HashIcon8,
-  Hash as HashIcon9,
-  Hash as HashIcon10
+  Clipboard,
+
 } from 'lucide-react';
 
 export default function MyCompanyPage() {
@@ -257,7 +218,7 @@ export default function MyCompanyPage() {
               { id: 'management', label: 'Ledelsesgjennomgang', icon: Users },
               { id: 'compliance', label: 'Samsvar', icon: Shield },
               { id: 'jsa', label: 'SJA', icon: Clipboard },
-              { id: 'equipment', label: 'Utstyr & FDV', icon: Tool },
+              { id: 'equipment', label: 'Utstyr & FDV', icon: Wrench },
               { id: 'processes', label: 'Arbeidsprosesser', icon: Workflow },
               { id: 'orgchart', label: 'Org. Kart', icon: BarChart3 }
             ].map((tab) => {
@@ -325,9 +286,9 @@ export default function MyCompanyPage() {
                     <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Aktivt utstyr</p>
                     <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--orange-600)' }}>{equipment.filter(e => e.status === 'operational').length}</p>
                   </div>
-                  <div style={{ background: 'var(--orange-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
-                    <Tool style={{ width: '24px', height: '24px', color: 'var(--orange-600)' }} />
-                  </div>
+                                     <div style={{ background: 'var(--orange-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
+                     <Wrench style={{ width: '24px', height: '24px', color: 'var(--orange-600)' }} />
+                   </div>
                 </div>
               </div>
 
