@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { companyService, type Protocol, type ManagementReview, type Compliance, type JSA, type Equipment, type WorkProcess, type OrgChart } from '@/lib/company-service';
 import { 
   Building, 
   FileText, 
@@ -34,13 +35,24 @@ export default function MyCompanyPage() {
   const [isMobile, setIsMobile] = useState(false);
 
   // State for different modules
-  const [protocols, setProtocols] = useState<any[]>([]);
-  const [managementReviews, setManagementReviews] = useState<any[]>([]);
-  const [compliance, setCompliance] = useState<any[]>([]);
-  const [jsa, setJsa] = useState<any[]>([]);
-  const [equipment, setEquipment] = useState<any[]>([]);
-  const [workProcesses, setWorkProcesses] = useState<any[]>([]);
-  const [orgChart, setOrgChart] = useState<any[]>([]);
+  const [protocols, setProtocols] = useState<Protocol[]>([]);
+  const [managementReviews, setManagementReviews] = useState<ManagementReview[]>([]);
+  const [compliance, setCompliance] = useState<Compliance[]>([]);
+  const [jsa, setJsa] = useState<JSA[]>([]);
+  const [equipment, setEquipment] = useState<Equipment[]>([]);
+  const [workProcesses, setWorkProcesses] = useState<WorkProcess[]>([]);
+  const [orgChart, setOrgChart] = useState<OrgChart[]>([]);
+  const [dashboardStats, setDashboardStats] = useState<any>(null);
+  const [recentActivity, setRecentActivity] = useState<any[]>([]);
+
+  // Modal states
+  const [showProtocolModal, setShowProtocolModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [showJSAModal, setShowJSAModal] = useState(false);
+  const [showEquipmentModal, setShowEquipmentModal] = useState(false);
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [showOrgChartModal, setShowOrgChartModal] = useState(false);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -59,20 +71,36 @@ export default function MyCompanyPage() {
     }
   }, [userProfile?.companyId]);
 
+  const service = userProfile?.companyId ? companyService(userProfile.companyId) : null;
+
   const loadCompanyData = async () => {
+    if (!service) return;
+    
     try {
       setLoading(true);
-      // Load data for all modules
-      // This would be replaced with actual API calls
-      await Promise.all([
-        loadProtocols(),
-        loadManagementReviews(),
-        loadCompliance(),
-        loadJSA(),
-        loadEquipment(),
-        loadWorkProcesses(),
-        loadOrgChart()
+      
+      // Load all data in parallel
+      const [protocolsData, reviewsData, complianceData, jsaData, equipmentData, processesData, orgChartData, statsData, activityData] = await Promise.all([
+        service.getProtocols(),
+        service.getManagementReviews(),
+        service.getCompliance(),
+        service.getJSAs(),
+        service.getEquipment(),
+        service.getWorkProcesses(),
+        service.getOrgChart(),
+        service.getDashboardStats(),
+        service.getRecentActivity()
       ]);
+
+      setProtocols(protocolsData);
+      setManagementReviews(reviewsData);
+      setCompliance(complianceData);
+      setJsa(jsaData);
+      setEquipment(equipmentData);
+      setWorkProcesses(processesData);
+      setOrgChart(orgChartData);
+      setDashboardStats(statsData);
+      setRecentActivity(activityData);
     } catch (error) {
       console.error('Error loading company data:', error);
     } finally {
@@ -80,62 +108,7 @@ export default function MyCompanyPage() {
     }
   };
 
-  const loadProtocols = async () => {
-    // Simulate loading protocols
-    setProtocols([
-      { id: 1, name: 'Sikkerhetsprotokoll', status: 'active', version: '2.1', lastUpdated: '2024-01-15', category: 'Sikkerhet' },
-      { id: 2, name: 'Miljøprotokoll', status: 'draft', version: '1.3', lastUpdated: '2024-01-10', category: 'Miljø' },
-      { id: 3, name: 'Kvalitetsprotokoll', status: 'active', version: '3.0', lastUpdated: '2024-01-20', category: 'Kvalitet' }
-    ]);
-  };
 
-  const loadManagementReviews = async () => {
-    setManagementReviews([
-      { id: 1, title: 'Q1 2024 Ledelsesgjennomgang', date: '2024-03-15', status: 'completed', participants: 8, findings: 12 },
-      { id: 2, title: 'Q4 2023 Ledelsesgjennomgang', date: '2023-12-20', status: 'completed', participants: 6, findings: 8 },
-      { id: 3, title: 'Q1 2025 Ledelsesgjennomgang', date: '2025-03-15', status: 'scheduled', participants: 0, findings: 0 }
-    ]);
-  };
-
-  const loadCompliance = async () => {
-    setCompliance([
-      { id: 1, regulation: 'Arbeidsmiljøloven', status: 'compliant', lastCheck: '2024-01-15', nextCheck: '2024-07-15', risk: 'low' },
-      { id: 2, regulation: 'Miljøloven', status: 'review', lastCheck: '2024-01-10', nextCheck: '2024-04-10', risk: 'medium' },
-      { id: 3, regulation: 'Sikkerhetsloven', status: 'compliant', lastCheck: '2024-01-20', nextCheck: '2024-07-20', risk: 'low' }
-    ]);
-  };
-
-  const loadJSA = async () => {
-    setJsa([
-      { id: 1, activity: 'Høydearbeid', department: 'Produksjon', riskLevel: 'high', lastUpdated: '2024-01-15', status: 'active' },
-      { id: 2, activity: 'Kjemisk håndtering', department: 'Laboratorium', riskLevel: 'medium', lastUpdated: '2024-01-10', status: 'active' },
-      { id: 3, activity: 'Maskinoperasjon', department: 'Verksted', riskLevel: 'low', lastUpdated: '2024-01-20', status: 'active' }
-    ]);
-  };
-
-  const loadEquipment = async () => {
-    setEquipment([
-      { id: 1, name: 'Kran A-101', type: 'Mobilkran', status: 'operational', lastInspection: '2024-01-15', nextInspection: '2024-07-15' },
-      { id: 2, name: 'Kompressor B-205', type: 'Luftkompressor', status: 'maintenance', lastInspection: '2024-01-10', nextInspection: '2024-04-10' },
-      { id: 3, name: 'Generator C-301', type: 'Nødgenerator', status: 'operational', lastInspection: '2024-01-20', nextInspection: '2024-07-20' }
-    ]);
-  };
-
-  const loadWorkProcesses = async () => {
-    setWorkProcesses([
-      { id: 1, name: 'Produksjonsprosess A', department: 'Produksjon', status: 'active', version: '2.1', lastUpdated: '2024-01-15' },
-      { id: 2, name: 'Kvalitetskontroll', department: 'Kvalitet', status: 'active', version: '1.5', lastUpdated: '2024-01-10' },
-      { id: 3, name: 'Vedlikeholdsprosess', department: 'Vedlikehold', status: 'draft', version: '1.0', lastUpdated: '2024-01-20' }
-    ]);
-  };
-
-  const loadOrgChart = async () => {
-    setOrgChart([
-      { id: 1, name: 'John Doe', position: 'CEO', department: 'Ledelse', reportsTo: null, employees: 5 },
-      { id: 2, name: 'Jane Smith', position: 'Produksjonsleder', department: 'Produksjon', reportsTo: 1, employees: 3 },
-      { id: 3, name: 'Bob Johnson', position: 'Kvalitetsleder', department: 'Kvalitet', reportsTo: 1, employees: 2 }
-    ]);
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -170,12 +143,126 @@ export default function MyCompanyPage() {
     }
   };
 
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('nb-NO', {
+  const formatDate = (dateString: string | Date) => {
+    const date = typeof dateString === 'string' ? new Date(dateString) : dateString;
+    return date.toLocaleDateString('nb-NO', {
       year: 'numeric',
       month: 'short',
       day: 'numeric'
     });
+  };
+
+  // Create functions
+  const handleCreateProtocol = async (protocolData: any) => {
+    if (!service || !userProfile) return;
+    
+    try {
+      await service.createProtocol({
+        ...protocolData,
+        companyId: userProfile.companyId,
+        createdBy: userProfile.email || userProfile.displayName || 'Unknown'
+      });
+      await loadCompanyData();
+      setShowProtocolModal(false);
+    } catch (error) {
+      console.error('Error creating protocol:', error);
+    }
+  };
+
+  const handleCreateReview = async (reviewData: any) => {
+    if (!service || !userProfile) return;
+    
+    try {
+      await service.createManagementReview({
+        ...reviewData,
+        companyId: userProfile.companyId,
+        createdBy: userProfile.email || userProfile.displayName || 'Unknown'
+      });
+      await loadCompanyData();
+      setShowReviewModal(false);
+    } catch (error) {
+      console.error('Error creating review:', error);
+    }
+  };
+
+  const handleCreateCompliance = async (complianceData: any) => {
+    if (!service || !userProfile) return;
+    
+    try {
+      await service.createCompliance({
+        ...complianceData,
+        companyId: userProfile.companyId,
+        createdBy: userProfile.email || userProfile.displayName || 'Unknown'
+      });
+      await loadCompanyData();
+      setShowComplianceModal(false);
+    } catch (error) {
+      console.error('Error creating compliance:', error);
+    }
+  };
+
+  const handleCreateJSA = async (jsaData: any) => {
+    if (!service || !userProfile) return;
+    
+    try {
+      await service.createJSA({
+        ...jsaData,
+        companyId: userProfile.companyId,
+        createdBy: userProfile.email || userProfile.displayName || 'Unknown'
+      });
+      await loadCompanyData();
+      setShowJSAModal(false);
+    } catch (error) {
+      console.error('Error creating JSA:', error);
+    }
+  };
+
+  const handleCreateEquipment = async (equipmentData: any) => {
+    if (!service || !userProfile) return;
+    
+    try {
+      await service.createEquipment({
+        ...equipmentData,
+        companyId: userProfile.companyId,
+        createdBy: userProfile.email || userProfile.displayName || 'Unknown'
+      });
+      await loadCompanyData();
+      setShowEquipmentModal(false);
+    } catch (error) {
+      console.error('Error creating equipment:', error);
+    }
+  };
+
+  const handleCreateProcess = async (processData: any) => {
+    if (!service || !userProfile) return;
+    
+    try {
+      await service.createWorkProcess({
+        ...processData,
+        companyId: userProfile.companyId,
+        createdBy: userProfile.email || userProfile.displayName || 'Unknown'
+      });
+      await loadCompanyData();
+      setShowProcessModal(false);
+    } catch (error) {
+      console.error('Error creating process:', error);
+    }
+  };
+
+  const handleCreateOrgChartEntry = async (entryData: any) => {
+    if (!service || !userProfile) return;
+    
+    try {
+      await service.createOrgChartEntry({
+        ...entryData,
+        companyId: userProfile.companyId,
+        createdBy: userProfile.email || userProfile.displayName || 'Unknown'
+      });
+      await loadCompanyData();
+      setShowOrgChartModal(false);
+    } catch (error) {
+      console.error('Error creating org chart entry:', error);
+    }
   };
 
   if (loading) {
@@ -254,13 +341,18 @@ export default function MyCompanyPage() {
               Bedriftsoversikt
             </h2>
             
-            {/* Statistics Grid */}
+                        {/* Statistics Grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
               <div className="card">
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Aktive protokoller</p>
-                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--gray-900)' }}>{protocols.filter(p => p.status === 'active').length}</p>
+                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--gray-900)' }}>
+                      {dashboardStats?.protocols?.active || 0}
+                    </p>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                      {dashboardStats?.protocols?.overdue || 0} forfaller snart
+                    </p>
                   </div>
                   <div style={{ background: 'var(--blue-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
                     <FileText style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />
@@ -272,7 +364,12 @@ export default function MyCompanyPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Samsvar status</p>
-                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--green-600)' }}>{compliance.filter(c => c.status === 'compliant').length}</p>
+                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--green-600)' }}>
+                      {dashboardStats?.compliance?.compliant || 0}
+                    </p>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                      {dashboardStats?.compliance?.dueSoon || 0} sjekker snart
+                    </p>
                   </div>
                   <div style={{ background: 'var(--green-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
                     <Shield style={{ width: '24px', height: '24px', color: 'var(--green-600)' }} />
@@ -284,11 +381,16 @@ export default function MyCompanyPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Aktivt utstyr</p>
-                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--orange-600)' }}>{equipment.filter(e => e.status === 'operational').length}</p>
+                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--orange-600)' }}>
+                      {dashboardStats?.equipment?.operational || 0}
+                    </p>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                      {dashboardStats?.equipment?.inspectionDue || 0} inspeksjoner forfaller
+                    </p>
                   </div>
-                                     <div style={{ background: 'var(--orange-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
-                     <Wrench style={{ width: '24px', height: '24px', color: 'var(--orange-600)' }} />
-                   </div>
+                  <div style={{ background: 'var(--orange-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
+                    <Wrench style={{ width: '24px', height: '24px', color: 'var(--orange-600)' }} />
+                  </div>
                 </div>
               </div>
 
@@ -296,7 +398,12 @@ export default function MyCompanyPage() {
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
                     <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Arbeidsprosesser</p>
-                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--purple-600)' }}>{workProcesses.filter(w => w.status === 'active').length}</p>
+                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--purple-600)' }}>
+                      {dashboardStats?.processes?.active || 0}
+                    </p>
+                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                      {dashboardStats?.processes?.overdue || 0} gjennomganger forfaller
+                    </p>
                   </div>
                   <div style={{ background: 'var(--purple-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
                     <Workflow style={{ width: '24px', height: '24px', color: 'var(--purple-600)' }} />
@@ -310,25 +417,45 @@ export default function MyCompanyPage() {
               <div style={{ padding: '1.5rem' }}>
                 <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>Siste aktivitet</h3>
                 <div style={{ display: 'grid', gap: '1rem' }}>
-                  {[
-                    { type: 'protocol', action: 'Oppdatert', item: 'Sikkerhetsprotokoll', time: '2 timer siden', user: 'John Doe' },
-                    { type: 'compliance', action: 'Sjekket', item: 'Arbeidsmiljøloven', time: '1 dag siden', user: 'Jane Smith' },
-                    { type: 'equipment', action: 'Inspektert', item: 'Kran A-101', time: '2 dager siden', user: 'Bob Johnson' }
-                  ].map((activity, index) => (
-                    <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-lg)' }}>
-                      <div style={{ background: 'var(--blue-100)', padding: '0.5rem', borderRadius: 'var(--radius-lg)' }}>
-                        <Activity style={{ width: '16px', height: '16px', color: 'var(--blue-600)' }} />
+                  {recentActivity.length > 0 ? (
+                    recentActivity.map((activity, index) => (
+                      <div key={index} style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-lg)' }}>
+                        <div style={{ 
+                          background: activity.type === 'protocol' ? 'var(--blue-100)' : 
+                                    activity.type === 'compliance' ? 'var(--green-100)' : 
+                                    activity.type === 'equipment' ? 'var(--orange-100)' : 'var(--gray-100)', 
+                          padding: '0.5rem', 
+                          borderRadius: 'var(--radius-lg)' 
+                        }}>
+                          <Activity style={{ 
+                            width: '16px', 
+                            height: '16px', 
+                            color: activity.type === 'protocol' ? 'var(--blue-600)' : 
+                                   activity.type === 'compliance' ? 'var(--green-600)' : 
+                                   activity.type === 'equipment' ? 'var(--orange-600)' : 'var(--gray-600)' 
+                          }} />
+                        </div>
+                        <div style={{ flex: '1' }}>
+                          <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-900)' }}>
+                            {activity.action} {activity.item}
+                          </p>
+                          <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                            av {activity.user} • {formatDate(activity.time)}
+                          </p>
+                        </div>
+                        <span className={`badge ${getStatusColor(activity.status)}`}>
+                          {activity.status === 'active' ? 'Aktiv' : 
+                           activity.status === 'completed' ? 'Fullført' : 
+                           activity.status === 'compliant' ? 'Samsvar' : 'Status'}
+                        </span>
                       </div>
-                      <div style={{ flex: '1' }}>
-                        <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-900)' }}>
-                          {activity.action} {activity.item}
-                        </p>
-                        <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
-                          av {activity.user} • {activity.time}
-                        </p>
-                      </div>
+                    ))
+                  ) : (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-500)' }}>
+                      <Activity style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: '0.5' }} />
+                      <p>Ingen aktivitet ennå</p>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </div>
@@ -342,10 +469,10 @@ export default function MyCompanyPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 Protokoller
               </h2>
-              <button className="btn btn-primary">
-                <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                Ny protokoll
-              </button>
+                          <button className="btn btn-primary" onClick={() => setShowProtocolModal(true)}>
+              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+              Ny protokoll
+            </button>
             </div>
 
             <div className="card">
@@ -405,10 +532,10 @@ export default function MyCompanyPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 Ledelsesgjennomgang
               </h2>
-              <button className="btn btn-primary">
-                <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                Ny gjennomgang
-              </button>
+                          <button className="btn btn-primary" onClick={() => setShowReviewModal(true)}>
+              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+              Ny gjennomgang
+            </button>
             </div>
 
             <div className="card">
@@ -468,10 +595,10 @@ export default function MyCompanyPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 Samsvar
               </h2>
-              <button className="btn btn-primary">
-                <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                Ny samsvarsjekk
-              </button>
+                          <button className="btn btn-primary" onClick={() => setShowComplianceModal(true)}>
+              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+              Ny samsvarsjekk
+            </button>
             </div>
 
             <div className="card">
@@ -533,10 +660,10 @@ export default function MyCompanyPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 SJA - Sikker Jobb Analyse
               </h2>
-              <button className="btn btn-primary">
-                <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                Ny SJA
-              </button>
+                          <button className="btn btn-primary" onClick={() => setShowJSAModal(true)}>
+              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+              Ny SJA
+            </button>
             </div>
 
             <div className="card">
@@ -596,10 +723,10 @@ export default function MyCompanyPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 Utstyr & FDV
               </h2>
-              <button className="btn btn-primary">
-                <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                Nytt utstyr
-              </button>
+                          <button className="btn btn-primary" onClick={() => setShowEquipmentModal(true)}>
+              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+              Nytt utstyr
+            </button>
             </div>
 
             <div className="card">
@@ -661,10 +788,10 @@ export default function MyCompanyPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 Arbeidsprosesser
               </h2>
-              <button className="btn btn-primary">
-                <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                Ny prosess
-              </button>
+                          <button className="btn btn-primary" onClick={() => setShowProcessModal(true)}>
+              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+              Ny prosess
+            </button>
             </div>
 
             <div className="card">
@@ -724,10 +851,10 @@ export default function MyCompanyPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 Organisasjonskart
               </h2>
-              <button className="btn btn-primary">
-                <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
-                Ny stilling
-              </button>
+                          <button className="btn btn-primary" onClick={() => setShowOrgChartModal(true)}>
+              <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+              Ny stilling
+            </button>
             </div>
 
             <div className="card">
