@@ -252,66 +252,31 @@ export default function MyCompanyPage() {
       setError(null);
       setSyncStatus('syncing');
       
-      console.log('🚀 Loading super advanced company data...');
+      console.log('🚀 Loading company data...');
       
-      // SUPER AVANSERTE PARALLELLE DATA-INNLASTINGER
-      const [
-        protocolsData, 
-        reviewsData, 
-        complianceData, 
-        jsaData, 
-        equipmentData, 
-        processesData, 
-        orgChartData, 
-        statsData, 
-        activityData
-      ] = await Promise.all([
-        service.getProtocols().catch(() => []),
-        service.getManagementReviews().catch(() => []),
-        service.getCompliance().catch(() => []),
-        service.getJSAs().catch(() => []),
-        service.getEquipment().catch(() => []),
-        service.getWorkProcesses().catch(() => []),
-        service.getOrgChart().catch(() => []),
-        service.getDashboardStats().catch(() => null),
-        service.getRecentActivity().catch(() => [])
-      ]);
+      // Simple data loading with fallbacks
+      const protocolsData = await service.getProtocols().catch(() => []);
+      const reviewsData = await service.getManagementReviews().catch(() => []);
+      const complianceData = await service.getCompliance().catch(() => []);
+      const jsaData = await service.getJSAs().catch(() => []);
+      const equipmentData = await service.getEquipment().catch(() => []);
+      const processesData = await service.getWorkProcesses().catch(() => []);
+      const orgChartData = await service.getOrgChart().catch(() => []);
+      const statsData = await service.getDashboardStats().catch(() => null);
+      const activityData = await service.getRecentActivity().catch(() => []);
 
-      // Get additional data safely
-      const analyticsData = await service.getAnalytics?.().catch(() => null) || null;
-      const performanceData = await getPerformanceMetrics().catch(() => null) || null;
-      const optimizationData = await getOptimizationSuggestions().catch(() => []) || [];
+      // Simple data processing
+      setProtocols(protocolsData || []);
+      setManagementReviews(reviewsData || []);
+      setCompliance(complianceData || []);
+      setJsa(jsaData || []);
+      setEquipment(equipmentData || []);
+      setWorkProcesses(processesData || []);
+      setOrgChart(orgChartData || []);
+      setDashboardStats(statsData || null);
+      setRecentActivity(activityData || []);
 
-      // SUPER AVANSERTE DATA-PROSESSERING
-      const processedProtocols = processProtocolsData(protocolsData);
-      const processedReviews = processReviewsData(reviewsData);
-      const processedCompliance = processComplianceData(complianceData);
-      const processedJSA = processJSAData(jsaData);
-      const processedEquipment = processEquipmentData(equipmentData);
-      const processedProcesses = processProcessesData(processesData);
-      const processedOrgChart = processOrgChartData(orgChartData);
-
-      // SUPER AVANSERTE STATE-UPDATES
-      setProtocols(processedProtocols);
-      setManagementReviews(processedReviews);
-      setCompliance(processedCompliance);
-      setJsa(processedJSA);
-      setEquipment(processedEquipment);
-      setWorkProcesses(processedProcesses);
-      setOrgChart(processedOrgChart);
-      setDashboardStats(statsData);
-      setRecentActivity(activityData);
-      setAnalytics(analyticsData);
-      setPerformanceMetrics(performanceData);
-      setOptimizationSuggestions(optimizationData);
-
-      // SUPER AVANSERTE NOTIFIKASJONER
-      generateNotifications(processedProtocols, processedCompliance, processedEquipment);
-      
-      // SUPER AVANSERTE APPROVAL QUEUE
-      updateApprovalQueue(processedProtocols, processedReviews, processedCompliance);
-
-      console.log('✅ Super advanced company data loaded successfully!');
+      console.log('✅ Company data loaded successfully!');
       setLastUpdate(new Date());
       setSyncStatus('synced');
       
@@ -1074,7 +1039,7 @@ export default function MyCompanyPage() {
             </div>
           </div>
           
-          {/* SUPER AVANSERTE STATUS INDICATORS */}
+          {/* Simple Status Indicators */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
             <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -1090,37 +1055,37 @@ export default function MyCompanyPage() {
             
             <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <Bell style={{ width: '16px', height: '16px', color: 'white' }} />
+                <FileText style={{ width: '16px', height: '16px', color: 'white' }} />
                 <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
-                  {unreadCount} nye varsler
+                  {protocols.length} protokoller
                 </span>
               </div>
               <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
-                {approvalQueue.length} venter på godkjenning
+                {compliance.length} samsvarskrav
               </p>
             </div>
             
             <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <TrendingUp style={{ width: '16px', height: '16px', color: 'white' }} />
+                <Users style={{ width: '16px', height: '16px', color: 'white' }} />
                 <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
-                  {performanceMetrics?.businessMetrics?.productivity?.toFixed(1) || '0'}% produktivitet
+                  {managementReviews.length} gjennomganger
                 </span>
               </div>
               <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
-                {performanceMetrics?.businessMetrics?.costSavings?.toLocaleString() || '0'} kr bespart
+                {jsa.length} SJA analyser
               </p>
             </div>
             
             <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <ShieldCheck style={{ width: '16px', height: '16px', color: 'white' }} />
+                <Wrench style={{ width: '16px', height: '16px', color: 'white' }} />
                 <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
-                  {dashboardStats?.compliance?.compliant || 0} compliant
+                  {equipment.length} utstyr
                 </span>
               </div>
               <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
-                {dashboardStats?.compliance?.atRisk || 0} at risk
+                {workProcesses.length} prosesser
               </p>
             </div>
           </div>
