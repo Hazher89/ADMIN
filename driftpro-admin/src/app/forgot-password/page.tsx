@@ -7,7 +7,7 @@ import { Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { emailService } from '@/lib/email-service';
+// import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');

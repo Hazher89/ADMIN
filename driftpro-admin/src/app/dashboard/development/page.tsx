@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
-import { emailService } from '@/lib/email-service';
+// import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 import { 
   Code, Database, Server, Shield, Activity, 
   CheckCircle, Mail, PenTool, Rocket
@@ -673,24 +673,28 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             className="btn btn-primary"
             onClick={async () => {
               try {
-                const success = await emailService.sendEmail({
-                  to: 'test@example.com',
-                  subject: 'Test Email from DriftPro',
-                  body: '<h2>Test Email</h2><p>This is a test email to verify the email service is working.</p>',
-                  metadata: {
-                    eventType: 'test_email'
-                  }
+                // Email functionality moved to API routes - use /api/send-test-email instead
+                const response = await fetch('/api/send-test-email', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    to: 'test@example.com',
+                    subject: 'Test Email from DriftPro',
+                    body: '<h2>Test Email</h2><p>This is a test email to verify the email service is working.</p>'
+                  })
                 });
                 
-                if (success) {
+                if (response.ok) {
                   alert('Test email sent successfully!');
                 } else {
                   alert('Failed to send test email. Check console for details.');
                 }
-                              } catch (error) {
-                  console.error('Test email error:', error);
-                  alert('Error sending test email: ' + (error instanceof Error ? error.message : 'Unknown error'));
-                }
+              } catch (error) {
+                console.error('Test email error:', error);
+                alert('Error sending test email: ' + (error instanceof Error ? error.message : 'Unknown error'));
+              }
             }}
           >
             Send Test Email

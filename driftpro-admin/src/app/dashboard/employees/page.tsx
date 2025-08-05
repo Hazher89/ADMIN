@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
-import { emailService } from '@/lib/email-service';
+// import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 import { UserPlus, Search, Filter, Edit, Trash2, Plus, MoreHorizontal, User, Building, MapPin, CheckCircle, Eye, Settings, Key, UserX, UserCheck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 
 import { Employee } from '@/lib/firebase-services';
@@ -242,22 +242,32 @@ export default function EmployeesPage() {
         const adminName = userProfile?.displayName || 'System Administrator';
         const companyName = userProfile?.companyName || 'Bedrift';
 
-        emailSent = await emailService.sendWelcomeEmail(
-          newEmployee.email,
-          newEmployee.displayName,
-          adminName,
-          companyName,
-          departmentName,
-          newEmployee.position || 'Ansatt'
-        );
+        // Email functionality moved to API routes
+        const response = await fetch('/api/send-welcome-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: newEmployee.email,
+            displayName: newEmployee.displayName,
+            adminName,
+            companyName,
+            departmentName,
+            position: newEmployee.position || 'Ansatt'
+          })
+        });
 
-        if (emailSent) {
+        if (response.ok) {
+          emailSent = true;
           console.log('Welcome email sent successfully to:', newEmployee.email);
         } else {
+          emailSent = false;
           console.warn('Failed to send welcome email to:', newEmployee.email);
         }
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError);
+        emailSent = false;
         // Don't fail the employee creation if email fails
       }
 
