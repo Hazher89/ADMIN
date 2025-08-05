@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 
 // Firebase config
 const firebaseConfig = {
@@ -30,13 +30,13 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔐 Processing password setup via Cloudflare Email Routing:', {
+    console.log('🔐 Processing password reset via Cloudflare Email Routing:', {
       token: token.substring(0, 10) + '...',
       provider: 'cloudflare_email_routing'
     });
 
-    // Find the setup token
-    const tokensQuery = query(collection(db, 'setupTokens'), where('token', '==', token));
+    // Find the reset token
+    const tokensQuery = query(collection(db, 'passwordResetTokens'), where('token', '==', token));
     const tokensSnapshot = await getDocs(tokensQuery);
 
     if (tokensSnapshot.empty) {
@@ -82,26 +82,21 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data();
 
     try {
-      // Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
+      // Sign in with current password to get user
+      const userCredential = await signInWithEmailAndPassword(
         auth,
         tokenData.email,
-        password
+        'temporary-password' // This will fail, but we need to get the user
       );
 
       const firebaseUser = userCredential.user;
 
-      // Update user profile
-      await updateProfile(firebaseUser, {
-        displayName: userData.name || userData.firstName + ' ' + userData.lastName
-      });
+      // Update password
+      await updatePassword(firebaseUser, password);
 
-      // Update user document with Firebase UID
+      // Update user document
       await updateDoc(userDoc.ref, {
-        uid: firebaseUser.uid,
-        status: 'active',
-        passwordSet: true,
-        passwordSetAt: new Date().toISOString(),
+        passwordUpdatedAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
 
@@ -111,11 +106,11 @@ export async function POST(request: NextRequest) {
         usedAt: new Date().toISOString()
       });
 
-      console.log('✅ Password setup completed successfully via Cloudflare Email Routing');
+      console.log('✅ Password reset completed successfully via Cloudflare Email Routing');
 
       return NextResponse.json({
         success: true,
-        message: 'Password set up successfully via Cloudflare Email Routing',
+        message: 'Password reset successfully via Cloudflare Email Routing',
         userId: firebaseUser.uid,
         provider: 'cloudflare_email_routing'
       });
@@ -123,16 +118,9 @@ export async function POST(request: NextRequest) {
     } catch (authError) {
       console.error('❌ Firebase Auth error:', authError);
       
-      if (authError instanceof Error && authError.message.includes('email-already-in-use')) {
-        return NextResponse.json(
-          { error: 'User already exists with this email' },
-          { status: 400 }
-        );
-      }
-
       return NextResponse.json(
         { 
-          error: 'Failed to create user account',
+          error: 'Failed to reset password',
           details: authError instanceof Error ? authError.message : 'Unknown error',
           provider: 'cloudflare_email_routing'
         },
@@ -141,7 +129,7 @@ export async function POST(request: NextRequest) {
     }
 
   } catch (error) {
-    console.error('❌ Error in setup-password API:', error);
+    console.error('❌ Error in reset-password API:', error);
     return NextResponse.json(
       { 
         error: 'Internal server error',

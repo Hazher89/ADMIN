@@ -1,65 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc, setDoc } from 'firebase/firestore';
-import { getApps, initializeApp } from 'firebase/app';
 
-export const dynamic = 'force-dynamic';
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+  authDomain: "driftpro-40ccd.firebaseapp.com",
+  projectId: "driftpro-40ccd",
+  storageBucket: "driftpro-40ccd.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
 
-/**
- * Get Firebase database instance with fallback
- */
-function getDb() {
-  try {
-    const apps = getApps();
-    if (apps.length === 0) {
-      // Initialize Firebase if not already done
-      const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
-      };
-      initializeApp(firebaseConfig);
-    }
-    
-    return getFirestore();
-  } catch (error) {
-    console.error('Error getting Firestore instance:', error);
-    return null;
-  }
-}
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 export async function GET(request: NextRequest) {
   try {
-    const firestoreDb = getDb();
-    if (!firestoreDb) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
+    const { searchParams } = new URL(request.url);
+    const includePassword = searchParams.get('includePassword') === 'true';
 
-    // Check if password should be included
-    const url = new URL(request.url);
-    const includePassword = url.searchParams.get('includePassword') === 'true';
+    const emailSettingsRef = doc(db, 'systemSettings', 'email');
+    const emailSettingsDoc = await getDoc(emailSettingsRef);
 
-    const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
-    
-    if (settingsDoc.exists()) {
-      const data = settingsDoc.data();
+    if (emailSettingsDoc.exists()) {
+      const data = emailSettingsDoc.data();
       
-      if (includePassword) {
-        // Return all data including password
-        return NextResponse.json(data);
-      } else {
-        // Don't return sensitive data like SMTP password
-        const { smtpPassword, ...safeData } = data;
-        return NextResponse.json(safeData);
-      }
+      // Return settings with or without password
+      const response = {
+        enabled: data.enabled ?? true,
+        fromEmail: data.fromEmail || 'noreplay@driftpro.no',
+        fromName: data.fromName || 'DriftPro System',
+        
+        // Email type toggles
+        adminSetup: data.adminSetup ?? true,
+        deviationReports: data.deviationReports ?? true,
+        deviationResolved: data.deviationResolved ?? true,
+        userWelcome: data.userWelcome ?? true,
+        notifications: data.notifications ?? true,
+        warnings: data.warnings ?? true,
+        systemAlerts: data.systemAlerts ?? true,
+        
+        // Cloudflare Email Routing settings
+        smtpHost: data.smtpHost || 'smtp.cloudflare.com',
+        smtpPort: data.smtpPort || 587,
+        smtpUser: data.smtpUser || 'noreplay@driftpro.no',
+        smtpSecure: data.smtpSecure ?? false,
+        smtpPassword: includePassword ? (data.smtpPassword || 'your-cloudflare-api-key') : '[HIDDEN]',
+        
+        // Advanced settings
+        emailQueueEnabled: data.emailQueueEnabled ?? false,
+        maxRetryAttempts: data.maxRetryAttempts || 3,
+        logAllEmails: data.logAllEmails ?? true,
+        
+        // Templates
+        adminSetupTemplate: data.adminSetupTemplate || 'Hei [adminName], velkommen til [companyName]. Klikk her for å sette opp passord: [setupUrl]',
+        deviationReportTemplate: data.deviationReportTemplate || 'Avviksrapport: [deviationTitle] - [message]',
+        notificationTemplate: data.notificationTemplate || 'Varsel: [subject] - [message]',
+        userWelcomeTemplate: data.userWelcomeTemplate || 'Velkommen [userName] til [companyName]! Logg inn her: [loginUrl]',
+        warningTemplate: data.warningTemplate || 'ADVARSEL: [warningType] - [description]. Handling kreves: [action]',
+        
+        // Analytics
+        analyticsEnabled: data.analyticsEnabled ?? false,
+        trackOpenRates: data.trackOpenRates ?? false,
+        trackClickRates: data.trackClickRates ?? false,
+        
+        // Spam protection
+        spamProtection: data.spamProtection || {
+          enabled: true,
+          maxRecipients: 50
+        },
+        
+        // Backup SMTP
+        backupSmtpEnabled: data.backupSmtpEnabled ?? false,
+        backupSmtpHost: data.backupSmtpHost || '',
+        backupSmtpPort: data.backupSmtpPort || 587,
+        
+        // Cloudflare Email Routing specific
+        provider: data.provider || 'cloudflare_email_routing',
+        tls: data.tls || { rejectUnauthorized: false },
+        connectionTimeout: data.connectionTimeout || 60000,
+        greetingTimeout: data.greetingTimeout || 30000,
+        socketTimeout: data.socketTimeout || 60000
+      };
+
+      return NextResponse.json(response);
     } else {
-      // Return default settings
+      // Return default Cloudflare Email Routing settings
       const defaultSettings = {
         enabled: true,
-        fromEmail: 'noreply@driftpro.no',
+        fromEmail: 'noreplay@driftpro.no',
         fromName: 'DriftPro System',
+        
+        // Email type toggles
         adminSetup: true,
         deviationReports: true,
         deviationResolved: true,
@@ -67,139 +101,123 @@ export async function GET(request: NextRequest) {
         notifications: true,
         warnings: true,
         systemAlerts: true,
-        smtpHost: 'smtp.domeneshop.no',
+        
+        // Cloudflare Email Routing settings
+        smtpHost: 'smtp.cloudflare.com',
         smtpPort: 587,
-        smtpUser: 'driftpro2',
-        smtpPassword: 'HazhaGada89!',
+        smtpUser: 'noreplay@driftpro.no',
         smtpSecure: false,
-        retryAttempts: 3,
-        retryDelay: 5000,
-        maxEmailsPerHour: 100,
-        logAllEmails: true
+        smtpPassword: includePassword ? 'your-cloudflare-api-key' : '[HIDDEN]',
+        
+        // Advanced settings
+        emailQueueEnabled: false,
+        maxRetryAttempts: 3,
+        logAllEmails: true,
+        
+        // Templates
+        adminSetupTemplate: 'Hei [adminName], velkommen til [companyName]. Klikk her for å sette opp passord: [setupUrl]',
+        deviationReportTemplate: 'Avviksrapport: [deviationTitle] - [message]',
+        notificationTemplate: 'Varsel: [subject] - [message]',
+        userWelcomeTemplate: 'Velkommen [userName] til [companyName]! Logg inn her: [loginUrl]',
+        warningTemplate: 'ADVARSEL: [warningType] - [description]. Handling kreves: [action]',
+        
+        // Analytics
+        analyticsEnabled: false,
+        trackOpenRates: false,
+        trackClickRates: false,
+        
+        // Spam protection
+        spamProtection: {
+          enabled: true,
+          maxRecipients: 50
+        },
+        
+        // Backup SMTP
+        backupSmtpEnabled: false,
+        backupSmtpHost: '',
+        backupSmtpPort: 587,
+        
+        // Cloudflare Email Routing specific
+        provider: 'cloudflare_email_routing',
+        tls: { rejectUnauthorized: false },
+        connectionTimeout: 60000,
+        greetingTimeout: 30000,
+        socketTimeout: 60000
       };
-      
-      if (includePassword) {
-        return NextResponse.json(defaultSettings);
-      } else {
-        const { smtpPassword, ...safeData } = defaultSettings;
-        return NextResponse.json(safeData);
-      }
+
+      return NextResponse.json(defaultSettings);
     }
   } catch (error) {
     console.error('Error getting email settings:', error);
-    return NextResponse.json({ error: 'Failed to get email settings' }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to get email settings' },
+      { status: 500 }
+    );
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('Starting to save email settings...');
-    
-    const firestoreDb = getDb();
-    if (!firestoreDb) {
-      console.error('Firestore database not available');
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
-
-    console.log('Firestore database available, parsing request body...');
     const body = await request.json();
-    console.log('Request body received:', { ...body, smtpPassword: body.smtpPassword ? '[HIDDEN]' : 'not provided' });
     
-    const { smtpPassword, ...settings } = body;
-
-    // Validate required fields
-    if (!settings.fromEmail || !settings.fromName) {
-      console.error('Missing required fields:', { fromEmail: !!settings.fromEmail, fromName: !!settings.fromName });
-      return NextResponse.json({ error: 'Missing required fields: fromEmail and fromName are required' }, { status: 400 });
-    }
-
-    console.log('Validation passed, preparing data for storage...');
-
-    // Prepare data for storage
-    const settingsData = {
-      ...settings,
-      updatedAt: new Date().toISOString(),
-      updatedBy: 'system' // In a real app, you'd get this from auth
+    const emailSettingsRef = doc(db, 'systemSettings', 'email');
+    
+    // Prepare settings with Cloudflare Email Routing defaults
+    const settings = {
+      ...body,
+      provider: 'cloudflare_email_routing',
+      updatedAt: new Date().toISOString()
     };
 
-    // If SMTP password is provided, store it separately or encrypted
-    if (smtpPassword) {
-      settingsData.smtpPassword = smtpPassword; // In production, encrypt this
-      console.log('SMTP password provided and will be stored');
-    } else {
-      console.log('No SMTP password provided');
-    }
+    await setDoc(emailSettingsRef, settings, { merge: true });
 
-    console.log('Attempting to save to Firestore...');
-    console.log('Settings data to save:', { ...settingsData, smtpPassword: settingsData.smtpPassword ? '[HIDDEN]' : 'not provided' });
-
-    await setDoc(doc(firestoreDb, 'system', 'emailSettings'), settingsData);
-
-    console.log('Email settings saved successfully');
-    return NextResponse.json({ success: true, message: 'Email settings saved successfully' });
-  } catch (error) {
-    console.error('Error saving email settings:', error);
-    console.error('Error details:', {
-      name: error instanceof Error ? error.name : 'Unknown',
-      message: error instanceof Error ? error.message : 'Unknown error',
-      stack: error instanceof Error ? error.stack : 'No stack trace'
-    });
     return NextResponse.json({ 
-      error: 'Failed to save email settings',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+      success: true, 
+      message: 'Email settings updated successfully',
+      provider: 'cloudflare_email_routing'
+    });
+  } catch (error) {
+    console.error('Error updating email settings:', error);
+    return NextResponse.json(
+      { error: 'Failed to update email settings' },
+      { status: 500 }
+    );
   }
-} 
+}
 
 export async function PUT(request: NextRequest) {
   try {
-    console.log('Force updating email settings with correct SMTP credentials...');
+    const emailSettingsRef = doc(db, 'systemSettings', 'email');
     
-    const firestoreDb = getDb();
-    if (!firestoreDb) {
-      console.error('Firestore database not available');
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
-
-    // Force update with correct SMTP settings
-    const correctSettings = {
-      enabled: true,
-      fromEmail: 'noreply@driftpro.no',
-      fromName: 'DriftPro System',
-      adminSetup: true,
-      deviationReports: true,
-      deviationResolved: true,
-      userWelcome: true,
-      notifications: true,
-      warnings: true,
-      systemAlerts: true,
-      smtpHost: 'smtp.domeneshop.no',
+    // Force update with Cloudflare Email Routing settings
+    const settings = {
+      smtpHost: 'smtp.cloudflare.com',
       smtpPort: 587,
-      smtpUser: 'driftpro2', // CORRECT username
-      smtpPassword: 'HazhaGada89!', // CORRECT password
+      smtpUser: 'noreplay@driftpro.no',
+      smtpPassword: 'your-cloudflare-api-key',
       smtpSecure: false,
-      retryAttempts: 3,
-      retryDelay: 5000,
-      maxEmailsPerHour: 100,
-      logAllEmails: true,
-      updatedAt: new Date().toISOString(),
-      updatedBy: 'system'
+      fromEmail: 'noreplay@driftpro.no',
+      fromName: 'DriftPro System',
+      provider: 'cloudflare_email_routing',
+      tls: { rejectUnauthorized: false },
+      connectionTimeout: 60000,
+      greetingTimeout: 30000,
+      socketTimeout: 60000,
+      updatedAt: new Date().toISOString()
     };
 
-    console.log('Force updating with correct settings:', { ...correctSettings, smtpPassword: '[HIDDEN]' });
+    await setDoc(emailSettingsRef, settings, { merge: true });
 
-    await setDoc(doc(firestoreDb, 'system', 'emailSettings'), correctSettings);
-
-    console.log('Email settings force updated successfully');
     return NextResponse.json({ 
       success: true, 
-      message: 'Email settings force updated with correct SMTP credentials' 
+      message: 'Email settings force updated to Cloudflare Email Routing',
+      provider: 'cloudflare_email_routing'
     });
   } catch (error) {
     console.error('Error force updating email settings:', error);
-    return NextResponse.json({ 
-      error: 'Failed to force update email settings',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
+    return NextResponse.json(
+      { error: 'Failed to force update email settings' },
+      { status: 500 }
+    );
   }
 } 

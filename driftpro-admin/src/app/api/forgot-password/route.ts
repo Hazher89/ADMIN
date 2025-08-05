@@ -1,100 +1,99 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
-import { getApps, initializeApp } from 'firebase/app';
 import { emailService } from '@/lib/email-service';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 
-// Initialize Firebase if not already initialized
-function initializeFirebase() {
-  if (getApps().length === 0) {
-    initializeApp({
-      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID,
-    });
-  }
-}
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+  authDomain: "driftpro-40ccd.firebaseapp.com",
+  projectId: "driftpro-40ccd",
+  storageBucket: "driftpro-40ccd.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
+
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
 
 export async function POST(request: NextRequest) {
   try {
-    console.log('🔧 FORGOT PASSWORD: Processing request...');
-    
-    initializeFirebase();
-    const firestoreDb = getFirestore();
-    
-    const { email } = await request.json();
-    
+    const body = await request.json();
+    const { email } = body;
+
     if (!email) {
-      return NextResponse.json({ error: 'E-postadresse er påkrevd' }, { status: 400 });
+      return NextResponse.json(
+        { error: 'Email is required' },
+        { status: 400 }
+      );
     }
-    
-    console.log('🔧 FORGOT PASSWORD: Looking for user with email:', email);
-    
-    // Find user in Firestore
-    const usersQuery = query(collection(firestoreDb, 'users'), where('email', '==', email));
-    const userDocs = await getDocs(usersQuery);
-    
-    if (userDocs.empty) {
-      console.log('🔧 FORGOT PASSWORD: No user found with email:', email);
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Hvis e-postadressen eksisterer i systemet, vil du motta en lenke for å tilbakestille passordet.' 
-      });
-    }
-    
-    const userDoc = userDocs.docs[0];
-    const userData = userDoc.data();
-    
-    console.log('🔧 FORGOT PASSWORD: User found:', {
-      userId: userDoc.id,
-      email: userData.email,
-      companyId: userData.companyId,
-      status: userData.status
+
+    console.log('📧 Processing forgot password request via Cloudflare Email Routing:', {
+      email,
+      provider: 'cloudflare_email_routing'
     });
-    
+
+    // Check if user exists
+    const usersQuery = query(collection(db, 'users'), where('email', '==', email));
+    const usersSnapshot = await getDocs(usersQuery);
+
+    if (usersSnapshot.empty) {
+      return NextResponse.json(
+        { error: 'No user found with this email address' },
+        { status: 404 }
+      );
+    }
+
+    const userDoc = usersSnapshot.docs[0];
+    const userData = userDoc.data();
+
     // Generate reset token
     const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const expiresAt = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
-    
+    const resetUrl = `https://driftpro-admin.netlify.app/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+
     // Store reset token in Firestore
-    await firestoreDb.collection('passwordResetTokens').add({
-      token: resetToken,
+    await addDoc(collection(db, 'passwordResetTokens'), {
       email: email,
+      token: resetToken,
       userId: userDoc.id,
-      companyId: userData.companyId,
-      expiresAt: expiresAt,
-      createdAt: new Date().toISOString(),
+      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
+      createdAt: serverTimestamp(),
       used: false
     });
-    
-    console.log('🔧 FORGOT PASSWORD: Reset token created for:', email);
-    
-    // Send reset email
-    const resetUrl = `https://driftpro-admin.netlify.app/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
-    
-    const emailResult = await emailService.sendPasswordResetEmail(email, resetUrl);
-    
-    if (emailResult.success) {
-      console.log('🔧 FORGOT PASSWORD: Reset email sent successfully to:', email);
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Hvis e-postadressen eksisterer i systemet, vil du motta en lenke for å tilbakestille passordet.' 
+
+    console.log('📧 Sending password reset email via Cloudflare Email Routing');
+
+    // Send password reset email using Cloudflare Email Routing
+    const result = await emailService.sendPasswordResetEmail(email, resetToken);
+
+    if (result.success) {
+      console.log('✅ Password reset email sent successfully via Cloudflare Email Routing');
+      return NextResponse.json({
+        success: true,
+        message: 'Password reset email sent successfully via Cloudflare Email Routing',
+        provider: 'cloudflare_email_routing'
       });
     } else {
-      console.error('🔧 FORGOT PASSWORD: Failed to send reset email:', emailResult.error);
-      return NextResponse.json({ 
-        success: true, 
-        message: 'Hvis e-postadressen eksisterer i systemet, vil du motta en lenke for å tilbakestille passordet.' 
-      });
+      console.error('❌ Password reset email sending failed:', result.error);
+      return NextResponse.json(
+        { 
+          error: 'Failed to send password reset email',
+          details: result.error,
+          provider: 'cloudflare_email_routing'
+        },
+        { status: 500 }
+      );
     }
-    
   } catch (error) {
-    console.error('🔧 FORGOT PASSWORD: Error:', error);
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Hvis e-postadressen eksisterer i systemet, vil du motta en lenke for å tilbakestille passordet.' 
-    });
+    console.error('❌ Error in forgot-password API:', error);
+    return NextResponse.json(
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        provider: 'cloudflare_email_routing'
+      },
+      { status: 500 }
+    );
   }
 } 

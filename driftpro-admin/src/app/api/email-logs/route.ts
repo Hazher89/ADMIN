@@ -1,57 +1,51 @@
-import { NextResponse } from 'next/server';
-import { getFirestore, collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
-import { getApps, initializeApp } from 'firebase/app';
+import { NextRequest, NextResponse } from 'next/server';
+import { initializeApp } from 'firebase/app';
+import { getFirestore, collection, getDocs, orderBy, limit, query } from 'firebase/firestore';
 
-export const dynamic = 'force-dynamic';
+// Firebase config
+const firebaseConfig = {
+  apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+  authDomain: "driftpro-40ccd.firebaseapp.com",
+  projectId: "driftpro-40ccd",
+  storageBucket: "driftpro-40ccd.appspot.com",
+  messagingSenderId: "123456789",
+  appId: "1:123456789:web:abcdef123456"
+};
 
-/**
- * Get Firebase database instance with fallback
- */
-function getDb() {
+// Initialize Firebase
+const app = initializeApp(firebaseConfig);
+const db = getFirestore(app);
+
+export async function GET(request: NextRequest) {
   try {
-    const apps = getApps();
-    if (apps.length === 0) {
-      // Initialize Firebase if not already done
-      const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
-      };
-      initializeApp(firebaseConfig);
-    }
-    
-    return getFirestore();
-  } catch (error) {
-    console.error('Error getting Firestore instance:', error);
-    return null;
-  }
-}
+    console.log('📧 Fetching email logs for Cloudflare Email Routing');
 
-export async function GET() {
-  try {
-    const firestoreDb = getDb();
-    if (!firestoreDb) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
-
-    const logsQuery = query(
-      collection(firestoreDb, 'emailLogs'),
+    // Get email logs from Firestore
+    const emailLogsQuery = query(
+      collection(db, 'emailLogs'),
       orderBy('sentAt', 'desc'),
       limit(100)
     );
 
-    const logsSnapshot = await getDocs(logsQuery);
-    const logs = logsSnapshot.docs.map(doc => ({
+    const emailLogsSnapshot = await getDocs(emailLogsQuery);
+    const emailLogs = emailLogsSnapshot.docs.map(doc => ({
       id: doc.id,
-      ...doc.data()
+      ...doc.data(),
+      sentAt: doc.data().sentAt?.toDate?.()?.toISOString() || doc.data().sentAt || new Date().toISOString()
     }));
 
-    return NextResponse.json(logs);
+    console.log(`✅ Retrieved ${emailLogs.length} email logs for Cloudflare Email Routing`);
+
+    return NextResponse.json(emailLogs);
   } catch (error) {
-    console.error('Error getting email logs:', error);
-    return NextResponse.json({ error: 'Failed to get email logs' }, { status: 500 });
+    console.error('❌ Error fetching email logs:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to fetch email logs',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        provider: 'cloudflare_email_routing'
+      },
+      { status: 500 }
+    );
   }
 } 

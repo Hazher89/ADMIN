@@ -1,261 +1,194 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import nodemailer from 'nodemailer';
-
-export const dynamic = 'force-dynamic';
-
-/**
- * Get Firebase database instance with fallback
- */
-function getDb() {
-  try {
-    const { getFirestore } = require('firebase/firestore');
-    const { getApps, initializeApp } = require('firebase/app');
-    
-    const apps = getApps();
-    if (apps.length === 0) {
-      // Initialize Firebase if not already done
-      const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
-      };
-      initializeApp(firebaseConfig);
-    }
-    
-    return getFirestore();
-  } catch (error) {
-    console.error('Error getting Firestore instance:', error);
-    return null;
-  }
-}
+import { emailService } from '@/lib/email-service';
 
 export async function POST(request: NextRequest) {
   try {
-    const firestoreDb = getDb();
-    if (!firestoreDb) {
-      return NextResponse.json({ error: 'Database not available' }, { status: 500 });
-    }
-
     const body = await request.json();
-    const { to, type, settings: providedSettings } = body;
+    const { to, type, settings } = body;
 
-    if (!to || !type) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    if (!to) {
+      return NextResponse.json(
+        { error: 'Missing required field: to' },
+        { status: 400 }
+      );
     }
 
-    // Use provided settings if available, otherwise get from Firebase
-    let emailSettings;
-    let smtpPassword;
-
-    if (providedSettings && providedSettings.smtpHost) {
-      // Use settings provided from frontend
-      emailSettings = providedSettings;
-      smtpPassword = providedSettings.smtpPassword || 'HazhaGada89!';
-    } else {
-      // Get email settings from Firebase
-      const settingsDoc = await getDoc(doc(firestoreDb, 'system', 'emailSettings'));
-      if (!settingsDoc.exists()) {
-        return NextResponse.json({ error: 'Email settings not configured' }, { status: 400 });
-      }
-      emailSettings = settingsDoc.data();
-      smtpPassword = emailSettings.smtpPassword || 'HazhaGada89!';
-    }
-
-    if (!smtpPassword) {
-      return NextResponse.json({ error: 'SMTP password not configured' }, { status: 400 });
-    }
-
-    // Create transporter with proper Domeneshop configuration
-    const transporter = nodemailer.createTransport({
-              host: emailSettings.smtpHost || 'smtp.domeneshop.no',
-      port: emailSettings.smtpPort || 587,
-      secure: emailSettings.smtpSecure || false,
-      auth: {
-        user: emailSettings.smtpUser || 'driftpro2',
-        pass: smtpPassword
-      },
-      // Domeneshop specific settings
-      tls: {
-        rejectUnauthorized: false,
-        ciphers: 'SSLv3'
-      },
-      // Advanced settings
-      connectionTimeout: (emailSettings.smtpTimeout || 30) * 1000,
-      greetingTimeout: (emailSettings.smtpTimeout || 30) * 1000,
-      socketTimeout: (emailSettings.smtpTimeout || 30) * 1000,
-      // Always enable debug for troubleshooting
-      debug: true,
-      logger: true
+    console.log('📧 Sending test email via Cloudflare Email Routing:', {
+      to,
+      type: type || 'test',
+      provider: 'cloudflare_email_routing'
     });
 
-    console.log('SMTP Configuration:', {
-      host: emailSettings.smtpHost,
-      port: emailSettings.smtpPort,
-      secure: emailSettings.smtpSecure,
-      user: emailSettings.smtpUser,
-      passwordProvided: !!smtpPassword
-    });
-
-    // Verify connection configuration
-    try {
-      await transporter.verify();
-    } catch (error) {
-      console.error('SMTP connection verification failed:', error);
-      return NextResponse.json({ 
-        error: 'SMTP connection failed', 
-        details: error instanceof Error ? error.message : 'Unknown error'
-      }, { status: 500 });
-    }
-
-    // Generate test email content based on type
-    let subject = '';
+    // Create test email content based on type
+    let subject = 'Test Email - DriftPro';
     let html = '';
-    let text = '';
 
     switch (type) {
       case 'admin_setup':
-        subject = 'Test: Admin-oppsett e-post';
+        subject = 'Test Admin Setup Email - DriftPro';
         html = `
-          <h1>Test: Admin-oppsett e-post</h1>
-          <p>Dette er en test-e-post for admin-oppsett.</p>
-          <p>Hei Test Admin,</p>
-          <p>Du har blitt utnevnt som administrator for Test Company.</p>
-          <p>Klikk på lenken nedenfor for å sette opp passordet ditt:</p>
-          <a href="https://example.com/setup-password?token=test&email=test@example.com">Sett opp passord</a>
-          <p>Lenken utløper om 24 timer.</p>
-          <p>Med vennlig hilsen,<br>DriftPro Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <h1 style="color: #1f2937; text-align: center; margin-bottom: 30px;">🧪 Test Admin Setup Email</h1>
+              <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Dette er en test av admin setup e-post-funksjonen via Cloudflare Email Routing.
+              </p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="#" 
+                   style="background-color: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                  🔐 Test Setup Link
+                </a>
+              </div>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                  Med vennlig hilsen,<br>
+                  DriftPro Team<br>
+                  noreplay@driftpro.no
+                </p>
+              </div>
+            </div>
+          </div>
         `;
-        text = `Test: Admin-oppsett e-post\n\nDette er en test-e-post for admin-oppsett.\n\nHei Test Admin,\nDu har blitt utnevnt som administrator for Test Company.\nKlikk på lenken nedenfor for å sette opp passordet ditt:\nhttps://example.com/setup-password?token=test&email=test@example.com\n\nLenken utløper om 24 timer.\n\nMed vennlig hilsen,\nDriftPro Team`;
         break;
-
+      
       case 'deviation_report':
-        subject = 'Test: Ny avviksrapport';
+        subject = 'Test Avviksrapport - DriftPro';
         html = `
-          <h1>Test: Ny avviksrapport</h1>
-          <p>Dette er en test-e-post for avviksrapport.</p>
-          <p>Et nytt avvik har blitt rapportert:</p>
-          <ul>
-            <li><strong>Avvik:</strong> Test avvik</li>
-            <li><strong>Beskrivelse:</strong> Dette er en test-beskrivelse</li>
-            <li><strong>Rapportert av:</strong> Test Bruker</li>
-            <li><strong>Dato:</strong> ${new Date().toLocaleDateString('nb-NO')}</li>
-            <li><strong>Prioritet:</strong> Høy</li>
-          </ul>
-          <p>Klikk <a href="https://example.com/deviations/123">her</a> for å se detaljer.</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <h1 style="color: #dc2626; text-align: center; margin-bottom: 30px;">🧪 Test Avviksrapport</h1>
+              <div style="background-color: #fef2f2; border: 1px solid #fecaca; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <h2 style="color: #991b1b; margin-top: 0;">Test Avvik</h2>
+                <p style="color: #7f1d1d; font-size: 16px; line-height: 1.6; margin-bottom: 0;">
+                  Dette er en test av avviksrapport e-post-funksjonen via Cloudflare Email Routing.
+                </p>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+                <strong>Rapportert av:</strong> Test Bruker
+              </p>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                  Med vennlig hilsen,<br>
+                  DriftPro System<br>
+                  noreplay@driftpro.no
+                </p>
+              </div>
+            </div>
+          </div>
         `;
-        text = `Test: Ny avviksrapport\n\nDette er en test-e-post for avviksrapport.\n\nEt nytt avvik har blitt rapportert:\n- Avvik: Test avvik\n- Beskrivelse: Dette er en test-beskrivelse\n- Rapportert av: Test Bruker\n- Dato: ${new Date().toLocaleDateString('nb-NO')}\n- Prioritet: Høy\n\nKlikk her for å se detaljer: https://example.com/deviations/123`;
         break;
-
+      
       case 'notification':
-        subject = 'Test: Varsel fra DriftPro';
+        subject = 'Test Varsel - DriftPro';
         html = `
-          <h1>Test: Varsel fra DriftPro</h1>
-          <p>Dette er en test-varsel fra DriftPro-systemet.</p>
-          <p>Test-melding: Dette er en test av varsel-systemet.</p>
-          <p>Med vennlig hilsen,<br>DriftPro Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <h1 style="color: #3b82f6; text-align: center; margin-bottom: 30px;">🧪 Test Varsel</h1>
+              <div style="background-color: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <p style="color: #334155; font-size: 16px; line-height: 1.6; margin: 0;">
+                  Dette er en test av varsel e-post-funksjonen via Cloudflare Email Routing.
+                </p>
+              </div>
+              <p style="color: #6b7280; font-size: 14px; margin-top: 20px;">
+                <strong>Prioritet:</strong> Normal
+              </p>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                  Med vennlig hilsen,<br>
+                  DriftPro System<br>
+                  noreplay@driftpro.no
+                </p>
+              </div>
+            </div>
+          </div>
         `;
-        text = `Test: Varsel fra DriftPro\n\nDette er en test-varsel fra DriftPro-systemet.\n\nTest-melding: Dette er en test av varsel-systemet.\n\nMed vennlig hilsen,\nDriftPro Team`;
         break;
-
-      case 'warning':
-        subject = 'Test: Advarsel fra DriftPro';
-        html = `
-          <h1>Test: Advarsel fra DriftPro</h1>
-          <p>Dette er en test-advarsel fra DriftPro-systemet.</p>
-          <p>Test-advarsel: Dette er en test av advarsel-systemet.</p>
-          <p>Dette er en automatisk advarsel fra DriftPro-systemet.</p>
-        `;
-        text = `Test: Advarsel fra DriftPro\n\nDette er en test-advarsel fra DriftPro-systemet.\n\nTest-advarsel: Dette er en test av advarsel-systemet.\n\nDette er en automatisk advarsel fra DriftPro-systemet.`;
-        break;
-
+      
       case 'welcome':
-        subject = 'Test: Velkommen til DriftPro';
+        subject = 'Test Velkomst - DriftPro';
         html = `
-          <h1>Test: Velkommen til DriftPro</h1>
-          <p>Dette er en test-velkomstmelding.</p>
-          <p>Hei Test Bruker,</p>
-          <p>Velkommen til Test Company på DriftPro!</p>
-          <p>Din konto er nå aktiv og du kan logge inn på systemet.</p>
-          <p>Med vennlig hilsen,<br>DriftPro Team</p>
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <h1 style="color: #059669; text-align: center; margin-bottom: 30px;">🧪 Test Velkomst</h1>
+              <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Dette er en test av velkomst e-post-funksjonen via Cloudflare Email Routing.
+              </p>
+              <div style="text-align: center; margin: 30px 0;">
+                <a href="#" 
+                   style="background-color: #059669; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+                  🚀 Test Login Link
+                </a>
+              </div>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                  Med vennlig hilsen,<br>
+                  DriftPro Team<br>
+                  noreplay@driftpro.no
+                </p>
+              </div>
+            </div>
+          </div>
         `;
-        text = `Test: Velkommen til DriftPro\n\nDette er en test-velkomstmelding.\n\nHei Test Bruker,\nVelkommen til Test Company på DriftPro!\nDin konto er nå aktiv og du kan logge inn på systemet.\n\nMed vennlig hilsen,\nDriftPro Team`;
         break;
-
+      
       default:
-        return NextResponse.json({ error: 'Invalid email type' }, { status: 400 });
+        subject = 'Test Email - Cloudflare Email Routing - DriftPro';
+        html = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
+            <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+              <h1 style="color: #3b82f6; text-align: center; margin-bottom: 30px;">🧪 Test Email - Cloudflare Email Routing</h1>
+              <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+                Dette er en test e-post sendt via Cloudflare Email Routing.
+              </p>
+              <div style="background-color: #eff6ff; border: 1px solid #3b82f6; border-radius: 8px; padding: 20px; margin-bottom: 20px;">
+                <h2 style="color: #1e40af; margin-top: 0;">✅ E-post-funksjonen fungerer!</h2>
+                <p style="color: #1e40af; font-size: 16px; line-height: 1.6; margin-bottom: 0;">
+                  Cloudflare Email Routing er konfigurert og fungerer perfekt.
+                </p>
+              </div>
+              <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+                <p style="color: #6b7280; font-size: 14px; margin: 0;">
+                  Med vennlig hilsen,<br>
+                  DriftPro System<br>
+                  noreplay@driftpro.no
+                </p>
+              </div>
+            </div>
+          </div>
+        `;
     }
 
-    // Send email
-    const mailOptions = {
-              from: `"${emailSettings.fromName || 'DriftPro System'}" <${emailSettings.fromEmail || 'noreply@driftpro.no'}>`,
-      to: to,
-      subject: subject,
-      html: html,
-      text: text
-    };
+    // Use the email service to send the test email
+    const result = await emailService.sendEmail(to, subject, html);
 
-    const result = await transporter.sendMail(mailOptions);
-
-    // Log the email
-    await logEmail(firestoreDb, {
-      to: [to],
-      subject: subject,
-      type: `test_${type}`,
-      status: 'sent',
-      sentAt: new Date().toISOString(),
-      messageId: result.messageId,
-      metadata: {
-        testType: type,
-        smtpHost: emailSettings.smtpHost,
-        smtpUser: emailSettings.smtpUser
-      }
-    });
-
-    return NextResponse.json({ 
-      success: true, 
-      message: 'Test email sent successfully',
-      messageId: result.messageId
-    });
-
-  } catch (error) {
-    console.error('Error sending test email:', error);
-    
-    // Log the error
-    try {
-      const firestoreDb = getDb();
-      if (firestoreDb) {
-        await logEmail(firestoreDb, {
-          to: [to || 'unknown'],
-          subject: 'Test email failed',
-          type: 'test_failed',
-          status: 'failed',
-          sentAt: new Date().toISOString(),
-          error: error instanceof Error ? error.message : 'Unknown error',
-          metadata: {
-            testType: type || 'unknown'
-          }
-        });
-      }
-    } catch (logError) {
-      console.error('Error logging email failure:', logError);
+    if (result.success) {
+      console.log('✅ Test email sent successfully via Cloudflare Email Routing');
+      return NextResponse.json({
+        success: true,
+        message: 'Test email sent successfully via Cloudflare Email Routing',
+        messageId: result.messageId,
+        provider: 'cloudflare_email_routing'
+      });
+    } else {
+      console.error('❌ Test email sending failed:', result.error);
+      return NextResponse.json(
+        { 
+          error: 'Failed to send test email',
+          details: result.error,
+          provider: 'cloudflare_email_routing'
+        },
+        { status: 500 }
+      );
     }
-
-    return NextResponse.json({ 
-      error: 'Failed to send test email',
-      details: error instanceof Error ? error.message : 'Unknown error'
-    }, { status: 500 });
-  }
-}
-
-async function logEmail(firestoreDb: any, emailData: any) {
-  try {
-    const { addDoc, collection } = require('firebase/firestore');
-    await addDoc(collection(firestoreDb, 'emailLogs'), emailData);
   } catch (error) {
-    console.error('Error logging email:', error);
+    console.error('❌ Error in send-test-email API:', error);
+    return NextResponse.json(
+      { 
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        provider: 'cloudflare_email_routing'
+      },
+      { status: 500 }
+    );
   }
 } 

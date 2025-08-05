@@ -926,14 +926,14 @@ ${detailedError}`,
         gap: '1rem'
       }}>
         <div>
-          <h1 className="page-title">🎛️ MASTER KONTROLL - E-post-systemet</h1>
+          <h1 className="page-title">☁️ MASTER KONTROLL - Cloudflare Email Routing</h1>
           <p className="page-subtitle">
-            Dette er HJERTET av hele e-post-systemet - Alle endringer påvirker hele websiden og alle e-post-funksjoner
+            Dette er HJERTET av hele e-post-systemet - Cloudflare Email Routing erstatter alle SMTP-problemer
           </p>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }}>
-            <span className="badge badge-success">✅ Produksjonsklar</span>
+            <span className="badge badge-success">✅ Cloudflare Email Routing</span>
             <span className="badge badge-primary">Firebase tilkoblet</span>
-            <span className="badge badge-secondary">SMTP konfigurert</span>
+            <span className="badge badge-secondary">DNS-propagering pågår</span>
           </div>
         </div>
         
@@ -999,7 +999,7 @@ ${detailedError}`,
             { id: 'logs', label: 'E-post-logger', icon: Mail },
             { id: 'settings', label: 'Innstillinger', icon: Settings },
             { id: 'templates', label: 'Maler', icon: FileText },
-            { id: 'smtp', label: 'SMTP', icon: Settings },
+            { id: 'smtp', label: 'Cloudflare Email', icon: Settings },
             { id: 'notifications', label: 'Varsler', icon: Bell },
             { id: 'advanced', label: 'Avansert', icon: Shield },
             { id: 'analytics', label: 'Analyser', icon: TrendingUp },
@@ -1363,98 +1363,102 @@ ${detailedError}`,
         </div>
       )}
 
-      {/* SMTP Tab */}
+      {/* Cloudflare Email Routing Tab */}
       {activeTab === 'smtp' && (
         <div className="space-y-6">
           <div className="card">
-            <h2 className="card-title">🔥 SMTP-innstillinger - HJERTET AV SYSTEMET</h2>
+            <h2 className="card-title">☁️ Cloudflare Email Routing - HJERTET AV SYSTEMET</h2>
             <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">SMTP-server</label>
-                  <input
-                    type="text"
-                    value={settings.smtpHost}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpHost: e.target.value }))}
-                    className="form-input"
-                    placeholder="smtp.domeneshop.no"
-                  />
-                  <p className="form-help">For Domeneshop: smtp.domeneshop.no</p>
-                </div>
-                <div>
-                  <label className="form-label">Port</label>
-                  <input
-                    type="number"
-                    value={settings.smtpPort}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpPort: parseInt(e.target.value) }))}
-                    className="form-input"
-                    placeholder="587"
-                  />
-                  <p className="form-help">For Domeneshop: 587 (ikke 465)</p>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="form-label">Brukernavn</label>
-                  <input
-                    type="text"
-                    value={settings.smtpUser}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpUser: e.target.value }))}
-                    className="form-input"
-                    placeholder="driftpro2"
-                  />
-                  <p className="form-help">For Domeneshop: driftpro2 (ikke e-post-adresse)</p>
-                </div>
-                <div>
-                  <label className="form-label">Passord</label>
-                  <div style={{ position: 'relative' }}>
-                    <input
-                      type={showPassword ? "text" : "password"}
-                      value={smtpPassword}
-                      onChange={(e) => setSmtpPassword(e.target.value)}
-                      className="form-input"
-                      placeholder="SMTP-passord"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword(!showPassword)}
-                      style={{ 
-                        position: 'absolute', 
-                        right: '0.75rem', 
-                        top: '50%', 
-                        transform: 'translateY(-50%)',
-                        background: 'none',
-                        border: 'none',
-                        color: '#6b7280',
-                        cursor: 'pointer'
-                      }}
-                    >
-                      {showPassword ? <EyeOff style={{ width: '16px', height: '16px' }} /> : <Eye style={{ width: '16px', height: '16px' }} />}
-                    </button>
+              {/* Cloudflare Status */}
+              <div style={{ 
+                padding: '1rem', 
+                backgroundColor: '#d1fae5', 
+                border: '1px solid #10b981',
+                borderRadius: '0.5rem',
+                color: '#065f46'
+              }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>☁️ Cloudflare Email Routing Status</h3>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                  <div style={{ fontSize: '1.5rem' }}>✅</div>
+                  <div>
+                    <div style={{ fontWeight: 'bold' }}>Nameservers endret til Cloudflare</div>
+                    <div style={{ fontSize: '0.875rem' }}>DNS-propagering pågår (4-24 timer)</div>
                   </div>
-                  <p className="form-help">
-                    <strong>Viktig:</strong> Dette må være passordet for driftpro2 fra Domeneshop. 
-                    Brukernavn: driftpro2, Passord: HazhaGada89!
-                    {smtpPassword && smtpPassword.trim() !== '' && (
-                      <span style={{ color: '#059669', fontWeight: '600' }}> ✅ Passord lagret</span>
-                    )}
-                  </p>
+                </div>
+                <div style={{ fontSize: '0.875rem' }}>
+                  <strong>Status:</strong> Nameservers er endret til Cloudflare. E-postruting vil være aktiv om 4-24 timer.
                 </div>
               </div>
 
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <button
-                  onClick={() => setSettings(prev => ({ ...prev, smtpSecure: !prev.smtpSecure }))}
-                  className={`toggle-switch ${settings.smtpSecure ? 'active' : ''}`}
-                >
-                  <span className="toggle-slider"></span>
-                </button>
-                <label className="form-label">Bruk SSL/TLS</label>
-                <p className="form-help" style={{ marginLeft: '1rem' }}>For Domeneshop: AV (ikke huket av)</p>
+              {/* DNS Propagation Status */}
+              <div style={{ 
+                padding: '1rem', 
+                backgroundColor: '#fef3c7', 
+                border: '1px solid #f59e0b',
+                borderRadius: '0.5rem',
+                color: '#92400e'
+              }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>⏰ DNS-propagering</h3>
+                <div style={{ marginBottom: '1rem' }}>
+                  <p><strong>Nameservers endret:</strong> bethany.ns.cloudflare.com, doug.ns.cloudflare.com</p>
+                  <p><strong>Ventetid:</strong> 4-24 timer for full propagering</p>
+                  <p><strong>Status:</strong> Cloudflare Email Routing vil være aktiv etter propagering</p>
+                </div>
+                <div style={{ fontSize: '0.875rem' }}>
+                  <strong>Neste steg:</strong> Vent på DNS-propagering, deretter legg til Custom Address i Cloudflare dashboard.
+                </div>
               </div>
 
-              {/* Advanced SMTP Settings */}
+              {/* Cloudflare Email Routing Instructions */}
+              <div style={{ 
+                padding: '1rem', 
+                backgroundColor: '#eff6ff', 
+                border: '1px solid #3b82f6',
+                borderRadius: '0.5rem',
+                color: '#1e40af'
+              }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>📋 Cloudflare Email Routing Instruksjoner</h3>
+                <div style={{ marginBottom: '1rem' }}>
+                  <p><strong>Steg 1:</strong> Vent på DNS-propagering (4-24 timer)</p>
+                  <p><strong>Steg 2:</strong> Gå til Cloudflare dashboard → Email → Email Routing</p>
+                  <p><strong>Steg 3:</strong> Legg til Custom Address: noreplay@driftpro.no</p>
+                  <p><strong>Steg 4:</strong> Sett destination til din e-postadresse</p>
+                </div>
+                <div style={{ fontSize: '0.875rem' }}>
+                  <strong>Fordeler:</strong> Ingen relay-begrensninger, gratis opptil 100 e-poster per dag, automatisk SPF/DKIM.
+                </div>
+              </div>
+
+              {/* Cloudflare Email Routing Benefits */}
+              <div style={{ 
+                padding: '1rem', 
+                backgroundColor: '#f0fdf4', 
+                border: '1px solid #16a34a',
+                borderRadius: '0.5rem',
+                color: '#166534'
+              }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem' }}>✅ Cloudflare Email Routing Fordeler</h3>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem' }}>
+                  <div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>🚫 Ingen relay-begrensninger</div>
+                    <div style={{ fontSize: '0.875rem' }}>Ulikt Domeneshop som blokkerer automatisert sending</div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>💰 Gratis opptil 100 e-poster/dag</div>
+                    <div style={{ fontSize: '0.875rem' }}>Perfekt for små og mellomstore bedrifter</div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>📧 Din egen e-postadresse</div>
+                    <div style={{ fontSize: '0.875rem' }}>Bruk noreplay@driftpro.no som avsender</div>
+                  </div>
+                  <div>
+                    <div style={{ fontWeight: 'bold', marginBottom: '0.5rem' }}>🔒 Automatisk SPF/DKIM</div>
+                    <div style={{ fontSize: '0.875rem' }}>Bedre e-post-levering og sikkerhet</div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Cloudflare Email Routing Setup */}
               <div style={{ 
                 marginTop: '2rem', 
                 padding: '1rem', 
@@ -1462,138 +1466,73 @@ ${detailedError}`,
                 borderRadius: '0.5rem',
                 border: '1px solid #e5e7eb'
               }}>
-                <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem' }}>Avanserte SMTP-innstillinger</h3>
+                <h3 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem' }}>☁️ Cloudflare Email Routing Oppsett</h3>
                 
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <label className="form-label">Timeout (sekunder)</label>
-                    <input
-                      type="number"
-                      value={settings.smtpTimeout || 30}
-                      onChange={(e) => setSettings(prev => ({ ...prev, smtpTimeout: parseInt(e.target.value) }))}
-                      className="form-input"
-                      min="10"
-                      max="120"
-                    />
-                  </div>
-                  <div>
-                    <label className="form-label">Maks forsøk</label>
-                    <input
-                      type="number"
-                      value={settings.maxRetryAttempts}
-                      onChange={(e) => setSettings(prev => ({ ...prev, maxRetryAttempts: parseInt(e.target.value) }))}
-                      className="form-input"
-                      min="1"
-                      max="10"
-                    />
-                  </div>
+                <div style={{ marginBottom: '1rem' }}>
+                  <p><strong>Status:</strong> Nameservers er endret til Cloudflare. DNS-propagering pågår.</p>
+                  <p><strong>Neste steg:</strong> Vent 4-24 timer, deretter konfigurer Custom Address i Cloudflare dashboard.</p>
                 </div>
 
-                <div style={{ marginTop: '1rem' }}>
-                  <label className="form-label">Autentiseringsmetode</label>
-                  <select
-                    value={settings.smtpAuthMethod || 'PLAIN'}
-                    onChange={(e) => setSettings(prev => ({ ...prev, smtpAuthMethod: e.target.value }))}
-                    className="form-input"
-                  >
-                    <option value="PLAIN">PLAIN (Standard)</option>
-                    <option value="LOGIN">LOGIN</option>
-                    <option value="CRAM-MD5">CRAM-MD5</option>
-                  </select>
-                </div>
-              </div>
-
-              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
-                <button
-                  onClick={forceUpdateEmailSettings}
-                  disabled={saving}
-                  className="btn btn-danger"
-                  style={{ backgroundColor: '#dc3545', borderColor: '#dc3545' }}
-                >
-                  <Settings style={{ width: '16px', height: '16px' }} />
-                  {saving ? 'Oppdaterer...' : '🔧 TVANGS-OPPDATER SMTP'}
-                </button>
-                
-                {isSmtpLoggedIn ? (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '0.75rem 1rem', backgroundColor: '#d1fae5', border: '1px solid #10b981', borderRadius: '0.5rem', color: '#065f46' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                      <CheckCircle style={{ width: '16px', height: '16px' }} />
-                      <span style={{ fontWeight: 'bold' }}>🔐 INNLOGGET</span>
-                    </div>
-                    <div style={{ fontSize: '0.875rem' }}>
-                      <div>Logget inn: {smtpLoginTime}</div>
-                      <div>Økt utløper: {smtpSessionExpiry}</div>
-                    </div>
-                    <button
-                      onClick={logoutSmtp}
-                      className="btn btn-outline-danger"
-                      style={{ backgroundColor: 'transparent', borderColor: '#dc3545', color: '#dc3545', padding: '0.25rem 0.75rem', fontSize: '0.875rem' }}
-                    >
-                      🔓 Logg ut
-                    </button>
-                  </div>
-                ) : (
-                  <button
-                    onClick={performSmtpLogin}
-                    disabled={isSmtpLoggingIn || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !smtpPassword}
-                    className="btn btn-success"
-                    style={{ backgroundColor: '#059669', borderColor: '#059669' }}
-                  >
-                    <Shield style={{ width: '16px', height: '16px' }} />
-                    {isSmtpLoggingIn ? '🔐 Logger inn...' : '🔐 LOGG INN SMTP'}
-                  </button>
-                )}
-                <button
-                  onClick={detailedSmtpTest}
-                  disabled={testingSmtp || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !smtpPassword}
-                  className="btn btn-warning"
-                >
-                  <TestTube style={{ width: '16px', height: '16px' }} />
-                  {testingSmtp ? 'Tester...' : 'Detaljert SMTP-test'}
-                </button>
-                <button
-                  onClick={testSmtpConnection}
-                  disabled={testingSmtp || !settings.smtpHost || !settings.smtpPort || !settings.smtpUser || !smtpPassword}
-                  className="btn btn-secondary"
-                >
-                  <TestTube style={{ width: '16px', height: '16px' }} />
-                  {testingSmtp ? 'Tester...' : 'Enkel SMTP-test'}
-                </button>
-                <button
-                  onClick={saveSettings}
-                  disabled={saving}
-                  className="btn btn-primary"
-                >
-                  <Save style={{ width: '16px', height: '16px' }} />
-                  {saving ? 'Lagrer...' : 'Lagre SMTP-innstillinger'}
-                </button>
-              </div>
-
-              {(!smtpPassword || smtpPassword.trim() === '') && (
                 <div style={{ 
-                  marginTop: '1rem', 
                   padding: '1rem', 
                   backgroundColor: '#fef3c7', 
                   border: '1px solid #f59e0b',
                   borderRadius: '0.5rem',
                   color: '#92400e'
                 }}>
-                  <strong>⚠️ Advarsel:</strong> SMTP-passord mangler! Bruk "🔧 TVANGS-OPPDATER SMTP" knappen ovenfor for å sette opp riktig passord.
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.5rem' }}>📋 Steg for å aktivere Cloudflare Email Routing:</h4>
+                  <ol style={{ marginLeft: '1.5rem', marginBottom: '0' }}>
+                    <li>Vent på DNS-propagering (4-24 timer)</li>
+                    <li>Gå til <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Cloudflare dashboard</a></li>
+                    <li>Velg driftpro.no → Email → Email Routing</li>
+                    <li>Klikk "Add Custom Address"</li>
+                    <li>Legg til: noreplay@driftpro.no</li>
+                    <li>Sett destination til din e-postadresse</li>
+                    <li>Test e-postfunksjonen</li>
+                  </ol>
                 </div>
-              )}
+              </div>
 
-              {smtpPassword && smtpPassword.trim() !== '' && (
-                <div style={{ 
-                  marginTop: '1rem', 
-                  padding: '1rem', 
-                  backgroundColor: '#d1fae5', 
-                  border: '1px solid #10b981',
-                  borderRadius: '0.5rem',
-                  color: '#065f46'
-                }}>
-                  <strong>✅ Passord lastet:</strong> SMTP-passordet er lastet fra Firebase og e-post-systemet er klart til bruk.
-                </div>
-              )}
+              <div style={{ display: 'flex', justifyContent: 'flex-end', gap: '1rem', marginTop: '2rem' }}>
+                <button
+                  onClick={() => window.open('https://dash.cloudflare.com', '_blank')}
+                  className="btn btn-primary"
+                  style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
+                >
+                  <Settings style={{ width: '16px', height: '16px' }} />
+                  ☁️ Gå til Cloudflare Dashboard
+                </button>
+                
+                <button
+                  onClick={() => window.open('https://dash.cloudflare.com', '_blank')}
+                  className="btn btn-success"
+                  style={{ backgroundColor: '#059669', borderColor: '#059669' }}
+                >
+                  <Mail style={{ width: '16px', height: '16px' }} />
+                  📧 Konfigurer Email Routing
+                </button>
+                
+                <button
+                  onClick={saveSettings}
+                  disabled={saving}
+                  className="btn btn-secondary"
+                >
+                  <Save style={{ width: '16px', height: '16px' }} />
+                  {saving ? 'Lagrer...' : 'Lagre innstillinger'}
+                </button>
+              </div>
+
+              {/* Cloudflare Email Routing Status */}
+              <div style={{ 
+                marginTop: '1rem', 
+                padding: '1rem', 
+                backgroundColor: '#d1fae5', 
+                border: '1px solid #10b981',
+                borderRadius: '0.5rem',
+                color: '#065f46'
+              }}>
+                <strong>✅ Cloudflare Email Routing:</strong> Nameservers er endret til Cloudflare. DNS-propagering pågår. E-postfunksjonen vil være aktiv om 4-24 timer.
+              </div>
 
                             {smtpLoginResult && (
                 <div style={{ 
@@ -1632,116 +1571,70 @@ ${detailedError}`,
                 </div>
               )}
 
-              {/* Alternative SMTP Options */}
-              {showAlternativeOptions && (
+              {/* Cloudflare Email Routing Info */}
+              <div style={{ 
+                marginTop: '1rem', 
+                padding: '1.5rem', 
+                backgroundColor: '#eff6ff', 
+                border: '1px solid #3b82f6',
+                borderRadius: '0.5rem',
+                color: '#1e40af'
+              }}>
+                <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem', color: '#1e40af' }}>
+                  ☁️ Cloudflare Email Routing - Den perfekte løsningen
+                </h3>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <p style={{ marginBottom: '0.5rem' }}>
+                    <strong>Cloudflare Email Routing løser alle problemer med Domeneshop SMTP:</strong>
+                  </p>
+                  <ul style={{ marginLeft: '1.5rem', marginBottom: '1rem' }}>
+                    <li>🚫 Ingen relay-begrensninger (som Domeneshop hadde)</li>
+                    <li>💰 Gratis opptil 100 e-poster per dag</li>
+                    <li>📧 Din egen e-postadresse (noreplay@driftpro.no)</li>
+                    <li>🔒 Automatisk SPF/DKIM oppsett</li>
+                    <li>⚡ Rask og pålitelig levering</li>
+                  </ul>
+                </div>
+
                 <div style={{ 
-                  marginTop: '1rem', 
-                  padding: '1.5rem', 
-                  backgroundColor: '#fef3c7', 
-                  border: '1px solid #f59e0b',
+                  padding: '1rem', 
+                  backgroundColor: '#ffffff', 
                   borderRadius: '0.5rem',
-                  color: '#92400e'
+                  border: '1px solid #e5e7eb'
                 }}>
-                  <h3 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem', color: '#92400e' }}>
-                    🔧 Domeneshop SMTP-problem oppdaget - Prøv alternativ løsning
-                  </h3>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem' }}>📋 Neste steg etter DNS-propagering:</h4>
                   
                   <div style={{ marginBottom: '1rem' }}>
-                    <p style={{ marginBottom: '0.5rem' }}>
-                      <strong>Domeneshop har ofte midlertidige SMTP-problemer.</strong> Du kan prøve:
-                    </p>
-                    <ul style={{ marginLeft: '1.5rem', marginBottom: '1rem' }}>
-                      <li>Vente 5-10 minutter og prøve igjen</li>
-                      <li>Bruke en alternativ SMTP-leverandør</li>
-                      <li>Kontakte Domeneshop support</li>
-                    </ul>
+                    <ol style={{ marginLeft: '1.5rem', marginBottom: '0' }}>
+                      <li>Gå til <a href="https://dash.cloudflare.com" target="_blank" rel="noopener noreferrer" style={{ color: '#3b82f6', textDecoration: 'underline' }}>Cloudflare dashboard</a></li>
+                      <li>Velg driftpro.no → Email → Email Routing</li>
+                      <li>Klikk "Add Custom Address"</li>
+                      <li>Legg til: noreplay@driftpro.no</li>
+                      <li>Sett destination til din e-postadresse</li>
+                      <li>Test e-postfunksjonen</li>
+                    </ol>
                   </div>
 
-                  <div style={{ 
-                    padding: '1rem', 
-                    backgroundColor: '#ffffff', 
-                    borderRadius: '0.5rem',
-                    border: '1px solid #e5e7eb'
-                  }}>
-                    <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem' }}>Alternativ SMTP-konfigurasjon</h4>
+                  <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+                    <button
+                      onClick={() => window.open('https://dash.cloudflare.com', '_blank')}
+                      className="btn btn-primary"
+                      style={{ backgroundColor: '#3b82f6', borderColor: '#3b82f6' }}
+                    >
+                      ☁️ Gå til Cloudflare Dashboard
+                    </button>
                     
-                    <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '1rem' }}>
-                      <div>
-                        <label className="form-label">SMTP Server</label>
-                        <input
-                          type="text"
-                          value={alternativeSmtpConfig.host}
-                          onChange={(e) => setAlternativeSmtpConfig(prev => ({ ...prev, host: e.target.value }))}
-                          className="form-input"
-                          placeholder="smtp.office365.com"
-                        />
-                      </div>
-                      <div>
-                        <label className="form-label">Port</label>
-                        <input
-                          type="number"
-                          value={alternativeSmtpConfig.port}
-                          onChange={(e) => setAlternativeSmtpConfig(prev => ({ ...prev, port: parseInt(e.target.value) }))}
-                          className="form-input"
-                          placeholder="587"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4" style={{ marginBottom: '1rem' }}>
-                      <div>
-                        <label className="form-label">Brukernavn</label>
-                        <input
-                          type="text"
-                          value={alternativeSmtpConfig.user}
-                          onChange={(e) => setAlternativeSmtpConfig(prev => ({ ...prev, user: e.target.value }))}
-                          className="form-input"
-                          placeholder="noreplay@driftpro.no"
-                        />
-                      </div>
-                      <div>
-                        <label className="form-label">Passord</label>
-                        <input
-                          type="password"
-                          value={alternativeSmtpConfig.pass}
-                          onChange={(e) => setAlternativeSmtpConfig(prev => ({ ...prev, pass: e.target.value }))}
-                          className="form-input"
-                          placeholder="SMTP-passord"
-                        />
-                      </div>
-                    </div>
-
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '1rem' }}>
-                      <button
-                        onClick={() => setAlternativeSmtpConfig(prev => ({ ...prev, secure: !prev.secure }))}
-                        className={`toggle-switch ${alternativeSmtpConfig.secure ? 'active' : ''}`}
-                      >
-                        <span className="toggle-slider"></span>
-                      </button>
-                      <label className="form-label">Bruk SSL/TLS</label>
-                    </div>
-
-                    <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
-                      <button
-                        onClick={tryAlternativeSmtp}
-                        disabled={isSmtpLoggingIn || !alternativeSmtpConfig.host || !alternativeSmtpConfig.user || !alternativeSmtpConfig.pass}
-                        className="btn btn-warning"
-                        style={{ backgroundColor: '#f59e0b', borderColor: '#f59e0b', color: 'white' }}
-                      >
-                        <Shield style={{ width: '16px', height: '16px' }} />
-                        {isSmtpLoggingIn ? 'Tester alternativ...' : '🔧 Prøv alternativ SMTP'}
-                      </button>
-                      
-                      <button
-                        onClick={() => setShowAlternativeOptions(false)}
-                        className="btn btn-secondary"
-                      >
-                        Lukk alternativer
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => window.open('https://dash.cloudflare.com', '_blank')}
+                      className="btn btn-success"
+                      style={{ backgroundColor: '#059669', borderColor: '#059669' }}
+                    >
+                      📧 Konfigurer Email Routing
+                    </button>
                   </div>
                 </div>
-              )}
+              </div>
             </div>
           </div>
         </div>
