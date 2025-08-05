@@ -78,13 +78,19 @@ export default function DocumentsPage() {
   }, [userProfile?.companyId]);
 
   const loadData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile?.companyId) {
+      console.log('DocumentsPage: No companyId available, skipping data load');
+      setLoading(false);
+      return;
+    }
 
     try {
       setLoading(true);
       setError(null);
+      console.log('DocumentsPage: Loading documents for companyId:', userProfile.companyId);
       const data = await firebaseService.getDocuments(userProfile.companyId);
       setDocuments(data);
+      console.log('DocumentsPage: Loaded documents:', data.length);
     } catch (error) {
       console.error('Error loading documents:', error);
       setError('Feil ved lasting av dokumenter: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
@@ -95,7 +101,10 @@ export default function DocumentsPage() {
 
   const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
-    if (!file || !userProfile?.companyId) return;
+    if (!file || !userProfile?.companyId || !userProfile?.id) {
+      setError('Mangler brukerinformasjon. Vennligst logg inn på nytt.');
+      return;
+    }
 
     if (!newDocument.title.trim()) {
       setError('Tittel er påkrevd');
@@ -284,6 +293,24 @@ export default function DocumentsPage() {
             margin: '0 auto'
           }}></div>
           <p style={{ marginTop: '1rem', color: 'var(--gray-600)' }}>Laster dokumenter...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!userProfile) {
+    return (
+      <div style={{ minHeight: '100vh', background: 'var(--gray-50)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ background: 'var(--red-100)', padding: '2rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--red-200)' }}>
+            <AlertCircle style={{ width: '48px', height: '48px', color: 'var(--red-600)', margin: '0 auto 1rem' }} />
+            <h2 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--red-800)', marginBottom: '0.5rem' }}>
+              Ingen brukerinformasjon
+            </h2>
+            <p style={{ color: 'var(--red-700)' }}>
+              Vennligst logg inn på nytt for å få tilgang til dokumenter.
+            </p>
+          </div>
         </div>
       </div>
     );
