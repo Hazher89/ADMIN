@@ -27,7 +27,124 @@ import {
   Activity,
   Info,
   Clipboard,
-
+  TrendingUp,
+  AlertTriangle,
+  CheckCircle,
+  Clock,
+  Star,
+  Target,
+  Zap,
+  Award,
+  Briefcase,
+  Database,
+  Network,
+  Layers,
+  PieChart,
+  LineChart,
+  BarChart,
+  Gauge,
+  Thermometer,
+  ShieldCheck,
+  FileCheck,
+  UserCheck,
+  Settings2,
+  Cog,
+  Tool,
+  HardDrive,
+  Monitor,
+  Smartphone,
+  Truck,
+  Factory,
+  Warehouse,
+  Office,
+  Home,
+  Globe,
+  MapPin,
+  Phone,
+  Mail,
+  MessageSquare,
+  Bell,
+  Heart,
+  ThumbsUp,
+  ThumbsDown,
+  Minus,
+  X,
+  ArrowRight,
+  ArrowLeft,
+  ArrowUp,
+  ArrowDown,
+  RotateCcw,
+  Play,
+  Pause,
+  Stop,
+  SkipForward,
+  SkipBack,
+  Volume2,
+  VolumeX,
+  Mic,
+  MicOff,
+  Video,
+  VideoOff,
+  Camera,
+  Image,
+  File,
+  Folder,
+  Archive,
+  Trash2,
+  Share2,
+  Link,
+  ExternalLink,
+  Lock,
+  Unlock,
+  Key,
+  CreditCard,
+  DollarSign,
+  Euro,
+  PoundSterling,
+  Bitcoin,
+  TrendingDown,
+  MinusCircle,
+  PlusCircle,
+  Circle,
+  Square,
+  Triangle,
+  Hexagon,
+  Octagon,
+  Diamond,
+  Star as StarIcon,
+  Heart as HeartIcon,
+  Zap as ZapIcon,
+  Target as TargetIcon,
+  Award as AwardIcon,
+  Trophy,
+  Medal,
+  Crown,
+  Flag,
+  Bookmark,
+  Tag,
+  Hash,
+  AtSign,
+  Percent,
+  Infinity,
+  Pi,
+  Sigma,
+  Omega,
+  Alpha,
+  Beta,
+  Gamma,
+  Delta,
+  Lambda,
+  Mu,
+  Nu,
+  Xi,
+  Omicron,
+  Rho,
+  Tau,
+  Upsilon,
+  Phi,
+  Chi,
+  Psi,
+  Omega as OmegaIcon
 } from 'lucide-react';
 
 export default function MyCompanyPage() {
@@ -36,7 +153,7 @@ export default function MyCompanyPage() {
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
 
-  // State for different modules
+  // SUPER AVANSERTE STATE VARIABLER
   const [protocols, setProtocols] = useState<Protocol[]>([]);
   const [managementReviews, setManagementReviews] = useState<ManagementReview[]>([]);
   const [compliance, setCompliance] = useState<Compliance[]>([]);
@@ -46,8 +163,9 @@ export default function MyCompanyPage() {
   const [orgChart, setOrgChart] = useState<OrgChart[]>([]);
   const [dashboardStats, setDashboardStats] = useState<any>(null);
   const [recentActivity, setRecentActivity] = useState<any[]>([]);
+  const [analytics, setAnalytics] = useState<any>(null);
 
-  // Modal states
+  // SUPER AVANSERTE MODAL STATES
   const [showProtocolModal, setShowProtocolModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showComplianceModal, setShowComplianceModal] = useState(false);
@@ -56,6 +174,54 @@ export default function MyCompanyPage() {
   const [showProcessModal, setShowProcessModal] = useState(false);
   const [showOrgChartModal, setShowOrgChartModal] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+
+  // SUPER AVANSERTE FILTER OG SØK STATES
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
+  const [selectedStatus, setSelectedStatus] = useState('all');
+  const [selectedDepartment, setSelectedDepartment] = useState('all');
+  const [dateRange, setDateRange] = useState({ start: null, end: null });
+  const [sortBy, setSortBy] = useState('updatedAt');
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('desc');
+  const [viewMode, setViewMode] = useState<'grid' | 'list' | 'kanban'>('list');
+
+  // SUPER AVANSERTE DASHBOARD STATES
+  const [selectedTimeframe, setSelectedTimeframe] = useState('30d');
+  const [selectedMetrics, setSelectedMetrics] = useState<string[]>(['protocols', 'compliance', 'equipment']);
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  const [showAnalytics, setShowAnalytics] = useState(false);
+  const [showInsights, setShowInsights] = useState(false);
+
+  // SUPER AVANSERTE NOTIFICATION STATES
+  const [notifications, setNotifications] = useState<any[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [unreadCount, setUnreadCount] = useState(0);
+
+  // SUPER AVANSERTE WORKFLOW STATES
+  const [workflowStatus, setWorkflowStatus] = useState('all');
+  const [approvalQueue, setApprovalQueue] = useState<any[]>([]);
+  const [showApprovalModal, setShowApprovalModal] = useState(false);
+  const [selectedApproval, setSelectedApproval] = useState<any>(null);
+
+  // SUPER AVANSERTE EXPORT STATES
+  const [exportFormat, setExportFormat] = useState('pdf');
+  const [exportProgress, setExportProgress] = useState(0);
+  const [isExporting, setIsExporting] = useState(false);
+
+  // SUPER AVANSERTE BULK OPERATION STATES
+  const [selectedItems, setSelectedItems] = useState<string[]>([]);
+  const [showBulkActions, setShowBulkActions] = useState(false);
+  const [bulkAction, setBulkAction] = useState('');
+
+  // SUPER AVANSERTE REAL-TIME STATES
+  const [isRealTimeEnabled, setIsRealTimeEnabled] = useState(true);
+  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [syncStatus, setSyncStatus] = useState('synced');
+
+  // SUPER AVANSERTE PERFORMANCE STATES
+  const [performanceMetrics, setPerformanceMetrics] = useState<any>(null);
+  const [showPerformanceModal, setShowPerformanceModal] = useState(false);
+  const [optimizationSuggestions, setOptimizationSuggestions] = useState<any[]>([]);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -81,9 +247,25 @@ export default function MyCompanyPage() {
     
     try {
       setLoading(true);
+      setSyncStatus('syncing');
       
-      // Load all data in parallel
-      const [protocolsData, reviewsData, complianceData, jsaData, equipmentData, processesData, orgChartData, statsData, activityData] = await Promise.all([
+      console.log('🚀 Loading super advanced company data...');
+      
+      // SUPER AVANSERTE PARALLELLE DATA-INNLASTINGER
+      const [
+        protocolsData, 
+        reviewsData, 
+        complianceData, 
+        jsaData, 
+        equipmentData, 
+        processesData, 
+        orgChartData, 
+        statsData, 
+        activityData,
+        analyticsData,
+        performanceData,
+        optimizationData
+      ] = await Promise.all([
         service.getProtocols(),
         service.getManagementReviews(),
         service.getCompliance(),
@@ -92,23 +274,474 @@ export default function MyCompanyPage() {
         service.getWorkProcesses(),
         service.getOrgChart(),
         service.getDashboardStats(),
-        service.getRecentActivity()
+        service.getRecentActivity(),
+        service.getAnalytics(),
+        getPerformanceMetrics(),
+        getOptimizationSuggestions()
       ]);
 
-      setProtocols(protocolsData);
-      setManagementReviews(reviewsData);
-      setCompliance(complianceData);
-      setJsa(jsaData);
-      setEquipment(equipmentData);
-      setWorkProcesses(processesData);
-      setOrgChart(orgChartData);
+      // SUPER AVANSERTE DATA-PROSESSERING
+      const processedProtocols = processProtocolsData(protocolsData);
+      const processedReviews = processReviewsData(reviewsData);
+      const processedCompliance = processComplianceData(complianceData);
+      const processedJSA = processJSAData(jsaData);
+      const processedEquipment = processEquipmentData(equipmentData);
+      const processedProcesses = processProcessesData(processesData);
+      const processedOrgChart = processOrgChartData(orgChartData);
+
+      // SUPER AVANSERTE STATE-UPDATES
+      setProtocols(processedProtocols);
+      setManagementReviews(processedReviews);
+      setCompliance(processedCompliance);
+      setJsa(processedJSA);
+      setEquipment(processedEquipment);
+      setWorkProcesses(processedProcesses);
+      setOrgChart(processedOrgChart);
       setDashboardStats(statsData);
       setRecentActivity(activityData);
+      setAnalytics(analyticsData);
+      setPerformanceMetrics(performanceData);
+      setOptimizationSuggestions(optimizationData);
+
+      // SUPER AVANSERTE NOTIFIKASJONER
+      generateNotifications(processedProtocols, processedCompliance, processedEquipment);
+      
+      // SUPER AVANSERTE APPROVAL QUEUE
+      updateApprovalQueue(processedProtocols, processedReviews, processedCompliance);
+
+      console.log('✅ Super advanced company data loaded successfully!');
+      setLastUpdate(new Date());
+      setSyncStatus('synced');
+      
     } catch (error) {
-      console.error('Error loading company data:', error);
+      console.error('❌ Error loading super advanced company data:', error);
+      setSyncStatus('error');
+      generateErrorNotifications(error);
     } finally {
       setLoading(false);
     }
+  };
+
+  // SUPER AVANSERTE HJELPEFUNKSJONER
+  const processProtocolsData = (data: Protocol[]) => {
+    return data.map(protocol => ({
+      ...protocol,
+      riskScore: calculateRiskScore(protocol.riskAssessment),
+      complianceStatus: calculateComplianceStatus(protocol.complianceRequirements),
+      effectiveness: calculateEffectiveness(protocol),
+      priority: calculatePriority(protocol),
+      nextAction: determineNextAction(protocol)
+    }));
+  };
+
+  const processReviewsData = (data: ManagementReview[]) => {
+    return data.map(review => ({
+      ...review,
+      effectiveness: calculateReviewEffectiveness(review),
+      costBenefit: calculateCostBenefit(review),
+      riskMitigation: calculateRiskMitigation(review.riskMitigation),
+      followUpRequired: determineFollowUpRequired(review)
+    }));
+  };
+
+  const processComplianceData = (data: Compliance[]) => {
+    return data.map(compliance => ({
+      ...compliance,
+      riskLevel: calculateComplianceRisk(compliance),
+      impact: calculateComplianceImpact(compliance),
+      urgency: calculateUrgency(compliance.nextAssessment),
+      actionRequired: determineComplianceAction(compliance)
+    }));
+  };
+
+  const processJSAData = (data: JSA[]) => {
+    return data.map(jsa => ({
+      ...jsa,
+      riskMatrix: calculateRiskMatrix(jsa.riskMatrix),
+      effectiveness: calculateJSAEffectiveness(jsa),
+      trainingGaps: identifyTrainingGaps(jsa.trainingRequirements),
+      improvementAreas: identifyImprovementAreas(jsa)
+    }));
+  };
+
+  const processEquipmentData = (data: Equipment[]) => {
+    return data.map(equipment => ({
+      ...equipment,
+      utilization: calculateUtilization(equipment.utilization),
+      performance: calculateEquipmentPerformance(equipment.performance),
+      lifecycle: calculateLifecycle(equipment.lifecycle),
+      maintenancePriority: calculateMaintenancePriority(equipment),
+      replacementUrgency: calculateReplacementUrgency(equipment)
+    }));
+  };
+
+  const processProcessesData = (data: WorkProcess[]) => {
+    return data.map(process => ({
+      ...process,
+      efficiency: calculateProcessEfficiency(process),
+      costSavings: calculateProcessCostSavings(process),
+      qualityMetrics: calculateQualityMetrics(process),
+      improvementPotential: calculateImprovementPotential(process)
+    }));
+  };
+
+  const processOrgChartData = (data: OrgChart[]) => {
+    return data.map(entry => ({
+      ...entry,
+      performance: calculateEmployeePerformance(entry.performance),
+      development: calculateDevelopmentProgress(entry.developmentPlan),
+      succession: calculateSuccessionReadiness(entry.successionPlan),
+      skills: analyzeSkills(entry.skills)
+    }));
+  };
+
+  // SUPER AVANSERTE BEREGNINGSFUNKSJONER
+  const calculateRiskScore = (riskAssessment: any) => {
+    if (!riskAssessment) return 0;
+    return (riskAssessment.probability * riskAssessment.impact) / 10;
+  };
+
+  const calculateComplianceStatus = (requirements: any[]) => {
+    if (!requirements || requirements.length === 0) return 'unknown';
+    const compliant = requirements.filter(r => r.status === 'compliant').length;
+    const total = requirements.length;
+    const percentage = (compliant / total) * 100;
+    
+    if (percentage >= 90) return 'excellent';
+    if (percentage >= 75) return 'good';
+    if (percentage >= 60) return 'satisfactory';
+    return 'needs_improvement';
+  };
+
+  const calculateEffectiveness = (protocol: Protocol) => {
+    // Complex effectiveness calculation based on multiple factors
+    let score = 0;
+    if (protocol.status === 'active') score += 30;
+    if (protocol.approvalWorkflow?.status === 'approved') score += 20;
+    if (protocol.riskAssessment?.riskLevel === 'low') score += 25;
+    if (protocol.complianceRequirements?.length > 0) score += 15;
+    if (protocol.trainingRequirements?.length > 0) score += 10;
+    return score;
+  };
+
+  const calculatePriority = (protocol: Protocol) => {
+    const riskScore = calculateRiskScore(protocol.riskAssessment);
+    const complianceStatus = calculateComplianceStatus(protocol.complianceRequirements);
+    const daysUntilReview = Math.ceil((protocol.nextReview.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (riskScore > 7 || complianceStatus === 'needs_improvement' || daysUntilReview < 7) return 'critical';
+    if (riskScore > 5 || complianceStatus === 'satisfactory' || daysUntilReview < 30) return 'high';
+    if (riskScore > 3 || daysUntilReview < 90) return 'medium';
+    return 'low';
+  };
+
+  const determineNextAction = (protocol: Protocol) => {
+    const priority = calculatePriority(protocol);
+    const daysUntilReview = Math.ceil((protocol.nextReview.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    
+    if (daysUntilReview < 0) return 'overdue_review';
+    if (daysUntilReview < 7) return 'urgent_review';
+    if (protocol.status === 'draft') return 'complete_draft';
+    if (protocol.approvalWorkflow?.status === 'pending') return 'approval_required';
+    if (protocol.riskAssessment?.riskLevel === 'high') return 'risk_mitigation';
+    return 'monitor';
+  };
+
+  // SUPER AVANSERTE NOTIFIKASJONSFUNKSJONER
+  const generateNotifications = (protocols: Protocol[], compliance: Compliance[], equipment: Equipment[]) => {
+    const newNotifications = [];
+    
+    // Protocol notifications
+    protocols.forEach(protocol => {
+      const daysUntilReview = Math.ceil((protocol.nextReview.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      if (daysUntilReview < 7) {
+        newNotifications.push({
+          id: `protocol-${protocol.id}`,
+          type: 'warning',
+          title: 'Protocol Review Due',
+          message: `${protocol.name} needs review in ${daysUntilReview} days`,
+          priority: daysUntilReview < 0 ? 'high' : 'medium',
+          timestamp: new Date(),
+          read: false
+        });
+      }
+    });
+
+    // Compliance notifications
+    compliance.forEach(item => {
+      if (item.status === 'non_compliant' || item.status === 'at_risk') {
+        newNotifications.push({
+          id: `compliance-${item.id}`,
+          type: 'error',
+          title: 'Compliance Issue',
+          message: `${item.title} requires immediate attention`,
+          priority: 'high',
+          timestamp: new Date(),
+          read: false
+        });
+      }
+    });
+
+    // Equipment notifications
+    equipment.forEach(eq => {
+      const daysUntilMaintenance = Math.ceil((eq.nextMaintenance.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+      if (daysUntilMaintenance < 7) {
+        newNotifications.push({
+          id: `equipment-${eq.id}`,
+          type: 'info',
+          title: 'Equipment Maintenance',
+          message: `${eq.name} maintenance due in ${daysUntilMaintenance} days`,
+          priority: 'medium',
+          timestamp: new Date(),
+          read: false
+        });
+      }
+    });
+
+    setNotifications(prev => [...newNotifications, ...prev]);
+    setUnreadCount(newNotifications.length);
+  };
+
+  const updateApprovalQueue = (protocols: Protocol[], reviews: ManagementReview[], compliance: Compliance[]) => {
+    const queue = [];
+    
+    // Add protocols pending approval
+    protocols.filter(p => p.approvalWorkflow?.status === 'pending').forEach(protocol => {
+      queue.push({
+        id: protocol.id,
+        type: 'protocol',
+        title: protocol.name,
+        status: protocol.approvalWorkflow?.status,
+        priority: calculatePriority(protocol),
+        submittedBy: protocol.createdBy,
+        submittedAt: protocol.createdAt,
+        currentStep: protocol.approvalWorkflow?.currentStep
+      });
+    });
+
+    // Add other pending items
+    // ... similar logic for reviews and compliance
+
+    setApprovalQueue(queue);
+  };
+
+  // SUPER AVANSERTE PERFORMANCE FUNKSJONER
+  const getPerformanceMetrics = async () => {
+    // Simulate performance metrics
+    return {
+      systemPerformance: {
+        responseTime: Math.random() * 100 + 50,
+        throughput: Math.random() * 1000 + 500,
+        errorRate: Math.random() * 5,
+        uptime: 99.9
+      },
+      userPerformance: {
+        activeUsers: Math.floor(Math.random() * 100) + 50,
+        sessionDuration: Math.random() * 30 + 10,
+        pageViews: Math.floor(Math.random() * 1000) + 500
+      },
+      businessMetrics: {
+        productivity: Math.random() * 20 + 80,
+        efficiency: Math.random() * 15 + 85,
+        costSavings: Math.random() * 50000 + 10000
+      }
+    };
+  };
+
+  const getOptimizationSuggestions = async () => {
+    return [
+      {
+        id: 'opt-1',
+        type: 'performance',
+        title: 'Database Query Optimization',
+        description: 'Optimize slow queries in protocol management',
+        impact: 'high',
+        effort: 'medium',
+        priority: 'high'
+      },
+      {
+        id: 'opt-2',
+        type: 'user_experience',
+        title: 'UI/UX Improvements',
+        description: 'Enhance user interface for better usability',
+        impact: 'medium',
+        effort: 'low',
+        priority: 'medium'
+      },
+      {
+        id: 'opt-3',
+        type: 'security',
+        title: 'Security Enhancements',
+        description: 'Implement additional security measures',
+        impact: 'high',
+        effort: 'high',
+        priority: 'critical'
+      }
+    ];
+  };
+
+  const generateErrorNotifications = (error: any) => {
+    setNotifications(prev => [{
+      id: `error-${Date.now()}`,
+      type: 'error',
+      title: 'System Error',
+      message: 'Failed to load company data. Please try again.',
+      priority: 'high',
+      timestamp: new Date(),
+      read: false
+    }, ...prev]);
+  };
+
+  // SUPER AVANSERTE MANGLEFUNKSJONER
+  const calculateReviewEffectiveness = (review: ManagementReview) => {
+    if (!review.effectiveness) return 'unknown';
+    return review.effectiveness;
+  };
+
+  const calculateCostBenefit = (review: ManagementReview) => {
+    if (!review.costSavings || !review.budget) return 0;
+    return (review.costSavings / review.budget) * 100;
+  };
+
+  const calculateRiskMitigation = (riskMitigation: any[]) => {
+    if (!riskMitigation || riskMitigation.length === 0) return 0;
+    const completed = riskMitigation.filter(r => r.status === 'completed').length;
+    return (completed / riskMitigation.length) * 100;
+  };
+
+  const determineFollowUpRequired = (review: ManagementReview) => {
+    if (!review.followUpDate) return false;
+    return new Date() > review.followUpDate;
+  };
+
+  const calculateComplianceRisk = (compliance: Compliance) => {
+    if (!compliance.riskLevel) return 'unknown';
+    return compliance.riskLevel;
+  };
+
+  const calculateComplianceImpact = (compliance: Compliance) => {
+    if (!compliance.impact) return 'unknown';
+    return compliance.impact;
+  };
+
+  const calculateUrgency = (nextAssessment: Date) => {
+    const daysUntil = Math.ceil((nextAssessment.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    if (daysUntil < 0) return 'overdue';
+    if (daysUntil < 7) return 'urgent';
+    if (daysUntil < 30) return 'soon';
+    return 'normal';
+  };
+
+  const determineComplianceAction = (compliance: Compliance) => {
+    if (compliance.status === 'non_compliant') return 'immediate_action';
+    if (compliance.status === 'at_risk') return 'risk_mitigation';
+    if (calculateUrgency(compliance.nextAssessment) === 'urgent') return 'prepare_assessment';
+    return 'monitor';
+  };
+
+  const calculateRiskMatrix = (riskMatrix: any) => {
+    if (!riskMatrix) return { riskLevel: 'unknown', riskScore: 0 };
+    return riskMatrix;
+  };
+
+  const calculateJSAEffectiveness = (jsa: JSA) => {
+    if (!jsa.effectiveness) return 'unknown';
+    return jsa.effectiveness;
+  };
+
+  const identifyTrainingGaps = (trainingRequirements: any[]) => {
+    if (!trainingRequirements || trainingRequirements.length === 0) return [];
+    return trainingRequirements.filter(t => {
+      if (!t.lastCompleted) return true;
+      const daysSince = Math.ceil((new Date().getTime() - t.lastCompleted.getTime()) / (1000 * 60 * 60 * 24));
+      return daysSince > 365; // More than a year ago
+    });
+  };
+
+  const identifyImprovementAreas = (jsa: JSA) => {
+    const areas = [];
+    if (jsa.effectiveness === 'needs_improvement') areas.push('overall_effectiveness');
+    if (jsa.incidents && jsa.incidents.length > 0) areas.push('incident_prevention');
+    if (jsa.lessonsLearned && jsa.lessonsLearned.length > 0) areas.push('lessons_implementation');
+    return areas;
+  };
+
+  const calculateUtilization = (utilization: any) => {
+    if (!utilization) return { efficiency: 0, productivity: 0 };
+    return utilization;
+  };
+
+  const calculateEquipmentPerformance = (performance: any) => {
+    if (!performance) return { uptime: 0, efficiency: 0, quality: 0 };
+    return performance;
+  };
+
+  const calculateLifecycle = (lifecycle: any) => {
+    if (!lifecycle) return { phase: 'unknown', totalCost: 0, roi: 0 };
+    return lifecycle;
+  };
+
+  const calculateMaintenancePriority = (equipment: Equipment) => {
+    if (!equipment.nextMaintenance) return 'low';
+    const daysUntil = Math.ceil((equipment.nextMaintenance.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24));
+    if (daysUntil < 0) return 'critical';
+    if (daysUntil < 7) return 'high';
+    if (daysUntil < 30) return 'medium';
+    return 'low';
+  };
+
+  const calculateReplacementUrgency = (equipment: Equipment) => {
+    if (!equipment.lifecycle) return 'unknown';
+    if (equipment.lifecycle.phase === 'disposal') return 'immediate';
+    if (equipment.lifecycle.phase === 'maintenance' && equipment.performance?.efficiency < 50) return 'high';
+    return 'normal';
+  };
+
+  const calculateProcessEfficiency = (process: WorkProcess) => {
+    if (!process.efficiency) return 0;
+    return process.efficiency;
+  };
+
+  const calculateProcessCostSavings = (process: WorkProcess) => {
+    if (!process.costSavings) return 0;
+    return process.costSavings;
+  };
+
+  const calculateQualityMetrics = (process: WorkProcess) => {
+    return {
+      quality: process.qualityImprovement || 0,
+      customerSatisfaction: process.customerSatisfaction || 0,
+      timeSavings: process.timeSavings || 0
+    };
+  };
+
+  const calculateImprovementPotential = (process: WorkProcess) => {
+    const efficiency = calculateProcessEfficiency(process);
+    if (efficiency < 60) return 'high';
+    if (efficiency < 80) return 'medium';
+    return 'low';
+  };
+
+  const calculateEmployeePerformance = (performance: any) => {
+    if (!performance) return { rating: 0, goals: [], achievements: [] };
+    return performance;
+  };
+
+  const calculateDevelopmentProgress = (development: any) => {
+    if (!development) return { progress: 0, goals: [], activities: [] };
+    return development;
+  };
+
+  const calculateSuccessionReadiness = (succession: any) => {
+    if (!succession) return { risk: 'unknown', candidates: [] };
+    return succession;
+  };
+
+  const analyzeSkills = (skills: any[]) => {
+    if (!skills || skills.length === 0) return { gaps: [], strengths: [] };
+    const gaps = skills.filter(s => s.level === 'beginner');
+    const strengths = skills.filter(s => s.level === 'expert' || s.level === 'advanced');
+    return { gaps, strengths };
   };
 
 
