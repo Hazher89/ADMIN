@@ -47,10 +47,10 @@ export class EmailService {
     
     // Default SMTP configuration - will be overridden by settings from Firebase
     this.smtpConfig = {
-      host: 'smtp.domeneshop.no',
+      host: 'smtp.sendgrid.net',
       port: 587,
-      user: 'driftpro2',
-      pass: 'HazhaGada89!',
+      user: 'apikey',
+      pass: 'SG.your-sendgrid-api-key', // Replace with actual SendGrid API key
       secure: false,
       // Add additional options to handle AWS IP restrictions
       tls: {
@@ -815,11 +815,11 @@ export class EmailService {
           deviationResolved: true,
           warnings: true,
           systemAlerts: true,
-          smtpHost: 'smtp.domeneshop.no',
-          smtpPort: 587,
-          smtpUser: 'driftpro2',
-          smtpSecure: false,
-          smtpPassword: 'HazhaGada89!',
+                  smtpHost: 'smtp.sendgrid.net',
+        smtpPort: 587,
+        smtpUser: 'apikey',
+        smtpSecure: false,
+        smtpPassword: 'SG.your-sendgrid-api-key',
           // Add AWS-compatible settings
           smtpTlsRejectUnauthorized: false,
           smtpConnectionTimeout: 60000,
@@ -839,11 +839,11 @@ export class EmailService {
         deviationResolved: true,
         warnings: true,
         systemAlerts: true,
-        smtpHost: 'smtp.domeneshop.no',
+        smtpHost: 'smtp.sendgrid.net',
         smtpPort: 587,
-        smtpUser: 'driftpro2',
+        smtpUser: 'apikey',
         smtpSecure: false,
-        smtpPassword: 'HazhaGada89!',
+        smtpPassword: 'SG.your-sendgrid-api-key',
         // Add AWS-compatible settings
         smtpTlsRejectUnauthorized: false,
         smtpConnectionTimeout: 60000,
