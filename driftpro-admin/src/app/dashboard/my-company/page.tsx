@@ -128,12 +128,12 @@ export default function MyCompanyPage() {
             animation: 'spin 1s linear infinite',
             margin: '0 auto'
           }}></div>
-          <h2 style={{ marginTop: '1.5rem', color: 'var(--blue-800)', fontSize: '2rem', fontWeight: '700' }}>
-            🚀 Min Bedrift
-          </h2>
-          <p style={{ marginTop: '0.5rem', color: 'var(--gray-600)', fontSize: '1.1rem' }}>
-            Laster bedriftsdata...
-          </p>
+                      <h2 style={{ marginTop: '1.5rem', color: 'var(--blue-800)', fontSize: '2rem', fontWeight: '700' }}>
+              Min Bedrift
+            </h2>
+            <p style={{ marginTop: '0.5rem', color: 'var(--gray-600)', fontSize: '1.1rem' }}>
+              Laster bedriftsdata...
+            </p>
         </div>
       </div>
     );
@@ -214,18 +214,18 @@ export default function MyCompanyPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
       {/* Header */}
-      <div style={{ background: 'linear-gradient(135deg, var(--blue-600) 0%, var(--purple-600) 100%)', boxShadow: 'var(--shadow-lg)', borderBottom: '1px solid var(--gray-200)', padding: '2rem' }}>
+      <div style={{ background: 'var(--white)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', borderBottom: '1px solid var(--gray-200)', padding: '2rem' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-              <div style={{ background: 'rgba(255,255,255,0.2)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
-                <Building style={{ width: '32px', height: '32px', color: 'white' }} />
+              <div style={{ background: 'var(--blue-100)', padding: '0.75rem', borderRadius: 'var(--radius-lg)' }}>
+                <Building style={{ width: '32px', height: '32px', color: 'var(--blue-600)' }} />
               </div>
               <div>
-                <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'white', margin: '0' }}>
-                  🚀 Min Bedrift
+                <h1 style={{ fontSize: '2.5rem', fontWeight: '800', color: 'var(--gray-900)', margin: '0' }}>
+                  Min Bedrift
                 </h1>
-                <p style={{ color: 'rgba(255,255,255,0.9)', fontSize: '1.1rem', margin: '0.25rem 0 0 0' }}>
+                <p style={{ color: 'var(--gray-600)', fontSize: '1.1rem', margin: '0.25rem 0 0 0' }}>
                   Enterprise Management Platform
                 </p>
               </div>
@@ -234,10 +234,12 @@ export default function MyCompanyPage() {
               <button 
                 className="btn btn-outline" 
                 style={{ 
-                  background: 'rgba(255,255,255,0.1)', 
-                  border: '1px solid rgba(255,255,255,0.3)', 
-                  color: 'white',
-                  padding: '0.75rem 1.5rem'
+                  background: 'var(--white)', 
+                  border: '1px solid var(--gray-300)', 
+                  color: 'var(--gray-700)',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontWeight: '500'
                 }}
                 onClick={() => loadCompanyData()}
               >
@@ -247,10 +249,12 @@ export default function MyCompanyPage() {
               <button 
                 className="btn btn-primary" 
                 style={{ 
-                  background: 'var(--green-600)', 
+                  background: 'var(--blue-600)', 
                   border: 'none', 
                   color: 'white',
-                  padding: '0.75rem 1.5rem'
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontWeight: '500'
                 }}
               >
                 <Plus style={{ width: '18px', height: '18px', marginRight: '0.5rem' }} />
@@ -261,50 +265,50 @@ export default function MyCompanyPage() {
           
           {/* Status Indicators */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
-            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <div style={{ background: 'var(--blue-50)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--blue-200)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <FileText style={{ width: '16px', height: '16px', color: 'white' }} />
-                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                <FileText style={{ width: '16px', height: '16px', color: 'var(--blue-600)' }} />
+                <span style={{ color: 'var(--blue-900)', fontSize: '0.875rem', fontWeight: '600' }}>
                   {protocols.length} protokoller
                 </span>
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
+              <p style={{ color: 'var(--blue-700)', fontSize: '0.75rem', margin: '0' }}>
                 {compliance.length} samsvarskrav
               </p>
             </div>
             
-            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <div style={{ background: 'var(--green-50)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--green-200)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <Users style={{ width: '16px', height: '16px', color: 'white' }} />
-                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                <Users style={{ width: '16px', height: '16px', color: 'var(--green-600)' }} />
+                <span style={{ color: 'var(--green-900)', fontSize: '0.875rem', fontWeight: '600' }}>
                   {managementReviews.length} gjennomganger
                 </span>
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
+              <p style={{ color: 'var(--green-700)', fontSize: '0.75rem', margin: '0' }}>
                 {jsa.length} SJA analyser
               </p>
             </div>
             
-            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <div style={{ background: 'var(--orange-50)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--orange-200)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <Wrench style={{ width: '16px', height: '16px', color: 'white' }} />
-                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                <Wrench style={{ width: '16px', height: '16px', color: 'var(--orange-600)' }} />
+                <span style={{ color: 'var(--orange-900)', fontSize: '0.875rem', fontWeight: '600' }}>
                   {equipment.length} utstyr
                 </span>
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
+              <p style={{ color: 'var(--orange-700)', fontSize: '0.75rem', margin: '0' }}>
                 {workProcesses.length} prosesser
               </p>
             </div>
             
-            <div style={{ background: 'rgba(255,255,255,0.1)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid rgba(255,255,255,0.2)' }}>
+            <div style={{ background: 'var(--purple-50)', padding: '1rem', borderRadius: 'var(--radius-lg)', border: '1px solid var(--purple-200)' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                <BarChart3 style={{ width: '16px', height: '16px', color: 'white' }} />
-                <span style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+                <BarChart3 style={{ width: '16px', height: '16px', color: 'var(--purple-600)' }} />
+                <span style={{ color: 'var(--purple-900)', fontSize: '0.875rem', fontWeight: '600' }}>
                   {orgChart.length} ansatte
                 </span>
               </div>
-              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.75rem', margin: '0' }}>
+              <p style={{ color: 'var(--purple-700)', fontSize: '0.75rem', margin: '0' }}>
                 Organisasjonskart
               </p>
             </div>
@@ -314,17 +318,17 @@ export default function MyCompanyPage() {
 
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
         {/* Tab Navigation */}
-        <div style={{ marginBottom: '2rem', background: 'var(--white)', borderRadius: 'var(--radius-xl)', boxShadow: 'var(--shadow-md)', padding: '1rem' }}>
+        <div style={{ marginBottom: '2rem', background: 'var(--white)', borderRadius: 'var(--radius-lg)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', padding: '1.5rem' }}>
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
             {[
-              { id: 'overview', label: '🚀 Oversikt', icon: Building, count: protocols.length + compliance.length + managementReviews.length, color: 'var(--blue-600)' },
-              { id: 'protocols', label: '📋 Protokoller', icon: FileText, count: protocols.length, color: 'var(--green-600)' },
-              { id: 'management', label: '👥 Ledelsesgjennomgang', icon: Users, count: managementReviews.length, color: 'var(--purple-600)' },
-              { id: 'compliance', label: '🛡️ Samsvar', icon: Shield, count: compliance.length, color: 'var(--orange-600)' },
-              { id: 'jsa', label: '⚠️ SJA', icon: Shield, count: jsa.length, color: 'var(--red-600)' },
-              { id: 'equipment', label: '🔧 Utstyr & FDV', icon: Wrench, count: equipment.length, color: 'var(--indigo-600)' },
-              { id: 'processes', label: '⚙️ Arbeidsprosesser', icon: Settings, count: workProcesses.length, color: 'var(--pink-600)' },
-              { id: 'orgchart', label: '📊 Org. Kart', icon: BarChart3, count: orgChart.length, color: 'var(--teal-600)' }
+              { id: 'overview', label: 'Oversikt', icon: Building, count: protocols.length + compliance.length + managementReviews.length, color: 'var(--blue-600)' },
+              { id: 'protocols', label: 'Protokoller', icon: FileText, count: protocols.length, color: 'var(--green-600)' },
+              { id: 'management', label: 'Ledelsesgjennomgang', icon: Users, count: managementReviews.length, color: 'var(--purple-600)' },
+              { id: 'compliance', label: 'Samsvar', icon: Shield, count: compliance.length, color: 'var(--orange-600)' },
+              { id: 'jsa', label: 'SJA', icon: Shield, count: jsa.length, color: 'var(--red-600)' },
+              { id: 'equipment', label: 'Utstyr & FDV', icon: Wrench, count: equipment.length, color: 'var(--indigo-600)' },
+              { id: 'processes', label: 'Arbeidsprosesser', icon: Settings, count: workProcesses.length, color: 'var(--pink-600)' },
+              { id: 'orgchart', label: 'Org. Kart', icon: BarChart3, count: orgChart.length, color: 'var(--teal-600)' }
             ].map((tab) => {
               const IconComponent = tab.icon;
               return (
@@ -332,21 +336,20 @@ export default function MyCompanyPage() {
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
                   style={{
-                    padding: '1rem 1.5rem',
+                    padding: '0.75rem 1.25rem',
                     border: 'none',
                     background: activeTab === tab.id ? tab.color : 'var(--gray-50)',
                     cursor: 'pointer',
-                    borderRadius: 'var(--radius-lg)',
+                    borderRadius: 'var(--radius-md)',
                     color: activeTab === tab.id ? 'white' : 'var(--gray-700)',
-                    fontWeight: activeTab === tab.id ? '700' : '600',
-                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: activeTab === tab.id ? '600' : '500',
+                    fontSize: '0.875rem',
                     whiteSpace: 'nowrap',
                     display: 'flex',
                     alignItems: 'center',
                     gap: '0.5rem',
-                    transition: 'all 0.2s ease',
-                    boxShadow: activeTab === tab.id ? '0 4px 12px rgba(0,0,0,0.15)' : 'none',
-                    transform: activeTab === tab.id ? 'translateY(-2px)' : 'none'
+                    transition: 'all 0.15s ease',
+                    boxShadow: activeTab === tab.id ? '0 2px 4px rgba(0,0,0,0.1)' : 'none'
                   }}
                 >
                   <IconComponent style={{ width: '18px', height: '18px' }} />
@@ -357,7 +360,7 @@ export default function MyCompanyPage() {
                     padding: '0.25rem 0.5rem', 
                     borderRadius: 'var(--radius-full)', 
                     fontSize: '0.75rem', 
-                    fontWeight: '700',
+                    fontWeight: '600',
                     minWidth: '20px',
                     textAlign: 'center'
                   }}>
@@ -369,12 +372,12 @@ export default function MyCompanyPage() {
           </div>
           
           {/* Search and Filters */}
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--gray-200)' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--gray-200)' }}>
             <div style={{ position: 'relative', flex: '1' }}>
               <Search style={{ position: 'absolute', left: '1rem', top: '50%', transform: 'translateY(-50%)', width: '18px', height: '18px', color: 'var(--gray-400)' }} />
               <input
                 type="text"
-                placeholder="🔍 Søk i alle moduler..."
+                placeholder="Søk i alle moduler..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
@@ -400,12 +403,12 @@ export default function MyCompanyPage() {
                 minWidth: '150px'
               }}
             >
-              <option value="all">📂 Alle kategorier</option>
-              <option value="Sikkerhet">🛡️ Sikkerhet</option>
-              <option value="Miljø">🌱 Miljø</option>
-              <option value="Kvalitet">✅ Kvalitet</option>
-              <option value="HMS">⚡ HMS</option>
-              <option value="Prosess">⚙️ Prosess</option>
+              <option value="all">Alle kategorier</option>
+              <option value="Sikkerhet">Sikkerhet</option>
+              <option value="Miljø">Miljø</option>
+              <option value="Kvalitet">Kvalitet</option>
+              <option value="HMS">HMS</option>
+              <option value="Prosess">Prosess</option>
             </select>
             
             <select
@@ -420,12 +423,12 @@ export default function MyCompanyPage() {
                 minWidth: '150px'
               }}
             >
-              <option value="all">📊 Alle statuser</option>
-              <option value="active">✅ Aktiv</option>
-              <option value="draft">📝 Kladd</option>
-              <option value="review">👀 Under gjennomgang</option>
-              <option value="approved">✅ Godkjent</option>
-              <option value="archived">📦 Arkivert</option>
+              <option value="all">Alle statuser</option>
+              <option value="active">Aktiv</option>
+              <option value="draft">Kladd</option>
+              <option value="review">Under gjennomgang</option>
+              <option value="approved">Godkjent</option>
+              <option value="archived">Arkivert</option>
             </select>
             
             <button
@@ -475,15 +478,15 @@ export default function MyCompanyPage() {
             </h2>
             
             {/* Statistics Grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-              <div className="card">
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+              <div style={{ background: 'var(--white)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid var(--gray-200)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Aktive protokoller</p>
-                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--gray-900)' }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Aktive protokoller</p>
+                    <p style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--gray-900)' }}>
                       {protocols.length}
                     </p>
-                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
                       {protocols.filter(p => p.status === 'active').length} aktive
                     </p>
                   </div>
@@ -493,14 +496,14 @@ export default function MyCompanyPage() {
                 </div>
               </div>
 
-              <div className="card">
+              <div style={{ background: 'var(--white)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid var(--gray-200)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Samsvarskrav</p>
-                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--gray-900)' }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Samsvarskrav</p>
+                    <p style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--gray-900)' }}>
                       {compliance.length}
                     </p>
-                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
                       {compliance.filter(c => c.status === 'compliant').length} compliant
                     </p>
                   </div>
@@ -510,14 +513,14 @@ export default function MyCompanyPage() {
                 </div>
               </div>
 
-              <div className="card">
+              <div style={{ background: 'var(--white)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid var(--gray-200)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Ledelsesgjennomganger</p>
-                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--gray-900)' }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>Ledelsesgjennomganger</p>
+                    <p style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--gray-900)' }}>
                       {managementReviews.length}
                     </p>
-                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
                       {managementReviews.filter(r => r.status === 'completed').length} fullført
                     </p>
                   </div>
@@ -527,14 +530,14 @@ export default function MyCompanyPage() {
                 </div>
               </div>
 
-              <div className="card">
+              <div style={{ background: 'var(--white)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid var(--gray-200)' }}>
                 <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                   <div>
-                    <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>SJA analyser</p>
-                    <p style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--gray-900)' }}>
+                    <p style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>SJA analyser</p>
+                    <p style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--gray-900)' }}>
                       {jsa.length}
                     </p>
-                    <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                    <p style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
                       {jsa.filter(j => j.status === 'approved').length} godkjent
                     </p>
                   </div>
@@ -546,9 +549,9 @@ export default function MyCompanyPage() {
             </div>
 
             {/* Recent Activity */}
-            <div className="card">
-              <div style={{ padding: '1.5rem' }}>
-                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+            <div style={{ background: 'var(--white)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid var(--gray-200)' }}>
+              <div style={{ padding: '0' }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
                   Siste aktivitet
                 </h3>
                 <div style={{ display: 'grid', gap: '1rem' }}>
@@ -594,25 +597,33 @@ export default function MyCompanyPage() {
         {activeTab === 'protocols' && (
           <div>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--gray-900)' }}>
                 Protokoller
               </h2>
-              <button className="btn btn-primary">
+              <button style={{ 
+                background: 'var(--blue-600)', 
+                border: 'none', 
+                color: 'white',
+                padding: '0.75rem 1.5rem',
+                borderRadius: 'var(--radius-lg)',
+                fontWeight: '500',
+                cursor: 'pointer'
+              }}>
                 <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
                 Ny protokoll
               </button>
             </div>
 
-            <div className="card">
-              <div style={{ padding: '1.5rem' }}>
+            <div style={{ background: 'var(--white)', padding: '1.5rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid var(--gray-200)' }}>
+              <div style={{ padding: '0' }}>
                 <div style={{ display: 'grid', gap: '1rem' }}>
-                  {protocols.map((protocol) => (
-                    <div key={protocol.id} style={{ 
-                      border: '1px solid var(--gray-200)', 
-                      borderRadius: 'var(--radius-lg)', 
-                      padding: '1.5rem',
-                      background: 'var(--white)'
-                    }}>
+                                      {protocols.map((protocol) => (
+                      <div key={protocol.id} style={{ 
+                        border: '1px solid var(--gray-200)', 
+                        borderRadius: 'var(--radius-lg)', 
+                        padding: '1.5rem',
+                        background: 'var(--gray-50)'
+                      }}>
                       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
                         <div style={{ flex: '1' }}>
                           <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
@@ -631,13 +642,34 @@ export default function MyCompanyPage() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{ 
+                            background: 'var(--white)', 
+                            border: '1px solid var(--gray-300)', 
+                            color: 'var(--gray-700)',
+                            padding: '0.5rem',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer'
+                          }}>
                             <FileText style={{ width: '16px', height: '16px' }} />
                           </button>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{ 
+                            background: 'var(--white)', 
+                            border: '1px solid var(--gray-300)', 
+                            color: 'var(--gray-700)',
+                            padding: '0.5rem',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer'
+                          }}>
                             <Settings style={{ width: '16px', height: '16px' }} />
                           </button>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{ 
+                            background: 'var(--white)', 
+                            border: '1px solid var(--gray-300)', 
+                            color: 'var(--gray-700)',
+                            padding: '0.5rem',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer'
+                          }}>
                             <Download style={{ width: '16px', height: '16px' }} />
                           </button>
                         </div>
@@ -653,7 +685,7 @@ export default function MyCompanyPage() {
         {/* Other tabs can be added similarly */}
         {activeTab !== 'overview' && activeTab !== 'protocols' && (
           <div>
-            <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1.5rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1.5rem' }}>
               {activeTab === 'management' && 'Ledelsesgjennomgang'}
               {activeTab === 'compliance' && 'Samsvar'}
               {activeTab === 'jsa' && 'SJA'}
@@ -661,12 +693,10 @@ export default function MyCompanyPage() {
               {activeTab === 'processes' && 'Arbeidsprosesser'}
               {activeTab === 'orgchart' && 'Organisasjonskart'}
             </h2>
-            <div className="card">
-              <div style={{ padding: '1.5rem', textAlign: 'center' }}>
-                <p style={{ color: 'var(--gray-600)' }}>
-                  Denne funksjonen er under utvikling. Kom tilbake senere!
-                </p>
-              </div>
+            <div style={{ background: 'var(--white)', padding: '2rem', borderRadius: 'var(--radius-lg)', boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)', border: '1px solid var(--gray-200)', textAlign: 'center' }}>
+              <p style={{ color: 'var(--gray-600)', fontSize: '1rem' }}>
+                Denne funksjonen er under utvikling. Kom tilbake senere!
+              </p>
             </div>
           </div>
         )}
