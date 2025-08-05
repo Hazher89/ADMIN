@@ -29,6 +29,12 @@ export class EmailService {
     user: string;
     pass: string;
     secure: boolean;
+    tls?: {
+      rejectUnauthorized: boolean;
+    };
+    connectionTimeout?: number;
+    greetingTimeout?: number;
+    socketTimeout?: number;
   };
 
   constructor() {
@@ -45,7 +51,15 @@ export class EmailService {
       port: 587,
       user: 'driftpro2',
       pass: 'HazhaGada89!',
-      secure: false
+      secure: false,
+      // Add additional options to handle AWS IP restrictions
+      tls: {
+        rejectUnauthorized: false
+      },
+      // Add connection timeout
+      connectionTimeout: 60000,
+      greetingTimeout: 30000,
+      socketTimeout: 60000
     };
   }
 
@@ -139,7 +153,14 @@ export class EmailService {
         auth: {
           user: smtpConfig.user,
           pass: smtpConfig.pass
-        }
+        },
+        // Add options to handle AWS IP restrictions
+        tls: {
+          rejectUnauthorized: settings.smtpTlsRejectUnauthorized !== undefined ? settings.smtpTlsRejectUnauthorized : false
+        },
+        connectionTimeout: settings.smtpConnectionTimeout || 60000,
+        greetingTimeout: settings.smtpGreetingTimeout || 30000,
+        socketTimeout: settings.smtpSocketTimeout || 60000
       });
 
       const mailOptions = {
@@ -798,7 +819,12 @@ export class EmailService {
           smtpPort: 587,
           smtpUser: 'driftpro2',
           smtpSecure: false,
-          smtpPassword: 'HazhaGada89!'
+          smtpPassword: 'HazhaGada89!',
+          // Add AWS-compatible settings
+          smtpTlsRejectUnauthorized: false,
+          smtpConnectionTimeout: 60000,
+          smtpGreetingTimeout: 30000,
+          smtpSocketTimeout: 60000
         };
       }
     } catch (error) {
@@ -817,7 +843,12 @@ export class EmailService {
         smtpPort: 587,
         smtpUser: 'driftpro2',
         smtpSecure: false,
-        smtpPassword: 'HazhaGada89!'
+        smtpPassword: 'HazhaGada89!',
+        // Add AWS-compatible settings
+        smtpTlsRejectUnauthorized: false,
+        smtpConnectionTimeout: 60000,
+        smtpGreetingTimeout: 30000,
+        smtpSocketTimeout: 60000
       };
     }
   }
