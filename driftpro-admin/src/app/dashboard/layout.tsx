@@ -287,6 +287,12 @@ export default function DashboardLayout({
       category: 'management'
     },
     {
+      name: 'Min Bedrift',
+      href: '/dashboard/my-company',
+      icon: <Building size={20} />,
+      category: 'management'
+    },
+    {
       name: 'Undersøkelser',
       href: '/dashboard/surveys',
       icon: <Target size={20} />,

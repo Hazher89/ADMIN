@@ -26,12 +26,12 @@ export class EmailService {
 
     console.log('📧 EMAIL SERVICE: Base URL set to:', this.baseUrl);
     
-    // Cloudflare Email Routing configuration
+    // Gmail SMTP configuration (easier to set up)
     this.smtpConfig = {
-      host: 'smtp.cloudflare.com',
+      host: 'smtp.gmail.com',
       port: 587,
-      user: 'noreplay@driftpro.no',
-      pass: 'your-cloudflare-api-key', // Will be replaced with actual API key
+      user: 'your-email@gmail.com', // Replace with your Gmail
+      pass: 'your-app-password', // Replace with Gmail App Password
       secure: false,
       tls: {
         rejectUnauthorized: false
