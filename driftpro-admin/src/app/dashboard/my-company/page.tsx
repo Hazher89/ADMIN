@@ -365,8 +365,21 @@ export default function MyCompanyPage() {
             </button>
             <button
               onClick={() => loadCompanyData()}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                background: '#2563eb',
+                color: 'white',
+                border: 'none',
+                padding: '0.75rem 1.5rem',
+                borderRadius: '8px',
+                fontSize: '14px',
+                fontWeight: '600',
+                cursor: 'pointer',
+                transition: 'all 0.15s ease',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+              }}
             >
               <Settings style={{ width: '16px', height: '16px' }} />
               Oppdater Data
@@ -668,12 +681,12 @@ export default function MyCompanyPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '0.5rem',
-                  background: 'var(--blue-600)',
+                  background: '#2563eb',
                   color: 'white',
                   border: 'none',
                   padding: '0.75rem 1.5rem',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--font-size-sm)',
+                  borderRadius: '8px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -778,12 +791,12 @@ export default function MyCompanyPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '0.5rem',
-                  background: 'var(--blue-600)',
+                  background: '#2563eb',
                   color: 'white',
                   border: 'none',
                   padding: '0.75rem 1.5rem',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--font-size-sm)',
+                  borderRadius: '8px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -888,12 +901,12 @@ export default function MyCompanyPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '0.5rem',
-                  background: 'var(--blue-600)',
+                  background: '#2563eb',
                   color: 'white',
                   border: 'none',
                   padding: '0.75rem 1.5rem',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--font-size-sm)',
+                  borderRadius: '8px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -965,12 +978,12 @@ export default function MyCompanyPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '0.5rem',
-                  background: 'var(--blue-600)',
+                  background: '#2563eb',
                   color: 'white',
                   border: 'none',
                   padding: '0.75rem 1.5rem',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--font-size-sm)',
+                  borderRadius: '8px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -1042,12 +1055,12 @@ export default function MyCompanyPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '0.5rem',
-                  background: 'var(--blue-600)',
+                  background: '#2563eb',
                   color: 'white',
                   border: 'none',
                   padding: '0.75rem 1.5rem',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--font-size-sm)',
+                  borderRadius: '8px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -1119,12 +1132,12 @@ export default function MyCompanyPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '0.5rem',
-                  background: 'var(--blue-600)',
+                  background: '#2563eb',
                   color: 'white',
                   border: 'none',
                   padding: '0.75rem 1.5rem',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--font-size-sm)',
+                  borderRadius: '8px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -1196,12 +1209,12 @@ export default function MyCompanyPage() {
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '0.5rem',
-                  background: 'var(--blue-600)',
+                  background: '#2563eb',
                   color: 'white',
                   border: 'none',
                   padding: '0.75rem 1.5rem',
-                  borderRadius: 'var(--radius-lg)',
-                  fontSize: 'var(--font-size-sm)',
+                  borderRadius: '8px',
+                  fontSize: '14px',
                   fontWeight: '600',
                   cursor: 'pointer',
                   transition: 'all 0.15s ease',
@@ -1388,15 +1401,35 @@ export default function MyCompanyPage() {
             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
               <button
                 onClick={handleCreateProtocol}
-                className="btn btn-primary"
-                style={{ flex: 1 }}
+                style={{ 
+                  flex: 1,
+                  background: '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
               >
                 Opprett Protokoll
               </button>
               <button
                 onClick={() => setShowProtocolModal(false)}
-                className="btn btn-outline"
-                style={{ flex: 1 }}
+                style={{ 
+                  flex: 1,
+                  background: 'white',
+                  color: '#374151',
+                  border: '1px solid #d1d5db',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: '8px',
+                  fontSize: '14px',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease'
+                }}
               >
                 Avbryt
               </button>
