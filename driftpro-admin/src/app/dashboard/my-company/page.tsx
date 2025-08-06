@@ -24,7 +24,8 @@ import {
   Star,
   Target,
   TrendingUp,
-  Activity
+  Activity,
+  X
 } from 'lucide-react';
 
 export default function MyCompanyPage() {
@@ -50,6 +51,72 @@ export default function MyCompanyPage() {
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('list');
   const [showAdvancedFilters, setShowAdvancedFilters] = useState(false);
+  
+  // Modal states for all tabs
+  const [showProtocolModal, setShowProtocolModal] = useState(false);
+  const [showReviewModal, setShowReviewModal] = useState(false);
+  const [showComplianceModal, setShowComplianceModal] = useState(false);
+  const [showJSAModal, setShowJSAModal] = useState(false);
+  const [showEquipmentModal, setShowEquipmentModal] = useState(false);
+  const [showProcessModal, setShowProcessModal] = useState(false);
+  const [showOrgChartModal, setShowOrgChartModal] = useState(false);
+  
+  // Form states
+  const [newProtocol, setNewProtocol] = useState({
+    name: '',
+    category: 'Sikkerhet',
+    description: '',
+    responsiblePerson: '',
+    department: ''
+  });
+  
+  const [newReview, setNewReview] = useState({
+    title: '',
+    type: 'quarterly',
+    description: '',
+    participants: '',
+    date: ''
+  });
+  
+  const [newCompliance, setNewCompliance] = useState({
+    title: '',
+    type: 'regulatory',
+    description: '',
+    regulation: '',
+    nextAssessment: ''
+  });
+  
+  const [newJSA, setNewJSA] = useState({
+    title: '',
+    jobType: '',
+    description: '',
+    department: '',
+    riskLevel: 'medium'
+  });
+  
+  const [newEquipment, setNewEquipment] = useState({
+    name: '',
+    type: 'vehicle',
+    description: '',
+    location: '',
+    maintenanceDate: ''
+  });
+  
+  const [newProcess, setNewProcess] = useState({
+    name: '',
+    category: 'operational',
+    description: '',
+    department: '',
+    version: '1.0'
+  });
+  
+  const [newOrgChart, setNewOrgChart] = useState({
+    name: '',
+    position: '',
+    department: '',
+    email: '',
+    phone: ''
+  });
 
   useEffect(() => {
     const checkMobile = () => {
@@ -122,6 +189,112 @@ export default function MyCompanyPage() {
       console.error('❌ Error loading company data:', error);
       setError('Kunne ikke laste bedriftsdata. Vennligst prøv igjen senere.');
       setLoading(false);
+    }
+  };
+
+  // Handle functions for all tabs
+  const handleCreateProtocol = () => {
+    if (newProtocol.name && newProtocol.description) {
+      const protocol = {
+        id: Date.now().toString(),
+        ...newProtocol,
+        status: 'active',
+        version: '1.0',
+        createdAt: new Date().toISOString()
+      };
+      setProtocols([...protocols, protocol]);
+      setNewProtocol({ name: '', category: 'Sikkerhet', description: '', responsiblePerson: '', department: '' });
+      setShowProtocolModal(false);
+      setSuccess('Protokoll opprettet successfully!');
+    }
+  };
+
+  const handleCreateReview = () => {
+    if (newReview.title && newReview.description) {
+      const review = {
+        id: Date.now().toString(),
+        ...newReview,
+        status: 'planned',
+        createdAt: new Date().toISOString()
+      };
+      setManagementReviews([...managementReviews, review]);
+      setNewReview({ title: '', type: 'quarterly', description: '', participants: '', date: '' });
+      setShowReviewModal(false);
+      setSuccess('Ledelsesgjennomgang opprettet successfully!');
+    }
+  };
+
+  const handleCreateCompliance = () => {
+    if (newCompliance.title && newCompliance.description) {
+      const complianceItem = {
+        id: Date.now().toString(),
+        ...newCompliance,
+        status: 'compliant',
+        createdAt: new Date().toISOString()
+      };
+      setCompliance([...compliance, complianceItem]);
+      setNewCompliance({ title: '', type: 'regulatory', description: '', regulation: '', nextAssessment: '' });
+      setShowComplianceModal(false);
+      setSuccess('Samsvarskrav opprettet successfully!');
+    }
+  };
+
+  const handleCreateJSA = () => {
+    if (newJSA.title && newJSA.description) {
+      const jsaItem = {
+        id: Date.now().toString(),
+        ...newJSA,
+        status: 'review',
+        createdAt: new Date().toISOString()
+      };
+      setJsa([...jsa, jsaItem]);
+      setNewJSA({ title: '', jobType: '', description: '', department: '', riskLevel: 'medium' });
+      setShowJSAModal(false);
+      setSuccess('SJA opprettet successfully!');
+    }
+  };
+
+  const handleCreateEquipment = () => {
+    if (newEquipment.name && newEquipment.description) {
+      const equipmentItem = {
+        id: Date.now().toString(),
+        ...newEquipment,
+        status: 'operational',
+        createdAt: new Date().toISOString()
+      };
+      setEquipment([...equipment, equipmentItem]);
+      setNewEquipment({ name: '', type: 'vehicle', description: '', location: '', maintenanceDate: '' });
+      setShowEquipmentModal(false);
+      setSuccess('Utstyr opprettet successfully!');
+    }
+  };
+
+  const handleCreateProcess = () => {
+    if (newProcess.name && newProcess.description) {
+      const process = {
+        id: Date.now().toString(),
+        ...newProcess,
+        status: 'active',
+        createdAt: new Date().toISOString()
+      };
+      setWorkProcesses([...workProcesses, process]);
+      setNewProcess({ name: '', category: 'operational', description: '', department: '', version: '1.0' });
+      setShowProcessModal(false);
+      setSuccess('Arbeidsprosess opprettet successfully!');
+    }
+  };
+
+  const handleCreateOrgChart = () => {
+    if (newOrgChart.name && newOrgChart.position) {
+      const orgChartItem = {
+        id: Date.now().toString(),
+        ...newOrgChart,
+        createdAt: new Date().toISOString()
+      };
+      setOrgChart([...orgChart, orgChartItem]);
+      setNewOrgChart({ name: '', position: '', department: '', email: '', phone: '' });
+      setShowOrgChartModal(false);
+      setSuccess('Organisasjonskart oppføring opprettet successfully!');
     }
   };
 
@@ -257,10 +430,10 @@ export default function MyCompanyPage() {
                   style={{
                     padding: '0.75rem 1.25rem',
                     border: 'none',
-                    background: activeTab === tab.id ? tab.color : 'var(--gray-50)',
+                    background: activeTab === tab.id ? tab.color : 'var(--gray-100)',
                     cursor: 'pointer',
                     borderRadius: 'var(--radius-md)',
-                    color: activeTab === tab.id ? 'white' : 'var(--gray-700)',
+                    color: activeTab === tab.id ? 'white' : 'var(--gray-800)',
                     fontWeight: activeTab === tab.id ? '600' : '500',
                     fontSize: '0.875rem',
                     whiteSpace: 'nowrap',
@@ -542,27 +715,1370 @@ export default function MyCompanyPage() {
           </div>
         )}
 
-        {/* Other tabs can be added similarly */}
-        {activeTab !== 'overview' && activeTab !== 'protocols' && (
+        {/* Management Reviews Tab */}
+        {activeTab === 'management' && (
           <div>
-            <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1.5rem' }}>
-              {activeTab === 'management' && 'Ledelsesgjennomgang'}
-              {activeTab === 'compliance' && 'Samsvar'}
-              {activeTab === 'jsa' && 'SJA'}
-              {activeTab === 'equipment' && 'Utstyr & FDV'}
-              {activeTab === 'processes' && 'Arbeidsprosesser'}
-              {activeTab === 'orgchart' && 'Organisasjonskart'}
-            </h2>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                Ledelsesgjennomgang
+              </h2>
+              <button 
+                onClick={() => setShowReviewModal(true)}
+                className="btn btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Ny gjennomgang
+              </button>
+            </div>
+
             <div className="card">
-              <div style={{ padding: '2rem', textAlign: 'center' }}>
-                <p style={{ color: 'var(--gray-600)', fontSize: '1rem' }}>
-                  Denne funksjonen er under utvikling. Kom tilbake senere!
-                </p>
+              <div style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {managementReviews.map((review) => (
+                    <div key={review.id} style={{ 
+                      border: '1px solid var(--gray-200)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      padding: '1.5rem',
+                      background: 'var(--gray-50)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ flex: '1' }}>
+                          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+                            {review.title}
+                          </h3>
+                          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {review.type}
+                            </span>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {review.status}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                            {review.description}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn btn-sm btn-outline">
+                            <Eye style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Edit style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Download style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Compliance Tab */}
+        {activeTab === 'compliance' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                Samsvar
+              </h2>
+              <button 
+                onClick={() => setShowComplianceModal(true)}
+                className="btn btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Ny samsvarskrav
+              </button>
+            </div>
+
+            <div className="card">
+              <div style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {compliance.map((item) => (
+                    <div key={item.id} style={{ 
+                      border: '1px solid var(--gray-200)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      padding: '1.5rem',
+                      background: 'var(--gray-50)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ flex: '1' }}>
+                          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+                            {item.title}
+                          </h3>
+                          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.type}
+                            </span>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                            {item.description}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn btn-sm btn-outline">
+                            <Eye style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Edit style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Download style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* JSA Tab */}
+        {activeTab === 'jsa' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                SJA - Sikker Jobb Analyse
+              </h2>
+              <button 
+                onClick={() => setShowJSAModal(true)}
+                className="btn btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Ny SJA
+              </button>
+            </div>
+
+            <div className="card">
+              <div style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {jsa.map((item) => (
+                    <div key={item.id} style={{ 
+                      border: '1px solid var(--gray-200)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      padding: '1.5rem',
+                      background: 'var(--gray-50)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ flex: '1' }}>
+                          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+                            {item.title}
+                          </h3>
+                          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.jobType}
+                            </span>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                            {item.description}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn btn-sm btn-outline">
+                            <Eye style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Edit style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Download style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Equipment Tab */}
+        {activeTab === 'equipment' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                Utstyr & FDV
+              </h2>
+              <button 
+                onClick={() => setShowEquipmentModal(true)}
+                className="btn btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Nytt utstyr
+              </button>
+            </div>
+
+            <div className="card">
+              <div style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {equipment.map((item) => (
+                    <div key={item.id} style={{ 
+                      border: '1px solid var(--gray-200)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      padding: '1.5rem',
+                      background: 'var(--gray-50)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ flex: '1' }}>
+                          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+                            {item.name}
+                          </h3>
+                          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.type}
+                            </span>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                            {item.description}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn btn-sm btn-outline">
+                            <Eye style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Edit style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Download style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Work Processes Tab */}
+        {activeTab === 'processes' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                Arbeidsprosesser
+              </h2>
+              <button 
+                onClick={() => setShowProcessModal(true)}
+                className="btn btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Ny prosess
+              </button>
+            </div>
+
+            <div className="card">
+              <div style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {workProcesses.map((item) => (
+                    <div key={item.id} style={{ 
+                      border: '1px solid var(--gray-200)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      padding: '1.5rem',
+                      background: 'var(--gray-50)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ flex: '1' }}>
+                          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+                            {item.name}
+                          </h3>
+                          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.category}
+                            </span>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.status}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                            {item.description}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn btn-sm btn-outline">
+                            <Eye style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Edit style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Download style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Org Chart Tab */}
+        {activeTab === 'orgchart' && (
+          <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                Organisasjonskart
+              </h2>
+              <button 
+                onClick={() => setShowOrgChartModal(true)}
+                className="btn btn-primary" 
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Ny stilling
+              </button>
+            </div>
+
+            <div className="card">
+              <div style={{ padding: '1.5rem' }}>
+                <div style={{ display: 'grid', gap: '1rem' }}>
+                  {orgChart.map((item) => (
+                    <div key={item.id} style={{ 
+                      border: '1px solid var(--gray-200)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      padding: '1.5rem',
+                      background: 'var(--gray-50)'
+                    }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                        <div style={{ flex: '1' }}>
+                          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+                            {item.name}
+                          </h3>
+                          <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.position}
+                            </span>
+                            <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {item.department}
+                            </span>
+                          </div>
+                          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                            {item.email} • {item.phone}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button className="btn btn-sm btn-outline">
+                            <Eye style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Edit style={{ width: '16px', height: '16px' }} />
+                          </button>
+                          <button className="btn btn-sm btn-outline">
+                            <Users style={{ width: '16px', height: '16px' }} />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </div>
         )}
       </div>
+
+      {/* Modals */}
+      
+      {/* Protocol Modal */}
+      {showProtocolModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>Ny Protokoll</h2>
+              <button onClick={() => setShowProtocolModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X style={{ width: '24px', height: '24px', color: 'var(--gray-500)' }} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Navn</label>
+                <input
+                  type="text"
+                  value={newProtocol.name}
+                  onChange={(e) => setNewProtocol({...newProtocol, name: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Protokoll navn"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Kategori</label>
+                <select
+                  value={newProtocol.category}
+                  onChange={(e) => setNewProtocol({...newProtocol, category: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                >
+                  <option value="Sikkerhet">Sikkerhet</option>
+                  <option value="Miljø">Miljø</option>
+                  <option value="Kvalitet">Kvalitet</option>
+                  <option value="HMS">HMS</option>
+                  <option value="Prosess">Prosess</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Beskrivelse</label>
+                <textarea
+                  value={newProtocol.description}
+                  onChange={(e) => setNewProtocol({...newProtocol, description: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)',
+                    minHeight: '100px',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Beskriv protokollen"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Ansvarlig Person</label>
+                <input
+                  type="text"
+                  value={newProtocol.responsiblePerson}
+                  onChange={(e) => setNewProtocol({...newProtocol, responsiblePerson: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Navn på ansvarlig person"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Avdeling</label>
+                <input
+                  type="text"
+                  value={newProtocol.department}
+                  onChange={(e) => setNewProtocol({...newProtocol, department: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Avdeling"
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={handleCreateProtocol}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Opprett Protokoll
+              </button>
+              <button
+                onClick={() => setShowProtocolModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1 }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Review Modal */}
+      {showReviewModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>Ny Ledelsesgjennomgang</h2>
+              <button onClick={() => setShowReviewModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X style={{ width: '24px', height: '24px', color: 'var(--gray-500)' }} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Tittel</label>
+                <input
+                  type="text"
+                  value={newReview.title}
+                  onChange={(e) => setNewReview({...newReview, title: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Gjennomgang tittel"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Type</label>
+                <select
+                  value={newReview.type}
+                  onChange={(e) => setNewReview({...newReview, type: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                >
+                  <option value="quarterly">Kvartalsgjennomgang</option>
+                  <option value="annual">Årsgjennomgang</option>
+                  <option value="monthly">Månedlig gjennomgang</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Beskrivelse</label>
+                <textarea
+                  value={newReview.description}
+                  onChange={(e) => setNewReview({...newReview, description: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)',
+                    minHeight: '100px',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Beskriv gjennomgangen"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Deltakere</label>
+                <input
+                  type="text"
+                  value={newReview.participants}
+                  onChange={(e) => setNewReview({...newReview, participants: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Deltakere"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Dato</label>
+                <input
+                  type="date"
+                  value={newReview.date}
+                  onChange={(e) => setNewReview({...newReview, date: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={handleCreateReview}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Opprett Gjennomgang
+              </button>
+              <button
+                onClick={() => setShowReviewModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1 }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Compliance Modal */}
+      {showComplianceModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>Nytt Samsvarskrav</h2>
+              <button onClick={() => setShowComplianceModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X style={{ width: '24px', height: '24px', color: 'var(--gray-500)' }} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Tittel</label>
+                <input
+                  type="text"
+                  value={newCompliance.title}
+                  onChange={(e) => setNewCompliance({...newCompliance, title: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Samsvarskrav tittel"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Type</label>
+                <select
+                  value={newCompliance.type}
+                  onChange={(e) => setNewCompliance({...newCompliance, type: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                >
+                  <option value="regulatory">Regulatorisk</option>
+                  <option value="certification">Sertifisering</option>
+                  <option value="internal">Intern</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Beskrivelse</label>
+                <textarea
+                  value={newCompliance.description}
+                  onChange={(e) => setNewCompliance({...newCompliance, description: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)',
+                    minHeight: '100px',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Beskriv samsvarskravet"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Regelverk</label>
+                <input
+                  type="text"
+                  value={newCompliance.regulation}
+                  onChange={(e) => setNewCompliance({...newCompliance, regulation: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Regelverk"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Neste Vurdering</label>
+                <input
+                  type="date"
+                  value={newCompliance.nextAssessment}
+                  onChange={(e) => setNewCompliance({...newCompliance, nextAssessment: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={handleCreateCompliance}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Opprett Samsvarskrav
+              </button>
+              <button
+                onClick={() => setShowComplianceModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1 }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* JSA Modal */}
+      {showJSAModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>Ny SJA</h2>
+              <button onClick={() => setShowJSAModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X style={{ width: '24px', height: '24px', color: 'var(--gray-500)' }} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Tittel</label>
+                <input
+                  type="text"
+                  value={newJSA.title}
+                  onChange={(e) => setNewJSA({...newJSA, title: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="SJA tittel"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Jobb Type</label>
+                <input
+                  type="text"
+                  value={newJSA.jobType}
+                  onChange={(e) => setNewJSA({...newJSA, jobType: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Type jobb"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Beskrivelse</label>
+                <textarea
+                  value={newJSA.description}
+                  onChange={(e) => setNewJSA({...newJSA, description: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)',
+                    minHeight: '100px',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Beskriv jobben"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Avdeling</label>
+                <input
+                  type="text"
+                  value={newJSA.department}
+                  onChange={(e) => setNewJSA({...newJSA, department: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Avdeling"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Risiko Nivå</label>
+                <select
+                  value={newJSA.riskLevel}
+                  onChange={(e) => setNewJSA({...newJSA, riskLevel: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                >
+                  <option value="low">Lav</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">Høy</option>
+                </select>
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={handleCreateJSA}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Opprett SJA
+              </button>
+              <button
+                onClick={() => setShowJSAModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1 }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Equipment Modal */}
+      {showEquipmentModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>Nytt Utstyr</h2>
+              <button onClick={() => setShowEquipmentModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X style={{ width: '24px', height: '24px', color: 'var(--gray-500)' }} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Navn</label>
+                <input
+                  type="text"
+                  value={newEquipment.name}
+                  onChange={(e) => setNewEquipment({...newEquipment, name: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Utstyr navn"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Type</label>
+                <select
+                  value={newEquipment.type}
+                  onChange={(e) => setNewEquipment({...newEquipment, type: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                >
+                  <option value="vehicle">Kjøretøy</option>
+                  <option value="tool">Verktøy</option>
+                  <option value="machine">Maskin</option>
+                  <option value="equipment">Utstyr</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Beskrivelse</label>
+                <textarea
+                  value={newEquipment.description}
+                  onChange={(e) => setNewEquipment({...newEquipment, description: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)',
+                    minHeight: '100px',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Beskriv utstyret"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Lokasjon</label>
+                <input
+                  type="text"
+                  value={newEquipment.location}
+                  onChange={(e) => setNewEquipment({...newEquipment, location: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Lokasjon"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Vedlikehold Dato</label>
+                <input
+                  type="date"
+                  value={newEquipment.maintenanceDate}
+                  onChange={(e) => setNewEquipment({...newEquipment, maintenanceDate: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={handleCreateEquipment}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Opprett Utstyr
+              </button>
+              <button
+                onClick={() => setShowEquipmentModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1 }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Process Modal */}
+      {showProcessModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>Ny Arbeidsprosess</h2>
+              <button onClick={() => setShowProcessModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X style={{ width: '24px', height: '24px', color: 'var(--gray-500)' }} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Navn</label>
+                <input
+                  type="text"
+                  value={newProcess.name}
+                  onChange={(e) => setNewProcess({...newProcess, name: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Prosess navn"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Kategori</label>
+                <select
+                  value={newProcess.category}
+                  onChange={(e) => setNewProcess({...newProcess, category: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                >
+                  <option value="operational">Operasjonell</option>
+                  <option value="quality">Kvalitet</option>
+                  <option value="safety">Sikkerhet</option>
+                  <option value="maintenance">Vedlikehold</option>
+                </select>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Beskrivelse</label>
+                <textarea
+                  value={newProcess.description}
+                  onChange={(e) => setNewProcess({...newProcess, description: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)',
+                    minHeight: '100px',
+                    resize: 'vertical'
+                  }}
+                  placeholder="Beskriv prosessen"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Avdeling</label>
+                <input
+                  type="text"
+                  value={newProcess.department}
+                  onChange={(e) => setNewProcess({...newProcess, department: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Avdeling"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Versjon</label>
+                <input
+                  type="text"
+                  value={newProcess.version}
+                  onChange={(e) => setNewProcess({...newProcess, version: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Versjon"
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={handleCreateProcess}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Opprett Prosess
+              </button>
+              <button
+                onClick={() => setShowProcessModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1 }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Org Chart Modal */}
+      {showOrgChartModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            padding: '2rem',
+            borderRadius: 'var(--radius-lg)',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>Ny Stilling</h2>
+              <button onClick={() => setShowOrgChartModal(false)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                <X style={{ width: '24px', height: '24px', color: 'var(--gray-500)' }} />
+              </button>
+            </div>
+            
+            <div style={{ display: 'grid', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Navn</label>
+                <input
+                  type="text"
+                  value={newOrgChart.name}
+                  onChange={(e) => setNewOrgChart({...newOrgChart, name: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Person navn"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Stilling</label>
+                <input
+                  type="text"
+                  value={newOrgChart.position}
+                  onChange={(e) => setNewOrgChart({...newOrgChart, position: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Stilling"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Avdeling</label>
+                <input
+                  type="text"
+                  value={newOrgChart.department}
+                  onChange={(e) => setNewOrgChart({...newOrgChart, department: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Avdeling"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>E-post</label>
+                <input
+                  type="email"
+                  value={newOrgChart.email}
+                  onChange={(e) => setNewOrgChart({...newOrgChart, email: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="E-post"
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>Telefon</label>
+                <input
+                  type="tel"
+                  value={newOrgChart.phone}
+                  onChange={(e) => setNewOrgChart({...newOrgChart, phone: e.target.value})}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-sm)'
+                  }}
+                  placeholder="Telefon"
+                />
+              </div>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={handleCreateOrgChart}
+                className="btn btn-primary"
+                style={{ flex: 1 }}
+              >
+                Opprett Stilling
+              </button>
+              <button
+                onClick={() => setShowOrgChartModal(false)}
+                className="btn btn-outline"
+                style={{ flex: 1 }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 
