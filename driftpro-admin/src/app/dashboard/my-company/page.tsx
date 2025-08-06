@@ -662,7 +662,24 @@ export default function MyCompanyPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 Protokoller
               </h2>
-              <button className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+              <button 
+                onClick={() => setShowProtocolModal(true)}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  background: 'var(--blue-600)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+              >
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Ny protokoll
               </button>
@@ -696,13 +713,46 @@ export default function MyCompanyPage() {
                           </div>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            background: 'var(--white)',
+                            color: 'var(--gray-700)',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                          }}>
                             <Eye style={{ width: '16px', height: '16px' }} />
                           </button>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            background: 'var(--white)',
+                            color: 'var(--gray-700)',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                          }}>
                             <Edit style={{ width: '16px', height: '16px' }} />
                           </button>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            background: 'var(--white)',
+                            color: 'var(--gray-700)',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                          }}>
                             <Download style={{ width: '16px', height: '16px' }} />
                           </button>
                         </div>
@@ -724,8 +774,21 @@ export default function MyCompanyPage() {
               </h2>
               <button 
                 onClick={() => setShowReviewModal(true)}
-                className="btn btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  background: 'var(--blue-600)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
               >
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Ny gjennomgang
@@ -760,13 +823,46 @@ export default function MyCompanyPage() {
                           </p>
                         </div>
                         <div style={{ display: 'flex', gap: '0.5rem' }}>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            background: 'var(--white)',
+                            color: 'var(--gray-700)',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                          }}>
                             <Eye style={{ width: '16px', height: '16px' }} />
                           </button>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            background: 'var(--white)',
+                            color: 'var(--gray-700)',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                          }}>
                             <Edit style={{ width: '16px', height: '16px' }} />
                           </button>
-                          <button className="btn btn-sm btn-outline">
+                          <button style={{
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            background: 'var(--white)',
+                            color: 'var(--gray-700)',
+                            borderRadius: 'var(--radius-md)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            transition: 'all 0.15s ease'
+                          }}>
                             <Download style={{ width: '16px', height: '16px' }} />
                           </button>
                         </div>
@@ -788,8 +884,21 @@ export default function MyCompanyPage() {
               </h2>
               <button 
                 onClick={() => setShowComplianceModal(true)}
-                className="btn btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  background: 'var(--blue-600)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
               >
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Ny samsvarskrav
@@ -852,8 +961,21 @@ export default function MyCompanyPage() {
               </h2>
               <button 
                 onClick={() => setShowJSAModal(true)}
-                className="btn btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  background: 'var(--blue-600)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
               >
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Ny SJA
@@ -916,8 +1038,21 @@ export default function MyCompanyPage() {
               </h2>
               <button 
                 onClick={() => setShowEquipmentModal(true)}
-                className="btn btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  background: 'var(--blue-600)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
               >
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Nytt utstyr
@@ -980,8 +1115,21 @@ export default function MyCompanyPage() {
               </h2>
               <button 
                 onClick={() => setShowProcessModal(true)}
-                className="btn btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  background: 'var(--blue-600)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
               >
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Ny prosess
@@ -1044,8 +1192,21 @@ export default function MyCompanyPage() {
               </h2>
               <button 
                 onClick={() => setShowOrgChartModal(true)}
-                className="btn btn-primary" 
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  background: 'var(--blue-600)',
+                  color: 'white',
+                  border: 'none',
+                  padding: '0.75rem 1.5rem',
+                  borderRadius: 'var(--radius-lg)',
+                  fontSize: 'var(--font-size-sm)',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  transition: 'all 0.15s ease',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
               >
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Ny stilling
