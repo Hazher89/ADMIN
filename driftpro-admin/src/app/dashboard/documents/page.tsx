@@ -204,6 +204,7 @@ export default function DocumentsPage() {
   };
 
   const getFileIcon = (fileType: string) => {
+    if (!fileType) return <File style={{ width: '24px', height: '24px', color: 'var(--gray-600)' }} />;
     if (fileType.includes('pdf')) return <FileText style={{ width: '24px', height: '24px', color: 'var(--red-600)' }} />;
     if (fileType.includes('image')) return <FileImage style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />;
     if (fileType.includes('spreadsheet') || fileType.includes('excel')) return <FileSpreadsheet style={{ width: '24px', height: '24px', color: 'var(--green-600)' }} />;
@@ -257,10 +258,10 @@ export default function DocumentsPage() {
 
   const stats = {
     total: documents.length,
-    pdf: documents.filter(d => d.fileType.includes('pdf')).length,
-    images: documents.filter(d => d.fileType.includes('image')).length,
-    documents: documents.filter(d => d.fileType.includes('word') || d.fileType.includes('document')).length,
-    spreadsheets: documents.filter(d => d.fileType.includes('spreadsheet') || d.fileType.includes('excel')).length,
+    pdf: documents.filter(d => d.fileType && d.fileType.includes('pdf')).length,
+    images: documents.filter(d => d.fileType && d.fileType.includes('image')).length,
+    documents: documents.filter(d => d.fileType && (d.fileType.includes('word') || d.fileType.includes('document'))).length,
+    spreadsheets: documents.filter(d => d.fileType && (d.fileType.includes('spreadsheet') || d.fileType.includes('excel'))).length,
     recent: documents.filter(d => {
       const docDate = new Date(d.createdAt);
       const weekAgo = new Date();

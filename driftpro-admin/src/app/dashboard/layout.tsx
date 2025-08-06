@@ -235,15 +235,9 @@ export default function DashboardLayout({
     
     // Time Management
     {
-      name: 'Ferie',
-      href: '/dashboard/vacation',
+      name: 'Fravær og ferie',
+      href: '/dashboard/absence-vacation',
       icon: <Calendar size={20} />,
-      category: 'time'
-    },
-    {
-      name: 'Fravær',
-      href: '/dashboard/absence',
-      icon: <AlertTriangle size={20} />,
       category: 'time'
     },
     {
@@ -281,7 +275,7 @@ export default function DashboardLayout({
     
     // Management
     {
-      name: 'Avvik',
+      name: 'HMS',
       href: '/dashboard/deviations',
       icon: <AlertTriangle size={20} />,
       category: 'management'

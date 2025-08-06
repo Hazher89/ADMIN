@@ -153,16 +153,35 @@ export interface TimeClock {
   updatedAt: string;
 }
 
+export interface Absence {
+  id: string;
+  employeeId: string;
+  employeeName: string;
+  companyId: string;
+  startDate: string;
+  endDate: string;
+  type: 'sick' | 'personal' | 'other';
+  reason: string;
+  status: 'pending' | 'approved' | 'rejected';
+  approvedBy?: string;
+  approvedAt?: string;
+  notes?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 export interface Vacation {
   id: string;
   employeeId: string;
+  employeeName: string;
   companyId: string;
   startDate: string;
   endDate: string;
   type: 'vacation' | 'sick' | 'personal' | 'other';
+  days: number;
   status: 'pending' | 'approved' | 'rejected';
-  requestedBy: string;
   approvedBy?: string;
+  approvedAt?: string;
   notes?: string;
   createdAt: string;
   updatedAt: string;
@@ -396,6 +415,41 @@ class FirebaseService {
     } catch (error) {
       console.error('Error fetching employee:', error);
       return null;
+    }
+  }
+
+  async getManagersAndAdmins(companyId: string): Promise<Employee[]> {
+    if (!db) {
+      console.error('Database not initialized in getManagersAndAdmins');
+      return [];
+    }
+
+    console.log('Fetching managers and admins for company:', companyId);
+
+    try {
+      const q = query(
+        collection(db, 'users'),
+        where('companyId', '==', companyId),
+        where('role', 'in', ['admin', 'department_leader'])
+      );
+      const snapshot = await getDocs(q);
+      const managers = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Employee[];
+      
+      // Sort by role (admin first, then department_leader) and then by name
+      managers.sort((a, b) => {
+        if (a.role === 'admin' && b.role !== 'admin') return -1;
+        if (a.role !== 'admin' && b.role === 'admin') return 1;
+        return a.displayName.localeCompare(b.displayName);
+      });
+      
+      console.log('Found managers and admins for company', companyId, ':', managers.length, managers);
+      return managers;
+    } catch (error) {
+      console.error('Error fetching managers and admins:', error);
+      return [];
     }
   }
 
@@ -828,6 +882,79 @@ class FirebaseService {
     }
   }
 
+  // Absence Management
+  async getAbsences(companyId: string, filters?: { employeeId?: string; status?: string }): Promise<Absence[]> {
+    if (!db) return [];
+
+    try {
+      let q = query(
+        collection(db, 'absences'),
+        where('companyId', '==', companyId)
+      );
+
+      if (filters?.employeeId) {
+        q = query(q, where('employeeId', '==', filters.employeeId));
+      }
+      if (filters?.status) {
+        q = query(q, where('status', '==', filters.status));
+      }
+
+      const snapshot = await getDocs(q);
+      const absences = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Absence[];
+
+      // Sort by creation date (newest first) in memory
+      return absences.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      console.error('Error fetching absences:', error);
+      return [];
+    }
+  }
+
+  async createAbsence(absenceData: Omit<Absence, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!db) throw new Error('Database not initialized');
+
+    try {
+      const now = new Date().toISOString();
+      const docRef = await addDoc(collection(db, 'absences'), {
+        ...absenceData,
+        createdAt: now,
+        updatedAt: now
+      });
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating absence:', error);
+      throw error;
+    }
+  }
+
+  async updateAbsence(id: string, data: Partial<Absence>): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
+
+    try {
+      await updateDoc(doc(db, 'absences', id), {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating absence:', error);
+      throw error;
+    }
+  }
+
+  async deleteAbsence(id: string): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
+
+    try {
+      await deleteDoc(doc(db, 'absences', id));
+    } catch (error) {
+      console.error('Error deleting absence:', error);
+      throw error;
+    }
+  }
+
   // Vacation Management
   async getVacations(companyId: string, filters?: { employeeId?: string; status?: string }): Promise<Vacation[]> {
     if (!db) return [];
@@ -886,6 +1013,17 @@ class FirebaseService {
       });
     } catch (error) {
       console.error('Error updating vacation:', error);
+      throw error;
+    }
+  }
+
+  async deleteVacation(id: string): Promise<void> {
+    if (!db) throw new Error('Database not initialized');
+
+    try {
+      await deleteDoc(doc(db, 'vacations', id));
+    } catch (error) {
+      console.error('Error deleting vacation:', error);
       throw error;
     }
   }

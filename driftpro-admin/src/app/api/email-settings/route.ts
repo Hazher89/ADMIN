@@ -18,7 +18,7 @@ const db = getFirestore(app);
 
 export async function GET(request: NextRequest) {
   try {
-    console.log('📧 Fetching email settings for Cloudflare Email Routing');
+    console.log('📧 Fetching email settings for Domeneshop SMTP');
 
     const emailSettingsRef = doc(db, 'systemSettings', 'email');
     const emailSettingsDoc = await getDoc(emailSettingsRef);
@@ -30,13 +30,13 @@ export async function GET(request: NextRequest) {
         smtpUser: data.smtpUser,
         fromEmail: data.fromEmail,
         hasPassword: !!data.smtpPassword,
-        provider: 'cloudflare_email_routing'
+        provider: 'domeneshop_smtp'
       });
       
       return NextResponse.json({
         success: true,
         settings: {
-          smtpHost: data.smtpHost || 'smtp.cloudflare.com',
+          smtpHost: data.smtpHost || 'smtp.domeneshop.no',
           smtpPort: data.smtpPort || 587,
           smtpUser: data.smtpUser || 'noreplay@driftpro.no',
           smtpPassword: data.smtpPassword || '',
@@ -47,14 +47,14 @@ export async function GET(request: NextRequest) {
           greetingTimeout: data.greetingTimeout || 30000,
           socketTimeout: data.socketTimeout || 60000
         },
-        provider: 'cloudflare_email_routing'
+        provider: 'domeneshop_smtp'
       });
     } else {
       console.log('📧 No email settings found, returning defaults');
       return NextResponse.json({
         success: true,
         settings: {
-          smtpHost: 'smtp.cloudflare.com',
+          smtpHost: 'smtp.domeneshop.no',
           smtpPort: 587,
           smtpUser: 'noreplay@driftpro.no',
           smtpPassword: '',
@@ -65,7 +65,7 @@ export async function GET(request: NextRequest) {
           greetingTimeout: 30000,
           socketTimeout: 60000
         },
-        provider: 'cloudflare_email_routing'
+        provider: 'domeneshop_smtp'
       });
     }
   } catch (error) {
@@ -74,7 +74,7 @@ export async function GET(request: NextRequest) {
       { 
         error: 'Failed to fetch email settings',
         details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'cloudflare_email_routing'
+        provider: 'domeneshop_smtp'
       },
       { status: 500 }
     );
@@ -93,12 +93,12 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('📧 Saving email settings for Cloudflare Email Routing:', {
+    console.log('📧 Saving email settings for Domeneshop SMTP:', {
       smtpHost: settings.smtpHost,
       smtpUser: settings.smtpUser,
       fromEmail: settings.fromEmail,
       hasPassword: !!settings.smtpPassword,
-      provider: 'cloudflare_email_routing'
+      provider: 'domeneshop_smtp'
     });
 
     // Validate required fields
@@ -114,15 +114,15 @@ export async function POST(request: NextRequest) {
     await setDoc(emailSettingsRef, {
       ...settings,
       updatedAt: serverTimestamp(),
-      provider: 'cloudflare_email_routing'
+      provider: 'domeneshop_smtp'
     });
 
-    console.log('✅ Email settings saved successfully for Cloudflare Email Routing');
+    console.log('✅ Email settings saved successfully for Domeneshop SMTP');
 
     return NextResponse.json({
       success: true,
       message: 'Email settings saved successfully',
-      provider: 'cloudflare_email_routing'
+      provider: 'domeneshop_smtp'
     });
   } catch (error) {
     console.error('❌ Error saving email settings:', error);
@@ -130,7 +130,7 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Failed to save email settings',
         details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'cloudflare_email_routing'
+        provider: 'domeneshop_smtp'
       },
       { status: 500 }
     );

@@ -36,14 +36,14 @@ export class EmailService {
           smtpHost: data.smtpHost,
           smtpUser: data.smtpUser,
           fromEmail: data.fromEmail,
-          provider: 'cloudflare_email_routing'
+          provider: 'domeneshop_smtp'
         });
         
         return {
-          smtpHost: data.smtpHost || 'smtp.cloudflare.com',
+          smtpHost: data.smtpHost || 'smtp.domeneshop.no',
           smtpPort: data.smtpPort || 587,
           smtpUser: data.smtpUser || 'noreplay@driftpro.no',
-          smtpPassword: data.smtpPassword || process.env.CLOUDFLARE_API_KEY,
+          smtpPassword: data.smtpPassword || process.env.DOMENESHOP_SMTP_PASSWORD,
           smtpSecure: data.smtpSecure || false,
           fromEmail: data.fromEmail || 'noreplay@driftpro.no',
           fromName: data.fromName || 'DriftPro System',
@@ -54,13 +54,13 @@ export class EmailService {
         };
       }
       
-      console.log('📧 Using default Cloudflare Email Routing settings');
-      // Return default Cloudflare Email Routing settings
+      console.log('📧 Using default Domeneshop SMTP settings');
+      // Return default Domeneshop SMTP settings
       return {
-        smtpHost: 'smtp.cloudflare.com',
+        smtpHost: 'smtp.domeneshop.no',
         smtpPort: 587,
         smtpUser: 'noreplay@driftpro.no',
-        smtpPassword: process.env.CLOUDFLARE_API_KEY || 'your-cloudflare-api-key',
+        smtpPassword: process.env.DOMENESHOP_SMTP_PASSWORD || 'your-domeneshop-password',
         smtpSecure: false,
         fromEmail: 'noreplay@driftpro.no',
         fromName: 'DriftPro System',
@@ -71,12 +71,12 @@ export class EmailService {
       };
     } catch (error) {
       console.error('❌ Error getting email settings:', error);
-      // Return default Cloudflare Email Routing settings
+      // Return default Domeneshop SMTP settings
       return {
-        smtpHost: 'smtp.cloudflare.com',
+        smtpHost: 'smtp.domeneshop.no',
         smtpPort: 587,
         smtpUser: 'noreplay@driftpro.no',
-        smtpPassword: process.env.CLOUDFLARE_API_KEY || 'your-cloudflare-api-key',
+        smtpPassword: process.env.DOMENESHOP_SMTP_PASSWORD || 'your-domeneshop-password',
         smtpSecure: false,
         fromEmail: 'noreplay@driftpro.no',
         fromName: 'DriftPro System',
@@ -92,16 +92,16 @@ export class EmailService {
     try {
       const emailSettings = await this.getEmailSettings();
       
-      console.log('📧 Attempting to send email via Cloudflare Email Routing:', {
+      console.log('📧 Attempting to send email via Domeneshop SMTP:', {
         to: Array.isArray(to) ? to : [to],
         subject,
         smtpHost: emailSettings.smtpHost,
         smtpUser: emailSettings.smtpUser,
         fromEmail: emailSettings.fromEmail,
-        provider: 'cloudflare_email_routing'
+        provider: 'domeneshop_smtp'
       });
       
-      // Create transporter with Cloudflare Email Routing
+      // Create transporter with Domeneshop SMTP
       const transporter = nodemailer.createTransport({
         host: emailSettings.smtpHost,
         port: emailSettings.smtpPort,
@@ -139,18 +139,18 @@ export class EmailService {
         sentAt: serverTimestamp(),
         messageId: result?.messageId || 'unknown',
         metadata: {
-          provider: 'cloudflare_email_routing',
+          provider: 'domeneshop_smtp',
           timestamp: new Date().toISOString(),
           smtpHost: emailSettings.smtpHost,
           fromEmail: emailSettings.fromEmail
         }
       });
 
-      console.log('✅ Email sent successfully via Cloudflare Email Routing:', {
+      console.log('✅ Email sent successfully via Domeneshop SMTP:', {
         messageId: result?.messageId,
         to: Array.isArray(to) ? to : [to],
         subject,
-        provider: 'cloudflare_email_routing'
+        provider: 'domeneshop_smtp'
       });
       
       return { success: true, messageId: result?.messageId || 'unknown' };
@@ -172,7 +172,7 @@ export class EmailService {
         sentAt: serverTimestamp(),
         error: error instanceof Error ? error.message : 'Unknown error',
         metadata: {
-          provider: 'cloudflare_email_routing',
+          provider: 'domeneshop_smtp',
           timestamp: new Date().toISOString(),
           error: error instanceof Error ? error.message : 'Unknown error'
         }
