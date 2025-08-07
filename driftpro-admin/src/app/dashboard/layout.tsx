@@ -417,9 +417,18 @@ export default function DashboardLayout({
           justifyContent: 'center',
           marginBottom: '2rem',
           boxShadow: 'var(--shadow-md)',
-          flexShrink: 0
+          flexShrink: 0,
+          overflow: 'hidden'
         }}>
-          <Zap size={24} color="white" />
+          <img 
+            src="/logo.svg" 
+            alt="DriftPro" 
+            style={{
+              width: '32px',
+              height: '32px',
+              objectFit: 'contain'
+            }}
+          />
         </div>
 
         {/* Navigation Icons */}

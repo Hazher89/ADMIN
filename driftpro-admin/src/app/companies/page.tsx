@@ -241,9 +241,18 @@ export default function CompaniesPage() {
                 borderRadius: 'var(--radius-lg)',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                overflow: 'hidden'
               }}>
-                <Building style={{ width: '20px', height: '20px', color: 'var(--white)' }} />
+                <img 
+                  src="/logo.svg" 
+                  alt="DriftPro" 
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    objectFit: 'contain'
+                  }}
+                />
               </div>
               <div>
                 <h1 style={{ 
@@ -373,8 +382,25 @@ export default function CompaniesPage() {
             >
               {/* Company Header */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                <div className="card-icon">
-                  <Building />
+                <div className="card-icon" style={{
+                  width: '40px',
+                  height: '40px',
+                  background: 'var(--gradient-primary)',
+                  borderRadius: 'var(--radius-lg)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  overflow: 'hidden'
+                }}>
+                  <img 
+                    src="/logo.svg" 
+                    alt="DriftPro" 
+                    style={{
+                      width: '24px',
+                      height: '24px',
+                      objectFit: 'contain'
+                    }}
+                  />
                 </div>
                 <div style={{ flex: '1' }}>
                   <h3 style={{
