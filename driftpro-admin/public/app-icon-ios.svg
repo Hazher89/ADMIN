@@ -1,0 +1,25 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- iOS App Icon - Modern Operations Design -->
+  
+  <!-- Background with iOS-safe area -->
+  <rect x="0" y="0" width="1024" height="1024" fill="#1F2937"/>
+  
+  <!-- Main icon container with safe margins -->
+  <g transform="translate(200, 200)">
+    <!-- Sleek rounded square background -->
+    <rect x="0" y="0" width="624" height="624" rx="156" fill="white" opacity="0.95"/>
+    
+    <!-- Modern gear/operations -->
+    <circle cx="312" cy="312" r="200" fill="#1F2937" opacity="0.9"/>
+    <circle cx="312" cy="312" r="120" fill="white" opacity="0.95"/>
+    
+    <!-- Gear teeth -->
+    <rect x="306" y="52" width="12" height="60" fill="white" opacity="0.95"/>
+    <rect x="306" y="912" width="12" height="60" fill="white" opacity="0.95"/>
+    <rect x="52" y="306" width="60" height="12" fill="white" opacity="0.95"/>
+    <rect x="912" y="306" width="60" height="12" fill="white" opacity="0.95"/>
+    
+    <!-- Operations flow -->
+    <path d="M 156 312 L 468 312" stroke="white" stroke-width="24" stroke-linecap="round"/>
+  </g>
+</svg>

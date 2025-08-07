@@ -1,0 +1,19 @@
+<svg width="32" height="32" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Modern operations design -->
+  
+  <!-- Sleek rounded square background -->
+  <rect x="2" y="2" width="28" height="28" rx="8" fill="#1F2937" stroke="none"/>
+  
+  <!-- Modern gear/operations -->
+  <circle cx="16" cy="16" r="10" fill="white" opacity="0.9"/>
+  <circle cx="16" cy="16" r="6" fill="#1F2937" opacity="0.8"/>
+  
+  <!-- Gear teeth -->
+  <rect x="15" y="4" width="2" height="3" fill="white" opacity="0.9"/>
+  <rect x="15" y="25" width="2" height="3" fill="white" opacity="0.9"/>
+  <rect x="4" y="15" width="3" height="2" fill="white" opacity="0.9"/>
+  <rect x="25" y="15" width="3" height="2" fill="white" opacity="0.9"/>
+  
+  <!-- Operations flow -->
+  <path d="M 8 16 L 24 16" stroke="#1F2937" stroke-width="1.5" stroke-linecap="round"/>
+</svg>

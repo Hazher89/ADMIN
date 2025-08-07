@@ -1,0 +1,25 @@
+<svg width="512" height="512" viewBox="0 0 512 512" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Android App Icon - Modern Operations Design -->
+  
+  <!-- Background with Android-safe area -->
+  <rect x="0" y="0" width="512" height="512" fill="#1F2937"/>
+  
+  <!-- Main icon container with safe margins -->
+  <g transform="translate(100, 100)">
+    <!-- Sleek rounded square background -->
+    <rect x="0" y="0" width="312" height="312" rx="78" fill="white" opacity="0.95"/>
+    
+    <!-- Modern gear/operations -->
+    <circle cx="156" cy="156" r="100" fill="#1F2937" opacity="0.9"/>
+    <circle cx="156" cy="156" r="60" fill="white" opacity="0.95"/>
+    
+    <!-- Gear teeth -->
+    <rect x="153" y="26" width="6" height="30" fill="white" opacity="0.95"/>
+    <rect x="153" y="456" width="6" height="30" fill="white" opacity="0.95"/>
+    <rect x="26" y="153" width="30" height="6" fill="white" opacity="0.95"/>
+    <rect x="456" y="153" width="30" height="6" fill="white" opacity="0.95"/>
+    
+    <!-- Operations flow -->
+    <path d="M 78 156 L 234 156" stroke="white" stroke-width="12" stroke-linecap="round"/>
+  </g>
+</svg>
