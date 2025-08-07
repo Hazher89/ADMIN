@@ -82,6 +82,7 @@ interface Vacation {
 
 export default function AbsenceVacationPage() {
   const { userProfile } = useAuth();
+  const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<'absence' | 'vacation'>('absence');
   const [absences, setAbsences] = useState<Absence[]>([]);
   const [vacations, setVacations] = useState<Vacation[]>([]);
@@ -145,6 +146,13 @@ export default function AbsenceVacationPage() {
   useEffect(() => {
     loadData();
   }, [userProfile?.companyId]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const handleCreateAbsence = async () => {
     if (!userProfile?.companyId) return;
@@ -317,8 +325,8 @@ export default function AbsenceVacationPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+      <div className="page-header" style={{ padding: isMobile ? '1rem' : undefined }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <div className="card-icon">
             <CalendarDays />
           </div>
@@ -331,19 +339,19 @@ export default function AbsenceVacationPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0' }}>
+        <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0', minWidth: isMobile ? '480px' : 'auto' }}>
             <button
               onClick={() => setActiveTab('absence')}
               style={{
-                padding: '1rem 2rem',
+                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'absence' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'absence' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'absence' ? '600' : '500',
-                fontSize: 'var(--font-size-base)'
+                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
               }}
             >
               <Heart style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
@@ -352,14 +360,14 @@ export default function AbsenceVacationPage() {
             <button
               onClick={() => setActiveTab('vacation')}
               style={{
-                padding: '1rem 2rem',
+                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'vacation' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'vacation' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'vacation' ? '600' : '500',
-                fontSize: 'var(--font-size-base)'
+                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
               }}
             >
               <Plane style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
@@ -452,9 +460,9 @@ export default function AbsenceVacationPage() {
       </div>
 
       {/* Search and Filters */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
+          <div className="card" style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="search-container" style={{ flex: 1, minWidth: isMobile ? '100%' : '300px' }}>
             <Search className="search-icon" />
             <input
               type="text"
@@ -468,7 +476,7 @@ export default function AbsenceVacationPage() {
             value={selectedType}
             onChange={(e) => setSelectedType(e.target.value)}
             className="form-select"
-            style={{ minWidth: '150px' }}
+                style={{ minWidth: isMobile ? '100%' : '150px' }}
           >
             <option value="all">Alle typer</option>
             {activeTab === 'absence' ? (
@@ -490,7 +498,7 @@ export default function AbsenceVacationPage() {
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
             className="form-select"
-            style={{ minWidth: '120px' }}
+                style={{ minWidth: isMobile ? '100%' : '120px' }}
           >
             <option value="all">Alle status</option>
             <option value="pending">Venter</option>
@@ -501,7 +509,7 @@ export default function AbsenceVacationPage() {
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as 'name' | 'date' | 'status')}
             className="form-select"
-            style={{ minWidth: '120px' }}
+                style={{ minWidth: isMobile ? '100%' : '120px' }}
           >
             <option value="date">Dato</option>
             <option value="name">Navn</option>
@@ -510,7 +518,7 @@ export default function AbsenceVacationPage() {
           <button
             onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
             className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', padding: isMobile ? '0.5rem 0.75rem' : undefined }}
           >
             {sortOrder === 'asc' ? <SortDesc style={{ width: '16px', height: '16px' }} /> : <SortAsc style={{ width: '16px', height: '16px' }} />}
           </button>
@@ -536,7 +544,7 @@ export default function AbsenceVacationPage() {
           </button>
         </div>
       ) : (
-        <div className="grid grid-cols-1">
+        <div className={isMobile ? 'grid grid-cols-1' : 'grid grid-cols-1'}>
           {filteredData.map((item) => (
             <div key={item.id} className="card">
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>

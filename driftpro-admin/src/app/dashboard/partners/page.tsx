@@ -118,6 +118,7 @@ export default function PartnersPage() {
   const { userProfile } = useAuth();
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedType, setSelectedType] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -206,6 +207,13 @@ export default function PartnersPage() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     loadPartners();
@@ -317,8 +325,8 @@ export default function PartnersPage() {
   return (
     <div>
       {/* Page Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+      <div className="page-header" style={{ padding: isMobile ? '1rem' : undefined }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
           <div className="card-icon">
             <Handshake />
           </div>
@@ -331,19 +339,19 @@ export default function PartnersPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0' }}>
+        <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0', minWidth: isMobile ? '500px' : 'auto' }}>
             <button
               onClick={() => setActiveTab('partners')}
               style={{
-                padding: '1rem 2rem',
+                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'partners' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'partners' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'partners' ? '600' : '500',
-                fontSize: 'var(--font-size-base)'
+                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
               }}
             >
               <Handshake style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
@@ -352,14 +360,14 @@ export default function PartnersPage() {
             <button
               onClick={() => setActiveTab('assignments')}
               style={{
-                padding: '1rem 2rem',
+                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'assignments' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'assignments' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'assignments' ? '600' : '500',
-                fontSize: 'var(--font-size-base)'
+                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
               }}
             >
               <Calendar style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
@@ -368,7 +376,7 @@ export default function PartnersPage() {
           </div>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
           <span className="badge badge-primary">
             {partners.length} partnere
           </span>
@@ -378,14 +386,14 @@ export default function PartnersPage() {
           <button 
             onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
             className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: isMobile ? '0.5rem 0.75rem' : undefined }}
           >
             {viewMode === 'grid' ? <List style={{ width: '16px', height: '16px' }} /> : <Grid style={{ width: '16px', height: '16px' }} />}
           </button>
           <button 
             onClick={() => setShowAddModal(true)}
             className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: isMobile ? '0.5rem 0.75rem' : undefined }}
           >
             <Plus style={{ width: '16px', height: '16px' }} />
             Legg til partner
@@ -450,9 +458,9 @@ export default function PartnersPage() {
           </div>
 
           {/* Search and Filters */}
-          <div className="card" style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
+          <div className="card" style={{ marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+              <div className="search-container" style={{ flex: 1, minWidth: isMobile ? '100%' : '280px' }}>
                 <Search className="search-icon" />
                 <input
                   type="text"
@@ -466,7 +474,7 @@ export default function PartnersPage() {
                 value={selectedType}
                 onChange={(e) => setSelectedType(e.target.value)}
                 className="form-select"
-                style={{ minWidth: '150px' }}
+                style={{ minWidth: isMobile ? '100%' : '150px' }}
               >
                 <option value="all">Alle typer</option>
                 <option value="supplier">Leverandør</option>
@@ -478,7 +486,7 @@ export default function PartnersPage() {
                 value={selectedStatus}
                 onChange={(e) => setSelectedStatus(e.target.value)}
                 className="form-select"
-                style={{ minWidth: '120px' }}
+                style={{ minWidth: isMobile ? '100%' : '120px' }}
               >
                 <option value="all">Alle status</option>
                 <option value="active">Aktiv</option>
@@ -507,7 +515,7 @@ export default function PartnersPage() {
               </button>
             </div>
           ) : (
-            <div className="grid grid-cols-3">
+            <div className={isMobile ? 'grid grid-cols-1' : 'grid grid-cols-3'}>
               {filteredPartners.map((partner) => (
                 <div key={partner.id} className="card">
                   <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
@@ -570,11 +578,11 @@ export default function PartnersPage() {
                     </div>
                   </div>
 
-                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                     <button 
                       onClick={() => handleViewPartner(partner)}
                       className="btn btn-secondary" 
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                      style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
                     >
                       <Eye style={{ width: '14px', height: '14px' }} />
                       Se
@@ -582,7 +590,7 @@ export default function PartnersPage() {
                     <button 
                       onClick={() => handleEditPartner(partner)}
                       className="btn btn-secondary" 
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                      style={{ fontSize: '0.75rem', padding: '0.5rem 0.75rem' }}
                     >
                       <Edit style={{ width: '14px', height: '14px' }} />
                       Rediger
@@ -592,7 +600,7 @@ export default function PartnersPage() {
                       className="btn btn-secondary" 
                       style={{ 
                         fontSize: '0.75rem', 
-                        padding: '0.25rem 0.5rem',
+                        padding: '0.5rem 0.5rem',
                         color: '#ef4444',
                         borderColor: '#ef4444'
                       }}
