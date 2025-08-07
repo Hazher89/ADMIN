@@ -183,51 +183,75 @@ export default function DashboardPage() {
       <div className="px-4 py-6 max-w-7xl mx-auto">
         {/* Stats Grid - Mobile */}
         {isMobile ? (
-          <div className="space-y-3 mb-6">
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+          <div className="space-y-2 mb-6">
+            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Total Ansatte</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.totalEmployees}</p>
+                  <p className="text-xs font-medium text-gray-600">Total Ansatte</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.totalEmployees}</p>
                 </div>
-                <div className="p-3 bg-blue-50 rounded-lg">
-                  <Users className="w-6 h-6 text-blue-600" />
+                <div className="p-2 bg-blue-50 rounded-lg">
+                  <Users className="w-5 h-5 text-blue-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Aktive Skift</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.activeShifts}</p>
+                  <p className="text-xs font-medium text-gray-600">Aktive Skift</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.activeShifts}</p>
                 </div>
-                <div className="p-3 bg-green-50 rounded-lg">
-                  <Clock className="w-6 h-6 text-green-600" />
+                <div className="p-2 bg-green-50 rounded-lg">
+                  <Clock className="w-5 h-5 text-green-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Ventende Forespørsler</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.pendingRequests}</p>
+                  <p className="text-xs font-medium text-gray-600">Ventende Forespørsler</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.pendingRequests}</p>
                 </div>
-                <div className="p-3 bg-yellow-50 rounded-lg">
-                  <AlertTriangle className="w-6 h-6 text-yellow-600" />
+                <div className="p-2 bg-yellow-50 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
                 </div>
               </div>
             </div>
 
-            <div className="bg-white rounded-xl p-4 shadow-sm border border-gray-200">
+            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm font-medium text-gray-600">Avdelinger</p>
-                  <p className="text-2xl font-bold text-gray-900">{stats.departments}</p>
+                  <p className="text-xs font-medium text-gray-600">Avdelinger</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.departments}</p>
                 </div>
-                <div className="p-3 bg-purple-50 rounded-lg">
-                  <Building className="w-6 h-6 text-purple-600" />
+                <div className="p-2 bg-purple-50 rounded-lg">
+                  <Building className="w-5 h-5 text-purple-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-600">Åpne Avvik</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.openDeviations}</p>
+                </div>
+                <div className="p-2 bg-red-50 rounded-lg">
+                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                </div>
+              </div>
+            </div>
+
+            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-xs font-medium text-gray-600">Aktive Stemplinger</p>
+                  <p className="text-xl font-bold text-gray-900">{stats.activeTimeClocks}</p>
+                </div>
+                <div className="p-2 bg-cyan-50 rounded-lg">
+                  <Clock className="w-5 h-5 text-cyan-600" />
                 </div>
               </div>
             </div>
@@ -317,49 +341,49 @@ export default function DashboardPage() {
         {/* Quick Actions - Mobile */}
         {isMobile ? (
           <div className="mb-6">
-            <h2 className="text-lg font-semibold text-gray-900 mb-4">Rask Handling</h2>
-            <div className="grid grid-cols-2 gap-3">
+            <h2 className="text-base font-semibold text-gray-900 mb-3">Rask Handling</h2>
+            <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => navigateTo('/dashboard/employees')}
-                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
+                className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors active:bg-gray-100"
               >
-                <div className="flex items-center justify-center w-10 h-10 bg-blue-100 rounded-lg mb-3">
-                  <Users className="w-5 h-5 text-blue-600" />
+                <div className="flex items-center justify-center w-8 h-8 bg-blue-100 rounded-lg mb-2">
+                  <Users className="w-4 h-4 text-blue-600" />
                 </div>
-                <h3 className="font-medium text-gray-900 text-sm">Ansatte</h3>
+                <h3 className="font-medium text-gray-900 text-xs">Ansatte</h3>
                 <p className="text-xs text-gray-600 mt-1">Administrer ansatte</p>
               </button>
 
               <button
                 onClick={() => navigateTo('/dashboard/shifts')}
-                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
+                className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors active:bg-gray-100"
               >
-                <div className="flex items-center justify-center w-10 h-10 bg-green-100 rounded-lg mb-3">
-                  <Calendar className="w-5 h-5 text-green-600" />
+                <div className="flex items-center justify-center w-8 h-8 bg-green-100 rounded-lg mb-2">
+                  <Calendar className="w-4 h-4 text-green-600" />
                 </div>
-                <h3 className="font-medium text-gray-900 text-sm">Skiftplan</h3>
+                <h3 className="font-medium text-gray-900 text-xs">Skiftplan</h3>
                 <p className="text-xs text-gray-600 mt-1">Planlegg skift</p>
               </button>
 
               <button
                 onClick={() => navigateTo('/dashboard/timeclock')}
-                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
+                className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors active:bg-gray-100"
               >
-                <div className="flex items-center justify-center w-10 h-10 bg-purple-100 rounded-lg mb-3">
-                  <Clock className="w-5 h-5 text-purple-600" />
+                <div className="flex items-center justify-center w-8 h-8 bg-purple-100 rounded-lg mb-2">
+                  <Clock className="w-4 h-4 text-purple-600" />
                 </div>
-                <h3 className="font-medium text-gray-900 text-sm">Stemple-system</h3>
+                <h3 className="font-medium text-gray-900 text-xs">Stemple-system</h3>
                 <p className="text-xs text-gray-600 mt-1">Inn/utstempling</p>
               </button>
 
               <button
                 onClick={() => navigateTo('/dashboard/documents')}
-                className="bg-white p-4 rounded-xl shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors"
+                className="bg-white p-3 rounded-lg shadow-sm border border-gray-200 text-left hover:bg-gray-50 transition-colors active:bg-gray-100"
               >
-                <div className="flex items-center justify-center w-10 h-10 bg-orange-100 rounded-lg mb-3">
-                  <FileText className="w-5 h-5 text-orange-600" />
+                <div className="flex items-center justify-center w-8 h-8 bg-orange-100 rounded-lg mb-2">
+                  <FileText className="w-4 h-4 text-orange-600" />
                 </div>
-                <h3 className="font-medium text-gray-900 text-sm">Dokumenter</h3>
+                <h3 className="font-medium text-gray-900 text-xs">Dokumenter</h3>
                 <p className="text-xs text-gray-600 mt-1">Administrer filer</p>
               </button>
             </div>
@@ -421,41 +445,41 @@ export default function DashboardPage() {
         {/* Recent Activity - Mobile */}
         {isMobile ? (
           <div>
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-gray-900">Siste Aktivitet</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-semibold text-gray-900">Siste Aktivitet</h2>
               <button 
                 onClick={() => navigateTo('/dashboard/activities')}
-                className="text-sm text-blue-600 font-medium"
+                className="text-xs text-blue-600 font-medium"
               >
                 Se alle
               </button>
             </div>
-            <div className="bg-white rounded-xl shadow-sm border border-gray-200">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
               {activities.length === 0 ? (
-                <div className="p-6 text-center">
-                  <Bell className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                  <p className="text-gray-600 font-medium">Ingen aktivitet ennå</p>
-                  <p className="text-sm text-gray-500 mt-1">
+                <div className="p-4 text-center">
+                  <Bell className="w-8 h-8 text-gray-300 mx-auto mb-2" />
+                  <p className="text-gray-600 font-medium text-sm">Ingen aktivitet ennå</p>
+                  <p className="text-xs text-gray-500 mt-1">
                     Aktiviteter vil vises her når de oppstår
                   </p>
                 </div>
               ) : (
                 <div className="divide-y divide-gray-100">
                   {activities.map((activity) => (
-                    <div key={activity.id} className="p-4">
-                      <div className="flex items-start space-x-3">
+                    <div key={activity.id} className="p-3">
+                      <div className="flex items-start space-x-2">
                         <div className="flex-shrink-0">
                           <div 
-                            className="w-8 h-8 rounded-full flex items-center justify-center"
+                            className="w-6 h-6 rounded-full flex items-center justify-center"
                             style={{ backgroundColor: getActivityColor(activity.type) }}
                           >
                             {getActivityIcon(activity.type)}
                           </div>
                         </div>
                         <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900">{activity.title}</p>
-                          <p className="text-sm text-gray-600 mt-1">{activity.description}</p>
-                          <p className="text-xs text-gray-500 mt-2">{formatTimeAgo(activity.createdAt)}</p>
+                          <p className="text-xs font-medium text-gray-900">{activity.title}</p>
+                          <p className="text-xs text-gray-600 mt-1">{activity.description}</p>
+                          <p className="text-xs text-gray-500 mt-1">{formatTimeAgo(activity.createdAt)}</p>
                         </div>
                       </div>
                     </div>

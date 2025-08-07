@@ -320,44 +320,52 @@ export default function DocumentsPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
       {/* Header */}
-      <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
+      <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: isMobile ? '1rem' : '1.5rem 2rem' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Dokumenter</h1>
-            <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem' }}>
+            <h1 style={{ fontSize: isMobile ? 'var(--font-size-xl)' : 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Dokumenter</h1>
+            <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)' }}>
               {documents.length} dokumenter • {formatFileSize(documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0))} total størrelse
             </p>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-            <button
-              onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
-              style={{ 
-                padding: '0.5rem', 
-                borderRadius: 'var(--radius-md)', 
-                border: '1px solid var(--gray-300)',
-                background: 'var(--white)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}
-              title={viewMode === 'grid' ? 'Listevisning' : 'Rutenettvisning'}
-            >
-              {viewMode === 'grid' ? <List style={{ width: '16px', height: '16px' }} /> : <Grid style={{ width: '16px', height: '16px' }} />}
-            </button>
+          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '1rem' }}>
+            {!isMobile && (
+              <button
+                onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
+                style={{ 
+                  padding: '0.5rem', 
+                  borderRadius: 'var(--radius-md)', 
+                  border: '1px solid var(--gray-300)',
+                  background: 'var(--white)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}
+                title={viewMode === 'grid' ? 'Listevisning' : 'Rutenettvisning'}
+              >
+                {viewMode === 'grid' ? <List style={{ width: '16px', height: '16px' }} /> : <Grid style={{ width: '16px', height: '16px' }} />}
+              </button>
+            )}
             <button
               onClick={() => setShowAddModal(true)}
               className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)',
+                padding: isMobile ? '0.5rem 0.75rem' : '0.75rem 1rem'
+              }}
             >
-              <Plus style={{ width: '16px', height: '16px' }} />
-              Last opp dokument
+              <Plus style={{ width: isMobile ? '14px' : '16px', height: isMobile ? '14px' : '16px' }} />
+              {isMobile ? 'Last opp' : 'Last opp dokument'}
             </button>
           </div>
         </div>
       </div>
 
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem 1rem' }}>
         {/* Success/Error Messages */}
         {success && (
           <div style={{ 
@@ -391,73 +399,77 @@ export default function DocumentsPage() {
           </div>
         )}
         {/* Stats Overview */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          <div className="card">
+        <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', gap: isMobile ? '0.5rem' : '1rem', marginBottom: isMobile ? '1rem' : '2rem' }}>
+          <div className="card" style={{ padding: isMobile ? '0.75rem' : '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
-                <FileText style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />
+              <div style={{ padding: isMobile ? '0.5rem' : '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
+                <FileText style={{ width: isMobile ? '20px' : '24px', height: isMobile ? '20px' : '24px', color: 'var(--blue-600)' }} />
               </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Totalt</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.total}</p>
+              <div style={{ marginLeft: isMobile ? '0.5rem' : '1rem' }}>
+                <p style={{ fontSize: isMobile ? 'var(--font-size-xs)' : 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Totalt</p>
+                <p style={{ fontSize: isMobile ? 'var(--font-size-lg)' : 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.total}</p>
               </div>
             </div>
           </div>
-          <div className="card">
+          <div className="card" style={{ padding: isMobile ? '0.75rem' : '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--red-100)', borderRadius: 'var(--radius-lg)' }}>
-                <FileText style={{ width: '24px', height: '24px', color: 'var(--red-600)' }} />
+              <div style={{ padding: isMobile ? '0.5rem' : '0.75rem', background: 'var(--red-100)', borderRadius: 'var(--radius-lg)' }}>
+                <FileText style={{ width: isMobile ? '20px' : '24px', height: isMobile ? '20px' : '24px', color: 'var(--red-600)' }} />
               </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>PDF</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.pdf}</p>
+              <div style={{ marginLeft: isMobile ? '0.5rem' : '1rem' }}>
+                <p style={{ fontSize: isMobile ? 'var(--font-size-xs)' : 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>PDF</p>
+                <p style={{ fontSize: isMobile ? 'var(--font-size-lg)' : 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.pdf}</p>
               </div>
             </div>
           </div>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
-                <FileImage style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />
+          {!isMobile && (
+            <>
+              <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
+                    <FileImage style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />
+                  </div>
+                  <div style={{ marginLeft: '1rem' }}>
+                    <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Bilder</p>
+                    <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.images}</p>
+                  </div>
+                </div>
               </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Bilder</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.images}</p>
+              <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--green-100)', borderRadius: 'var(--radius-lg)' }}>
+                    <FileSpreadsheet style={{ width: '24px', height: '24px', color: 'var(--green-600)' }} />
+                  </div>
+                  <div style={{ marginLeft: '1rem' }}>
+                    <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Regneark</p>
+                    <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.spreadsheets}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--green-100)', borderRadius: 'var(--radius-lg)' }}>
-                <FileSpreadsheet style={{ width: '24px', height: '24px', color: 'var(--green-600)' }} />
+              <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--orange-100)', borderRadius: 'var(--radius-lg)' }}>
+                    <Clock style={{ width: '24px', height: '24px', color: 'var(--orange-600)' }} />
+                  </div>
+                  <div style={{ marginLeft: '1rem' }}>
+                    <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Nye (7 dager)</p>
+                    <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.recent}</p>
+                  </div>
+                </div>
               </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Regneark</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.spreadsheets}</p>
+              <div className="card">
+                <div style={{ display: 'flex', alignItems: 'center' }}>
+                  <div style={{ padding: '0.75rem', background: 'var(--purple-100)', borderRadius: 'var(--radius-lg)' }}>
+                    <Shield style={{ width: '24px', height: '24px', color: 'var(--purple-600)' }} />
+                  </div>
+                  <div style={{ marginLeft: '1rem' }}>
+                    <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Offentlige</p>
+                    <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.public}</p>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--orange-100)', borderRadius: 'var(--radius-lg)' }}>
-                <Clock style={{ width: '24px', height: '24px', color: 'var(--orange-600)' }} />
-              </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Nye (7 dager)</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.recent}</p>
-              </div>
-            </div>
-          </div>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--purple-100)', borderRadius: 'var(--radius-lg)' }}>
-                <Shield style={{ width: '24px', height: '24px', color: 'var(--purple-600)' }} />
-              </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Offentlige</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.public}</p>
-              </div>
-            </div>
-          </div>
+            </>
+          )}
         </div>
 
         {/* Category Stats */}
@@ -495,8 +507,8 @@ export default function DocumentsPage() {
         </div>
 
         {/* Search and Filters */}
-        <div className="card" style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem', alignItems: 'center' }}>
+        <div className="card" style={{ marginBottom: isMobile ? '1rem' : '2rem' }}>
+          <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: isMobile ? '0.5rem' : '1rem', alignItems: isMobile ? 'stretch' : 'center' }}>
             <div style={{ flex: '1' }}>
               <div style={{ position: 'relative' }}>
                 <Search style={{ 
@@ -510,73 +522,78 @@ export default function DocumentsPage() {
                 }} />
                 <input
                   type="text"
-                  placeholder="Søk i dokumenter, beskrivelser eller tags..."
+                  placeholder="Søk i dokumenter..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{ 
                     width: '100%', 
-                    padding: '0.75rem 0.75rem 0.75rem 2.5rem', 
+                    padding: isMobile ? '0.5rem 0.5rem 0.5rem 2rem' : '0.75rem 0.75rem 0.75rem 2.5rem', 
                     border: '1px solid var(--gray-300)', 
                     borderRadius: 'var(--radius-lg)', 
-                    outline: 'none'
+                    outline: 'none',
+                    fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)'
                   }}
                 />
               </div>
             </div>
-            <select
-              value={selectedCategory}
-              onChange={(e) => setSelectedCategory(e.target.value)}
-              style={{ 
-                padding: '0.75rem', 
-                border: '1px solid var(--gray-300)', 
-                borderRadius: 'var(--radius-lg)', 
-                outline: 'none',
-                minWidth: isMobile ? '100%' : '150px'
-              }}
-            >
-              <option value="all">Alle kategorier</option>
-              <option value="policy">Policy</option>
-              <option value="procedure">Prosedyre</option>
-              <option value="form">Skjema</option>
-              <option value="report">Rapport</option>
-              <option value="other">Annet</option>
-            </select>
-            <select
-              value={sortBy}
-              onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'size' | 'category')}
-              style={{ 
-                padding: '0.75rem', 
-                border: '1px solid var(--gray-300)', 
-                borderRadius: 'var(--radius-lg)', 
-                outline: 'none',
-                minWidth: isMobile ? '100%' : '120px'
-              }}
-            >
-              <option value="date">Dato</option>
-              <option value="name">Navn</option>
-              <option value="size">Størrelse</option>
-              <option value="category">Kategori</option>
-            </select>
-            <button
-              onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
-              style={{ 
-                padding: '0.75rem', 
-                border: '1px solid var(--gray-300)', 
-                borderRadius: 'var(--radius-lg)', 
-                background: 'var(--white)',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.25rem'
-              }}
-              title={sortOrder === 'asc' ? 'Synkende rekkefølge' : 'Stigende rekkefølge'}
-            >
-              {sortOrder === 'asc' ? <SortDesc style={{ width: '16px', height: '16px' }} /> : <SortAsc style={{ width: '16px', height: '16px' }} />}
-            </button>
+            <div style={{ display: 'flex', gap: isMobile ? '0.5rem' : '0.75rem', flexDirection: isMobile ? 'row' : 'row' }}>
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                style={{ 
+                  padding: isMobile ? '0.5rem' : '0.75rem', 
+                  border: '1px solid var(--gray-300)', 
+                  borderRadius: 'var(--radius-lg)', 
+                  outline: 'none',
+                  minWidth: isMobile ? '120px' : '150px',
+                  fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)'
+                }}
+              >
+                <option value="all">Alle kategorier</option>
+                <option value="policy">Policy</option>
+                <option value="procedure">Prosedyre</option>
+                <option value="form">Skjema</option>
+                <option value="report">Rapport</option>
+                <option value="other">Annet</option>
+              </select>
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'size' | 'category')}
+                style={{ 
+                  padding: isMobile ? '0.5rem' : '0.75rem', 
+                  border: '1px solid var(--gray-300)', 
+                  borderRadius: 'var(--radius-lg)', 
+                  outline: 'none',
+                  minWidth: isMobile ? '100px' : '120px',
+                  fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)'
+                }}
+              >
+                <option value="date">Dato</option>
+                <option value="name">Navn</option>
+                <option value="size">Størrelse</option>
+                <option value="category">Kategori</option>
+              </select>
+              <button
+                onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
+                style={{ 
+                  padding: isMobile ? '0.5rem' : '0.75rem', 
+                  border: '1px solid var(--gray-300)', 
+                  borderRadius: 'var(--radius-lg)', 
+                  background: 'var(--white)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.25rem'
+                }}
+                title={sortOrder === 'asc' ? 'Synkende rekkefølge' : 'Stigende rekkefølge'}
+              >
+                {sortOrder === 'asc' ? <SortDesc style={{ width: '16px', height: '16px' }} /> : <SortAsc style={{ width: '16px', height: '16px' }} />}
+              </button>
+            </div>
           </div>
           {searchTerm && (
-            <div style={{ marginTop: '1rem', padding: '0.75rem', background: 'var(--blue-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--blue-200)' }}>
-              <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--blue-700)' }}>
+            <div style={{ marginTop: isMobile ? '0.5rem' : '1rem', padding: isMobile ? '0.5rem' : '0.75rem', background: 'var(--blue-50)', borderRadius: 'var(--radius-lg)', border: '1px solid var(--blue-200)' }}>
+              <p style={{ fontSize: isMobile ? 'var(--font-size-xs)' : 'var(--font-size-sm)', color: 'var(--blue-700)' }}>
                 {filteredDocuments.length} dokumenter funnet for "{searchTerm}"
               </p>
             </div>
@@ -586,12 +603,12 @@ export default function DocumentsPage() {
         {/* Documents List */}
         <div className="card">
           {filteredDocuments.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center' }}>
-              <FileText style={{ width: '48px', height: '48px', color: 'var(--gray-400)', margin: '0 auto 1rem' }} />
-              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+            <div style={{ padding: isMobile ? '2rem 1rem' : '3rem', textAlign: 'center' }}>
+              <FileText style={{ width: isMobile ? '32px' : '48px', height: isMobile ? '32px' : '48px', color: 'var(--gray-400)', margin: '0 auto 1rem' }} />
+              <h3 style={{ fontSize: isMobile ? 'var(--font-size-base)' : 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
                 {searchTerm ? 'Ingen dokumenter funnet' : 'Ingen dokumenter'}
               </h3>
-              <p style={{ color: 'var(--gray-600)', marginBottom: '1rem' }}>
+              <p style={{ color: 'var(--gray-600)', marginBottom: '1rem', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)' }}>
                 {searchTerm 
                   ? 'Prøv å endre søkekriteriene dine eller legg til nye dokumenter.'
                   : 'Start med å laste opp ditt første dokument.'
@@ -601,14 +618,199 @@ export default function DocumentsPage() {
                 <button
                   onClick={() => setShowAddModal(true)}
                   className="btn btn-primary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: '0 auto' }}
+                  style={{ 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    gap: '0.5rem', 
+                    margin: '0 auto',
+                    fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)',
+                    padding: isMobile ? '0.5rem 1rem' : '0.75rem 1.5rem'
+                  }}
                 >
-                  <Plus style={{ width: '16px', height: '16px' }} />
-                  Last opp første dokument
+                  <Plus style={{ width: isMobile ? '14px' : '16px', height: isMobile ? '14px' : '16px' }} />
+                  {isMobile ? 'Last opp' : 'Last opp første dokument'}
                 </button>
               )}
             </div>
+          ) : isMobile ? (
+            /* Mobile Card View */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+              {filteredDocuments.map((doc) => (
+                <div 
+                  key={doc.id} 
+                  style={{ 
+                    padding: '0.75rem', 
+                    border: '1px solid var(--gray-200)', 
+                    borderRadius: 'var(--radius-lg)', 
+                    background: 'var(--white)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => {
+                    setSelectedDocument(doc);
+                    setShowDetailModal(true);
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                    <div style={{ flexShrink: 0 }}>
+                      {getFileIcon(doc.fileType)}
+                    </div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                        <p style={{ 
+                          fontWeight: '500', 
+                          color: 'var(--gray-900)', 
+                          fontSize: 'var(--font-size-sm)',
+                          margin: 0,
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {doc.title}
+                        </p>
+                        {doc.isPublic && (
+                          <Shield style={{ width: '12px', height: '12px', color: 'var(--green-600)', flexShrink: 0 }} />
+                        )}
+                      </div>
+                      <p style={{ 
+                        fontSize: 'var(--font-size-xs)', 
+                        color: 'var(--gray-600)', 
+                        margin: '0 0 0.25rem 0',
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap'
+                      }}>
+                        {doc.fileName}
+                      </p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '0.5rem' }}>
+                        <span style={{ 
+                          padding: '0.125rem 0.5rem',
+                          borderRadius: 'var(--radius-full)',
+                          background: 'var(--gray-100)',
+                          fontSize: 'var(--font-size-xs)',
+                          fontWeight: '500',
+                          color: 'var(--gray-700)',
+                          textTransform: 'capitalize'
+                        }}>
+                          {doc.category}
+                        </span>
+                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                          {formatFileSize(doc.fileSize)}
+                        </span>
+                        <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                          {formatDate(doc.createdAt)}
+                        </span>
+                      </div>
+                      {doc.description && (
+                        <p style={{ 
+                          fontSize: 'var(--font-size-xs)', 
+                          color: 'var(--gray-500)', 
+                          margin: '0 0 0.5rem 0',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
+                          overflow: 'hidden'
+                        }}>
+                          {doc.description}
+                        </p>
+                      )}
+                      {doc.tags && doc.tags.length > 0 && (
+                        <div style={{ display: 'flex', gap: '0.25rem', flexWrap: 'wrap', marginBottom: '0.5rem' }}>
+                          {doc.tags.slice(0, 2).map((tag, index) => (
+                            <span key={index} style={{
+                              padding: '0.125rem 0.375rem',
+                              background: 'var(--blue-100)',
+                              color: 'var(--blue-700)',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: 'var(--font-size-xs)',
+                              fontWeight: '500'
+                            }}>
+                              {tag}
+                            </span>
+                          ))}
+                          {doc.tags.length > 2 && (
+                            <span style={{
+                              padding: '0.125rem 0.375rem',
+                              background: 'var(--gray-100)',
+                              color: 'var(--gray-600)',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: 'var(--font-size-xs)',
+                              fontWeight: '500'
+                            }}>
+                              +{doc.tags.length - 2}
+                            </span>
+                          )}
+                        </div>
+                      )}
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            downloadDocument(doc);
+                          }}
+                          style={{ 
+                            padding: '0.375rem', 
+                            borderRadius: 'var(--radius-md)', 
+                            border: '1px solid var(--gray-300)',
+                            background: 'var(--white)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                          title="Last ned"
+                        >
+                          <Download style={{ width: '12px', height: '12px', color: 'var(--gray-600)' }} />
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-600)' }}>Last ned</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSelectedDocument(doc);
+                            setShowDetailModal(true);
+                          }}
+                          style={{ 
+                            padding: '0.375rem', 
+                            borderRadius: 'var(--radius-md)', 
+                            border: '1px solid var(--blue-300)',
+                            background: 'var(--white)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                          title="Se detaljer"
+                        >
+                          <Eye style={{ width: '12px', height: '12px', color: 'var(--blue-600)' }} />
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--blue-600)' }}>Se</span>
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteDocument(doc);
+                          }}
+                          style={{ 
+                            padding: '0.375rem', 
+                            borderRadius: 'var(--radius-md)', 
+                            border: '1px solid var(--red-300)',
+                            background: 'var(--white)',
+                            cursor: 'pointer',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem'
+                          }}
+                          title="Slett"
+                        >
+                          <Trash2 style={{ width: '12px', height: '12px', color: 'var(--red-600)' }} />
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--red-600)' }}>Slett</span>
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
+            /* Desktop Table View */
             <div style={{ overflowX: 'auto' }}>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead style={{ background: 'var(--gray-50)' }}>
