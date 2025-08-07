@@ -16,6 +16,9 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "DriftPro Admin - Avansert Administrasjonssystem",
   description: "Den avanserte administrasjonsplattformen for moderne bedrifter. Administrer ansatte, skift, fravær, avvik og mye mer.",
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({

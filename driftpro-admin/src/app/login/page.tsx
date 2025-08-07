@@ -112,9 +112,18 @@ export default function LoginPage() {
             alignItems: 'center',
             justifyContent: 'center',
             margin: '0 auto 1.5rem',
-            boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)'
+            boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)',
+            overflow: 'hidden'
           }}>
-            <Building style={{ width: '40px', height: '40px', color: 'white' }} />
+            <img 
+              src="/logo.svg" 
+              alt="DriftPro" 
+              style={{
+                width: '50px',
+                height: '50px',
+                objectFit: 'contain'
+              }}
+            />
           </div>
           <h1 style={{
             fontSize: '2rem',

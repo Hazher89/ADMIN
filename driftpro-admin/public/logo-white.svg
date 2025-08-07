@@ -1,0 +1,34 @@
+<svg width="180" height="50" viewBox="0 0 180 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- White Logo for Dark Backgrounds -->
+  
+  <!-- Modern operations icon -->
+  <g transform="translate(15, 13)">
+    <!-- Sleek rounded square background -->
+    <rect x="0" y="0" width="24" height="24" rx="8" fill="white" stroke="none"/>
+    
+    <!-- Modern gear/operations -->
+    <circle cx="12" cy="12" r="8" fill="#1F2937" opacity="0.9"/>
+    <circle cx="12" cy="12" r="4" fill="white" opacity="0.95"/>
+    
+    <!-- Gear teeth -->
+    <rect x="11" y="2" width="2" height="3" fill="#1F2937" opacity="0.9"/>
+    <rect x="11" y="19" width="2" height="3" fill="#1F2937" opacity="0.9"/>
+    <rect x="2" y="11" width="3" height="2" fill="#1F2937" opacity="0.9"/>
+    <rect x="19" y="11" width="3" height="2" fill="#1F2937" opacity="0.9"/>
+    
+    <!-- Operations flow -->
+    <path d="M 6 12 L 18 12" stroke="white" stroke-width="1.5" stroke-linecap="round"/>
+  </g>
+  
+  <!-- Typography -->
+  <g transform="translate(70, 0)">
+    <!-- Drift -->
+    <text x="0" y="26" font-family="'Poppins', 'Montserrat', 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif" font-size="22" font-weight="800" fill="white" letter-spacing="-0.05em">
+      Drift
+    </text>
+    <!-- Pro -->
+    <text x="0" y="42" font-family="'Poppins', 'Montserrat', 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif" font-size="16" font-weight="600" fill="white" opacity="0.9" letter-spacing="0.2em">
+      PRO
+    </text>
+  </g>
+</svg>

@@ -61,11 +61,32 @@ export default function DashboardLayout({
 }) {
   const { user, logout, userProfile } = useAuth();
   const router = useRouter();
+  const pathname = usePathname();
+  
+  // Mobile state
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
+  const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
+  const [unreadCount, setUnreadCount] = useState(0);
   
   // Debug logging for layout
   console.log('DashboardLayout: user:', user);
   console.log('DashboardLayout: userProfile:', userProfile);
   console.log('DashboardLayout: logout function:', !!logout);
+
+  // Check if mobile on mount and resize
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   // GDPR Compliance: Ensure user has a valid companyId
   useEffect(() => {
@@ -98,122 +119,22 @@ export default function DashboardLayout({
   useEffect(() => {
     if (user && userProfile) {
       const selectedCompany = localStorage.getItem('selectedCompany');
-      if (selectedCompany) {
-        try {
-          const company = JSON.parse(selectedCompany);
-          console.log('🔒 IMMEDIATE GDPR CHECK: Selected company:', company);
-          console.log('🔒 IMMEDIATE GDPR CHECK: User companyId:', userProfile.companyId);
-          
-          if (userProfile.companyId !== company.id) {
-            console.error('🚨 IMMEDIATE GDPR VIOLATION: User companyId does not match selected company:', {
-              userEmail: user.email,
-              userCompanyId: userProfile.companyId,
-              selectedCompanyId: company.id,
-              selectedCompanyName: company.name
-            });
-            alert(`Sikkerhetsbrudd: Du har ikke tilgang til ${company.name}. Du blir logget ut umiddelbart.`);
-            logout();
-            router.push('/companies');
-            return;
-          }
-          
-          console.log('✅ IMMEDIATE GDPR CHECK: User company matches selected company');
-        } catch (error) {
-          console.error('Error parsing selected company:', error);
-        }
-      }
-    }
-  }, [user, userProfile, logout, router]);
-  const pathname = usePathname();
-  const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
-  const [hoveredItem, setHoveredItem] = useState<string | null>(null);
-  const [tooltipPosition, setTooltipPosition] = useState({ top: 0, left: 0 });
-
-  // Check if user is from DriftPro AS (has access to admin pages)
-  const isDriftProAdmin = userProfile?.companyName === 'DriftPro AS';
-  
-  // Additional GDPR check: Validate against selected company from localStorage
-  useEffect(() => {
-    if (user && userProfile) {
-      const selectedCompany = localStorage.getItem('selectedCompany');
-      if (selectedCompany) {
-        try {
-          const company = JSON.parse(selectedCompany);
-          console.log('🔒 COMPANY VALIDATION: Selected company:', company);
-          console.log('🔒 COMPANY VALIDATION: User companyId:', userProfile.companyId);
-          
-          // Strict GDPR validation - no exceptions
-          if (userProfile.companyId !== company.id) {
-            console.error('🚨 GDPR VIOLATION: User companyId does not match selected company:', {
-              userEmail: user.email,
-              userCompanyId: userProfile.companyId,
-              selectedCompanyId: company.id,
-              selectedCompanyName: company.name
-            });
-            alert(`Sikkerhetsbrudd: Du har ikke tilgang til ${company.name}. Du blir logget ut.`);
-            logout();
-            router.push('/companies');
-            return;
-          }
-          
-          console.log('✅ COMPANY VALIDATION: User company matches selected company');
-        } catch (error) {
-          console.error('Error parsing selected company:', error);
-        }
+      if (!selectedCompany) {
+        console.error('🚨 GDPR VIOLATION: No company selected');
+        alert('Ingen bedrift valgt. Du blir logget ut.');
+        logout();
+        router.push('/companies');
+        return;
       }
     }
   }, [user, userProfile, logout, router]);
 
-  // Function to calculate tooltip position
-  const calculateTooltipPosition = (event: React.MouseEvent, itemHref: string) => {
-    const rect = event.currentTarget.getBoundingClientRect();
-    const sidebarWidth = 80;
-    const tooltipOffset = 10;
-    
-    setTooltipPosition({
-      top: rect.top + rect.height / 2,
-      left: sidebarWidth + tooltipOffset
-    });
-    setHoveredItem(itemHref);
-  };
+  // Check if user is DriftPro admin
+  const isDriftProAdmin = userProfile?.companyId === 'driftpro-as';
 
-  // Function to handle mouse leave
-  const handleMouseLeave = () => {
-    setHoveredItem(null);
-  };
-
-  // Load unread notification count
-  useEffect(() => {
-    if (!user?.uid) return;
-
-    const loadUnreadCount = async () => {
-      const count = await notificationService.getUnreadCount(user.uid);
-      setUnreadCount(count);
-    };
-
-    loadUnreadCount();
-    
-    // Set up real-time listener for unread count
-    const setupNotifications = async () => {
-      const unsubscribe = await notificationService.loadNotifications(user.uid, (notifications) => {
-        const unread = notifications.filter(n => n.status === 'unread').length;
-        setUnreadCount(unread);
-      });
-
-      return unsubscribe;
-    };
-
-    setupNotifications();
-
-    return () => {
-      // Cleanup will be handled by the service
-    };
-  }, [user]);
-
+  // Sidebar items configuration
   const sidebarItems: SidebarItem[] = [
-    // Main Navigation
+    // Main navigation
     {
       name: 'Dashboard',
       href: '/dashboard',
@@ -227,75 +148,53 @@ export default function DashboardLayout({
       category: 'main'
     },
     {
-      name: 'Avdelinger',
-      href: '/dashboard/departments',
-      icon: <Building size={20} />,
+      name: 'Vakter',
+      href: '/dashboard/shifts',
+      icon: <Calendar size={20} />,
       category: 'main'
     },
-    
-    // Time Management
     {
       name: 'Fravær og ferie',
       href: '/dashboard/absence-vacation',
-      icon: <Calendar size={20} />,
-      category: 'time'
+      icon: <Heart size={20} />,
+      category: 'main'
     },
     {
-      name: 'Stemple-system',
-      href: '/dashboard/stempel',
-      icon: <Clock size={20} />,
-      category: 'time'
-    },
-    {
-      name: 'Skiftplan',
-      href: '/dashboard/shifts',
-      icon: <Calendar size={20} />,
-      category: 'time'
-    },
-    
-    // Communication & Documents
-    {
-      name: 'Chat',
-      href: '/dashboard/chat',
-      icon: <MessageSquare size={20} />,
-      category: 'communication'
+      name: 'HMS',
+      href: '/dashboard/deviations',
+      icon: <Shield size={20} />,
+      category: 'main'
     },
     {
       name: 'Dokumenter',
       href: '/dashboard/documents',
       icon: <FileText size={20} />,
-      category: 'communication'
+      category: 'main'
     },
     {
-      name: 'Varsler',
-      href: '/dashboard/notifications',
-      icon: <Bell size={20} />,
-      category: 'communication'
-    },
-    
-    // Management
-    {
-      name: 'HMS',
-      href: '/dashboard/deviations',
-      icon: <AlertTriangle size={20} />,
-      category: 'management'
-    },
-    {
-      name: 'Min Bedrift',
-      href: '/dashboard/my-company',
-      icon: <Building size={20} />,
-      category: 'management'
-    },
-    {
-      name: 'Undersøkelser',
-      href: '/dashboard/surveys',
-      icon: <Target size={20} />,
-      category: 'management'
+      name: 'Chat',
+      href: '/dashboard/chat',
+      icon: <MessageSquare size={20} />,
+      category: 'main'
     },
     {
       name: 'Rapporter',
       href: '/dashboard/reports',
       icon: <BarChart3 size={20} />,
+      category: 'main'
+    },
+    {
+      name: 'Tidsregistrering',
+      href: '/dashboard/timeclock',
+      icon: <Clock size={20} />,
+      category: 'main'
+    },
+    
+    // Management
+    {
+      name: 'Avdelinger',
+      href: '/dashboard/departments',
+      icon: <Building size={20} />,
       category: 'management'
     },
     {
@@ -338,8 +237,6 @@ export default function DashboardLayout({
         category: 'admin',
         isAdmin: true
       },
-
-
     ] : [])
   ];
 
@@ -365,10 +262,57 @@ export default function DashboardLayout({
     return acc;
   }, {} as Record<string, SidebarItem[]>);
 
+  const calculateTooltipPosition = (event: React.MouseEvent, itemHref: string) => {
+    if (isMobile) return;
+    
+    const rect = event.currentTarget.getBoundingClientRect();
+    setTooltipPosition({
+      x: rect.right + 10,
+      y: rect.top + rect.height / 2
+    });
+    setHoveredItem(itemHref);
+  };
+
+  const handleMouseLeave = () => {
+    setHoveredItem(null);
+  };
+
+  // Load notifications
+  useEffect(() => {
+    if (!user?.uid) return;
+
+    const loadUnreadCount = async () => {
+      try {
+        const count = await notificationService.getUnreadCount(user.uid);
+        setUnreadCount(count);
+      } catch (error) {
+        console.error('Error loading unread count:', error);
+      }
+    };
+
+    const setupNotifications = async () => {
+      try {
+        // Set up real-time listener for notifications
+        const unsubscribe = await notificationService.loadNotifications(user.uid, (notifications) => {
+          const unread = notifications.filter(n => n.status === 'unread').length;
+          setUnreadCount(unread);
+        });
+        
+        loadUnreadCount();
+        
+        return unsubscribe;
+      } catch (error) {
+        console.error('Error setting up notifications:', error);
+      }
+    };
+
+    setupNotifications();
+  }, [user]);
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Mobile Overlay */}
-      {sidebarOpen && (
+      {sidebarOpen && isMobile && (
         <div 
           style={{
             position: 'fixed',
@@ -377,25 +321,23 @@ export default function DashboardLayout({
             right: 0,
             bottom: 0,
             background: 'rgba(0, 0, 0, 0.5)',
-            zIndex: 999,
-            display: 'none'
+            zIndex: 999
           }}
-          className="mobile-overlay"
           onClick={() => setSidebarOpen(false)}
         />
       )}
       
-      {/* Opera-Inspired Sidebar */}
+      {/* Responsive Sidebar */}
       <div 
         className={`sidebar ${sidebarOpen ? 'open' : ''}`}
         style={{
-          width: '80px',
+          width: isMobile ? (sidebarOpen ? '280px' : '0') : '80px',
           background: 'var(--gray-900)',
           borderRight: '1px solid var(--gray-800)',
           display: 'flex',
           flexDirection: 'column',
-          alignItems: 'center',
-          padding: '1rem 0',
+          alignItems: isMobile ? 'stretch' : 'center',
+          padding: isMobile ? '1rem' : '1rem 0',
           position: 'fixed',
           left: 0,
           top: 0,
@@ -403,12 +345,13 @@ export default function DashboardLayout({
           zIndex: 1000,
           transition: 'all var(--transition-normal)',
           overflowY: 'auto',
-          overflowX: 'hidden'
+          overflowX: 'hidden',
+          transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)'
         }}
       >
         {/* Logo */}
         <div style={{
-          width: '48px',
+          width: isMobile ? 'auto' : '48px',
           height: '48px',
           background: 'var(--gradient-primary)',
           borderRadius: '12px',
@@ -417,12 +360,21 @@ export default function DashboardLayout({
           justifyContent: 'center',
           marginBottom: '2rem',
           boxShadow: 'var(--shadow-md)',
-          flexShrink: 0
+          flexShrink: 0,
+          overflow: 'hidden'
         }}>
-          <Zap size={24} color="white" />
+          <img 
+            src="/logo.svg" 
+            alt="DriftPro" 
+            style={{
+              width: '32px',
+              height: '32px',
+              objectFit: 'contain'
+            }}
+          />
         </div>
 
-        {/* Navigation Icons */}
+        {/* Navigation Items */}
         <div style={{ 
           flex: 1, 
           display: 'flex', 
@@ -433,6 +385,25 @@ export default function DashboardLayout({
         }}>
           {Object.entries(groupedItems).map(([category, items]) => (
             <div key={category} style={{ width: '100%' }}>
+              {/* Category Label for Mobile */}
+              {isMobile && (
+                <div style={{
+                  padding: '0.5rem 0',
+                  marginBottom: '0.5rem',
+                  borderBottom: '1px solid var(--gray-800)',
+                  color: 'var(--gray-400)',
+                  fontSize: '0.75rem',
+                  fontWeight: '600',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.05em'
+                }}>
+                  {category === 'main' && 'Hovedmeny'}
+                  {category === 'management' && 'Ledelse'}
+                  {category === 'settings' && 'Innstillinger'}
+                  {category === 'admin' && 'Administrasjon'}
+                </div>
+              )}
+              
               {items.map((item) => {
                 const isActive = pathname === item.href;
                 return (
@@ -442,7 +413,7 @@ export default function DashboardLayout({
                       position: 'relative',
                       width: '100%',
                       display: 'flex',
-                      justifyContent: 'center',
+                      justifyContent: isMobile ? 'flex-start' : 'center',
                       marginBottom: '0.5rem'
                     }}
                     onMouseEnter={(e) => calculateTooltipPosition(e, item.href)}
@@ -451,29 +422,48 @@ export default function DashboardLayout({
                     <Link
                       href={item.href}
                       style={{
-                        width: '48px',
+                        width: isMobile ? '100%' : '48px',
                         height: '48px',
                         borderRadius: '12px',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
+                        justifyContent: isMobile ? 'flex-start' : 'center',
                         background: isActive ? 'var(--primary)' : 'transparent',
                         color: isActive ? 'white' : 'var(--gray-400)',
                         textDecoration: 'none',
                         transition: 'all var(--transition-normal)',
                         position: 'relative',
-                        border: isActive ? 'none' : '1px solid transparent'
+                        border: isActive ? 'none' : '1px solid transparent',
+                        padding: isMobile ? '0 1rem' : '0',
+                        gap: isMobile ? '0.75rem' : '0'
                       }}
-                      onClick={() => setSidebarOpen(false)}
+                      onClick={() => {
+                        setSidebarOpen(false);
+                        if (isMobile) {
+                          // Close sidebar on mobile after navigation
+                          setTimeout(() => setSidebarOpen(false), 100);
+                        }
+                      }}
                     >
                       {item.icon}
+                      
+                      {/* Item name for mobile */}
+                      {isMobile && (
+                        <span style={{
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          whiteSpace: 'nowrap'
+                        }}>
+                          {item.name}
+                        </span>
+                      )}
                       
                       {/* Admin Star */}
                       {item.isAdmin && (
                         <div style={{
                           position: 'absolute',
                           top: '-2px',
-                          right: '-2px',
+                          right: isMobile ? '1rem' : '-2px',
                           color: '#ef4444',
                           fontSize: '12px'
                         }}>
@@ -486,92 +476,259 @@ export default function DashboardLayout({
                         <div style={{
                           position: 'absolute',
                           top: '-4px',
-                          right: '-4px',
+                          right: isMobile ? '1rem' : '-4px',
                           background: item.badgeColor === 'badge-danger' ? 'var(--danger)' : 'var(--primary)',
                           color: 'white',
-                          fontSize: '10px',
+                          fontSize: '0.625rem',
                           fontWeight: '600',
-                          padding: '2px 6px',
-                          borderRadius: '8px',
-                          border: '2px solid var(--gray-900)',
-                          minWidth: '16px',
-                          height: '16px',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center'
+                          padding: '0.125rem 0.375rem',
+                          borderRadius: '0.75rem',
+                          minWidth: '1.25rem',
+                          textAlign: 'center',
+                          lineHeight: '1'
                         }}>
                           {item.badge}
                         </div>
                       )}
                     </Link>
-
-
                   </div>
                 );
               })}
-              
-              {/* Category Separator */}
-              {category !== Object.keys(groupedItems)[Object.keys(groupedItems).length - 1] && (
-                <div style={{
-                  width: '32px',
-                  height: '1px',
-                  background: 'var(--gray-700)',
-                  margin: '1rem auto',
-                  opacity: 0.5
-                }}></div>
-              )}
             </div>
           ))}
         </div>
 
-
-
-        {/* Debug logging */}
-        {(() => {
-          console.log('DashboardLayout: About to render logout button, user:', user);
-          return null;
-        })()}
-
-
+        {/* Logout Button */}
+        <div style={{
+          width: '100%',
+          padding: isMobile ? '1rem 0' : '0',
+          borderTop: isMobile ? '1px solid var(--gray-800)' : 'none',
+          marginTop: 'auto'
+        }}>
+          <button
+            onClick={handleLogout}
+            style={{
+              width: isMobile ? '100%' : '48px',
+              height: '48px',
+              borderRadius: '12px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: isMobile ? 'flex-start' : 'center',
+              background: 'transparent',
+              color: 'var(--gray-400)',
+              border: '1px solid var(--gray-700)',
+              cursor: 'pointer',
+              transition: 'all var(--transition-normal)',
+              padding: isMobile ? '0 1rem' : '0',
+              gap: isMobile ? '0.75rem' : '0'
+            }}
+            onMouseEnter={() => {
+              if (!isMobile) {
+                setTooltipPosition({ x: 80, y: window.innerHeight - 80 });
+                setHoveredItem('logout');
+              }
+            }}
+            onMouseLeave={handleMouseLeave}
+          >
+            <LogOut size={20} />
+            {isMobile && (
+              <span style={{
+                fontSize: '0.875rem',
+                fontWeight: '500'
+              }}>
+                Logg ut
+              </span>
+            )}
+          </button>
+        </div>
       </div>
 
       {/* Main Content */}
-      <div 
-        className="main-content"
-        style={{
-          marginLeft: '80px',
-          flex: 1,
-          background: 'var(--gray-50)',
-          minHeight: '100vh',
-          transition: 'margin-left var(--transition-normal)'
-        }}
-      >
-        {/* Mobile Menu Button */}
-        <button
-          onClick={() => setSidebarOpen(!sidebarOpen)}
-          className="mobile-menu-btn"
-        >
-          {sidebarOpen ? <X size={16} /> : <Menu size={16} />}
-        </button>
+      <div style={{
+        flex: 1,
+        marginLeft: isMobile ? '0' : '80px',
+        minHeight: '100vh',
+        background: 'var(--gray-50)',
+        transition: 'margin-left var(--transition-normal)'
+      }}>
+        {/* Mobile Header */}
+        {isMobile && (
+          <div style={{
+            position: 'sticky',
+            top: 0,
+            background: 'white',
+            borderBottom: '1px solid var(--gray-200)',
+            padding: '1rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between',
+            zIndex: 100
+          }}>
+            {/* Mobile Menu Button */}
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              style={{
+                background: 'none',
+                border: 'none',
+                fontSize: '1.5rem',
+                color: 'var(--gray-600)',
+                cursor: 'pointer',
+                padding: '0.5rem',
+                borderRadius: '8px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
+            </button>
+
+            {/* Mobile Logo */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem'
+            }}>
+              <img 
+                src="/logo.svg" 
+                alt="DriftPro" 
+                style={{
+                  width: '32px',
+                  height: '32px',
+                  objectFit: 'contain'
+                }}
+              />
+              <span style={{
+                fontSize: '1.125rem',
+                fontWeight: '600',
+                color: 'var(--gray-900)'
+              }}>
+                DriftPro
+              </span>
+            </div>
+
+            {/* Mobile Actions */}
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}>
+              <NotificationBell />
+              <div style={{
+                width: '32px',
+                height: '32px',
+                borderRadius: '50%',
+                background: 'var(--gradient-primary)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                color: 'white',
+                fontSize: '0.875rem',
+                fontWeight: '600'
+              }}>
+                {userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* Desktop Header */}
+        {!isMobile && (
+          <div style={{
+            background: 'white',
+            borderBottom: '1px solid var(--gray-200)',
+            padding: '1rem 2rem',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-between'
+          }}>
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <h1 style={{
+                fontSize: '1.5rem',
+                fontWeight: '600',
+                color: 'var(--gray-900)',
+                margin: 0
+              }}>
+                {sidebarItems.find(item => item.href === pathname)?.name || 'Dashboard'}
+              </h1>
+            </div>
+
+            <div style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <NotificationBell />
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                padding: '0.5rem 1rem',
+                background: 'var(--gray-100)',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                transition: 'all var(--transition-normal)'
+              }}>
+                <div style={{
+                  width: '32px',
+                  height: '32px',
+                  borderRadius: '50%',
+                  background: 'var(--gradient-primary)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontSize: '0.875rem',
+                  fontWeight: '600'
+                }}>
+                  {userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+                </div>
+                <div>
+                  <div style={{
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: 'var(--gray-900)'
+                  }}>
+                    {userProfile?.displayName || 'Bruker'}
+                  </div>
+                  <div style={{
+                    fontSize: '0.75rem',
+                    color: 'var(--gray-500)'
+                  }}>
+                    {userProfile?.role || 'Bruker'}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Page Content */}
-        {children}
+        <div style={{
+          padding: isMobile ? '1rem' : '2rem',
+          minHeight: 'calc(100vh - 80px)'
+        }}>
+          {children}
+        </div>
       </div>
 
-      {/* Global Tooltip */}
-      {hoveredItem && (
+      {/* Desktop Tooltip */}
+      {!isMobile && hoveredItem && (
         <div style={{
           position: 'fixed',
-          left: `${tooltipPosition.left}px`,
-          top: `${tooltipPosition.top}px`,
+          left: tooltipPosition.x,
+          top: tooltipPosition.y,
           transform: 'translateY(-50%)',
           background: 'var(--gray-800)',
           color: 'white',
           padding: '0.5rem 0.75rem',
-          borderRadius: '8px',
-          fontSize: 'var(--font-size-sm)',
+          borderRadius: '6px',
+          fontSize: '0.875rem',
           fontWeight: '500',
-          whiteSpace: 'nowrap',
           zIndex: 1001,
           boxShadow: 'var(--shadow-lg)',
           border: '1px solid var(--gray-700)',
@@ -580,7 +737,7 @@ export default function DashboardLayout({
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span>
-              {sidebarItems.find(item => item.href === hoveredItem)?.name || ''}
+              {hoveredItem === 'logout' ? 'Logg ut' : sidebarItems.find(item => item.href === hoveredItem)?.name || ''}
             </span>
             {sidebarItems.find(item => item.href === hoveredItem)?.isAdmin && (
               <Star size={12} fill="#ef4444" color="#ef4444" />
@@ -667,6 +824,18 @@ export default function DashboardLayout({
         @keyframes fadeIn {
           from { opacity: 0; transform: translateX(-10px); }
           to { opacity: 1; transform: translateX(0); }
+        }
+        
+        /* Mobile optimizations */
+        @media (max-width: 768px) {
+          .sidebar {
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+          }
+          
+          .modal-content {
+            margin: 1rem;
+            max-width: calc(100vw - 2rem);
+          }
         }
       `}</style>
     </div>
