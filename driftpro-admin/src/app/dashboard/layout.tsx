@@ -189,6 +189,18 @@ export default function DashboardLayout({
       icon: <Clock size={20} />,
       category: 'main'
     },
+    {
+      name: 'E-postinnstillinger',
+      href: '/dashboard/email-settings',
+      icon: <Settings size={20} />,
+      category: 'main'
+    },
+    {
+      name: 'E-postlogger',
+      href: '/dashboard/email-logs',
+      icon: <FileText size={20} />,
+      category: 'main'
+    },
     
     // Management
     {
@@ -231,9 +243,30 @@ export default function DashboardLayout({
         isAdmin: true
       },
       {
+        name: 'E-postinnstillinger',
+        href: '/dashboard/email-settings',
+        icon: <Settings size={20} />,
+        category: 'admin',
+        isAdmin: true
+      },
+      {
+        name: 'E-postkonfigurasjon',
+        href: '/dashboard/email-config',
+        icon: <Mail size={20} />,
+        category: 'admin',
+        isAdmin: true
+      },
+      {
         name: 'E-postlogger',
         href: '/dashboard/email-logs',
-        icon: <Mail size={20} />,
+        icon: <FileText size={20} />,
+        category: 'admin',
+        isAdmin: true
+      },
+      {
+        name: 'E-postkontroll',
+        href: '/dashboard/email-control',
+        icon: <Shield size={20} />,
         category: 'admin',
         isAdmin: true
       },
@@ -352,7 +385,7 @@ export default function DashboardLayout({
         {/* Logo */}
         <div style={{
           width: isMobile ? 'auto' : '48px',
-          height: '48px',
+          height: isMobile ? '48px' : '48px',
           background: 'var(--gradient-primary)',
           borderRadius: '12px',
           display: 'flex',
@@ -361,14 +394,15 @@ export default function DashboardLayout({
           marginBottom: '2rem',
           boxShadow: 'var(--shadow-md)',
           flexShrink: 0,
-          overflow: 'hidden'
+          overflow: 'hidden',
+          padding: isMobile ? '0.5rem' : '0'
         }}>
           <img 
             src="/logo.svg" 
             alt="DriftPro" 
             style={{
-              width: '32px',
-              height: '32px',
+              width: isMobile ? '36px' : '32px',
+              height: isMobile ? '36px' : '32px',
               objectFit: 'contain'
             }}
           />

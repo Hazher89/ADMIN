@@ -344,7 +344,7 @@ export default function CompaniesPage() {
             <Search style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
             <input
               type="text"
-              placeholder="Søk etter bedrift..."
+              placeholder="Søk etter bedrift (organisasjonsnummer eller navn)..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
@@ -357,6 +357,16 @@ export default function CompaniesPage() {
               }}
             />
           </div>
+          {!searchTerm && (
+            <p style={{
+              fontSize: 'var(--font-size-sm)',
+              color: 'var(--gray-600)',
+              marginTop: '0.5rem',
+              textAlign: 'center'
+            }}>
+              Skriv organisasjonsnummer eller bedriftsnavn for å søke
+            </p>
+          )}
           {searchTerm && (
             <p style={{
               fontSize: 'var(--font-size-sm)',
@@ -368,174 +378,168 @@ export default function CompaniesPage() {
           )}
         </div>
 
-        {/* Companies List */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
-          {filteredCompanies.map((company) => (
-            <div
-              key={company.id}
-              className="card"
-              style={{ 
-                transition: 'all var(--transition-normal)',
-                cursor: 'pointer'
-              }}
-              onClick={() => handleCompanySelect(company)}
-            >
-              {/* Company Header */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-                <div className="card-icon" style={{
-                  width: '40px',
-                  height: '40px',
-                  background: 'var(--gradient-primary)',
-                  borderRadius: 'var(--radius-lg)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  overflow: 'hidden'
-                }}>
-                  <img 
-                    src="/logo.svg" 
-                    alt="DriftPro" 
-                    style={{
-                      width: '24px',
-                      height: '24px',
-                      objectFit: 'contain'
-                    }}
-                  />
-                </div>
-                <div style={{ flex: '1' }}>
-                  <h3 style={{
-                    fontSize: 'var(--font-size-lg)',
-                    fontWeight: '600',
-                    color: 'var(--gray-900)',
-                    marginBottom: '0.25rem'
-                  }}>
-                    {company.name}
-                  </h3>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
-                      Org.nr: {company.orgNumber}
-                    </span>
-                    <span className={`badge ${
-                      company.status === 'active' ? 'badge-success' :
-                      company.status === 'inactive' ? 'badge-danger' :
-                      'badge-warning'
-                    }`}>
-                      {company.status === 'active' ? 'Aktiv' :
-                       company.status === 'inactive' ? 'Inaktiv' : 'Venter'}
-                    </span>
-                  </div>
-                </div>
-                <div style={{
-                  padding: '0.75rem',
-                  background: '#10b981',
-                  border: 'none',
-                  borderRadius: '8px',
-                  color: 'white',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  transition: 'all 0.2s ease'
-                }}>
-                  <ArrowRight style={{ width: '20px', height: '20px' }} />
-                </div>
-              </div>
-
-              {/* Company Details */}
-              <div style={{ marginBottom: '1rem' }}>
-                {company.address && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <MapPin style={{ width: '16px', height: '16px', color: 'var(--gray-400)' }} />
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
-                      {formatAddress(company.address)}
-                    </span>
-                  </div>
-                )}
-                {company.employeeCount && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <Users style={{ width: '16px', height: '16px', color: 'var(--gray-400)' }} />
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
-                      {company.employeeCount} ansatte
-                    </span>
-                  </div>
-                )}
-                {company.industry && (
-                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>
-                    {company.industry}
-                  </div>
-                )}
-              </div>
-
-              {/* Contact Info */}
-              <div style={{ 
-                marginBottom: '1rem',
-                padding: '1rem',
-                background: 'var(--gray-50)',
+        {/* Companies List - Only show if search term exists */}
+        {searchTerm && (
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+            {filteredCompanies.length === 0 ? (
+              <div style={{
+                textAlign: 'center',
+                padding: '3rem',
+                background: 'var(--white)',
                 borderRadius: 'var(--radius-lg)',
+                boxShadow: 'var(--shadow-sm)',
                 border: '1px solid var(--gray-200)'
               }}>
-                {company.phone && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <Phone style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
-                      {company.phone}
-                    </span>
-                  </div>
-                )}
-                {company.email && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                    <Mail style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
-                      {company.email}
-                    </span>
-                  </div>
-                )}
-                {company.contactPerson?.name && (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                    <Users style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
-                    <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
-                      Kontakt: {company.contactPerson.name}
-                    </span>
-                  </div>
-                )}
+                <Building style={{ width: '48px', height: '48px', color: 'var(--gray-400)', margin: '0 auto 1rem' }} />
+                <h3 style={{
+                  fontSize: 'var(--font-size-lg)',
+                  fontWeight: '600',
+                  color: 'var(--gray-900)',
+                  marginBottom: '0.5rem'
+                }}>
+                  Ingen bedrifter funnet
+                </h3>
+                <p style={{
+                  color: 'var(--gray-600)',
+                  fontSize: 'var(--font-size-base)'
+                }}>
+                  Prøv å søke med et annet organisasjonsnummer eller bedriftsnavn
+                </p>
               </div>
-            </div>
-          ))}
+            ) : (
+              filteredCompanies.map((company) => (
+                <div
+                  key={company.id}
+                  className="card"
+                  style={{ 
+                    transition: 'all var(--transition-normal)',
+                    cursor: 'pointer'
+                  }}
+                  onClick={() => handleCompanySelect(company)}
+                >
+                  {/* Company Header */}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+                    <div className="card-icon" style={{
+                      width: '40px',
+                      height: '40px',
+                      background: 'var(--gradient-primary)',
+                      borderRadius: 'var(--radius-lg)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      overflow: 'hidden'
+                    }}>
+                      <img 
+                        src="/logo.svg" 
+                        alt="DriftPro" 
+                        style={{
+                          width: '24px',
+                          height: '24px',
+                          objectFit: 'contain'
+                        }}
+                      />
+                    </div>
+                    <div style={{ flex: '1' }}>
+                      <h3 style={{
+                        fontSize: 'var(--font-size-lg)',
+                        fontWeight: '600',
+                        color: 'var(--gray-900)',
+                        marginBottom: '0.25rem'
+                      }}>
+                        {company.name}
+                      </h3>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                          Org.nr: {company.orgNumber}
+                        </span>
+                        <span className={`badge ${
+                          company.status === 'active' ? 'badge-success' :
+                          company.status === 'inactive' ? 'badge-danger' :
+                          'badge-warning'
+                        }`}>
+                          {company.status === 'active' ? 'Aktiv' :
+                           company.status === 'inactive' ? 'Inaktiv' : 'Venter'}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{
+                      padding: '0.75rem',
+                      background: '#10b981',
+                      border: 'none',
+                      borderRadius: '8px',
+                      color: 'white',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease'
+                    }}>
+                      <ArrowRight style={{ width: '20px', height: '20px' }} />
+                    </div>
+                  </div>
 
-          {filteredCompanies.length === 0 && (
-            <div style={{
-              textAlign: 'center',
-              padding: '3rem',
-              background: 'var(--white)',
-              border: '1px solid var(--gray-200)',
-              borderRadius: 'var(--radius-lg)'
-            }}>
-              <Building style={{ 
-                width: '64px', 
-                height: '64px', 
-                color: 'var(--gray-300)', 
-                margin: '0 auto 1rem' 
-              }} />
-              <h3 style={{ 
-                fontSize: 'var(--font-size-lg)', 
-                fontWeight: '600', 
-                color: 'var(--gray-900)', 
-                marginBottom: '0.5rem' 
-              }}>
-                {searchTerm ? 'Ingen bedrifter funnet' : 'Ingen bedrifter'}
-              </h3>
-              <p style={{ 
-                color: 'var(--gray-600)',
-                fontSize: 'var(--font-size-base)'
-              }}>
-                {searchTerm 
-                  ? 'Prøv å søke med et annet navn eller organisasjonsnummer'
-                  : 'Ingen bedrifter funnet i databasen. Kontakt systemadministrator for å få tilgang til DriftPro.'
-                }
-              </p>
-              
-            </div>
-          )}
-        </div>
+                  {/* Company Details */}
+                  <div style={{ marginBottom: '1rem' }}>
+                    {company.address && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <MapPin style={{ width: '16px', height: '16px', color: 'var(--gray-400)' }} />
+                        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                          {formatAddress(company.address)}
+                        </span>
+                      </div>
+                    )}
+                    {company.employeeCount && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <Users style={{ width: '16px', height: '16px', color: 'var(--gray-400)' }} />
+                        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                          {company.employeeCount} ansatte
+                        </span>
+                      </div>
+                    )}
+                    {company.industry && (
+                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)', marginBottom: '0.5rem' }}>
+                        {company.industry}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Contact Info */}
+                  <div style={{ 
+                    marginBottom: '1rem',
+                    padding: '1rem',
+                    background: 'var(--gray-50)',
+                    borderRadius: 'var(--radius-lg)',
+                    border: '1px solid var(--gray-200)'
+                  }}>
+                    {company.phone && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <Phone style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
+                        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
+                          {company.phone}
+                        </span>
+                      </div>
+                    )}
+                    {company.email && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <Mail style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
+                        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
+                          {company.email}
+                        </span>
+                      </div>
+                    )}
+                    {company.contactPerson?.name && (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <Users style={{ width: '16px', height: '16px', color: 'var(--primary)' }} />
+                        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)', fontWeight: '500' }}>
+                          Kontakt: {company.contactPerson.name}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            )}
+          </div>
+        )}
 
         {/* Footer */}
         <div style={{ 
