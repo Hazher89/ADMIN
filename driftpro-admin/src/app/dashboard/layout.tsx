@@ -160,6 +160,12 @@ export default function DashboardLayout({
       category: 'main'
     },
     {
+      name: 'BUD priser',
+      href: '/dashboard/bud-priser',
+      icon: <Target size={20} />,
+      category: 'main'
+    },
+    {
       name: 'HMS',
       href: '/dashboard/deviations',
       icon: <Shield size={20} />,
