@@ -5,19 +5,11 @@ import { PostcodeData, searchPostcodes, getServicesByCategory, getCategories } f
 
 export default function BudPriserPage() {
   const [postcode, setPostcode] = useState('');
-  const [address, setAddress] = useState('');
   const [selectedZone, setSelectedZone] = useState<PostcodeData | null>(null);
   const [totalPrice, setTotalPrice] = useState(0);
-  const [addressSuggestions, setAddressSuggestions] = useState<Array<{
-    display: string;
-    postcode: string;
-    fullAddress: string;
-  }>>([]);
-  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [searchHistory, setSearchHistory] = useState<Array<{
     timestamp: Date;
-    address: string;
     postcode: string;
     price: number;
     place: string;
@@ -38,6 +30,10 @@ export default function BudPriserPage() {
     }
     return [];
   });
+  
+  // Postcode search states
+  const [postcodeSuggestions, setPostcodeSuggestions] = useState<PostcodeData[]>([]);
+  const [showPostcodeSuggestions, setShowPostcodeSuggestions] = useState(false);
   
   // Extra services search states
   const [extraServiceSearch, setExtraServiceSearch] = useState('');
@@ -77,7 +73,6 @@ export default function BudPriserPage() {
     adHoc1: string;
     adHoc2: string;
     totalpris: number;
-    address: string;
     postcode: string;
     place: string;
     selectedServices: Array<{
@@ -134,7 +129,6 @@ export default function BudPriserPage() {
     return `NO_O_M${nextNumber.toString().padStart(4, '0')}`;
   };
   
-  const addressInputRef = useRef<HTMLInputElement>(null);
   const serviceInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
@@ -158,42 +152,14 @@ export default function BudPriserPage() {
     else setTrafficImpact(0);
   }, []);
 
-  // Optimized address search with debouncing
-  const searchAddresses = useCallback(async (searchTerm: string) => {
-    if (searchTerm.length < 2) { // Reduced from 3 to 2 characters
-      setAddressSuggestions([]);
-      setShowAddressSuggestions(false);
-      return;
+  // Postcode search function
+  const searchPostcodesWithSuggestions = useCallback((searchTerm: string) => {
+    if (searchTerm.length < 2) { // Start searching from 2 characters
+      return [];
     }
-
-    setIsLoading(true);
-    try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(searchTerm + ', Norway')}&countrycodes=no&limit=5&addressdetails=1&dedupe=1`
-      );
-      
-      if (response.ok) {
-        const data = await response.json();
-        const suggestions = data.map((item: any) => ({
-          display: item.display_name,
-          postcode: item.address?.postcode || '',
-          fullAddress: item.display_name
-        }));
-        
-        setAddressSuggestions(suggestions);
-        setShowAddressSuggestions(true);
-        
-        // Hidden: Calculate distance impact
-        if (suggestions.length > 0) {
-          const randomDistance = Math.floor(Math.random() * 50) + 5;
-          setDistanceImpact(randomDistance > 20 ? (randomDistance - 20) * 15 : 0);
-        }
-      }
-    } catch (error) {
-      console.error('Feil ved adressesøk:', error);
-    } finally {
-      setIsLoading(false);
-    }
+    
+    const results = searchPostcodes(searchTerm);
+    return results.slice(0, 10); // Limit to 10 suggestions
   }, []);
 
   // Service search function
@@ -224,30 +190,30 @@ export default function BudPriserPage() {
     // Filter services based on search term (case-insensitive)
     const filteredServices = allServices.filter(service =>
       service.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      service.category.toLowerCase().includes(searchTerm.toLowerCase())
+      service.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      service.description.toLowerCase().includes(searchTerm.toLowerCase())
     );
 
     setServiceSuggestions(filteredServices.slice(0, 8)); // Limit to 8 suggestions
     setShowServiceSuggestions(filteredServices.length > 0);
   }, []);
 
-  const handleAddressChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Postcode change handler
+  const handlePostcodeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    setAddress(value);
+    setPostcode(value);
     
     // Clear suggestions if input is empty
     if (value.length === 0) {
-      setAddressSuggestions([]);
-      setShowAddressSuggestions(false);
+      setPostcodeSuggestions([]);
+      setShowPostcodeSuggestions(false);
       return;
     }
     
-    // Debounced search with shorter delay
-    const timeoutId = setTimeout(() => {
-      searchAddresses(value);
-    }, 200); // Reduced from 300ms to 200ms
-
-    return () => clearTimeout(timeoutId);
+    // Search for postcodes
+    const suggestions = searchPostcodesWithSuggestions(value);
+    setPostcodeSuggestions(suggestions);
+    setShowPostcodeSuggestions(suggestions.length > 0);
   };
 
   const handleServiceSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -265,14 +231,7 @@ export default function BudPriserPage() {
     searchServices(value);
   };
 
-  const selectAddress = (suggestion: any) => {
-    setAddress(suggestion.fullAddress);
-    setShowAddressSuggestions(false);
-    
-    if (suggestion.postcode) {
-      setPostcode(suggestion.postcode);
-    }
-  };
+  // Address selection handler removed - now using postkode only
 
   const selectService = (service: any) => {
     // Check if service is already selected
@@ -302,16 +261,16 @@ export default function BudPriserPage() {
     // Calculate total price including selected services
     const basePrice = data.price;
     const servicesPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
-    const advancedPrice = basePrice + servicesPrice + weatherImpact + trafficImpact + distanceImpact;
+    const totalPrice = basePrice + servicesPrice;
     
     // Fix JavaScript floating point precision issue by rounding to 2 decimal places
-    const roundedPrice = Math.round(advancedPrice * 100) / 100;
+    const roundedPrice = Math.round(totalPrice * 100) / 100;
     
     setTotalPrice(roundedPrice);
     
     const newEntry = {
       timestamp: new Date(),
-      address: address,
+      address: '', // No address anymore
       postcode: data.postcode,
       price: roundedPrice,
       place: data.place
@@ -329,13 +288,65 @@ export default function BudPriserPage() {
     if (postcode) {
       setIsCalculating(true);
       
-      // Hidden: Simulate advanced AI calculation
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // Simulate calculation delay
+      await new Promise(resolve => setTimeout(resolve, 800));
       
-      const postcodeData = searchPostcodes(postcode);
-      if (postcodeData.length > 0) {
-        const data = postcodeData[0];
-        handlePostcodeSelect(data);
+      // Search for postcode in Excel data
+      const postcodeResults = searchPostcodes(postcode);
+      
+      if (postcodeResults.length > 0) {
+        // Find exact match first, then partial matches
+        const exactMatch = postcodeResults.find(p => p.postcode === postcode);
+        const data = exactMatch || postcodeResults[0];
+        
+        // Set selected zone and calculate total price including services
+        setSelectedZone(data);
+        const basePrice = data.price;
+        const servicesPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
+        const totalPrice = basePrice + servicesPrice;
+        const roundedPrice = Math.round(totalPrice * 100) / 100;
+        setTotalPrice(roundedPrice);
+        
+        // Add to search history
+        const newEntry = {
+          timestamp: new Date(),
+          address: '', // No address anymore
+          postcode: postcode,
+          price: roundedPrice, // Use total price including services
+          place: data.place
+        };
+        
+        const updatedHistory = [newEntry, ...searchHistory];
+        setSearchHistory(updatedHistory);
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('budPriserSearchHistory', JSON.stringify(updatedHistory));
+        }
+      } else {
+        // Postcode not found in Excel file
+        setSelectedZone({
+          postcode: postcode,
+          place: 'Vi dekker ikke dette området',
+          price: 0,
+          zone: 'Ukjent'
+        });
+        setTotalPrice(0);
+        
+        // Add to search history with "not in our zone" message
+        const newEntry = {
+          timestamp: new Date(),
+          address: '', // No address anymore
+          postcode: postcode,
+          price: 0,
+          place: 'Vi dekker ikke dette området'
+        };
+        
+        const updatedHistory = [newEntry, ...searchHistory];
+        setSearchHistory(updatedHistory);
+        
+        if (typeof window !== 'undefined') {
+          localStorage.setItem('budPriserSearchHistory', JSON.stringify(updatedHistory));
+        }
       }
       
       setIsCalculating(false);
@@ -375,7 +386,7 @@ export default function BudPriserPage() {
       adHoc1: '', // Can be filled later if needed
       adHoc2: '', // Can be filled later if needed
       totalpris: totalPrice,
-      address: address,
+      address: '', // No address anymore
       postcode: postcode,
       place: selectedZone?.place || '',
       selectedServices: [...selectedServices]
@@ -460,15 +471,27 @@ export default function BudPriserPage() {
     }
   };
 
+  // Update total price when selected services change
+  useEffect(() => {
+    if (selectedZone && selectedZone.price > 0) {
+      const basePrice = selectedZone.price;
+      const servicesPrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
+      const totalPrice = basePrice + servicesPrice;
+      
+      // Fix JavaScript floating point precision issue
+      const roundedPrice = Math.round(totalPrice * 100) / 100;
+      setTotalPrice(roundedPrice);
+    }
+  }, [selectedServices, selectedZone]);
+
   // Close suggestions when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (addressInputRef.current && !addressInputRef.current.contains(event.target as Node)) {
-        setShowAddressSuggestions(false);
-      }
       if (serviceInputRef.current && !serviceInputRef.current.contains(event.target as Node)) {
         setShowServiceSuggestions(false);
       }
+      // Close postcode suggestions when clicking outside
+      setShowPostcodeSuggestions(false);
     };
 
     document.addEventListener('mousedown', handleClickOutside);
@@ -489,7 +512,7 @@ export default function BudPriserPage() {
           <div>
             <h1 className="page-title">🚚 BUD Priser</h1>
             <p className="page-subtitle">
-              Beregn leveringspriser basert på adresse og tjenester
+              Beregn leveringspriser basert på postkode og tjenester
             </p>
           </div>
         </div>
@@ -602,21 +625,21 @@ export default function BudPriserPage() {
           <div style={{ background: 'white', borderRadius: '0.5rem', border: '1px solid var(--gray-200)', marginBottom: '1.5rem' }}>
             <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--gray-200)' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--gray-900)' }}>Søkefelt</h3>
-              <p style={{ color: 'var(--gray-600)', fontSize: '0.875rem' }}>Fyll ut adresse og eventuelle ekstra tjenester</p>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.875rem' }}>Skriv inn postkode og eventuelle ekstra tjenester</p>
             </div>
             <div style={{ padding: '1.5rem' }}>
               <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1.5rem' }}>
-                {/* Address Search */}
+                {/* Postcode Input */}
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.5rem', color: 'var(--gray-700)' }}>
-                    📍 Adresse
+                    📮 Postkode
                   </label>
-                  <div style={{ position: 'relative' }} ref={addressInputRef}>
+                  <div style={{ position: 'relative' }}>
                     <input
                       type="text"
-                      value={address}
-                      onChange={handleAddressChange}
-                      placeholder="Skriv adresse (min 2 bokstaver)..."
+                      value={postcode}
+                      onChange={handlePostcodeChange}
+                      placeholder="Skriv postkode (f.eks. 1475)..."
                       style={{
                         width: '100%',
                         padding: '0.5rem 0.75rem',
@@ -626,90 +649,107 @@ export default function BudPriserPage() {
                       }}
                     />
                     
-                    {isLoading && (
-                      <div style={{ position: 'absolute', right: '0.75rem', top: '0.5rem' }}>
-                        <div style={{ width: '16px', height: '16px', border: '2px solid var(--primary)', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }}></div>
-                      </div>
-                    )}
-                    
-                    {/* Address Suggestions */}
-                    {showAddressSuggestions && addressSuggestions.length > 0 && (
-                      <div style={{ position: 'absolute', zIndex: 20, width: '100%', marginTop: '0.25rem', background: 'white', border: '1px solid var(--gray-300)', borderRadius: '0.375rem', boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', maxHeight: '12rem', overflow: 'auto' }}>
-                        {addressSuggestions.map((suggestion, index) => (
+                    {/* Postcode Suggestions */}
+                    {showPostcodeSuggestions && postcodeSuggestions.length > 0 && (
+                      <div style={{ 
+                        position: 'absolute', 
+                        zIndex: 20, 
+                        width: '100%', 
+                        marginTop: '0.25rem', 
+                        background: 'white', 
+                        border: '1px solid var(--gray-300)', 
+                        borderRadius: '0.375rem', 
+                        boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)', 
+                        maxHeight: '12rem', 
+                        overflow: 'auto' 
+                      }}>
+                        {postcodeSuggestions.map((postcodeData, index) => (
                           <div
-                            key={index}
-                            onClick={() => selectAddress(suggestion)}
-                            style={{ padding: '0.75rem', cursor: 'pointer', borderBottom: '1px solid var(--gray-100)', transition: 'background-color 0.15s' }}
+                            key={`${postcodeData.postcode}-${index}`}
+                            onClick={() => {
+                              handlePostcodeSelect(postcodeData);
+                              setShowPostcodeSuggestions(false);
+                            }}
+                            style={{ 
+                              padding: '0.75rem', 
+                              cursor: 'pointer', 
+                              borderBottom: '1px solid var(--gray-100)', 
+                              transition: 'background-color 0.15s',
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center'
+                            }}
                             onMouseEnter={(e) => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'transparent'}
+                            onMouseLeave={(e) => e.currentTarget.style.backgroundColor = 'white'}
                           >
-                            <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--gray-900)' }}>
-                              {suggestion.display.split(',')[0]}
-                            </div>
-                            <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
-                              {suggestion.display.split(',').slice(1).join(', ')}
-                            </div>
-                            {suggestion.postcode && (
-                              <div style={{ fontSize: '0.75rem', color: 'var(--primary)', marginTop: '0.5rem', fontWeight: '500' }}>
-                                📮 {suggestion.postcode}
+                            <div>
+                              <div style={{ fontWeight: '500', color: 'var(--gray-900)' }}>
+                                {postcodeData.postcode} {postcodeData.place}
                               </div>
-                            )}
+                              <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
+                                {postcodeData.zone} - {postcodeData.price} kr
+                              </div>
+                            </div>
+                            <div style={{ 
+                              fontSize: '0.875rem', 
+                              fontWeight: '600', 
+                              color: 'var(--primary)' 
+                            }}>
+                              {postcodeData.price} kr
+                            </div>
                           </div>
                         ))}
                       </div>
                     )}
+                    
+                    {/* Clear button when postcode is entered */}
+                    {postcode && (
+                      <button
+                        onClick={() => {
+                          setPostcode('');
+                          setSelectedZone(null);
+                          setTotalPrice(0);
+                          setPostcodeSuggestions([]);
+                          setShowPostcodeSuggestions(false);
+                        }}
+                        style={{
+                          position: 'absolute',
+                          right: '0.5rem',
+                          top: '50%',
+                          transform: 'translateY(-50%)',
+                          background: 'none',
+                          border: 'none',
+                          color: '#dc2626',
+                          cursor: 'pointer',
+                          fontSize: '1rem',
+                          padding: '0',
+                          width: '20px',
+                          height: '20px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center'
+                        }}
+                        title="Fjern postkode"
+                      >
+                        ×
+                      </button>
+                    )}
                   </div>
                   
-                  {/* Postcode Display */}
-                  {postcode && (
-                    <div style={{ marginTop: '0.5rem' }}>
-                      <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: 'var(--gray-700)' }}>
-                        📮 Postkode
-                      </label>
-                      <div style={{ position: 'relative' }}>
-                        <input
-                          type="text"
-                          value={postcode}
-                          onChange={(e) => setPostcode(e.target.value)}
-                          style={{
-                            width: '100%',
-                            padding: '0.5rem 0.75rem',
-                            paddingRight: '2.5rem',
-                            border: '1px solid var(--gray-300)',
-                            borderRadius: '0.375rem',
-                            background: '#f9fafb',
-                            fontSize: '0.875rem'
-                          }}
-                          readOnly
-                        />
-                        <button
-                          onClick={() => {
-                            setPostcode('');
-                            setSelectedZone(null);
-                            setTotalPrice(0);
-                          }}
-                          style={{
-                            position: 'absolute',
-                            right: '0.5rem',
-                            top: '50%',
-                            transform: 'translateY(-50%)',
-                            background: 'none',
-                            border: 'none',
-                            color: '#dc2626',
-                            cursor: 'pointer',
-                            fontSize: '1rem',
-                            padding: '0',
-                            width: '20px',
-                            height: '20px',
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center'
-                          }}
-                          title="Fjern postkode"
-                        >
-                          ×
-                        </button>
-                      </div>
+                  {/* Red message for unknown postcodes */}
+                  {selectedZone && selectedZone.place === 'Vi dekker ikke dette området' && (
+                    <div style={{ 
+                      marginTop: '0.5rem', 
+                      padding: '0.5rem', 
+                      background: '#fef2f2', 
+                      border: '1px solid #fecaca', 
+                      borderRadius: '0.375rem',
+                      color: '#dc2626',
+                      fontSize: '0.875rem',
+                      fontWeight: '500',
+                      textAlign: 'center'
+                    }}>
+                      ⚠️ Vi dekker ikke dette området
                     </div>
                   )}
                 </div>
@@ -817,7 +857,7 @@ export default function BudPriserPage() {
           <div style={{ background: 'white', borderRadius: '0.5rem', border: '1px solid var(--gray-200)', marginBottom: '1.5rem' }}>
             <div style={{ padding: '1.5rem', borderBottom: '1px solid var(--gray-200)' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--gray-900)' }}>Beregning</h3>
-              <p style={{ color: 'var(--gray-600)', fontSize: '0.875rem' }}>Beregn totalpris basert på valgt adresse og tjenester</p>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.875rem' }}>Beregn totalpris basert på valgt postkode og tjenester</p>
             </div>
             <div style={{ padding: '1.5rem', textAlign: 'center' }}>
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
@@ -897,7 +937,7 @@ export default function BudPriserPage() {
               
               {totalPrice === 0 && (
                 <div style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>
-                  Velg en adresse og klikk "BEREGN PRIS"
+                  Skriv inn postkode og klikk "BEREGN PRIS"
                 </div>
               )}
             </div>
@@ -942,14 +982,14 @@ export default function BudPriserPage() {
                 <div style={{ textAlign: 'center', color: 'var(--gray-500)', padding: '3rem 1.5rem' }}>
                   <div style={{ fontSize: '4rem', marginBottom: '1rem' }}>📊</div>
                   <div style={{ fontSize: '1.125rem', fontWeight: '500' }}>Ingen søkeresultater ennå</div>
-                  <div style={{ fontSize: '0.875rem' }}>Start med å søke etter en adresse i søkefanen</div>
+                  <div style={{ fontSize: '0.875rem' }}>Start med å søke etter en postkode i søkefanen</div>
                 </div>
               ) : (
                 <div style={{ overflowX: 'auto' }}>
                   {/* Excel-style Table Header */}
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: '1rem', padding: '0.75rem', background: '#f8fafc', borderBottom: '1px solid var(--gray-200)', fontWeight: '500', fontSize: '0.875rem', color: 'var(--gray-700)' }}>
                     <div>📅 Dato/Tid</div>
-                    <div>📍 Adresse</div>
+                    <div>📮 Type</div>
                     <div>📮 Postkode</div>
                     <div>🏘️ Sted</div>
                     <div>💰 Pris (kr)</div>
@@ -983,8 +1023,8 @@ export default function BudPriserPage() {
                             })}
                           </div>
                         </div>
-                        <div style={{ fontSize: '0.875rem', color: 'var(--gray-800)', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }} title={entry.address}>
-                          {entry.address}
+                        <div style={{ fontSize: '0.875rem', color: 'var(--gray-800)', fontWeight: '500', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          📮 Postkode
                         </div>
                         <div style={{ fontSize: '0.875rem', color: 'var(--primary)', fontWeight: '600' }}>
                           {entry.postcode}
@@ -1212,7 +1252,6 @@ export default function BudPriserPage() {
                   Oppdrag Detaljer:
                 </div>
                 <div style={{ fontSize: '0.75rem', color: '#0369a1' }}>
-                  📍 Adresse: {address}<br/>
                   📮 Postkode: {postcode} - {selectedZone?.place}<br/>
                   💰 Totalpris: {totalPrice.toFixed(2)} kr<br/>
                   {selectedServices.length > 0 && (
@@ -1228,14 +1267,13 @@ export default function BudPriserPage() {
               <div style={{ display: 'grid', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: 'var(--gray-700)' }}>
-                    🚛 Bilnummer *
+                    🚛 Bilnummer
                   </label>
                   <div style={{ display: 'flex', gap: '0.5rem' }}>
                     <input
                       type="text"
                       value={registrationForm.bilnummer}
                       onChange={(e) => setRegistrationForm(prev => ({ ...prev, bilnummer: e.target.value }))}
-                      required
                       style={{
                         flex: 1,
                         padding: '0.5rem 0.75rem',
@@ -1243,9 +1281,9 @@ export default function BudPriserPage() {
                         borderRadius: '0.375rem',
                         fontSize: '0.875rem'
                       }}
-                      placeholder="F.eks. NO_O_M0001"
+                      placeholder="NO_O_M0001"
                       pattern="NO_O_M[0-9]{4}"
-                      title="Format: NO_O_M + 4 siffer (f.eks. NO_O_M0001)"
+                      title="Format: NO_O_M + 4 siffer"
                     />
                     <button
                       type="button"
@@ -1270,13 +1308,12 @@ export default function BudPriserPage() {
                 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: 'var(--gray-700)' }}>
-                    📅 Kjøredato *
+                    📅 Kjøredato
                   </label>
                   <input
                     type="date"
                     value={registrationForm.kjoredato}
                     onChange={(e) => setRegistrationForm(prev => ({ ...prev, kjoredato: e.target.value }))}
-                    required
                     style={{
                       width: '100%',
                       padding: '0.5rem 0.75rem',
@@ -1289,13 +1326,12 @@ export default function BudPriserPage() {
                 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: 'var(--gray-700)' }}>
-                    📋 Freight Order *
+                    📋 Freight Order
                   </label>
                   <input
                     type="text"
                     value={registrationForm.freightOrder}
                     onChange={(e) => setRegistrationForm(prev => ({ ...prev, freightOrder: e.target.value }))}
-                    required
                     style={{
                       width: '100%',
                       padding: '0.5rem 0.75rem',
@@ -1303,19 +1339,18 @@ export default function BudPriserPage() {
                       borderRadius: '0.375rem',
                       fontSize: '0.875rem'
                     }}
-                    placeholder="F.eks. FO-2024-001"
+                    placeholder="6100"
                   />
                 </div>
                 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: 'var(--gray-700)' }}>
-                    📦 Freight Unit *
+                    📦 Freight Unit
                   </label>
                   <input
                     type="text"
                     value={registrationForm.freightUnit}
                     onChange={(e) => setRegistrationForm(prev => ({ ...prev, freightUnit: e.target.value }))}
-                    required
                     style={{
                       width: '100%',
                       padding: '0.5rem 0.75rem',
@@ -1323,13 +1358,13 @@ export default function BudPriserPage() {
                       borderRadius: '0.375rem',
                       fontSize: '0.875rem'
                     }}
-                    placeholder="F.eks. FU-001"
+                    placeholder="41/4200"
                   />
                 </div>
                 
                 <div>
                   <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', marginBottom: '0.25rem', color: 'var(--gray-700)' }}>
-                    🔢 SO-nummer + Kommentarer *
+                    🔢 SO-nummer + Kommentarer
                   </label>
                   <textarea
                     value={`${registrationForm.soNummer}${registrationForm.kommentarer ? ` - ${registrationForm.kommentarer}` : ''}`}
@@ -1351,7 +1386,6 @@ export default function BudPriserPage() {
                         }));
                       }
                     }}
-                    required
                     style={{
                       width: '100%',
                       padding: '0.5rem 0.75rem',
@@ -1361,11 +1395,9 @@ export default function BudPriserPage() {
                       minHeight: '80px',
                       resize: 'vertical'
                     }}
-                    placeholder="F.eks. SO-2024-001 - Eventuelle kommentarer om oppdraget..."
+                    placeholder="SO-2024-001 - Eventuelle kommentarer om oppdraget..."
                   />
-                  <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
-                    💡 Skriv SO-nummeret først, deretter " - " og eventuelle kommentarer
-                  </div>
+
                 </div>
               </div>
               

@@ -42,16 +42,25 @@ export default function NotificationBell() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  // Reset notifications when userProfile changes
+  useEffect(() => {
+    if (!userProfile?.companyId) {
+      setNotifications([]);
+      setUnreadCount(0);
+    }
+  }, [userProfile?.companyId]);
+
   const loadNotifications = useCallback(async () => {
     try {
       if (!db) {
-        console.error('Firebase not initialized');
+        console.log('NotificationBell: Firebase not initialized');
         return () => {};
       }
 
-      if (!user?.uid || !userProfile?.companyName) {
-        console.error('User or company not found');
+      if (!user?.uid || !userProfile?.companyId) {
+        console.log('NotificationBell: User or company not found - user:', !!user?.uid, 'companyId:', !!userProfile?.companyId);
         setNotifications([]);
+        setUnreadCount(0);
         return () => {};
       }
 
@@ -59,7 +68,7 @@ export default function NotificationBell() {
       const notificationsQuery = query(
         collection(db, 'notifications'),
         where('userId', '==', user.uid),
-        where('companyId', '==', userProfile.companyName)
+        where('companyId', '==', userProfile.companyId)
       );
       
       const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
@@ -109,7 +118,7 @@ export default function NotificationBell() {
               readAt,
               archivedAt,
               metadata: data.metadata || {},
-              companyId: userProfile.companyName || '' // Add company isolation
+              companyId: userProfile.companyId || '' // Add company isolation
             };
             
             notificationsData.push(notification);
@@ -124,15 +133,19 @@ export default function NotificationBell() {
         const unreadNotifications = notificationsData.filter(n => n.status === 'unread');
         setUnreadCount(unreadNotifications.length);
       }, (error) => {
-        console.error('Error loading notifications:', error);
+        console.log('NotificationBell: Error loading notifications:', error);
+        setNotifications([]);
+        setUnreadCount(0);
       });
 
       return unsubscribe;
     } catch (error) {
-      console.error('Error setting up notifications listener:', error);
+      console.log('NotificationBell: Error setting up notifications listener:', error);
+      setNotifications([]);
+      setUnreadCount(0);
       return () => {};
     }
-  }, [user?.uid, userProfile?.companyName]);
+  }, [user?.uid, userProfile?.companyId]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!db) return;

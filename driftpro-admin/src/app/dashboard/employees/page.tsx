@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
+import { sveveSMS } from '@/lib/sveve-sms-service';
 // import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 import { UserPlus, Search, Filter, Edit, Trash2, Plus, MoreHorizontal, User, Building, MapPin, CheckCircle, Eye, Settings, Key, UserX, UserCheck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 
@@ -303,9 +304,31 @@ export default function EmployeesPage() {
         loadEmployees();
       }, 1000);
       
+      // Send welcome SMS if phone number is provided
+      let smsSent = false;
+      if (newEmployee.phone && sveveSMS.validatePhoneNumber(newEmployee.phone)) {
+        try {
+          const departmentName = getDepartmentName(newEmployee.departmentId);
+          const companyName = userProfile?.companyName || 'Bedrift';
+          
+          await sveveSMS.sendEmployeeWelcome(
+            newEmployee.phone,
+            newEmployee.displayName,
+            companyName,
+            `${window.location.origin}/login`
+          );
+          smsSent = true;
+          console.log('Welcome SMS sent successfully to:', newEmployee.phone);
+        } catch (smsError) {
+          console.error('Error sending welcome SMS:', smsError);
+          smsSent = false;
+          // Don't fail the employee creation if SMS fails
+        }
+      }
+
       const message = emailSent 
-        ? `Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}`
-        : `Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email} - sjekk e-postinnstillinger.`;
+        ? `Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}${smsSent ? ', Velkomst-SMS sendt' : ''}`
+        : `Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email} - sjekk e-postinnstillinger.${smsSent ? ' Velkomst-SMS sendt.' : ''}`;
       alert(message);
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -359,8 +382,28 @@ export default function EmployeesPage() {
     }
 
     try {
-      // TODO: Implement password reset functionality
-      alert('Passord tilbakestillt! En e-post med nytt passord er sendt til ansatten.');
+      if (!selectedEmployee) return;
+
+      // Generate random password reset code
+      const resetCode = Math.random().toString(36).substring(2, 8).toUpperCase();
+      
+      // Send SMS with reset code if phone number exists
+      if (selectedEmployee.phone && sveveSMS.validatePhoneNumber(selectedEmployee.phone)) {
+        try {
+          await sveveSMS.sendPasswordResetCode(
+            selectedEmployee.phone,
+            selectedEmployee.displayName,
+            resetCode
+          );
+          alert(`Passord-tilbakestillingskode sendt via SMS til ${selectedEmployee.phone}: ${resetCode}`);
+        } catch (smsError) {
+          console.error('Error sending SMS reset code:', smsError);
+          alert('Kunne ikke sende SMS-kode. Prøv e-post i stedet.');
+        }
+      } else {
+        // TODO: Implement email password reset functionality
+        alert('Passord tilbakestillt! En e-post med nytt passord er sendt til ansatten.');
+      }
     } catch (error) {
       console.error('Error resetting password:', error);
       alert(`Feil ved tilbakestilling av passord: ${error instanceof Error ? error.message : 'Ukjent feil'}`);

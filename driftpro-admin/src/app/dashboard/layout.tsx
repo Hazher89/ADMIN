@@ -221,6 +221,12 @@ export default function DashboardLayout({
       icon: <Handshake size={20} />,
       category: 'management'
     },
+    {
+      name: 'Partner Portal',
+      href: '/partner-login',
+      icon: <Globe size={20} />,
+      category: 'management'
+    },
     
     // Settings (available for all companies)
     {
@@ -383,7 +389,7 @@ export default function DashboardLayout({
           height: '100vh',
           zIndex: 1000,
           transition: 'all var(--transition-normal)',
-          overflowY: 'auto',
+          overflowY: 'hidden',
           overflowX: 'hidden',
           transform: isMobile && !sidebarOpen ? 'translateX(-100%)' : 'translateX(0)'
         }}
@@ -421,7 +427,9 @@ export default function DashboardLayout({
           flexDirection: 'column', 
           gap: '0.5rem', 
           width: '100%',
-          minHeight: 0
+          minHeight: 0,
+          overflowY: 'auto',
+          paddingBottom: '1rem'
         }}>
           {Object.entries(groupedItems).map(([category, items]) => (
             <div key={category} style={{ width: '100%' }}>
@@ -543,7 +551,10 @@ export default function DashboardLayout({
           width: '100%',
           padding: isMobile ? '1rem 0' : '0',
           borderTop: isMobile ? '1px solid var(--gray-800)' : 'none',
-          marginTop: 'auto'
+          marginTop: '2rem',
+          flexShrink: 0,
+          position: 'relative',
+          zIndex: 10
         }}>
           <button
             onClick={handleLogout}
@@ -560,7 +571,9 @@ export default function DashboardLayout({
               cursor: 'pointer',
               transition: 'all var(--transition-normal)',
               padding: isMobile ? '0 1rem' : '0',
-              gap: isMobile ? '0.75rem' : '0'
+              gap: isMobile ? '0.75rem' : '0',
+              position: 'relative',
+              zIndex: 11
             }}
             onMouseEnter={() => {
               if (!isMobile) {
