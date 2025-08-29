@@ -40,8 +40,15 @@ interface SharedDocument extends Omit<PartnerDocument, 'id' | 'partnerId' | 'par
 
 export default function PartnerDashboardPage() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const companyName = searchParams.get('company');
+  
+  // Wrap useSearchParams in a component to avoid build issues
+  const [companyName, setCompanyName] = useState<string | null>(null);
+  
+  useEffect(() => {
+    // Get company name from URL params on client side
+    const urlParams = new URLSearchParams(window.location.search);
+    setCompanyName(urlParams.get('company'));
+  }, []);
   
   const [partnerSession, setPartnerSession] = useState<any>(null);
   const [assignments, setAssignments] = useState<PartnerAssignment[]>([]);
