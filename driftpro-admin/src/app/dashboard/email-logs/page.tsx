@@ -88,9 +88,6 @@ interface EmailSettings {
 export default function EmailLogsPage() {
   const { userProfile } = useAuth();
   
-  // Debug logging
-  console.log('EmailLogsPage: userProfile:', userProfile);
-  
   const [activeTab, setActiveTab] = useState('logs');
   const [emailLogs, setEmailLogs] = useState<EmailLog[]>([]);
   const [loading, setLoading] = useState(false);
@@ -344,7 +341,6 @@ export default function EmailLogsPage() {
         
         if (result.success) {
           setMessage('✅ SMTP-test fullført! Se detaljer i konsollen.');
-          console.log('SMTP Test Results:', result);
         } else {
           let errorMessage = 'Ukjent feil';
           
@@ -363,7 +359,6 @@ export default function EmailLogsPage() {
           }
           
           setMessage(`❌ SMTP-test feilet: ${errorMessage}`);
-          console.log('SMTP Test Details:', result);
         }
       } else {
         const error = await response.json();
@@ -381,23 +376,18 @@ export default function EmailLogsPage() {
     setSmtpLoginResult(null);
 
     try {
-      console.log('🔐 Performing SMTP login...');
-
       // Step 1: Validate configuration
-      console.log('Step 1: Validating configuration...');
       if (!settings.smtpHost || !settings.smtpUser || !smtpPassword) {
         throw new Error('Manglende SMTP-innstillinger: Host, bruker eller passord mangler');
       }
 
       // Step 2: Test Firebase connection
-      console.log('Step 2: Testing Firebase connection...');
       const firebaseTest = await fetch('/api/email-settings?includePassword=true');
       if (!firebaseTest.ok) {
         throw new Error('Firebase-tilkobling feilet - kan ikke hente innstillinger');
       }
 
       // Step 3: Test SMTP connection with detailed verification
-      console.log('Step 3: Testing SMTP connection...');
       const smtpTest = await fetch('/api/smtp-login-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -429,7 +419,6 @@ export default function EmailLogsPage() {
       }
 
       // Step 4: Test email sending
-      console.log('Step 4: Testing email sending...');
       const emailTest = await fetch('/api/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -571,8 +560,6 @@ ${detailedError}`,
     setSmtpLoginResult(null);
 
     try {
-      console.log('🔐 Testing alternative SMTP configuration...');
-      
       const smtpTest = await fetch('/api/smtp-login-test', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

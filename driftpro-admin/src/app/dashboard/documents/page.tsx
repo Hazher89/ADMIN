@@ -79,7 +79,6 @@ export default function DocumentsPage() {
 
   const loadData = async () => {
     if (!userProfile?.companyId) {
-      console.log('DocumentsPage: No companyId available, skipping data load');
       setLoading(false);
       return;
     }
@@ -87,10 +86,8 @@ export default function DocumentsPage() {
     try {
       setLoading(true);
       setError(null);
-      console.log('DocumentsPage: Loading documents for companyId:', userProfile.companyId);
       const data = await firebaseService.getDocuments(userProfile.companyId);
       setDocuments(data);
-      console.log('DocumentsPage: Loaded documents:', data.length);
     } catch (error) {
       console.error('Error loading documents:', error);
       setError('Feil ved lasting av dokumenter: ' + (error instanceof Error ? error.message : 'Ukjent feil'));

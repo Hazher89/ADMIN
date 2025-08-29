@@ -51,40 +51,24 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
 
-  // Debug logging for state changes
-  useEffect(() => {
-    console.log('AuthContext: State changed - user:', user);
-    console.log('AuthContext: State changed - userProfile:', userProfile);
-    console.log('AuthContext: State changed - loading:', loading);
-  }, [user, userProfile, loading]);
+
 
   useEffect(() => {
-    console.log('AuthContext useEffect triggered');
-    console.log('Window check:', typeof window !== 'undefined');
-    console.log('Auth check:', !!auth);
-    console.log('DB check:', !!db);
-    
     // Only run on client side and if Firebase is available
     if (typeof window === 'undefined' || !auth) {
-      console.log('AuthContext: Skipping initialization - window or auth not available');
       setLoading(false);
       return;
     }
 
-    console.log('AuthContext: Setting up auth state listener');
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      console.log('AuthContext: Auth state changed, user:', user);
       setUser(user);
       
       if (user && db) {
-        console.log('AuthContext: User and DB available, fetching profile');
         // Fetch user profile from Firestore
         try {
           const userDoc = await getDoc(doc(db, 'users', user.uid));
-          console.log('AuthContext: User doc exists:', userDoc.exists());
           if (userDoc.exists()) {
             const data = userDoc.data();
-            console.log('AuthContext: User data from Firestore:', data);
             const userProfile: UserProfile = {
               id: user.uid,
               displayName: data.displayName || user.displayName || 'Ny bruker',
@@ -101,7 +85,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               companyName: data.companyName || undefined, // Add company information
               companyId: data.companyId || undefined
             };
-            console.log('AuthContext: Created userProfile:', userProfile);
             setUserProfile(userProfile);
           } else {
             // Create default profile if it doesn't exist
@@ -143,74 +126,38 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!db) throw new Error('Database ikke tilgjengelig.');
     
     try {
-      console.log('🔒 PRE-LOGIN VALIDATION: Starting validation for companyId:', companyId);
-      console.log('🔒 PRE-LOGIN VALIDATION: User email:', email);
-      
       // FIRST: Check if user exists and validate company access BEFORE authentication
       const usersQuery = query(collection(db, 'users'), where('email', '==', email));
       const userSnapshot = await getDocs(usersQuery);
       
       if (userSnapshot.empty) {
-        console.error('🚨 PRE-LOGIN GDPR VIOLATION: User not found in database:', email);
         throw new Error('Bruker ikke funnet. Kontakt administrator.');
       }
       
       const userDoc = userSnapshot.docs[0];
       const userData = userDoc.data();
       
-      console.log('🔒 PRE-LOGIN VALIDATION: User data found:', userData);
-      console.log('🔒 PRE-LOGIN VALIDATION: User companyId:', userData.companyId);
-      console.log('🔒 PRE-LOGIN VALIDATION: Expected companyId:', companyId);
-      console.log('🔒 PRE-LOGIN VALIDATION: CompanyId match:', userData.companyId === companyId);
-      console.log('🔒 PRE-LOGIN VALIDATION: User status:', userData.status);
-      console.log('🔒 PRE-LOGIN VALIDATION: User has UID:', !!userData.uid);
-      console.log('🔒 PRE-LOGIN VALIDATION: User UID value:', userData.uid);
-      console.log('🔒 PRE-LOGIN VALIDATION: User UID type:', typeof userData.uid);
-      
       // Check if user has a companyId
       if (!userData.companyId) {
-        console.error('🚨 PRE-LOGIN GDPR VIOLATION: User has no companyId:', email);
         throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
       }
       
       // Check if user belongs to the selected company
       if (userData.companyId !== companyId) {
-        console.error('🚨 PRE-LOGIN GDPR VIOLATION: User companyId mismatch:', {
-          userEmail: email,
-          userCompanyId: userData.companyId,
-          requestedCompanyId: companyId
-        });
         throw new Error(`Sikkerhetsbrudd: Du har ikke tilgang til ${companyId}. Du blir logget ut umiddelbart.`);
       }
       
       // Check if user has been set up with Firebase Authentication
       if (!userData.uid) {
-        console.error('🚨 PRE-LOGIN SETUP ERROR: User missing Firebase UID:', {
-          userEmail: email,
-          hasUid: !!userData.uid,
-          status: userData.status,
-          companyId: userData.companyId
-        });
         throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
       }
       
       if (userData.status !== 'active') {
-        console.error('🚨 PRE-LOGIN SETUP ERROR: User status not active:', {
-          userEmail: email,
-          hasUid: !!userData.uid,
-          status: userData.status,
-          companyId: userData.companyId
-        });
         throw new Error(`Brukeren er ikke aktivert (status: ${userData.status || 'unknown'}). Kontakt administrator for å få nytt passord.`);
       }
       
-      console.log('✅ PRE-LOGIN VALIDATION: User access validated - proceeding with authentication');
-      
       // ONLY NOW: Proceed with Firebase authentication
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      
-      console.log('✅ AUTHENTICATION SUCCESS: User authenticated successfully');
-      console.log('✅ GDPR VALIDATION: User access granted for companyId:', companyId);
       
     } catch (error: unknown) {
       console.error('🚨 LOGIN ERROR:', error);

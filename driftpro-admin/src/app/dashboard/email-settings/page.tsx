@@ -78,7 +78,6 @@ export default function EmailSettingsPage() {
 
       if (response.ok) {
         const data = await response.json();
-        console.log('Email settings saved:', data);
         alert('E-post-innstillinger lagret!');
       } else {
         const error = await response.json();

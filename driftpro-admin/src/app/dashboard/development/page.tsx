@@ -351,8 +351,6 @@ export async function fixUsersWithoutCompanyId() {
     const usersQuery = query(collection(db, 'users'), where('companyId', '==', null));
     const snapshot = await getDocs(usersQuery);
     
-    console.log('Found', snapshot.size, 'users without companyId');
-    
     // Update each user with a default companyId (you need to specify which company)
     const defaultCompanyId = 'YOUR_DEFAULT_COMPANY_ID'; // Replace with actual company ID
     
@@ -361,10 +359,7 @@ export async function fixUsersWithoutCompanyId() {
         companyId: defaultCompanyId,
         updatedAt: new Date().toISOString()
       });
-      console.log('Updated user:', userDoc.id);
     }
-    
-    console.log('All users updated successfully');
   } catch (error) {
     console.error('Error fixing users:', error);
   }
@@ -400,14 +395,11 @@ export async function fixBaxigshtiCompany() {
     const snapshot = await getDocs(usersQuery);
     
     if (snapshot.empty) {
-      console.log('baxigshti@hotmail.de not found in users collection');
       return;
     }
     
     const userDoc = snapshot.docs[0];
     const userData = userDoc.data();
-    
-    console.log('Found baxigshti@hotmail.de:', userData);
     
     // Update to DriftPro company only
     // You need to replace 'DRIFTPRO_COMPANY_ID' with the actual DriftPro company ID
@@ -418,9 +410,6 @@ export async function fixBaxigshtiCompany() {
       role: 'admin',
       updatedAt: new Date().toISOString()
     });
-    
-    console.log('✅ baxigshti@hotmail.de updated to DriftPro company only');
-    console.log('✅ User role set to admin');
     
   } catch (error) {
     console.error('Error fixing baxigshti company:', error);
@@ -528,7 +517,6 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const createFile = async (fileName: string, content: string) => {
     try {
       // In a real implementation, this would create the file in the project
-      console.log('Creating file:', fileName, content);
       alert(`File ${fileName} would be created in the project`);
     } catch (error) {
       console.error('Error creating file:', error);

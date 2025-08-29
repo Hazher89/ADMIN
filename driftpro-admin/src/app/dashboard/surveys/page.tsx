@@ -102,7 +102,6 @@ export default function SurveysPage() {
       };
 
       const surveyId = await firebaseService.createSurvey(surveyData);
-      console.log('Survey created with ID:', surveyId);
 
       setShowAddModal(false);
       setNewSurvey({

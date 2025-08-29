@@ -120,7 +120,6 @@ interface PartnerAssignment {
 
 export default function PartnersPage() {
   const { userProfile } = useAuth();
-  console.log('PartnersPage rendered - userProfile:', userProfile);
   
   const [partners, setPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -339,20 +338,14 @@ export default function PartnersPage() {
   };
 
   const loadPartners = async () => {
-    console.log('loadPartners called - userProfile:', userProfile);
-    console.log('loadPartners called - companyId:', userProfile?.companyId);
-    
     if (!userProfile?.companyId) {
-      console.log('No companyId found, setting loading to false');
       setLoading(false);
       return;
     }
 
     try {
-      console.log('Loading partners for companyId:', userProfile.companyId);
       setError(null);
       const partnersData = await firebaseService.getPartners(userProfile.companyId);
-      console.log('Partners loaded:', partnersData);
       setPartners(partnersData);
     } catch (error) {
       console.error('Error loading partners:', error);
@@ -602,7 +595,6 @@ export default function PartnersPage() {
 
           if (response.ok) {
             const result = await response.json();
-            console.log('✅ Welcome SMS sent successfully:', result);
           } else {
             console.error('❌ Failed to send welcome SMS:', response.status);
           }
@@ -732,7 +724,6 @@ export default function PartnersPage() {
   }, []);
 
   useEffect(() => {
-    console.log('useEffect triggered - userProfile?.companyId:', userProfile?.companyId);
     loadPartners();
     loadPartnerUsers();
   }, [userProfile?.companyId]);
@@ -817,10 +808,7 @@ export default function PartnersPage() {
     }).format(amount);
   };
 
-  console.log('PartnersPage render - loading:', loading, 'partners:', partners.length, 'userProfile:', !!userProfile);
-  
   if (loading) {
-    console.log('Showing loading spinner');
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '50vh' }}>
         <Loader2 style={{ width: '32px', height: '32px', animation: 'spin 1s linear infinite' }} />
@@ -837,11 +825,11 @@ export default function PartnersPage() {
           <h1 style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--gray-900)' }}>
             Samarbeidspartnere
           </h1>
-        </div>
+          </div>
         <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-lg)' }}>
           Administrer samarbeidspartnere og tildelte oppdrag
-        </p>
-      </div>
+            </p>
+          </div>
 
       {/* Debug Info */}
       <div style={{ 
@@ -856,7 +844,7 @@ export default function PartnersPage() {
         Partners: {partners.length}<br />
         UserProfile: {userProfile ? 'Loaded' : 'Not loaded'}<br />
         CompanyId: {userProfile?.companyId || 'None'}
-      </div>
+        </div>
 
       {/* Success/Error Messages */}
       {success && (
@@ -920,38 +908,38 @@ export default function PartnersPage() {
         marginBottom: '2rem',
         gap: '0'
       }}>
-        <button
-          onClick={() => setActiveTab('partners')}
-          style={{
-            padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'partners' ? '2px solid var(--primary)' : '2px solid transparent',
-            color: activeTab === 'partners' ? 'var(--primary)' : 'var(--gray-600)',
-            fontWeight: activeTab === 'partners' ? '600' : '500',
-            fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
-          }}
-        >
+            <button
+              onClick={() => setActiveTab('partners')}
+              style={{
+                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'partners' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'partners' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'partners' ? '600' : '500',
+                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
+              }}
+            >
           <Building style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
           Partnere
-        </button>
-        <button
-          onClick={() => setActiveTab('assignments')}
-          style={{
-            padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
-            border: 'none',
-            background: 'transparent',
-            cursor: 'pointer',
-            borderBottom: activeTab === 'assignments' ? '2px solid var(--primary)' : '2px solid transparent',
-            color: activeTab === 'assignments' ? 'var(--primary)' : 'var(--gray-600)',
-            fontWeight: activeTab === 'assignments' ? '600' : '500',
-            fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
-          }}
-        >
-          <Calendar style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
-          Tildelt oppdrag
-        </button>
+            </button>
+            <button
+              onClick={() => setActiveTab('assignments')}
+              style={{
+                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'assignments' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'assignments' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'assignments' ? '600' : '500',
+                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
+              }}
+            >
+              <Calendar style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              Tildelt oppdrag
+            </button>
         <button
           onClick={() => setActiveTab('users')}
           style={{
@@ -968,8 +956,8 @@ export default function PartnersPage() {
           <Users style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
           Brukere
         </button>
-      </div>
-
+        </div>
+        
       {/* Main Content */}
       {activeTab === 'partners' && (
         <div>
@@ -982,7 +970,7 @@ export default function PartnersPage() {
             flexWrap: 'wrap',
             gap: '1rem'
           }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flexWrap: 'wrap' }}>
               <span style={{
                 padding: '0.5rem 1rem',
                 background: 'var(--primary)',
@@ -991,8 +979,8 @@ export default function PartnersPage() {
                 fontSize: 'var(--font-size-sm)',
                 fontWeight: '600'
               }}>
-                {partners.length} partnere
-              </span>
+            {partners.length} partnere
+          </span>
               <span style={{
                 padding: '0.5rem 1rem',
                 background: 'var(--gray-100)',
@@ -1001,12 +989,12 @@ export default function PartnersPage() {
                 fontSize: 'var(--font-size-sm)',
                 fontWeight: '600'
               }}>
-                {formatCurrency(stats.totalRevenue)} omsetning
-              </span>
+            {formatCurrency(stats.totalRevenue)} omsetning
+          </span>
             </div>
             
-            <button 
-              onClick={() => setShowAddModal(true)}
+          <button 
+            onClick={() => setShowAddModal(true)}
               style={{
                 padding: '0.75rem 1.5rem',
                 background: 'var(--primary)',
@@ -1019,20 +1007,20 @@ export default function PartnersPage() {
                 gap: '0.5rem',
                 fontWeight: '600'
               }}
-            >
-              <Plus style={{ width: '16px', height: '16px' }} />
-              Legg til partner
-            </button>
-          </div>
+          >
+            <Plus style={{ width: '16px', height: '16px' }} />
+            Legg til partner
+          </button>
+      </div>
 
           {/* Partners Grid */}
           {filteredPartners.length === 0 ? (
-            <div style={{ 
+        <div style={{ 
               textAlign: 'center', 
               padding: '3rem', 
               color: 'var(--gray-500)',
               background: 'white',
-              borderRadius: 'var(--radius-lg)',
+          borderRadius: 'var(--radius-lg)', 
               border: '1px solid var(--gray-200)'
             }}>
               <Building style={{ width: '64px', height: '64px', margin: '0 auto 1rem', opacity: 0.5 }} />
@@ -1057,9 +1045,9 @@ export default function PartnersPage() {
                 <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
                 Legg til første partner
               </button>
-            </div>
+        </div>
           ) : (
-            <div style={{ 
+        <div style={{ 
               display: 'grid', 
               gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))',
               gap: '1.5rem'
@@ -1067,7 +1055,7 @@ export default function PartnersPage() {
               {filteredPartners.map((partner) => (
                 <div key={partner.id} style={{
                   background: 'white',
-                  borderRadius: 'var(--radius-lg)',
+          borderRadius: 'var(--radius-lg)', 
                   padding: '1.5rem',
                   border: '1px solid var(--gray-200)',
                   boxShadow: 'var(--shadow-sm)',
@@ -1085,15 +1073,15 @@ export default function PartnersPage() {
                       height: '48px',
                       borderRadius: '50%',
                       background: 'var(--gradient-primary)',
-                      display: 'flex',
-                      alignItems: 'center',
+          display: 'flex',
+          alignItems: 'center',
                       justifyContent: 'center',
                       color: 'white',
                       fontSize: '1.25rem',
                       fontWeight: '600'
-                    }}>
+        }}>
                       {partner.name.split(' ').map(n => n[0]).join('').toUpperCase()}
-                    </div>
+        </div>
                     <div>
                       <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)' }}>
                         {partner.name}
@@ -1119,7 +1107,7 @@ export default function PartnersPage() {
                     <span style={{ color: 'var(--gray-500)' }}>
                       {partner.projects} prosjekter
                     </span>
-                  </div>
+            </div>
                   
                   <div style={{ 
                     display: 'flex', 
@@ -1194,12 +1182,12 @@ export default function PartnersPage() {
                       <User style={{ width: '14px', height: '14px' }} />
                       Opprett bruker
                     </button>
-                  </div>
-                </div>
+            </div>
+            </div>
               ))}
             </div>
           )}
-        </div>
+          </div>
       )}
 
       {activeTab === 'assignments' && (
@@ -1214,7 +1202,7 @@ export default function PartnersPage() {
             gap: '1rem'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-              <select 
+              <select
                 value={calendarView}
                 onChange={(e) => setCalendarView(e.target.value as 'week' | 'month')}
                 style={{
@@ -1256,10 +1244,10 @@ export default function PartnersPage() {
                 >
                   ›
                 </button>
-              </div>
             </div>
-            
-            <button
+          </div>
+
+              <button 
               onClick={() => setShowAssignmentModal(true)}
               style={{
                 padding: '0.75rem 1.5rem',
@@ -1273,11 +1261,11 @@ export default function PartnersPage() {
                 gap: '0.5rem',
                 fontWeight: '600'
               }}
-            >
-              <Plus style={{ width: '16px', height: '16px' }} />
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
               Legg til oppdrag
-            </button>
-          </div>
+              </button>
+            </div>
 
           {/* Calendar Grid */}
           <div style={{ 
@@ -1297,12 +1285,12 @@ export default function PartnersPage() {
               borderBottom: '1px solid var(--gray-200)'
             }}>
               Samarbeidspartnere
-            </div>
+                    </div>
             {getWeekDays().map((day, index) => (
               <div key={index} style={{ 
                 background: 'var(--gray-50)', 
                 padding: '1rem', 
-                fontWeight: '600',
+                        fontWeight: '600', 
                 textAlign: 'center',
                 borderBottom: '1px solid var(--gray-200)',
                 cursor: 'pointer'
@@ -1400,11 +1388,11 @@ export default function PartnersPage() {
                         >
                           <div style={{ fontWeight: '600' }}>
                             {assignment.title}
-                          </div>
+                    </div>
                           <div style={{ fontSize: '0.7rem', opacity: 0.9 }}>
                             {assignment.startTime} - {assignment.endTime}
-                          </div>
-                        </div>
+                    </div>
+                    </div>
                       ))}
                     </div>
                   ))}
@@ -1412,8 +1400,8 @@ export default function PartnersPage() {
               ))
             )}
           </div>
-        </div>
-      )}
+                      </div>
+                    )}
 
       {activeTab === 'users' && (
         <div>
@@ -1446,8 +1434,8 @@ export default function PartnersPage() {
                 fontWeight: '600'
               }}>
                 {partners.length} partnere
-              </span>
-            </div>
+                      </span>
+                    </div>
             
             <button 
               onClick={() => {
@@ -1470,7 +1458,7 @@ export default function PartnersPage() {
               <Plus style={{ width: '16px', height: '16px' }} />
               Opprett bruker
             </button>
-          </div>
+                  </div>
 
           {/* Users Grid */}
           {partnerUsers.length === 0 ? (
@@ -1489,7 +1477,7 @@ export default function PartnersPage() {
               <p style={{ marginBottom: '1.5rem' }}>
                 Du har ikke opprettet noen partner-brukere ennå.
               </p>
-              <button 
+                    <button 
                 onClick={() => setShowCreateUserModal(true)}
                 style={{
                   padding: '0.75rem 1.5rem',
@@ -1503,7 +1491,7 @@ export default function PartnersPage() {
               >
                 <Plus style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
                 Opprett bruker
-              </button>
+                    </button>
             </div>
           ) : (
             <div style={{ 
@@ -1615,7 +1603,7 @@ export default function PartnersPage() {
                     borderTop: '1px solid var(--gray-100)',
                     paddingTop: '1rem'
                   }}>
-                    <button
+                    <button 
                       onClick={() => {
                         setSelectedUser(user);
                         setEditPartnerUser({
@@ -1643,12 +1631,12 @@ export default function PartnersPage() {
                       Rediger
                     </button>
                     
-                    <button
+                    <button 
                       onClick={() => {
                         setSelectedUser(user);
                         setShowResetPasswordModal(true);
                       }}
-                      style={{
+                      style={{ 
                         padding: '0.5rem 0.75rem',
                         background: 'var(--blue-100)',
                         color: 'var(--blue-700)',
@@ -1909,15 +1897,15 @@ export default function PartnersPage() {
 
       {/* Reset Password Modal */}
       {showResetPasswordModal && selectedUser && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
-          display: 'flex',
-          alignItems: 'center',
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          background: 'rgba(0, 0, 0, 0.5)', 
+          display: 'flex', 
+          alignItems: 'center', 
           justifyContent: 'center',
           zIndex: 1000
         }}>
@@ -2052,7 +2040,7 @@ export default function PartnersPage() {
               </h2>
               <button
                 onClick={() => setShowDetailModal(false)}
-                style={{
+                style={{ 
                   background: 'none',
                   border: 'none',
                   cursor: 'pointer',
@@ -2200,9 +2188,9 @@ export default function PartnersPage() {
                     border: '1px solid var(--gray-300)',
                     borderRadius: 'var(--radius-lg)',
                     background: 'white',
-                    cursor: 'pointer'
-                  }}
-                >
+                  cursor: 'pointer'
+                }}
+              >
                   Lukk
                 </button>
               </div>
@@ -2261,11 +2249,11 @@ export default function PartnersPage() {
                   value={newPartnerUser.fullName}
                   onChange={(e) => setNewPartnerUser({...newPartnerUser, fullName: e.target.value})}
                   placeholder="Skriv fullt navn"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-lg)',
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    border: '1px solid var(--gray-300)', 
+                    borderRadius: 'var(--radius-lg)', 
                     outline: 'none'
                   }}
                 />
@@ -2280,11 +2268,11 @@ export default function PartnersPage() {
                   value={newPartnerUser.email}
                   onChange={(e) => setNewPartnerUser({...newPartnerUser, email: e.target.value})}
                   placeholder="bruker@email.com"
-                  style={{
-                    width: '100%',
-                    padding: '0.75rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-lg)',
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    border: '1px solid var(--gray-300)', 
+                    borderRadius: 'var(--radius-lg)', 
                     outline: 'none'
                   }}
                 />
@@ -2550,11 +2538,11 @@ export default function PartnersPage() {
                   <select
                     value={newPartner.type}
                     onChange={(e) => setNewPartner({...newPartner, type: e.target.value as any})}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid var(--gray-300)',
-                      borderRadius: 'var(--radius-lg)',
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.75rem', 
+                      border: '1px solid var(--gray-300)', 
+                      borderRadius: 'var(--radius-lg)', 
                       outline: 'none'
                     }}
                   >
@@ -2574,33 +2562,33 @@ export default function PartnersPage() {
                     value={newPartner.orgNumber}
                     onChange={(e) => setNewPartner({...newPartner, orgNumber: e.target.value})}
                     placeholder="123 456 789"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid var(--gray-300)',
-                      borderRadius: 'var(--radius-lg)',
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.75rem', 
+                      border: '1px solid var(--gray-300)', 
+                      borderRadius: 'var(--radius-lg)', 
                       outline: 'none'
                     }}
                   />
-                </div>
+              </div>
 
-                <div>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                     MVA-nummer
-                  </label>
-                  <input
-                    type="text"
+                </label>
+                <input
+                  type="text"
                     value={newPartner.vatNumber}
                     onChange={(e) => setNewPartner({...newPartner, vatNumber: e.target.value})}
                     placeholder="MVA 123 456 789"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid var(--gray-300)',
-                      borderRadius: 'var(--radius-lg)',
-                      outline: 'none'
-                    }}
-                  />
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    border: '1px solid var(--gray-300)', 
+                    borderRadius: 'var(--radius-lg)', 
+                    outline: 'none'
+                  }}
+                />
                 </div>
               </div>
 
@@ -2634,66 +2622,66 @@ export default function PartnersPage() {
                   <div>
                     <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                       Navn
-                    </label>
-                    <input
-                      type="text"
-                      value={newPartner.contactPerson.name}
-                      onChange={(e) => setNewPartner({
-                        ...newPartner, 
-                        contactPerson: {...newPartner.contactPerson, name: e.target.value}
-                      })}
+                </label>
+                <input
+                  type="text"
+                  value={newPartner.contactPerson.name}
+                  onChange={(e) => setNewPartner({
+                    ...newPartner, 
+                    contactPerson: {...newPartner.contactPerson, name: e.target.value}
+                  })}
                       placeholder="Kontaktperson navn"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid var(--gray-300)',
-                        borderRadius: 'var(--radius-lg)',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    border: '1px solid var(--gray-300)', 
+                    borderRadius: 'var(--radius-lg)', 
+                    outline: 'none'
+                  }}
+                />
+              </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                      E-post
-                    </label>
-                    <input
-                      type="email"
-                      value={newPartner.contactPerson.email}
-                      onChange={(e) => setNewPartner({
-                        ...newPartner, 
-                        contactPerson: {...newPartner.contactPerson, email: e.target.value}
-                      })}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    E-post
+                  </label>
+                  <input
+                    type="email"
+                    value={newPartner.contactPerson.email}
+                    onChange={(e) => setNewPartner({
+                      ...newPartner, 
+                      contactPerson: {...newPartner.contactPerson, email: e.target.value}
+                    })}
                       placeholder="kontakt@bedrift.no"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid var(--gray-300)',
-                        borderRadius: 'var(--radius-lg)',
-                        outline: 'none'
-                      }}
-                    />
-                  </div>
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.75rem', 
+                      border: '1px solid var(--gray-300)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      outline: 'none'
+                    }}
+                  />
+                </div>
 
-                  <div>
-                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                      Telefon
-                    </label>
-                    <input
-                      type="tel"
-                      value={newPartner.contactPerson.phone}
-                      onChange={(e) => setNewPartner({
-                        ...newPartner, 
-                        contactPerson: {...newPartner.contactPerson, phone: e.target.value}
-                      })}
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Telefon
+                  </label>
+                  <input
+                    type="tel"
+                    value={newPartner.contactPerson.phone}
+                    onChange={(e) => setNewPartner({
+                      ...newPartner, 
+                      contactPerson: {...newPartner.contactPerson, phone: e.target.value}
+                    })}
                       placeholder="+47 123 45 678"
-                      style={{
-                        width: '100%',
-                        padding: '0.75rem',
-                        border: '1px solid var(--gray-300)',
-                        borderRadius: 'var(--radius-lg)',
-                        outline: 'none'
-                      }}
+                    style={{ 
+                      width: '100%', 
+                      padding: '0.75rem', 
+                      border: '1px solid var(--gray-300)', 
+                      borderRadius: 'var(--radius-lg)', 
+                      outline: 'none'
+                    }}
                     />
                   </div>
 
@@ -2716,10 +2704,10 @@ export default function PartnersPage() {
                         borderRadius: 'var(--radius-lg)',
                         outline: 'none'
                       }}
-                    />
-                  </div>
+                  />
                 </div>
               </div>
+            </div>
 
               {/* Address */}
               <div>
@@ -2889,20 +2877,20 @@ export default function PartnersPage() {
 
               {/* Actions */}
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button
-                  onClick={() => setShowAddModal(false)}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-lg)',
+              <button
+                onClick={() => setShowAddModal(false)}
+                style={{ 
+                  padding: '0.75rem 1.5rem', 
+                  border: '1px solid var(--gray-300)', 
+                  borderRadius: 'var(--radius-lg)', 
                     background: 'white',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Avbryt
-                </button>
-                <button
-                  onClick={handleCreatePartner}
+                  cursor: 'pointer'
+                }}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleCreatePartner}
                   disabled={loading || !newPartner.name.trim()}
                   style={{
                     padding: '0.75rem 1.5rem',
@@ -2914,7 +2902,7 @@ export default function PartnersPage() {
                   }}
                 >
                   {loading ? 'Oppretter...' : 'Opprett partner'}
-                </button>
+              </button>
               </div>
             </div>
           </div>
@@ -2945,9 +2933,9 @@ export default function PartnersPage() {
             overflow: 'auto'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
-              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
                 {newAssignment.id ? 'Rediger oppdrag' : 'Nytt oppdrag'}
-              </h2>
+                </h2>
               <button
                 onClick={() => setShowAssignmentModal(false)}
                 style={{
@@ -3016,7 +3004,7 @@ export default function PartnersPage() {
                 </select>
               </div>
 
-              <div>
+                  <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                   Beskrivelse
                 </label>
@@ -3034,10 +3022,10 @@ export default function PartnersPage() {
                   }}
                   placeholder="Beskrivelse av oppdraget"
                 />
-              </div>
+                  </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
+                  <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                     Startdato *
                   </label>
@@ -3053,9 +3041,9 @@ export default function PartnersPage() {
                       outline: 'none'
                     }}
                   />
-                </div>
+                  </div>
 
-                <div>
+                  <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                     Sluttdato
                   </label>
@@ -3071,11 +3059,11 @@ export default function PartnersPage() {
                       outline: 'none'
                     }}
                   />
-                </div>
-              </div>
+                  </div>
+                  </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
-                <div>
+                    <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                     Starttid *
                   </label>
@@ -3091,9 +3079,9 @@ export default function PartnersPage() {
                       outline: 'none'
                     }}
                   />
-                </div>
+                    </div>
 
-                <div>
+                    <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                     Sluttid
                   </label>
@@ -3109,10 +3097,10 @@ export default function PartnersPage() {
                       outline: 'none'
                     }}
                   />
+                    </div>
                 </div>
-              </div>
 
-              <div>
+                  <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                   Lokasjon
                 </label>
@@ -3129,9 +3117,9 @@ export default function PartnersPage() {
                   }}
                   placeholder="Lokasjon for oppdraget"
                 />
-              </div>
+                  </div>
 
-              <div>
+                  <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                   PDF-filer
                 </label>
@@ -3174,10 +3162,10 @@ export default function PartnersPage() {
                   }}>
                     Velg filer
                   </label>
-                </div>
-              </div>
+                  </div>
+                  </div>
 
-              <div>
+                  <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                   Notater
                 </label>
@@ -3291,10 +3279,10 @@ export default function PartnersPage() {
                 >
                   Lagre oppdrag
                 </button>
-              </div>
-            </div>
-          </div>
-        </div>
+                  </div>
+                  </div>
+                  </div>
+                  </div>
       )}
 
       {/* Day Assignment Modal */}
@@ -3335,10 +3323,10 @@ export default function PartnersPage() {
               >
                 <X style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
               </button>
-            </div>
+                </div>
 
             <div style={{ display: 'grid', gap: '1rem' }}>
-              <div>
+                  <div>
                 <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
                   Samarbeidspartner
                 </label>
@@ -3360,23 +3348,23 @@ export default function PartnersPage() {
                     </option>
                   ))}
                 </select>
-              </div>
+            </div>
 
               <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '1rem' }}>
-                <button
+              <button
                   onClick={() => setShowDayAssignmentModal(false)}
-                  style={{
-                    padding: '0.75rem 1.5rem',
-                    border: '1px solid var(--gray-300)',
-                    borderRadius: 'var(--radius-lg)',
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  border: '1px solid var(--gray-300)',
+                  borderRadius: 'var(--radius-lg)',
                     background: 'white',
-                    cursor: 'pointer'
-                  }}
-                >
+                  cursor: 'pointer'
+                }}
+              >
                   Avbryt
-                </button>
-                <button
-                  onClick={() => {
+              </button>
+              <button
+                onClick={() => {
                     if (selectedPartnerForAssignment) {
                       setNewAssignment({
                         ...newAssignment,
@@ -3397,7 +3385,7 @@ export default function PartnersPage() {
                   }}
                 >
                   Fortsett
-                </button>
+              </button>
               </div>
             </div>
           </div>

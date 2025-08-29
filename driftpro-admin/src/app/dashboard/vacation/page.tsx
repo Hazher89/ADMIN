@@ -80,7 +80,6 @@ export default function VacationPage() {
 
     const timeoutId = setTimeout(() => {
       if (loading) {
-        console.log('Loading timeout - setting loading to false');
         setLoading(false);
         setVacationRequests([]);
       }

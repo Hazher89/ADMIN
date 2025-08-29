@@ -53,12 +53,10 @@ export default function NotificationBell() {
   const loadNotifications = useCallback(async () => {
     try {
       if (!db) {
-        console.log('NotificationBell: Firebase not initialized');
         return () => {};
       }
 
       if (!user?.uid || !userProfile?.companyId) {
-        console.log('NotificationBell: User or company not found - user:', !!user?.uid, 'companyId:', !!userProfile?.companyId);
         setNotifications([]);
         setUnreadCount(0);
         return () => {};
@@ -133,14 +131,12 @@ export default function NotificationBell() {
         const unreadNotifications = notificationsData.filter(n => n.status === 'unread');
         setUnreadCount(unreadNotifications.length);
       }, (error) => {
-        console.log('NotificationBell: Error loading notifications:', error);
         setNotifications([]);
         setUnreadCount(0);
       });
 
       return unsubscribe;
     } catch (error) {
-      console.log('NotificationBell: Error setting up notifications listener:', error);
       setNotifications([]);
       setUnreadCount(0);
       return () => {};

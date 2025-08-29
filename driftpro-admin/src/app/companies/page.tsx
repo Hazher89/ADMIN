@@ -80,15 +80,11 @@ export default function CompaniesPage() {
         return;
       }
 
-      console.log('Loading companies from Firebase...');
       const companiesQuery = collection(db, 'companies');
       const snapshot = await getDocs(companiesQuery);
       
-      console.log('Found companies:', snapshot.docs.length);
-      
       const companiesData = snapshot.docs.map(doc => {
         const data = doc.data();
-        console.log('Company data:', data);
         return {
           id: doc.id,
           name: data.name || '',
@@ -111,7 +107,6 @@ export default function CompaniesPage() {
         };
       }) as Company[];
       
-      console.log('Processed companies:', companiesData);
       setCompanies(companiesData);
       setFilteredCompanies(companiesData);
     } catch (error) {

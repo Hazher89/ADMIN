@@ -71,10 +71,7 @@ export default function DashboardLayout({
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [unreadCount, setUnreadCount] = useState(0);
   
-  // Debug logging for layout
-  console.log('DashboardLayout: user:', user);
-  console.log('DashboardLayout: userProfile:', userProfile);
-  console.log('DashboardLayout: logout function:', !!logout);
+
 
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -91,11 +88,7 @@ export default function DashboardLayout({
   // GDPR Compliance: Ensure user has a valid companyId
   useEffect(() => {
     if (user && userProfile) {
-      console.log('🔒 DASHBOARD GDPR CHECK: User:', user.email);
-      console.log('🔒 DASHBOARD GDPR CHECK: UserProfile:', userProfile);
-      
       if (!userProfile.companyId) {
-        console.error('🚨 GDPR VIOLATION: User without companyId detected:', user.email);
         alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
         logout();
         router.push('/companies');
@@ -104,14 +97,11 @@ export default function DashboardLayout({
       
       // Additional check: ensure userProfile is properly loaded
       if (!userProfile.id || !userProfile.email) {
-        console.error('🚨 GDPR VIOLATION: Incomplete user profile detected:', user.email);
         alert('Ufullstendig brukerprofil oppdaget. Du blir logget ut.');
         logout();
         router.push('/companies');
         return;
       }
-      
-      console.log('✅ DASHBOARD GDPR CHECK: User validated successfully');
     }
   }, [user, userProfile, logout, router]);
 
@@ -120,7 +110,6 @@ export default function DashboardLayout({
     if (user && userProfile) {
       const selectedCompany = localStorage.getItem('selectedCompany');
       if (!selectedCompany) {
-        console.error('🚨 GDPR VIOLATION: No company selected');
         alert('Ingen bedrift valgt. Du blir logget ut.');
         logout();
         router.push('/companies');

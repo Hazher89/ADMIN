@@ -124,7 +124,6 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
     setError(null);
     
     try {
-      console.log('Fetching Brreg data for org number:', orgNumber);
       const response = await fetch(`https://data.brreg.no/enhetsregisteret/api/enheter/${orgNumber}`);
       
       if (!response.ok) {
@@ -132,7 +131,6 @@ export default function CompanyDetailModal({ isOpen, onClose, orgNumber, company
       }
 
       const data = await response.json();
-      console.log('Brreg data received:', data);
       setBrregData(data);
     } catch (error) {
       console.error('Error fetching Brreg data:', error);

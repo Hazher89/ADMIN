@@ -22,8 +22,6 @@ export default function ForgotPasswordPage() {
     setSuccess('');
 
     try {
-      console.log('🔧 FORGOT PASSWORD: Submitting request for email:', email);
-      
       const response = await fetch('/api/forgot-password', {
         method: 'POST',
         headers: {
@@ -33,8 +31,6 @@ export default function ForgotPasswordPage() {
       });
 
       const result = await response.json();
-      
-      console.log('🔧 FORGOT PASSWORD: Response:', result);
 
       if (response.ok) {
         setSuccess(result.message || 'E-post for tilbakestilling av passord er sendt! Sjekk innboksen din.');

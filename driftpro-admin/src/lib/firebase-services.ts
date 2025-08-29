@@ -2041,58 +2041,88 @@ class FirebaseService {
   // BRRG.no API Integration
   async searchBRRGCompany(query: string): Promise<any[]> {
     try {
-      // BRRG.no API endpoint (dette må oppdateres med riktig API)
-      const response = await fetch(`https://api.brrg.no/search?q=${encodeURIComponent(query)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          // Legg til API key hvis nødvendig
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('BRRG API request failed');
-      }
-
-      const data = await response.json();
-      return data.results || [];
-    } catch (error) {
-      console.error('Error searching BRRG:', error);
-      // Return mock data for testing
-      return [
+      // BRRG.no API endpoint - må oppdateres med riktig API
+      console.log('🔍 Searching BRRG.no for:', query);
+      
+      // TODO: Erstatt med riktig BRRG.no API endpoint og nøkkel
+      // For nå bruker vi mock-data som ligner ekte BRRG-data
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 500));
+      
+      // Return realistic mock data based on search query
+      const mockResults = [
         {
           orgNumber: '123456789',
-          companyName: 'Test Bedrift AS',
-          address: 'Testveien 123',
+          companyName: `${query} AS`,
+          address: 'Storgata 123',
           postalCode: '0001',
           city: 'Oslo',
           municipality: 'Oslo',
           county: 'Oslo',
           industry: 'Teknologi',
-          employees: 50,
-          revenue: 10000000,
-          foundedYear: 2020,
+          employees: Math.floor(Math.random() * 100) + 10,
+          revenue: Math.floor(Math.random() * 10000000) + 1000000,
+          foundedYear: Math.floor(Math.random() * 30) + 1990,
+          status: 'Aktiv'
+        },
+        {
+          orgNumber: '987654321',
+          companyName: `${query} Norge AS`,
+          address: 'Hovedveien 456',
+          postalCode: '5000',
+          city: 'Bergen',
+          municipality: 'Bergen',
+          county: 'Vestland',
+          industry: 'Konsulent',
+          employees: Math.floor(Math.random() * 50) + 5,
+          revenue: Math.floor(Math.random() * 5000000) + 500000,
+          foundedYear: Math.floor(Math.random() * 25) + 1995,
           status: 'Aktiv'
         }
       ];
+      
+      console.log('🔍 BRRG mock results:', mockResults);
+      return mockResults;
+      
+    } catch (error) {
+      console.error('Error searching BRRG:', error);
+      return [];
     }
   }
 
   async getBRRGCompanyByOrgNumber(orgNumber: string): Promise<any | null> {
     try {
-      const response = await fetch(`https://api.brrg.no/company/${orgNumber}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('BRRG API request failed');
-      }
-
-      const data = await response.json();
-      return data;
+      console.log('🔍 Fetching BRRG company by org number:', orgNumber);
+      
+      // TODO: Erstatt med riktig BRRG.no API endpoint og nøkkel
+      // For nå returnerer vi mock-data basert på org-nummeret
+      
+      // Simulate API delay
+      await new Promise(resolve => setTimeout(resolve, 300));
+      
+      // Return realistic mock data based on org number
+      const mockCompany = {
+        orgNumber: orgNumber,
+        companyName: `Bedrift ${orgNumber.slice(-3)} AS`,
+        address: 'Storgata 123',
+        postalCode: '0001',
+        city: 'Oslo',
+        municipality: 'Oslo',
+        county: 'Oslo',
+        industry: 'Teknologi',
+        employees: Math.floor(Math.random() * 100) + 10,
+        revenue: Math.floor(Math.random() * 10000000) + 1000000,
+        foundedYear: Math.floor(Math.random() * 30) + 1990,
+        status: 'Aktiv',
+        phone: '+47 123 45 678',
+        email: `info@bedrift${orgNumber.slice(-3)}.no`,
+        website: `https://www.bedrift${orgNumber.slice(-3)}.no`
+      };
+      
+      console.log('🔍 BRRG mock company:', mockCompany);
+      return mockCompany;
+      
     } catch (error) {
       console.error('Error fetching BRRG company:', error);
       return null;

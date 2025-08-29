@@ -70,36 +70,25 @@ export default function EmployeesPage() {
   }, []);
 
   useEffect(() => {
-    console.log('Employees useEffect triggered, userProfile:', userProfile);
-    console.log('userProfile?.companyId:', userProfile?.companyId);
-    console.log('userProfile?.id:', userProfile?.id);
-    console.log('authLoading:', authLoading);
-    
     let timeoutId: NodeJS.Timeout;
     
     // Wait for auth to finish loading
     if (authLoading) {
-      console.log('Auth still loading, waiting...');
       return;
     }
     
     if (userProfile?.companyId) {
-      console.log('Loading employees for company:', userProfile.companyId);
       setLoading(true);
       
       // Define load functions inside useEffect to avoid dependency issues
       const loadEmployees = async () => {
         if (!userProfile?.companyId) {
-          console.error('No company ID found in loadEmployees');
           setLoading(false);
           return;
         }
 
-        console.log('Loading employees for company:', userProfile.companyId);
-
         try {
           const data = await firebaseService.getEmployees(userProfile.companyId);
-          console.log('Loaded employees:', data);
           setEmployees(data);
         } catch (error) {
           console.error('Error loading employees:', error);
@@ -125,8 +114,6 @@ export default function EmployeesPage() {
       loadEmployees();
       loadDepartments();
     } else {
-      console.log('No companyId found in userProfile');
-      console.log('userProfile object:', userProfile);
       // Don't set loading to false immediately, wait a bit to see if userProfile loads
       timeoutId = setTimeout(() => {
         if (!userProfile?.companyId) {
@@ -146,15 +133,11 @@ export default function EmployeesPage() {
   // Create a reusable loadEmployees function for other functions to use
   const loadEmployees = async () => {
     if (!userProfile?.companyId) {
-      console.error('No company ID found in loadEmployees');
       return;
     }
 
-    console.log('Loading employees for company:', userProfile.companyId);
-
     try {
       const data = await firebaseService.getEmployees(userProfile.companyId);
-      console.log('Loaded employees:', data);
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -189,13 +172,7 @@ export default function EmployeesPage() {
       return;
     }
 
-    console.log('Creating employee with data:', {
-      ...newEmployee,
-      departmentId: newEmployee.departmentId || '',
-      position: newEmployee.position || '',
-      companyId: userProfile.companyId,
-      hireDate: new Date().toISOString()
-    });
+
 
     try {
       // Create employee data without undefined fields
@@ -234,8 +211,6 @@ export default function EmployeesPage() {
 
       const employeeId = await firebaseService.createEmployee(employeeData);
 
-      console.log('Employee created successfully with ID:', employeeId);
-
       // Send welcome email to the new employee
       let emailSent = false;
       try {
@@ -261,10 +236,8 @@ export default function EmployeesPage() {
 
         if (response.ok) {
           emailSent = true;
-          console.log('Welcome email sent successfully to:', newEmployee.email);
         } else {
           emailSent = false;
-          console.warn('Failed to send welcome email to:', newEmployee.email);
         }
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError);
@@ -318,9 +291,7 @@ export default function EmployeesPage() {
             `${window.location.origin}/login`
           );
           smsSent = true;
-          console.log('Welcome SMS sent successfully to:', newEmployee.phone);
         } catch (smsError) {
-          console.error('Error sending welcome SMS:', smsError);
           smsSent = false;
           // Don't fail the employee creation if SMS fails
         }
