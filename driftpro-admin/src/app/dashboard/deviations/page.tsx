@@ -146,13 +146,33 @@ export default function HMSPage() {
   }, [userProfile?.companyId]);
 
   const loadDeviations = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile?.companyId) {
+      setLoading(false);
+      return;
+    }
 
     try {
-      const data = await firebaseService.getDeviations(userProfile.companyId);
-      setDeviations(data);
+      // TODO: Replace with real Firebase data
+      const mockDeviations = [
+        {
+          id: '1',
+          title: 'Sikkerhetsbrudd',
+          description: 'Ansatt uten verneutstyr',
+          type: 'safety',
+          severity: 'high',
+          departmentId: 'dept1',
+          location: 'Produksjonshall',
+          status: 'open',
+          companyId: userProfile.companyId,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        }
+      ];
+      
+      setDeviations(mockDeviations);
     } catch (error) {
       console.error('Error loading deviations:', error);
+      setDeviations([]);
     } finally {
       setLoading(false);
     }

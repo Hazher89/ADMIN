@@ -36,7 +36,8 @@ import {
   Key,
   Palette,
   Terminal,
-  Handshake
+  Handshake,
+  Phone
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import NotificationBell from '@/components/NotificationBell';
@@ -187,7 +188,7 @@ export default function DashboardLayout({
     {
       name: 'SMS Logg & Telefonbok',
       href: '/dashboard/sms-logs',
-      icon: <MessageSquare size={20} />,
+      icon: <Phone size={20} />,
       category: 'main'
     },
     

@@ -238,122 +238,253 @@ export default function SMSLogsPage() {
   };
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">SMS Logg & Telefonbok</h1>
-        <p className="text-gray-600">Administrer SMS-utskrifter og kontakter</p>
-      </div>
+    <div>
+      {/* Page Header */}
+      <div className="page-header" style={{ padding: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div className="card-icon">
+            <Phone style={{ width: '24px', height: '24px', color: 'var(--primary)' }} />
+          </div>
+          <div>
+            <h1 className="page-title">📱 SMS Logg & Telefonbok</h1>
+            <p className="page-subtitle">
+              Administrer SMS-utskrifter, kontakter og send meldinger
+            </p>
+          </div>
+        </div>
 
-      {/* Tab Navigation */}
-      <div className="border-b border-gray-200 mb-6">
-        <nav className="-mb-px flex space-x-8">
+        {/* Tab Navigation */}
+        <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
+          <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0' }}>
+            <button
+              onClick={() => setActiveTab('logs')}
+              style={{
+                padding: '1rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'logs' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'logs' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'logs' ? '600' : '500',
+                fontSize: 'var(--font-size-base)'
+              }}
+            >
+              <span style={{ marginRight: '0.5rem' }}>📋</span>
+              SMS Logg
+            </button>
+            <button
+              onClick={() => setActiveTab('phonebook')}
+              style={{
+                padding: '1rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'phonebook' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'phonebook' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'phonebook' ? '600' : '500',
+                fontSize: 'var(--font-size-base)'
+              }}
+            >
+              <span style={{ marginRight: '0.5rem' }}>👥</span>
+              Telefonbok
+            </button>
+            <button
+              onClick={() => setActiveTab('send')}
+              style={{
+                padding: '1rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'send' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'send' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'send' ? '600' : '500',
+                fontSize: 'var(--font-size-base)'
+              }}
+            >
+              <span style={{ marginRight: '0.5rem' }}>📤</span>
+              Send SMS
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', flexWrap: 'wrap' }}>
           <button
-            onClick={() => setActiveTab('logs')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'logs'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            style={{
+              padding: '0.5rem 1rem',
+              background: 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
           >
-            <MessageSquare className="w-4 h-4 inline mr-2" />
-            SMS Logg
+            {smsLogs.length} SMS SENDT
           </button>
           <button
-            onClick={() => setActiveTab('phonebook')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'phonebook'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#f1f5f9',
+              color: 'var(--gray-600)',
+              border: '1px solid var(--gray-200)',
+              borderRadius: '0.375rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
           >
-            <Phone className="w-4 h-4 inline mr-2" />
-            Telefonbok
+            {contacts.length} KONTAKTER
           </button>
-          <button
-            onClick={() => setActiveTab('send')}
-            className={`py-2 px-1 border-b-2 font-medium text-sm ${
-              activeTab === 'send'
-                ? 'border-blue-500 text-blue-600'
-                : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
-            }`}
-          >
-            <Send className="w-4 h-4 inline mr-2" />
-            Send SMS
-          </button>
-        </nav>
+        </div>
       </div>
 
       {/* SMS Logs Tab */}
       {activeTab === 'logs' && (
-        <div>
-          <div className="mb-6 flex flex-col sm:flex-row gap-4">
-            <div className="flex-1">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
-                <input
-                  type="text"
-                  placeholder="Søk i SMS logg..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                />
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+          {/* Search and Filters */}
+          <div className="card" style={{ marginBottom: '2rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+              <div style={{ flex: '1' }}>
+                <div style={{ position: 'relative' }}>
+                  <Search style={{ 
+                    position: 'absolute', 
+                    left: '12px', 
+                    top: '50%', 
+                    transform: 'translateY(-50%)', 
+                    color: '#6b7280',
+                    width: '20px',
+                    height: '20px'
+                  }} />
+                  <input
+                    type="text"
+                    placeholder="Søk i SMS logg..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '12px 12px 12px 40px',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: '0.375rem',
+                      fontSize: 'var(--font-size-base)'
+                    }}
+                  />
+                </div>
               </div>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value as any)}
+                style={{
+                  padding: '12px',
+                  border: '1px solid var(--gray-300)',
+                  borderRadius: '0.375rem',
+                  fontSize: 'var(--font-size-base)',
+                  minWidth: '150px'
+                }}
+              >
+                <option value="all">Alle statuser</option>
+                <option value="sent">Sendt</option>
+                <option value="delivered">Levert</option>
+                <option value="failed">Feilet</option>
+              </select>
             </div>
-            <select
-              value={statusFilter}
-              onChange={(e) => setStatusFilter(e.target.value as any)}
-              className="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            >
-              <option value="all">Alle statuser</option>
-              <option value="sent">Sendt</option>
-              <option value="delivered">Levert</option>
-              <option value="failed">Feilet</option>
-            </select>
           </div>
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
+          <div className="card" style={{ overflow: 'hidden' }}>
+            <div style={{ overflowX: 'auto' }}>
+              <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
+                <thead style={{ background: 'var(--gray-50)' }}>
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th style={{ 
+                      padding: '12px 24px', 
+                      textAlign: 'left', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500', 
+                      color: 'var(--gray-500)', 
+                      textTransform: 'uppercase',
+                      borderBottom: '1px solid var(--gray-200)'
+                    }}>
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th style={{ 
+                      padding: '12px 24px', 
+                      textAlign: 'left', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500', 
+                      color: 'var(--gray-500)', 
+                      textTransform: 'uppercase',
+                      borderBottom: '1px solid var(--gray-200)'
+                    }}>
                       Til
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th style={{ 
+                      padding: '12px 24px', 
+                      textAlign: 'left', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500', 
+                      color: 'var(--gray-500)', 
+                      textTransform: 'uppercase',
+                      borderBottom: '1px solid var(--gray-200)'
+                    }}>
                       Melding
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th style={{ 
+                      padding: '12px 24px', 
+                      textAlign: 'left', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500', 
+                      color: 'var(--gray-500)', 
+                      textTransform: 'uppercase',
+                      borderBottom: '1px solid var(--gray-200)'
+                    }}>
                       Tidspunkt
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th style={{ 
+                      padding: '12px 24px', 
+                      textAlign: 'left', 
+                      fontSize: '0.75rem', 
+                      fontWeight: '500', 
+                      color: 'var(--gray-500)', 
+                      textTransform: 'uppercase',
+                      borderBottom: '1px solid var(--gray-200)'
+                    }}>
                       Kostnad
                     </th>
                   </tr>
                 </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
+                <tbody>
                   {filteredLogs.map((log) => (
-                    <tr key={log.id} className="hover:bg-gray-50">
-                      <td className="px-6 py-4 whitespace-nowrap">
-                        <div className="flex items-center">
+                    <tr key={log.id} style={{ 
+                      borderBottom: '1px solid var(--gray-200)',
+                      transition: 'background-color 0.2s'
+                    }} onMouseEnter={(e) => {
+                      e.currentTarget.style.backgroundColor = 'var(--gray-50)';
+                    }} onMouseLeave={(e) => {
+                      e.currentTarget.style.backgroundColor = 'transparent';
+                    }}>
+                      <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
+                        <div style={{ display: 'flex', alignItems: 'center' }}>
                           {getStatusIcon(log.status)}
-                          <span className="ml-2 text-sm text-gray-900">
+                          <span style={{ marginLeft: '8px', fontSize: '0.875rem', color: 'var(--gray-900)' }}>
                             {getStatusText(log.status)}
                           </span>
                         </div>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                      <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-900)' }}>
                         {log.to}
                       </td>
-                      <td className="px-6 py-4 text-sm text-gray-900 max-w-xs truncate">
+                      <td style={{ padding: '16px 24px', fontSize: '0.875rem', color: 'var(--gray-900)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                         {log.message}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-500)' }}>
                         {log.timestamp.toLocaleString('nb-NO')}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-500)' }}>
                         {log.cost ? `kr ${log.cost.toFixed(2)}` : '-'}
                       </td>
                     </tr>
