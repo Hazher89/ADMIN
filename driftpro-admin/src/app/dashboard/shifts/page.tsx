@@ -55,63 +55,14 @@ export default function ShiftsPage() {
   }, [userProfile?.companyId]);
 
   const loadData = async () => {
-    if (!userProfile?.companyId) {
-      setLoading(false);
-      return;
-    }
+    if (!userProfile?.companyId) return;
 
     try {
       setLoading(true);
-      // TODO: Replace with real Firebase data
-      const mockShifts = [
-        {
-          id: '1',
-          employeeId: 'emp1',
-          departmentId: 'dept1',
-          startTime: '2024-01-15T08:00:00Z',
-          endTime: '2024-01-15T16:00:00Z',
-          type: 'regular',
-          status: 'scheduled',
-          notes: 'Standard vakt',
-          companyId: userProfile.companyId,
-          createdAt: '2024-01-15T08:00:00Z',
-          updatedAt: '2024-01-15T08:00:00Z'
-        },
-        {
-          id: '2',
-          employeeId: 'emp2',
-          departmentId: 'dept2',
-          startTime: '2024-01-15T16:00:00Z',
-          endTime: '2024-01-15T00:00:00Z',
-          type: 'night',
-          status: 'in_progress',
-          notes: 'Nattevakt',
-          companyId: userProfile.companyId,
-          createdAt: '2024-01-15T16:00:00Z',
-          updatedAt: '2024-01-15T16:00:00Z'
-        }
-      ];
-      
-      setShifts(mockShifts);
+      const data = await firebaseService.getShifts(userProfile.companyId);
+      setShifts(data);
     } catch (error) {
       console.error('Error loading shifts:', error);
-      // Fallback to mock data
-      const mockShifts = [
-        {
-          id: '1',
-          employeeId: 'emp1',
-          departmentId: 'dept1',
-          startTime: '2024-01-15T08:00:00Z',
-          endTime: '2024-01-15T16:00:00Z',
-          type: 'regular',
-          status: 'scheduled',
-          notes: 'Standard vakt',
-          companyId: userProfile.companyId,
-          createdAt: '2024-01-15T08:00:00Z',
-          updatedAt: '2024-01-15T08:00:00Z'
-        }
-      ];
-      setShifts(mockShifts);
     } finally {
       setLoading(false);
     }

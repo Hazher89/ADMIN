@@ -12,7 +12,6 @@ const nextConfig: NextConfig = {
   env: {
     CUSTOM_KEY: process.env.CUSTOM_KEY,
   },
-  trailingSlash: true,
   generateBuildId: async () => {
     return 'build-' + Date.now();
   },

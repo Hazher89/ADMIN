@@ -87,37 +87,12 @@ export default function DocumentsPage() {
       setLoading(true);
       setError(null);
       
-      // TODO: Replace with real Firebase data
-      const mockDocuments = [
-        {
-          id: '1',
-          title: 'Sikkerhetsmanual',
-          description: 'Bedriftens sikkerhetsprosedyrer',
-          category: 'policy',
-          fileSize: 1024000,
-          fileName: 'sikkerhetsmanual.pdf',
-          companyId: userProfile.companyId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        },
-        {
-          id: '2',
-          title: 'Arbeidsinstruksjon',
-          description: 'Standard arbeidsprosedyrer',
-          category: 'procedure',
-          fileSize: 512000,
-          fileName: 'arbeidsinstruksjon.pdf',
-          companyId: userProfile.companyId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ];
-      
-      setDocuments(mockDocuments);
+      // Load real data from Firebase
+      const documentsData = await firebaseService.getDocuments(userProfile.companyId);
+      setDocuments(documentsData);
     } catch (error) {
       console.error('Error loading documents:', error);
       setError('Feil ved lasting av dokumenter: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
-      // Fallback to mock data
       setDocuments([]);
     } finally {
       setLoading(false);

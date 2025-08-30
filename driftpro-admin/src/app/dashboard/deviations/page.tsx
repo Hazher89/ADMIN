@@ -152,24 +152,9 @@ export default function HMSPage() {
     }
 
     try {
-      // TODO: Replace with real Firebase data
-      const mockDeviations = [
-        {
-          id: '1',
-          title: 'Sikkerhetsbrudd',
-          description: 'Ansatt uten verneutstyr',
-          type: 'safety',
-          severity: 'high',
-          departmentId: 'dept1',
-          location: 'Produksjonshall',
-          status: 'open',
-          companyId: userProfile.companyId,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        }
-      ];
-      
-      setDeviations(mockDeviations);
+      // Load real data from Firebase
+      const deviationsData = await firebaseService.getDeviations(userProfile.companyId);
+      setDeviations(deviationsData);
     } catch (error) {
       console.error('Error loading deviations:', error);
       setDeviations([]);
