@@ -18,14 +18,13 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
-import { sveveSMS } from './sveve-sms-service';
 
 // Types
 export interface Employee {
   id: string;
   displayName: string;
   email: string;
-  phone: string; // Required for SMS notifications
+  phone?: string;
   departmentId?: string;
   position?: string;
   role: 'admin' | 'department_leader' | 'employee';
@@ -353,89 +352,6 @@ export interface Partner {
   createdBy: string;
   createdAt: string;
   updatedAt: string;
-  // BRRG.no API data
-  brrgData?: {
-    orgNumber: string;
-    companyName: string;
-    address: string;
-    postalCode: string;
-    city: string;
-    municipality: string;
-    county: string;
-    industry: string;
-    employees?: number;
-    revenue?: number;
-    foundedYear?: number;
-    status: string;
-  };
-}
-
-export interface PartnerUser {
-  id: string;
-  partnerId: string;
-  partnerName: string;
-  companyId: string;
-  email: string;
-  fullName: string;
-  phoneNumber?: string; // For SMS notifications
-  role: 'user' | 'admin';
-  status: 'active' | 'inactive' | 'suspended';
-  lastLogin?: string;
-  createdAt: string;
-  updatedAt: string;
-  passwordHash?: string; // For Firebase Auth
-  firebaseUid?: string; // Firebase Auth UID
-}
-
-export interface PartnerAssignment {
-  id: string;
-  partnerId: string;
-  partnerName: string;
-  companyId: string;
-  title: string;
-  description: string;
-  startDate: string;
-  endDate: string;
-  startTime: string;
-  endTime: string;
-  status: 'pending' | 'accepted' | 'declined' | 'in_progress' | 'completed' | 'cancelled';
-  priority: 'low' | 'medium' | 'high' | 'urgent';
-  assignedBy: string;
-  assignedTo: string;
-  departmentId: string;
-  location?: string;
-  requirements?: string[];
-  documents?: string[];
-  pdfFiles?: string[];
-  budget?: number;
-  notes?: string;
-  partnerResponse?: {
-    status: 'pending' | 'accepted' | 'declined';
-    comment?: string;
-    respondedAt?: string;
-    respondedBy?: string;
-  };
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface PartnerDocument {
-  id: string;
-  partnerId: string;
-  partnerName: string;
-  companyId: string;
-  title: string;
-  description?: string;
-  type: 'pdf' | 'image' | 'document' | 'contract' | 'other';
-  fileName: string;
-  fileUrl: string;
-  fileSize: number;
-  uploadedBy: string;
-  sharedWith: string[]; // Array of partner user IDs
-  accessLevel: 'read' | 'write' | 'admin';
-  tags?: string[];
-  createdAt: string;
-  updatedAt: string;
 }
 
 export interface Setting {
@@ -448,6 +364,40 @@ export interface Setting {
   value?: string;
   companyId: string;
   createdBy: string;
+  updatedAt: string;
+}
+
+export interface PartnerAssignment {
+  id: string;
+  companyId: string;
+  partnerId: string;
+  title: string;
+  description: string;
+  startTime: string;
+  endTime: string;
+  status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
+  assignedBy: string;
+  assignedTo?: string;
+  partnerResponse?: {
+    status: 'accepted' | 'rejected' | 'no_response';
+    notes?: string;
+    responseAt: string;
+  };
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface PartnerUser {
+  id: string;
+  companyId: string;
+  partnerId: string;
+  userId: string;
+  fullName: string;
+  email: string;
+  phoneNumber: string;
+  status: 'active' | 'inactive';
+  role: 'admin' | 'employee';
+  createdAt: string;
   updatedAt: string;
 }
 
@@ -572,22 +522,6 @@ class FirebaseService {
       });
 
       console.log('Activity log created for employee:', docRef.id);
-
-      // Send welcome SMS to new employee
-      if (employeeData.phone && sveveSMS.validatePhoneNumber(employeeData.phone)) {
-        try {
-          await sveveSMS.sendEmployeeWelcome(
-            employeeData.phone,
-            employeeData.displayName,
-            'din bedrift', // TODO: Get actual company name
-            `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login`
-          );
-        } catch (error) {
-          console.error('Failed to send welcome SMS:', error);
-          // Don't fail employee creation if SMS fails
-        }
-      }
-
       return docRef.id;
     } catch (error) {
       console.error('Error creating employee:', error);
@@ -616,38 +550,6 @@ class FirebaseService {
       await deleteDoc(doc(db, 'users', id));
     } catch (error) {
       console.error('Error deleting employee:', error);
-      throw error;
-    }
-  }
-
-  async updateEmployeePassword(id: string, newPassword: string): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
-
-    try {
-      // Update password in Firebase Auth (this would need Firebase Auth integration)
-      // For now, just update the document
-      await updateDoc(doc(db, 'users', id), {
-        passwordHash: newPassword, // In production, this should be hashed
-        updatedAt: new Date().toISOString()
-      });
-
-      // Send SMS notification about password change
-      const employeeDoc = await getDoc(doc(db, 'users', id));
-      if (employeeDoc.exists()) {
-        const employeeData = employeeDoc.data() as Employee;
-        if (employeeData.phone && sveveSMS.validatePhoneNumber(employeeData.phone)) {
-          try {
-            await sveveSMS.sendPasswordChanged(
-              employeeData.phone,
-              employeeData.displayName
-            );
-          } catch (error) {
-            console.error('Failed to send password change SMS:', error);
-          }
-        }
-      }
-    } catch (error) {
-      console.error('Error updating employee password:', error);
       throw error;
     }
   }
@@ -1828,21 +1730,125 @@ class FirebaseService {
     }
   }
 
-  // Partner User Management - GDPR Compliant
+  // Partner Assignment Management
+  async createPartnerAssignment(assignmentData: Omit<PartnerAssignment, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      const now = new Date().toISOString();
+      const docRef = await addDoc(collection(db, 'partnerAssignments'), {
+        ...assignmentData,
+        createdAt: now,
+        updatedAt: now
+      });
+
+      // Send SMS notification to partner users
+      await this.notifyPartnerUsersAboutAssignment(assignmentData.partnerId, assignmentData.title, assignmentData.startTime);
+
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating partner assignment:', error);
+      throw error;
+    }
+  }
+
+  async getPartnerAssignments(companyId: string, partnerId?: string): Promise<PartnerAssignment[]> {
+    if (!db) return [];
+
+    try {
+      let q;
+      if (partnerId) {
+        q = query(
+          collection(db, 'partnerAssignments'),
+          where('companyId', '==', companyId),
+          where('partnerId', '==', partnerId)
+        );
+      } else {
+        q = query(
+          collection(db, 'partnerAssignments'),
+          where('companyId', '==', companyId)
+        );
+      }
+
+      const snapshot = await getDocs(q);
+      const assignments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as PartnerAssignment[];
+
+      return assignments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      console.error('Error fetching partner assignments:', error);
+      return [];
+    }
+  }
+
+  async getPartnerAssignmentsForUser(partnerId: string): Promise<PartnerAssignment[]> {
+    if (!db) return [];
+
+    try {
+      const q = query(
+        collection(db, 'partnerAssignments'),
+        where('partnerId', '==', partnerId)
+      );
+
+      const snapshot = await getDocs(q);
+      const assignments = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as PartnerAssignment[];
+
+      return assignments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+    } catch (error) {
+      console.error('Error fetching partner assignments for user:', error);
+      return [];
+    }
+  }
+
+  async updatePartnerAssignment(id: string, data: Partial<PartnerAssignment>): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await updateDoc(doc(db, 'partnerAssignments', id), {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating partner assignment:', error);
+      throw error;
+    }
+  }
+
+  async updatePartnerAssignmentResponse(assignmentId: string, response: PartnerAssignment['partnerResponse']): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await updateDoc(doc(db, 'partnerAssignments', assignmentId), {
+        partnerResponse: response,
+        updatedAt: new Date().toISOString()
+      });
+
+      // Send SMS notification to admin about response
+      await this.notifyAdminAboutPartnerResponse(assignmentId, response);
+    } catch (error) {
+      console.error('Error updating partner assignment response:', error);
+      throw error;
+    }
+  }
+
+  // Partner User Management
   async getPartnerUsers(companyId: string, partnerId?: string): Promise<PartnerUser[]> {
     if (!db) return [];
 
     try {
       let q;
       if (partnerId) {
-        // Get users for specific partner
         q = query(
           collection(db, 'partnerUsers'),
           where('companyId', '==', companyId),
           where('partnerId', '==', partnerId)
         );
       } else {
-        // Get all partner users for company
         q = query(
           collection(db, 'partnerUsers'),
           where('companyId', '==', companyId)
@@ -1879,253 +1885,124 @@ class FirebaseService {
     }
   }
 
-  async updatePartnerUser(id: string, data: Partial<PartnerUser>): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
-
+  // SMS Notifications
+  private async notifyPartnerUsersAboutAssignment(partnerId: string, assignmentTitle: string, startTime: string): Promise<void> {
     try {
-      await updateDoc(doc(db, 'partnerUsers', id), {
-        ...data,
-        updatedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error updating partner user:', error);
-      throw error;
-    }
-  }
+      // Get partner users with phone numbers
+      const partnerUsers = await this.getPartnerUsers('', partnerId);
+      const usersWithPhone = partnerUsers.filter(user => user.phoneNumber && user.status === 'active');
 
-  async deletePartnerUser(id: string): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+      // Send SMS to each user
+      for (const user of usersWithPhone) {
+        try {
+          const message = `Nytt oppdrag: ${assignmentTitle}. Start: ${startTime}. Logg inn på DriftPro for detaljer.`;
+          
+          const response = await fetch('/api/sms/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: user.phoneNumber,
+              message: message,
+              priority: 'high'
+            })
+          });
 
-    try {
-      await deleteDoc(doc(db, 'partnerUsers', id));
-    } catch (error) {
-      console.error('Error deleting partner user:', error);
-      throw error;
-    }
-  }
-
-  // Partner Assignments - GDPR Compliant
-  async getPartnerAssignments(companyId: string, partnerId?: string): Promise<PartnerAssignment[]> {
-    if (!db) return [];
-
-    try {
-      let q;
-      if (partnerId) {
-        // Get assignments for specific partner
-        q = query(
-          collection(db, 'partnerAssignments'),
-          where('companyId', '==', companyId),
-          where('partnerId', '==', partnerId)
-        );
-      } else {
-        // Get all assignments for company
-        q = query(
-          collection(db, 'partnerAssignments'),
-          where('companyId', '==', companyId)
-        );
-      }
-
-      const snapshot = await getDocs(q);
-      const assignments = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as PartnerAssignment[];
-
-      return assignments.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } catch (error) {
-      console.error('Error fetching partner assignments:', error);
-      return [];
-    }
-  }
-
-  async createPartnerAssignment(assignmentData: Omit<PartnerAssignment, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
-
-    try {
-      const docRef = await addDoc(collection(db, 'partnerAssignments'), {
-        ...assignmentData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      return docRef.id;
-    } catch (error) {
-      console.error('Error creating partner assignment:', error);
-      throw error;
-    }
-  }
-
-  async updatePartnerAssignment(id: string, data: Partial<PartnerAssignment>): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
-
-    try {
-      await updateDoc(doc(db, 'partnerAssignments', id), {
-        ...data,
-        updatedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error updating partner assignment:', error);
-      throw error;
-    }
-  }
-
-  // Partner Documents - GDPR Compliant
-  async getPartnerDocuments(companyId: string, partnerId?: string): Promise<PartnerDocument[]> {
-    if (!db) return [];
-
-    try {
-      let q;
-      if (partnerId) {
-        // Get documents for specific partner
-        q = query(
-          collection(db, 'partnerDocuments'),
-          where('companyId', '==', companyId),
-          where('partnerId', '==', partnerId)
-        );
-      } else {
-        // Get all documents for company
-        q = query(
-          collection(db, 'partnerDocuments'),
-          where('companyId', '==', companyId)
-        );
-      }
-
-      const snapshot = await getDocs(q);
-      const documents = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as PartnerDocument[];
-
-      return documents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-    } catch (error) {
-      console.error('Error fetching partner documents:', error);
-      return [];
-    }
-  }
-
-  async createPartnerDocument(documentData: Omit<PartnerDocument, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
-
-    try {
-      const docRef = await addDoc(collection(db, 'partnerDocuments'), {
-        ...documentData,
-        createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
-
-      return docRef.id;
-    } catch (error) {
-      console.error('Error creating partner document:', error);
-      throw error;
-    }
-  }
-
-  // Partner Response Management
-  async updatePartnerAssignmentResponse(
-    assignmentId: string, 
-    response: PartnerAssignment['partnerResponse']
-  ): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
-
-    try {
-      await updateDoc(doc(db, 'partnerAssignments', assignmentId), {
-        partnerResponse: response,
-        updatedAt: new Date().toISOString()
-      });
-    } catch (error) {
-      console.error('Error updating partner response:', error);
-      throw error;
-    }
-  }
-
-  // BRRG.no API Integration
-  async searchBRRGCompany(query: string): Promise<any[]> {
-    try {
-      // BRRG.no API endpoint - må oppdateres med riktig API
-      console.log('🔍 Searching BRRG.no for:', query);
-      
-      // TODO: Erstatt med riktig BRRG.no API endpoint og nøkkel
-      // For nå bruker vi mock-data som ligner ekte BRRG-data
-      
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 500));
-      
-      // Return realistic mock data based on search query
-      const mockResults = [
-        {
-          orgNumber: '123456789',
-          companyName: `${query} AS`,
-          address: 'Storgata 123',
-          postalCode: '0001',
-          city: 'Oslo',
-          municipality: 'Oslo',
-          county: 'Oslo',
-          industry: 'Teknologi',
-          employees: Math.floor(Math.random() * 100) + 10,
-          revenue: Math.floor(Math.random() * 10000000) + 1000000,
-          foundedYear: Math.floor(Math.random() * 30) + 1990,
-          status: 'Aktiv'
-        },
-        {
-          orgNumber: '987654321',
-          companyName: `${query} Norge AS`,
-          address: 'Hovedveien 456',
-          postalCode: '5000',
-          city: 'Bergen',
-          municipality: 'Bergen',
-          county: 'Vestland',
-          industry: 'Konsulent',
-          employees: Math.floor(Math.random() * 50) + 5,
-          revenue: Math.floor(Math.random() * 5000000) + 500000,
-          foundedYear: Math.floor(Math.random() * 25) + 1995,
-          status: 'Aktiv'
+          if (response.ok) {
+            console.log(`✅ SMS sent to ${user.fullName} about assignment: ${assignmentTitle}`);
+          }
+        } catch (error) {
+          console.error(`Failed to send SMS to ${user.fullName}:`, error);
         }
-      ];
-      
-      console.log('🔍 BRRG mock results:', mockResults);
-      return mockResults;
-      
+      }
     } catch (error) {
-      console.error('Error searching BRRG:', error);
-      return [];
+      console.error('Error notifying partner users about assignment:', error);
     }
   }
 
-  async getBRRGCompanyByOrgNumber(orgNumber: string): Promise<any | null> {
+  private async notifyAdminAboutPartnerResponse(assignmentId: string, response: PartnerAssignment['partnerResponse']): Promise<void> {
     try {
-      console.log('🔍 Fetching BRRG company by org number:', orgNumber);
+      if (!db) return;
       
-      // TODO: Erstatt med riktig BRRG.no API endpoint og nøkkel
-      // For nå returnerer vi mock-data basert på org-nummeret
+      // Get assignment details
+      const assignmentDoc = await getDoc(doc(db, 'partnerAssignments', assignmentId));
+      if (!assignmentDoc.exists()) return;
+
+      const assignment = assignmentDoc.data() as PartnerAssignment;
       
-      // Simulate API delay
-      await new Promise(resolve => setTimeout(resolve, 300));
-      
-      // Return realistic mock data based on org number
-      const mockCompany = {
-        orgNumber: orgNumber,
-        companyName: `Bedrift ${orgNumber.slice(-3)} AS`,
-        address: 'Storgata 123',
-        postalCode: '0001',
-        city: 'Oslo',
-        municipality: 'Oslo',
-        county: 'Oslo',
-        industry: 'Teknologi',
-        employees: Math.floor(Math.random() * 100) + 10,
-        revenue: Math.floor(Math.random() * 10000000) + 1000000,
-        foundedYear: Math.floor(Math.random() * 30) + 1990,
-        status: 'Aktiv',
-        phone: '+47 123 45 678',
-        email: `info@bedrift${orgNumber.slice(-3)}.no`,
-        website: `https://www.bedrift${orgNumber.slice(-3)}.no`
-      };
-      
-      console.log('🔍 BRRG mock company:', mockCompany);
-      return mockCompany;
-      
+      // Get admin users for the company
+      const adminUsers = await this.getEmployees(assignment.companyId);
+      const adminsWithPhone = adminUsers.filter(emp => 
+        emp.phone && emp.role === 'admin' && emp.status === 'active'
+      );
+
+      // Send SMS to admins
+      for (const admin of adminsWithPhone) {
+        try {
+          const message = `Partner ${assignment.partnerName} har svart på oppdrag "${assignment.title}": ${response?.status}. Logg inn på DriftPro.`;
+          
+          const response = await fetch('/api/sms/send', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              to: admin.phone,
+              message: message,
+              priority: 'normal'
+            })
+          });
+
+          if (response.ok) {
+            console.log(`✅ Admin notification SMS sent to ${admin.displayName}`);
+          }
+        } catch (error) {
+          console.error(`Failed to send admin notification SMS to ${admin.displayName}:`, error);
+        }
+      }
     } catch (error) {
-      console.error('Error fetching BRRG company:', error);
-      return null;
+      console.error('Error notifying admin about partner response:', error);
+    }
+  }
+
+  // Partner Assignment File Upload
+  async uploadPartnerAssignmentFile(file: File, partnerId: string, assignmentId: string, companyId: string): Promise<{ fileUrl: string; fileName: string; fileSize: number }> {
+    if (!db || !storage) throw new Error('Firebase not initialized');
+
+    try {
+      // Create organized file path in Firebase Storage
+      const timestamp = Date.now();
+      const fileName = `${timestamp}_${file.name}`;
+      const filePath = `partners/${companyId}/${partnerId}/assignments/${assignmentId}/${fileName}`;
+      
+      // Upload file to Firebase Storage
+      const storageRef = ref(storage, filePath);
+      await uploadBytes(storageRef, file);
+      const fileUrl = await getDownloadURL(storageRef);
+
+      // Create file record in Firestore
+      const fileRecord = {
+        fileName: file.name,
+        fileUrl,
+        fileSize: file.size,
+        fileType: file.type,
+        filePath,
+        partnerId,
+        assignmentId,
+        companyId,
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: 'system'
+      };
+
+      // Add to partner assignment files collection
+      await addDoc(collection(db, `partners/${partnerId}/assignments/${assignmentId}/files`), fileRecord);
+
+      return {
+        fileUrl,
+        fileName: file.name,
+        fileSize: file.size
+      };
+
+    } catch (error) {
+      console.error('Error uploading partner assignment file:', error);
+      throw error;
     }
   }
 }
