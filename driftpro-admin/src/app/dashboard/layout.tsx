@@ -185,15 +185,9 @@ export default function DashboardLayout({
       category: 'main'
     },
     {
-      name: 'E-postinnstillinger',
-      href: '/dashboard/email-settings',
-      icon: <Settings size={20} />,
-      category: 'main'
-    },
-    {
-      name: 'E-postlogger',
-      href: '/dashboard/email-logs',
-      icon: <FileText size={20} />,
+      name: 'SMS Logg & Telefonbok',
+      href: '/dashboard/sms-logs',
+      icon: <MessageSquare size={20} />,
       category: 'main'
     },
     
@@ -210,12 +204,14 @@ export default function DashboardLayout({
       icon: <Handshake size={20} />,
       category: 'management'
     },
-    {
+    
+    // Partner Portal (only for single users, not companies)
+    ...(userProfile?.role === 'user' ? [{
       name: 'Partner Portal',
       href: '/partner-login',
       icon: <Globe size={20} />,
       category: 'management'
-    },
+    }] : []),
     
     // Settings (available for all companies)
     {
@@ -243,34 +239,7 @@ export default function DashboardLayout({
         category: 'admin',
         isAdmin: true
       },
-      {
-        name: 'E-postinnstillinger',
-        href: '/dashboard/email-settings',
-        icon: <Settings size={20} />,
-        category: 'admin',
-        isAdmin: true
-      },
-      {
-        name: 'E-postkonfigurasjon',
-        href: '/dashboard/email-config',
-        icon: <Mail size={20} />,
-        category: 'admin',
-        isAdmin: true
-      },
-      {
-        name: 'E-postlogger',
-        href: '/dashboard/email-logs',
-        icon: <FileText size={20} />,
-        category: 'admin',
-        isAdmin: true
-      },
-      {
-        name: 'E-postkontroll',
-        href: '/dashboard/email-control',
-        icon: <Shield size={20} />,
-        category: 'admin',
-        isAdmin: true
-      },
+
     ] : [])
   ];
 

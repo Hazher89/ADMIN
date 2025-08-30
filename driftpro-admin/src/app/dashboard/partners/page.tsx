@@ -831,20 +831,7 @@ export default function PartnersPage() {
             </p>
           </div>
 
-      {/* Debug Info */}
-      <div style={{ 
-        background: 'var(--gray-100)', 
-        padding: '1rem', 
-        borderRadius: 'var(--radius-lg)', 
-        marginBottom: '1rem',
-        fontSize: 'var(--font-size-sm)'
-      }}>
-        <strong>Debug Info:</strong><br />
-        Loading: {loading.toString()}<br />
-        Partners: {partners.length}<br />
-        UserProfile: {userProfile ? 'Loaded' : 'Not loaded'}<br />
-        CompanyId: {userProfile?.companyId || 'None'}
-        </div>
+
 
       {/* Success/Error Messages */}
       {success && (

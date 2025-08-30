@@ -111,3 +111,4 @@ console.log('✅ bud-priser-data.ts has been updated with correct postcode data!
 console.log(`📊 Total postcodes: ${postcodeData.length}`);
 console.log(`🎯 Postcode 1475: ${postcodeData.find(p => p.postcode === '1475')?.place} - ${postcodeData.find(p => p.postcode === '1475')?.price} kr`);
 
+
