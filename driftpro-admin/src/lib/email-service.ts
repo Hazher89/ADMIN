@@ -102,9 +102,10 @@ export class EmailService {
       });
       
       // Use nodemailer directly instead of fetch request
-      const nodemailer = await import('nodemailer');
+      const nodemailerModule = await import('nodemailer');
+      const nodemailer = nodemailerModule.default;
       
-      const transporter = nodemailer.default.createTransporter({
+      const transporter = nodemailer.createTransporter({
         host: emailSettings.smtpHost,
         port: emailSettings.smtpPort,
         secure: emailSettings.smtpSecure,
