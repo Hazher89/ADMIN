@@ -350,3 +350,4 @@ function generateEmailTemplate(template, data) {
 
 // Run the test
 testOffice365Email();
+

@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('📧 Processing forgot password request via Cloudflare Email Routing:', {
+    console.log('📧 Processing forgot password request via Office 365 SMTP:', {
       email,
-      provider: 'cloudflare_email_routing'
+      provider: 'office365_smtp'
     });
 
     // Check if user exists
@@ -62,17 +62,17 @@ export async function POST(request: NextRequest) {
       used: false
     });
 
-    console.log('📧 Sending password reset email via Cloudflare Email Routing');
+    console.log('📧 Sending password reset email via Office 365 SMTP');
 
-    // Send password reset email using Cloudflare Email Routing
+    // Send password reset email using Office 365 SMTP
     const result = await emailService.sendPasswordResetEmail(email, resetToken);
 
     if (result.success) {
-      console.log('✅ Password reset email sent successfully via Cloudflare Email Routing');
+      console.log('✅ Password reset email sent successfully via Office 365 SMTP');
       return NextResponse.json({
         success: true,
-        message: 'Password reset email sent successfully via Cloudflare Email Routing',
-        provider: 'cloudflare_email_routing'
+        message: 'Password reset email sent successfully via Office 365 SMTP',
+        provider: 'office365_smtp'
       });
     } else {
       console.error('❌ Password reset email sending failed:', result.error);
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         { 
           error: 'Failed to send password reset email',
           details: result.error,
-          provider: 'cloudflare_email_routing'
+          provider: 'office365_smtp'
         },
         { status: 500 }
       );
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'cloudflare_email_routing'
+        provider: 'office365_smtp'
       },
       { status: 500 }
     );

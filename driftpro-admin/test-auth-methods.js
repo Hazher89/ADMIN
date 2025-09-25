@@ -92,3 +92,4 @@ async function testAuthMethods() {
 
 // Run the test
 testAuthMethods();
+
