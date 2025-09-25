@@ -1,6 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { EmailTemplates } from './email-templates';
+import nodemailer from 'nodemailer';
 
 // Firebase config
 const firebaseConfig = {
@@ -102,9 +103,6 @@ export class EmailService {
       });
       
       // Use nodemailer directly instead of fetch request
-      const nodemailerModule = await import('nodemailer');
-      const nodemailer = nodemailerModule.default;
-      
       const transporter = nodemailer.createTransporter({
         host: emailSettings.smtpHost,
         port: emailSettings.smtpPort,
