@@ -20,7 +20,7 @@ exports.handler = async function(event, context) {
     }
 
     // Create transporter with the provided config or use defaults
-    const transporter = nodemailer.createTransporter({
+    const transporter = nodemailer.createTransport({
       host: config?.smtpHost || 'smtp.domeneshop.no',
       port: config?.smtpPort || 587,
       secure: false, // Use TLS
