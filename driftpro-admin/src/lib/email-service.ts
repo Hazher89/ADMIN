@@ -1,7 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { EmailTemplates } from './email-templates';
-import * as nodemailer from 'nodemailer';
 
 // Firebase config
 const firebaseConfig = {
@@ -102,32 +101,34 @@ export class EmailService {
         provider: 'office365_smtp'
       });
       
-      // Import nodemailer with dynamic require
-      const nodemailerModule = require('nodemailer');
-      
-      const transporter = nodemailerModule.createTransporter({
-        host: emailSettings.smtpHost,
-        port: emailSettings.smtpPort,
-        secure: emailSettings.smtpSecure,
-        auth: {
-          user: emailSettings.smtpUser,
-          pass: emailSettings.smtpPassword
-        },
-        tls: emailSettings.tls,
-        connectionTimeout: emailSettings.connectionTimeout,
-        greetingTimeout: emailSettings.greetingTimeout,
-        socketTimeout: emailSettings.socketTimeout
+      // Use Netlify function for email sending
+      const response = await fetch(`${this.baseUrl}/.netlify/functions/send-email`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          emailData: {
+            to: Array.isArray(to) ? to : [to],
+            subject: subject,
+            body: html
+          },
+          config: {
+            smtpHost: emailSettings.smtpHost,
+            smtpPort: emailSettings.smtpPort,
+            smtpUser: emailSettings.smtpUser,
+            smtpPass: emailSettings.smtpPassword,
+            senderName: emailSettings.fromName,
+            senderEmail: emailSettings.fromEmail
+          }
+        })
       });
 
-      const mailOptions = {
-        from: `${emailSettings.fromName} <${emailSettings.fromEmail}>`,
-        to: Array.isArray(to) ? to.join(', ') : to,
-        subject: subject,
-        html: html,
-        text: text || this.htmlToText(html)
-      };
-
-      const info = await transporter.sendMail(mailOptions);
+      const result = await response.json();
+      
+      if (!result.success) {
+        throw new Error(result.error || 'Email sending failed');
+      }
+      
+      const info = { messageId: result.messageId || 'unknown' };
 
       // Log email to Firestore
       await addDoc(collection(db, 'emailLogs'), {
