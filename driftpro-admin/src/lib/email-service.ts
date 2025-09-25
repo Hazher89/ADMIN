@@ -1,7 +1,7 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
 import { EmailTemplates } from './email-templates';
-import nodemailer from 'nodemailer';
+import * as nodemailer from 'nodemailer';
 
 // Firebase config
 const firebaseConfig = {
