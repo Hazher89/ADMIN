@@ -103,9 +103,9 @@ export class EmailService {
       });
       
       // Import nodemailer with dynamic require
-      const { createTransporter } = require('nodemailer');
+      const nodemailerModule = require('nodemailer');
       
-      const transporter = createTransporter({
+      const transporter = nodemailerModule.createTransporter({
         host: emailSettings.smtpHost,
         port: emailSettings.smtpPort,
         secure: emailSettings.smtpSecure,
