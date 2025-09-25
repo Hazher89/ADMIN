@@ -103,7 +103,8 @@ export class EmailService {
       });
       
       // Use nodemailer directly instead of fetch request
-      const transporter = nodemailer.createTransporter({
+      const nodemailerLib = require('nodemailer');
+      const transporter = nodemailerLib.createTransporter({
         host: emailSettings.smtpHost,
         port: emailSettings.smtpPort,
         secure: emailSettings.smtpSecure,
