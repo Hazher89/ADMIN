@@ -1,7 +1,6 @@
 import { addDoc, collection, doc, setDoc, getDoc, updateDoc, getDocs, getFirestore } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
 import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
-import { emailService } from './email-service';
 
 export interface AdminSetupToken {
   id: string;
@@ -183,13 +182,98 @@ export class AdminEmailService {
   ): Promise<boolean> {
     try {
       console.log('Sending password setup email to:', email);
-      const result = await emailService.sendAdminSetupEmail(email, adminName, companyName, setupToken);
-      console.log('Password setup email sent successfully:', result);
-      return result;
+      
+      // Use API endpoint for email sending
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/email/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: email,
+          subject: `Velkommen til ${companyName} - Sett opp passord`,
+          html: this.getPasswordSetupEmailHTML(adminName, companyName, setupToken),
+          text: this.getPasswordSetupEmailText(adminName, companyName, setupToken),
+          credentials: {
+            email: 'driftpro@mavilogistikk.no',
+            password: 'HazGada1989'
+          }
+        })
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        console.log('Password setup email sent successfully:', result);
+        return true;
+      } else {
+        throw new Error(result.error || 'Email sending failed');
+      }
     } catch (error) {
       console.error('Error sending password setup email:', error);
       throw new Error(`Failed to send password setup email: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
+  }
+
+  private getPasswordSetupEmailHTML(adminName: string, companyName: string, setupToken: string): string {
+    const setupUrl = `https://driftpro-admin.netlify.app/setup-password/${setupToken}`;
+    
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
+        <div style="background-color: white; padding: 30px; border-radius: 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <h1 style="color: #1f2937; text-align: center; margin-bottom: 30px;">Velkommen til ${companyName}!</h1>
+          
+          <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Hei ${adminName},
+          </p>
+          
+          <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Du har blitt utnevnt som administrator for ${companyName} i DriftPro-systemet. 
+            For å komme i gang, må du sette opp ditt passord.
+          </p>
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${setupUrl}" 
+               style="background-color: #3b82f6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block;">
+              🔐 Sett opp passord
+            </a>
+          </div>
+          
+          <p style="color: #6b7280; font-size: 14px; margin-top: 30px; text-align: center;">
+            Hvis knappen ikke fungerer, kan du kopiere og lime inn denne lenken i nettleseren din:
+          </p>
+          <p style="color: #3b82f6; font-size: 14px; text-align: center; word-break: break-all;">
+            ${setupUrl}
+          </p>
+          
+          <div style="margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb; text-align: center;">
+            <p style="color: #6b7280; font-size: 14px; margin: 0;">
+              Med vennlig hilsen,<br>
+              DriftPro Team<br>
+              driftpro@mavilogistikk.no
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  private getPasswordSetupEmailText(adminName: string, companyName: string, setupToken: string): string {
+    const setupUrl = `https://driftpro-admin.netlify.app/setup-password/${setupToken}`;
+    
+    return `
+      Velkommen til ${companyName}!
+      
+      Hei ${adminName},
+      
+      Du har blitt utnevnt som administrator for ${companyName} i DriftPro-systemet. 
+      For å komme i gang, må du sette opp ditt passord.
+      
+      Sett opp passord: ${setupUrl}
+      
+      Med vennlig hilsen,
+      DriftPro Team
+      driftpro@mavilogistikk.no
+    `;
   }
 
   /**

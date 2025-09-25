@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService, Company } from '@/lib/firebase-services';
+import { Company } from '@/lib/firebase-services';
 import { brrgService, BRRGCompany } from '@/lib/brrg-service';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { storage } from '@/lib/firebase';
@@ -37,16 +37,22 @@ import {
   Shield,
   FileImage
 } from 'lucide-react';
+import AddCompanyModal from '@/components/AddCompanyModal';
 
 
 
 export default function CompaniesPage() {
   const { userProfile } = useAuth();
   const [companies, setCompanies] = useState<Company[]>([]);
+  const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [saving, setSaving] = useState(false);
   
   // BRRG Integration
   const [showBRRGModal, setShowBRRGModal] = useState(false);
@@ -151,23 +157,79 @@ export default function CompaniesPage() {
   const [selectedCompanyForSettings, setSelectedCompanyForSettings] = useState<Company | null>(null);
 
   useEffect(() => {
-    loadCompanies();
+    setMounted(true);
+    // Only load companies on client-side
+    if (typeof window !== 'undefined') {
+      // Add a small delay to ensure Firebase is initialized
+      setTimeout(() => {
+        loadCompanies();
+      }, 100);
+    }
   }, []);
 
   const loadCompanies = async () => {
     try {
       setLoading(true);
+      setError(null);
+      
+      console.log('Loading companies...');
+      
+      // Check if we're on client side
+      if (typeof window === 'undefined') {
+        console.log('Server-side rendering, skipping company loading');
+        setCompanies([]);
+        setFilteredCompanies([]);
+        return;
+      }
+      
+      // Dynamically import firebaseService
+      const { firebaseService } = await import('@/lib/firebase-services');
       
       // Load real companies from Firebase
       const companiesData = await firebaseService.getCompanies();
+      console.log('Loaded companies:', companiesData.length);
       
       // Companies are already in the correct format
       setCompanies(companiesData);
+      setFilteredCompanies(companiesData);
     } catch (error) {
       console.error('Error loading companies:', error);
+      setError('Feil ved lasting av bedrifter: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
       setCompanies([]);
+      setFilteredCompanies([]);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleAddCompany = async (companyData: any) => {
+    try {
+      console.log('handleAddCompany called with:', companyData);
+      
+      // Check if we're on client side
+      if (typeof window === 'undefined') {
+        console.error('Cannot create company on server-side');
+        alert('Kan ikke opprette bedrift på server-siden');
+        return;
+      }
+      
+      // Dynamically import firebaseService
+      const { firebaseService } = await import('@/lib/firebase-services');
+      
+      setSaving(true);
+      const result = await firebaseService.createCompanyWithAdmin(companyData);
+      console.log('Company created:', result);
+      
+      // Reload companies
+      await loadCompanies();
+      
+      // Show success message
+      alert('Bedrift opprettet successfully!');
+    } catch (error: any) {
+      console.error('Error creating company:', error);
+      alert(`Feil ved opprettelse av bedrift: ${error.message}`);
+    } finally {
+      setSaving(false);
     }
   };
 
@@ -261,7 +323,8 @@ export default function CompaniesPage() {
       position: '',
       department: '',
       accessLevel: 'full',
-      notes: ''
+      notes: '',
+      password: ''
     }]);
   };
 
@@ -271,7 +334,7 @@ export default function CompaniesPage() {
     }
   };
 
-  const handleAdminChange = (index: number, field: 'name' | 'email' | 'phone' | 'position' | 'department' | 'accessLevel' | 'notes', value: string) => {
+  const handleAdminChange = (index: number, field: 'name' | 'email' | 'phone' | 'position' | 'department' | 'accessLevel' | 'notes' | 'password', value: string) => {
     const newAdmins = [...admins];
     if (field === 'accessLevel') {
       newAdmins[index][field] = value as 'full' | 'limited' | 'readonly';
@@ -399,9 +462,9 @@ export default function CompaniesPage() {
     if (!selectedBRRGCompany) return;
 
     // Validate admins
-    const validAdmins = admins.filter(admin => admin.name.trim() && admin.email.trim());
+    const validAdmins = admins.filter(admin => admin.name.trim() && admin.email.trim() && admin.password && admin.password.length >= 6);
     if (validAdmins.length === 0) {
-      alert('Du må legge til minst én admin med navn og e-post');
+      alert('Du må legge til minst én admin med navn, e-post og passord (minst 6 tegn)');
       return;
     }
 
@@ -463,6 +526,12 @@ export default function CompaniesPage() {
       };
 
       // Add company to Firebase
+      if (typeof window === 'undefined') {
+        console.error('Cannot create company on server-side');
+        return;
+      }
+      
+      const { firebaseService } = await import('@/lib/firebase-services');
       const companyId = await firebaseService.createCompany(newCompany);
       const addedCompany = { 
         id: companyId, 
@@ -475,6 +544,8 @@ export default function CompaniesPage() {
       const adminResults = [];
       for (const admin of validAdmins) {
         try {
+          console.log(`👤 Adding admin: ${admin.name} (${admin.email}) to company: ${selectedBRRGCompany.navn}`);
+          
           const result = await brrgService.addAdmin({
             email: admin.email,
             name: admin.name,
@@ -483,9 +554,11 @@ export default function CompaniesPage() {
             companyName: selectedBRRGCompany.navn,
             permissions: ['manage_users', 'manage_documents', 'manage_deviations', 'manage_reports', 'view_analytics']
           });
-          adminResults.push({ email: admin.email, success: true });
+          
+          console.log(`✅ Admin ${admin.email} added successfully:`, result);
+          adminResults.push({ email: admin.email, success: true, result });
         } catch (error) {
-          console.error(`Error adding admin ${admin.email}:`, error);
+          console.error(`❌ Error adding admin ${admin.email}:`, error);
           adminResults.push({ email: admin.email, success: false, error: error instanceof Error ? error.message : 'Ukjent feil' });
           // Continue with other admins even if one fails
         }
@@ -559,11 +632,18 @@ export default function CompaniesPage() {
       const successfulAdmins = adminResults.filter(r => r.success);
       const failedAdmins = adminResults.filter(r => !r.success);
       
-      let message = `Bedrift "${selectedBRRGCompany.navn}" opprettet!\n\n`;
-      message += `✅ ${successfulAdmins.length} admin(s) lagt til og e-post sendt.\n`;
+      let message = `🏢 Bedrift "${selectedBRRGCompany.navn}" opprettet!\n\n`;
+      
+      if (successfulAdmins.length > 0) {
+        message += `✅ ${successfulAdmins.length} admin(s) lagt til og velkommen-e-post sendt til:\n`;
+        successfulAdmins.forEach(admin => {
+          message += `- ${admin.email}\n`;
+        });
+        message += `\n📧 E-postene inneholder passordoppsett-lenker.\n`;
+      }
       
       if (failedAdmins.length > 0) {
-        message += `❌ ${failedAdmins.length} admin(s) feilet:\n`;
+        message += `\n❌ ${failedAdmins.length} admin(s) feilet:\n`;
         failedAdmins.forEach(admin => {
           message += `- ${admin.email}: ${admin.error}\n`;
         });
@@ -608,6 +688,12 @@ export default function CompaniesPage() {
     try {
       setEditingCompany(true);
       
+      if (typeof window === 'undefined') {
+        console.error('Cannot update company on server-side');
+        return;
+      }
+      
+      const { firebaseService } = await import('@/lib/firebase-services');
       await firebaseService.updateCompany(selectedCompany.id, {
         name: editForm.name.trim(),
         industry: editForm.industry,
@@ -650,6 +736,12 @@ export default function CompaniesPage() {
       setDeletingCompany(true);
 
       // Delete all associated data in Firebase
+      if (typeof window === 'undefined') {
+        console.error('Cannot delete company on server-side');
+        return;
+      }
+      
+      const { firebaseService } = await import('@/lib/firebase-services');
       await firebaseService.deleteCompany(selectedCompany.id);
 
       // Update local state
@@ -666,14 +758,18 @@ export default function CompaniesPage() {
     }
   };
 
-  const filteredCompanies = companies.filter(company => {
-    const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         company.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         company.location.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesIndustry = selectedIndustry === 'all' || company.industry === selectedIndustry;
-    const matchesStatus = selectedStatus === 'all' || company.status === selectedStatus;
-    return matchesSearch && matchesIndustry && matchesStatus;
-  });
+  // Filter companies based on search criteria
+  useEffect(() => {
+    const filtered = companies.filter(company => {
+      const matchesSearch = company.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           company.industry.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                           company.location.toLowerCase().includes(searchTerm.toLowerCase());
+      const matchesIndustry = selectedIndustry === 'all' || company.industry === selectedIndustry;
+      const matchesStatus = selectedStatus === 'all' || company.status === selectedStatus;
+      return matchesSearch && matchesIndustry && matchesStatus;
+    });
+    setFilteredCompanies(filtered);
+  }, [companies, searchTerm, selectedIndustry, selectedStatus]);
 
   const industries = ['all', ...Array.from(new Set(companies.map(comp => comp.industry)))];
   const statuses = ['all', ...Array.from(new Set(companies.map(comp => comp.status)))];
@@ -708,7 +804,8 @@ export default function CompaniesPage() {
     try {
       setLoading(true);
       
-      const response = await fetch('/api/send-password-setup', {
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/send-password-setup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -742,6 +839,12 @@ export default function CompaniesPage() {
       setLoading(true);
       
       // Update company status to inactive
+      if (typeof window === 'undefined') {
+        console.error('Cannot update company on server-side');
+        return;
+      }
+      
+      const { firebaseService } = await import('@/lib/firebase-services');
       await firebaseService.updateCompany(company.id, { status: 'inactive' });
       
       // Update local state
@@ -766,6 +869,52 @@ export default function CompaniesPage() {
   };
 
 
+
+  if (!mounted) {
+    return (
+      <div style={{
+        minHeight: '100vh',
+        background: 'var(--gray-50)',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center'
+      }}>
+        <div style={{
+          textAlign: 'center',
+          padding: '2rem',
+          background: 'white',
+          borderRadius: 'var(--radius-lg)',
+          boxShadow: 'var(--shadow-lg)',
+          maxWidth: '400px',
+          width: '100%'
+        }}>
+          <div style={{
+            width: '48px',
+            height: '48px',
+            border: '4px solid var(--gray-200)',
+            borderTop: '4px solid var(--primary)',
+            borderRadius: '50%',
+            animation: 'spin 1s linear infinite',
+            margin: '0 auto 1rem'
+          }} />
+          <h3 style={{ 
+            fontSize: 'var(--font-size-lg)', 
+            fontWeight: '600', 
+            color: 'var(--gray-900)',
+            marginBottom: '0.5rem'
+          }}>
+            Initialiserer...
+          </h3>
+          <p style={{ 
+            color: 'var(--gray-600)',
+            fontSize: 'var(--font-size-base)'
+          }}>
+            Laster applikasjonen
+          </p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div>
@@ -794,7 +943,15 @@ export default function CompaniesPage() {
             <Database style={{ width: '16px', height: '16px' }} />
             Legg til fra BRRG
           </button>
-          <button className="btn btn-secondary">
+          <button 
+            className="btn btn-secondary"
+            onClick={() => {
+              console.log('Opening modal...');
+              console.log('Current showAddModal state:', showAddModal);
+              setShowAddModal(true);
+              console.log('Set showAddModal to true');
+            }}
+          >
             <Plus style={{ width: '16px', height: '16px' }} />
             Legg til manuelt
           </button>
@@ -978,7 +1135,13 @@ export default function CompaniesPage() {
               <Database style={{ width: '16px', height: '16px' }} />
               Legg til fra BRRG
             </button>
-            <button className="btn btn-secondary">
+            <button 
+              className="btn btn-secondary"
+              onClick={() => {
+                console.log('Opening modal (second button)...');
+                setShowAddModal(true);
+              }}
+            >
               <Plus style={{ width: '16px', height: '16px' }} />
               Legg til manuelt
             </button>
@@ -991,6 +1154,29 @@ export default function CompaniesPage() {
         <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
           <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
           <p style={{ color: '#666' }}>Laster bedrifter...</p>
+        </div>
+      )}
+
+      {/* Error State */}
+      {error && (
+        <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
+          <div style={{ color: '#dc2626', fontSize: '1.25rem', marginBottom: '1rem' }}>
+            ⚠️ Feil
+          </div>
+          <p style={{ color: '#666', marginBottom: '1rem' }}>{error}</p>
+          <button
+            onClick={() => loadCompanies()}
+            style={{
+              padding: '0.5rem 1rem',
+              background: '#3b82f6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '0.375rem',
+              cursor: 'pointer'
+            }}
+          >
+            Prøv igjen
+          </button>
         </div>
       )}
 
@@ -1606,6 +1792,13 @@ export default function CompaniesPage() {
                       style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
                     />
                     <input
+                      type="password"
+                      placeholder="Passord (minst 6 tegn) *"
+                      value={admin.password || ''}
+                      onChange={(e) => handleAdminChange(index, 'password', e.target.value)}
+                      style={{ padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-md)' }}
+                    />
+                    <input
                       type="text"
                       placeholder="Avdeling"
                       value={admin.department}
@@ -1657,6 +1850,72 @@ export default function CompaniesPage() {
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Legg til ny administrator
               </button>
+            </div>
+
+            {/* Sidepanel-tilganger */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', marginBottom: '1rem', color: 'var(--gray-900)' }}>
+                Sidepanel-tilganger
+              </h3>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" defaultChecked style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Dashboard</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Ansatte</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Vakter</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Fravær og ferie</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>BUD priser</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>HMS</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Dokumenter</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Chat</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Rapporter</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Tidsregistrering</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>SMS Logg</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Avdelinger</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Samarbeidspartnere</span>
+                </label>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '0.75rem', border: '1px solid var(--gray-200)', borderRadius: 'var(--radius-md)', cursor: 'pointer' }}>
+                  <input type="checkbox" defaultChecked style={{ margin: 0 }} />
+                  <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500' }}>Innstillinger</span>
+                </label>
+              </div>
             </div>
 
             {/* Action Buttons */}
@@ -2279,6 +2538,13 @@ export default function CompaniesPage() {
           </div>
         </div>
       )}
+
+      {/* Add Company Modal */}
+      <AddCompanyModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onSave={handleAddCompany}
+      />
     </div>
   );
 } 

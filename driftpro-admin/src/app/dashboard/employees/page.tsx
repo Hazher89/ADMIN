@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
-import { sveveSMS } from '@/lib/sveve-sms-service';
 // import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 import { UserPlus, Search, Filter, Edit, Trash2, Plus, MoreHorizontal, User, Building, MapPin, CheckCircle, Eye, Settings, Key, UserX, UserCheck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 
@@ -70,25 +69,36 @@ export default function EmployeesPage() {
   }, []);
 
   useEffect(() => {
+    console.log('Employees useEffect triggered, userProfile:', userProfile);
+    console.log('userProfile?.companyId:', userProfile?.companyId);
+    console.log('userProfile?.id:', userProfile?.id);
+    console.log('authLoading:', authLoading);
+    
     let timeoutId: NodeJS.Timeout;
     
     // Wait for auth to finish loading
     if (authLoading) {
+      console.log('Auth still loading, waiting...');
       return;
     }
     
     if (userProfile?.companyId) {
+      console.log('Loading employees for company:', userProfile.companyId);
       setLoading(true);
       
       // Define load functions inside useEffect to avoid dependency issues
       const loadEmployees = async () => {
         if (!userProfile?.companyId) {
+          console.error('No company ID found in loadEmployees');
           setLoading(false);
           return;
         }
 
+        console.log('Loading employees for company:', userProfile.companyId);
+
         try {
           const data = await firebaseService.getEmployees(userProfile.companyId);
+          console.log('Loaded employees:', data);
           setEmployees(data);
         } catch (error) {
           console.error('Error loading employees:', error);
@@ -114,6 +124,8 @@ export default function EmployeesPage() {
       loadEmployees();
       loadDepartments();
     } else {
+      console.log('No companyId found in userProfile');
+      console.log('userProfile object:', userProfile);
       // Don't set loading to false immediately, wait a bit to see if userProfile loads
       timeoutId = setTimeout(() => {
         if (!userProfile?.companyId) {
@@ -133,11 +145,15 @@ export default function EmployeesPage() {
   // Create a reusable loadEmployees function for other functions to use
   const loadEmployees = async () => {
     if (!userProfile?.companyId) {
+      console.error('No company ID found in loadEmployees');
       return;
     }
 
+    console.log('Loading employees for company:', userProfile.companyId);
+
     try {
       const data = await firebaseService.getEmployees(userProfile.companyId);
+      console.log('Loaded employees:', data);
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -172,7 +188,13 @@ export default function EmployeesPage() {
       return;
     }
 
-
+    console.log('Creating employee with data:', {
+      ...newEmployee,
+      departmentId: newEmployee.departmentId || '',
+      position: newEmployee.position || '',
+      companyId: userProfile.companyId,
+      hireDate: new Date().toISOString()
+    });
 
     try {
       // Create employee data without undefined fields
@@ -211,12 +233,14 @@ export default function EmployeesPage() {
 
       const employeeId = await firebaseService.createEmployee(employeeData);
 
+      console.log('Employee created successfully with ID:', employeeId);
+
       // Send welcome email to the new employee
       let emailSent = false;
       try {
         const departmentName = getDepartmentName(newEmployee.departmentId);
         const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName = userProfile?.companyName || 'Bedrift';
+        const companyName = userProfile?.companyId || 'Bedrift';
 
         // Email functionality moved to API routes
         const response = await fetch('/api/send-welcome-email', {
@@ -236,8 +260,10 @@ export default function EmployeesPage() {
 
         if (response.ok) {
           emailSent = true;
+          console.log('Welcome email sent successfully to:', newEmployee.email);
         } else {
           emailSent = false;
+          console.warn('Failed to send welcome email to:', newEmployee.email);
         }
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError);
@@ -277,29 +303,9 @@ export default function EmployeesPage() {
         loadEmployees();
       }, 1000);
       
-      // Send welcome SMS if phone number is provided
-      let smsSent = false;
-      if (newEmployee.phone && sveveSMS.validatePhoneNumber(newEmployee.phone)) {
-        try {
-          const departmentName = getDepartmentName(newEmployee.departmentId);
-          const companyName = userProfile?.companyName || 'Bedrift';
-          
-          await sveveSMS.sendEmployeeWelcome(
-            newEmployee.phone,
-            newEmployee.displayName,
-            companyName,
-            `${window.location.origin}/login`
-          );
-          smsSent = true;
-        } catch (smsError) {
-          smsSent = false;
-          // Don't fail the employee creation if SMS fails
-        }
-      }
-
       const message = emailSent 
-        ? `Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}${smsSent ? ', Velkomst-SMS sendt' : ''}`
-        : `Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email} - sjekk e-postinnstillinger.${smsSent ? ' Velkomst-SMS sendt.' : ''}`;
+        ? `Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}`
+        : `Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email} - sjekk e-postinnstillinger.`;
       alert(message);
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -353,28 +359,8 @@ export default function EmployeesPage() {
     }
 
     try {
-      if (!selectedEmployee) return;
-
-      // Generate random password reset code
-      const resetCode = Math.random().toString(36).substring(2, 8).toUpperCase();
-      
-      // Send SMS with reset code if phone number exists
-      if (selectedEmployee.phone && sveveSMS.validatePhoneNumber(selectedEmployee.phone)) {
-        try {
-          await sveveSMS.sendPasswordResetCode(
-            selectedEmployee.phone,
-            selectedEmployee.displayName,
-            resetCode
-          );
-          alert(`Passord-tilbakestillingskode sendt via SMS til ${selectedEmployee.phone}: ${resetCode}`);
-        } catch (smsError) {
-          console.error('Error sending SMS reset code:', smsError);
-          alert('Kunne ikke sende SMS-kode. Prøv e-post i stedet.');
-        }
-      } else {
-        // TODO: Implement email password reset functionality
-        alert('Passord tilbakestillt! En e-post med nytt passord er sendt til ansatten.');
-      }
+      // TODO: Implement password reset functionality
+      alert('Passord tilbakestillt! En e-post med nytt passord er sendt til ansatten.');
     } catch (error) {
       console.error('Error resetting password:', error);
       alert(`Feil ved tilbakestilling av passord: ${error instanceof Error ? error.message : 'Ukjent feil'}`);

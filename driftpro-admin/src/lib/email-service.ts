@@ -1,6 +1,6 @@
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
-import nodemailer from 'nodemailer';
+import { EmailTemplates } from './email-templates';
 
 // Firebase config
 const firebaseConfig = {
@@ -40,12 +40,12 @@ export class EmailService {
         });
         
         return {
-          smtpHost: data.smtpHost || 'smtp.domeneshop.no',
-          smtpPort: data.smtpPort || 587,
-          smtpUser: data.smtpUser || 'noreplay@driftpro.no',
-          smtpPassword: data.smtpPassword || process.env.DOMENESHOP_SMTP_PASSWORD,
-          smtpSecure: data.smtpSecure || false,
-          fromEmail: data.fromEmail || 'noreplay@driftpro.no',
+        smtpHost: data.smtpHost || 'smtp-mail.outlook.com',
+        smtpPort: data.smtpPort || 587,
+        smtpUser: data.smtpUser || 'driftpro@mavilogistikk.no',
+        smtpPassword: data.smtpPassword || 'HazGada1989',
+        smtpSecure: data.smtpSecure || false,
+        fromEmail: data.fromEmail || 'driftpro@mavilogistikk.no',
           fromName: data.fromName || 'DriftPro System',
           tls: data.tls || { rejectUnauthorized: false },
           connectionTimeout: data.connectionTimeout || 60000,
@@ -54,15 +54,15 @@ export class EmailService {
         };
       }
       
-      console.log('📧 Using default Domeneshop SMTP settings');
-      // Return default Domeneshop SMTP settings
+      console.log('📧 Using default Office 365 SMTP settings');
+      // Return default Office 365 SMTP settings
       return {
-        smtpHost: 'smtp.domeneshop.no',
+        smtpHost: 'smtp-mail.outlook.com',
         smtpPort: 587,
-        smtpUser: 'noreplay@driftpro.no',
-        smtpPassword: process.env.DOMENESHOP_SMTP_PASSWORD || 'your-domeneshop-password',
+        smtpUser: 'driftpro@mavilogistikk.no',
+        smtpPassword: 'HazGada1989',
         smtpSecure: false,
-        fromEmail: 'noreplay@driftpro.no',
+        fromEmail: 'driftpro@mavilogistikk.no',
         fromName: 'DriftPro System',
         tls: { rejectUnauthorized: false },
         connectionTimeout: 60000,
@@ -71,14 +71,14 @@ export class EmailService {
       };
     } catch (error) {
       console.error('❌ Error getting email settings:', error);
-      // Return default Domeneshop SMTP settings
+      // Return default Office 365 SMTP settings
       return {
-        smtpHost: 'smtp.domeneshop.no',
+        smtpHost: 'smtp-mail.outlook.com',
         smtpPort: 587,
-        smtpUser: 'noreplay@driftpro.no',
-        smtpPassword: process.env.DOMENESHOP_SMTP_PASSWORD || 'your-domeneshop-password',
+        smtpUser: 'driftpro@mavilogistikk.no',
+        smtpPassword: 'HazGada1989',
         smtpSecure: false,
-        fromEmail: 'noreplay@driftpro.no',
+        fromEmail: 'driftpro@mavilogistikk.no',
         fromName: 'DriftPro System',
         tls: { rejectUnauthorized: false },
         connectionTimeout: 60000,
@@ -92,74 +92,69 @@ export class EmailService {
     try {
       const emailSettings = await this.getEmailSettings();
       
-      console.log('📧 Attempting to send email via Domeneshop SMTP:', {
+      console.log('📧 Attempting to send email via Office 365 SMTP:', {
         to: Array.isArray(to) ? to : [to],
         subject,
         smtpHost: emailSettings.smtpHost,
         smtpUser: emailSettings.smtpUser,
         fromEmail: emailSettings.fromEmail,
-        provider: 'domeneshop_smtp'
+        provider: 'office365_smtp'
       });
       
-      // Create transporter with Domeneshop SMTP
-      const transporter = nodemailer.createTransport({
-        host: emailSettings.smtpHost,
-        port: emailSettings.smtpPort,
-        secure: emailSettings.smtpSecure,
-        auth: {
-          user: emailSettings.smtpUser,
-          pass: emailSettings.smtpPassword
-        },
-        tls: emailSettings.tls,
-        connectionTimeout: emailSettings.connectionTimeout,
-        greetingTimeout: emailSettings.greetingTimeout,
-        socketTimeout: emailSettings.socketTimeout
+      // Use API endpoint for email sending (works in browser)
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/email/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: Array.isArray(to) ? to.join(', ') : to,
+          subject: subject,
+          html: html,
+          text: text || undefined,
+          credentials: {
+            email: emailSettings.smtpUser,
+            password: emailSettings.smtpPassword
+          }
+        })
       });
 
-      // Verify connection configuration
-      await transporter.verify();
-      console.log('✅ SMTP connection verified successfully');
+      const result = await response.json();
 
-      // Send email
-      const result = await transporter.sendMail({
-        from: `"${emailSettings.fromName}" <${emailSettings.fromEmail}>`,
-        to: Array.isArray(to) ? to.join(', ') : to,
-        subject: subject,
-        html: html,
-        text: text || undefined
-      });
+      if (result.success) {
+        // Log email to Firestore
+        await addDoc(collection(db, 'emailLogs'), {
+          to: Array.isArray(to) ? to : [to],
+          subject: subject,
+          content: html,
+          type: 'system',
+          status: 'sent',
+          sentAt: serverTimestamp(),
+          messageId: result.messageId || 'unknown',
+          metadata: {
+            provider: 'office365_smtp',
+            timestamp: new Date().toISOString(),
+            smtpHost: emailSettings.smtpHost,
+            fromEmail: emailSettings.fromEmail
+          }
+        });
 
-      // Log email to Firestore
-      await addDoc(collection(db, 'emailLogs'), {
-        to: Array.isArray(to) ? to : [to],
-        subject: subject,
-        content: html,
-        type: 'system',
-        status: 'sent',
-        sentAt: serverTimestamp(),
-        messageId: result?.messageId || 'unknown',
-        metadata: {
-          provider: 'domeneshop_smtp',
-          timestamp: new Date().toISOString(),
-          smtpHost: emailSettings.smtpHost,
-          fromEmail: emailSettings.fromEmail
-        }
-      });
-
-      console.log('✅ Email sent successfully via Domeneshop SMTP:', {
-        messageId: result?.messageId,
-        to: Array.isArray(to) ? to : [to],
-        subject,
-        provider: 'domeneshop_smtp'
-      });
-      
-      return { success: true, messageId: result?.messageId || 'unknown' };
+        console.log('✅ Email sent successfully via Office 365 SMTP:', {
+          messageId: result.messageId,
+          to: Array.isArray(to) ? to : [to],
+          subject,
+          provider: 'office365_smtp'
+        });
+        
+        return { success: true, messageId: result.messageId || 'unknown' };
+      } else {
+        throw new Error(result.error || 'Email sending failed');
+      }
     } catch (error) {
       console.error('❌ Email sending failed:', {
         error: error instanceof Error ? error.message : 'Unknown error',
         to: Array.isArray(to) ? to : [to],
         subject,
-        provider: 'cloudflare_email_routing'
+        provider: 'office365_smtp'
       });
       
       // Log error to Firestore
@@ -172,7 +167,7 @@ export class EmailService {
         sentAt: serverTimestamp(),
         error: error instanceof Error ? error.message : 'Unknown error',
         metadata: {
-          provider: 'domeneshop_smtp',
+          provider: 'office365_smtp',
           timestamp: new Date().toISOString(),
           error: error instanceof Error ? error.message : 'Unknown error'
         }
@@ -183,7 +178,7 @@ export class EmailService {
   }
 
   async sendAdminSetupEmail(adminEmail: string, adminName: string, companyName: string, setupToken: string) {
-    const setupUrl = `${this.baseUrl}/setup-password?token=${setupToken}`;
+    const setupUrl = `${this.baseUrl}/setup-password/${setupToken}`;
     
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
@@ -217,7 +212,7 @@ export class EmailService {
             <p style="color: #6b7280; font-size: 14px; margin: 0;">
               Med vennlig hilsen,<br>
               DriftPro Team<br>
-              noreplay@driftpro.no
+              driftpro@mavilogistikk.no
             </p>
           </div>
         </div>
@@ -261,7 +256,7 @@ export class EmailService {
             <p style="color: #6b7280; font-size: 14px; margin: 0;">
               Med vennlig hilsen,<br>
               DriftPro Team<br>
-              noreplay@driftpro.no
+              driftpro@mavilogistikk.no
             </p>
           </div>
         </div>
@@ -292,7 +287,7 @@ export class EmailService {
             <p style="color: #6b7280; font-size: 14px; margin: 0;">
               Med vennlig hilsen,<br>
               DriftPro System<br>
-              noreplay@driftpro.no
+              driftpro@mavilogistikk.no
             </p>
           </div>
         </div>
@@ -331,7 +326,7 @@ export class EmailService {
             <p style="color: #6b7280; font-size: 14px; margin: 0;">
               Med vennlig hilsen,<br>
               DriftPro System<br>
-              noreplay@driftpro.no
+              driftpro@mavilogistikk.no
             </p>
           </div>
         </div>
@@ -375,7 +370,7 @@ export class EmailService {
             <p style="color: #6b7280; font-size: 14px; margin: 0;">
               Med vennlig hilsen,<br>
               DriftPro Team<br>
-              noreplay@driftpro.no
+              driftpro@mavilogistikk.no
             </p>
           </div>
         </div>
@@ -383,6 +378,37 @@ export class EmailService {
     `;
 
     return this.sendEmail(userEmail, `Velkommen til ${companyName} - DriftPro`, html);
+  }
+
+  // New notification methods using professional templates
+  async sendNewCompanyNotification(adminEmail: string, companyName: string, adminName: string) {
+    const template = EmailTemplates.getNewCompanyNotificationTemplate(adminEmail, companyName, adminName);
+    return this.sendEmail(adminEmail, template.subject, template.html);
+  }
+
+  async sendVacationRequestNotification(adminEmail: string, employeeName: string, startDate: string, endDate: string, days: number) {
+    const template = EmailTemplates.getVacationRequestTemplate(adminEmail, employeeName, startDate, endDate, days);
+    return this.sendEmail(adminEmail, template.subject, template.html);
+  }
+
+  async sendDeviationReportNotification(adminEmail: string, reporterName: string, deviationTitle: string, description: string, severity: string) {
+    const template = EmailTemplates.getDeviationReportTemplate(adminEmail, reporterName, deviationTitle, description, severity);
+    return this.sendEmail(adminEmail, template.subject, template.html);
+  }
+
+  async sendPartnerAssignmentNotification(partnerEmail: string, partnerName: string, routeName: string, assignmentDate: string) {
+    const template = EmailTemplates.getPartnerAssignmentTemplate(partnerEmail, partnerName, routeName, assignmentDate);
+    return this.sendEmail(partnerEmail, template.subject, template.html);
+  }
+
+  async sendNewUserNotification(adminEmail: string, userName: string, companyName: string, role: string) {
+    const template = EmailTemplates.getNewUserTemplate(adminEmail, userName, companyName, role);
+    return this.sendEmail(adminEmail, template.subject, template.html);
+  }
+
+  async sendAuditNotification(adminEmail: string, auditType: string, findings: string, severity: string) {
+    const template = EmailTemplates.getAuditNotificationTemplate(adminEmail, auditType, findings, severity);
+    return this.sendEmail(adminEmail, template.subject, template.html);
   }
 }
 

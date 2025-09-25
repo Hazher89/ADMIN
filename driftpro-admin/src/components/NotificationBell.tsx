@@ -42,23 +42,19 @@ export default function NotificationBell() {
   const [showDropdown, setShowDropdown] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  // Reset notifications when userProfile changes
-  useEffect(() => {
-    if (!userProfile?.companyId) {
-      setNotifications([]);
-      setUnreadCount(0);
-    }
-  }, [userProfile?.companyId]);
-
   const loadNotifications = useCallback(async () => {
     try {
       if (!db) {
+        console.error('Firebase not initialized');
         return () => {};
       }
 
       if (!user?.uid || !userProfile?.companyId) {
+        // Don't log error if user is not logged in yet
+        if (user?.uid && !userProfile?.companyId) {
+          console.warn('User logged in but no company ID found in profile');
+        }
         setNotifications([]);
-        setUnreadCount(0);
         return () => {};
       }
 
@@ -131,14 +127,12 @@ export default function NotificationBell() {
         const unreadNotifications = notificationsData.filter(n => n.status === 'unread');
         setUnreadCount(unreadNotifications.length);
       }, (error) => {
-        setNotifications([]);
-        setUnreadCount(0);
+        console.error('Error loading notifications:', error);
       });
 
       return unsubscribe;
     } catch (error) {
-      setNotifications([]);
-      setUnreadCount(0);
+      console.error('Error setting up notifications listener:', error);
       return () => {};
     }
   }, [user?.uid, userProfile?.companyId]);

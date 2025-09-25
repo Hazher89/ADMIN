@@ -72,7 +72,7 @@ export default function VacationPage() {
 
   // Load data
   useEffect(() => {
-    if (!userProfile?.companyName) {
+    if (!userProfile?.companyId) {
       setLoading(false);
       setVacationRequests([]);
       return;
@@ -88,11 +88,11 @@ export default function VacationPage() {
     loadData();
 
     return () => clearTimeout(timeoutId);
-  }, [userProfile?.companyName]);
+  }, [userProfile?.companyId]);
 
   const loadData = async () => {
     try {
-      if (!db || !userProfile?.companyName) return;
+      if (!db || !userProfile?.companyId) return;
 
       // Load vacation requests
       const requestsSnapshot = await getDocs(collection(db, 'vacationRequests'));
@@ -100,7 +100,7 @@ export default function VacationPage() {
 
       requestsSnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.companyId === userProfile.companyName) {
+        if (data.companyId === userProfile.companyId) {
           const request: VacationRequest = {
             id: doc.id,
             employeeId: data.employeeId || '',
@@ -113,7 +113,7 @@ export default function VacationPage() {
             status: data.status || 'pending',
             days: data.days || 0,
             submittedAt: data.submittedAt || new Date().toISOString(),
-            companyId: userProfile.companyName || ''
+            companyId: userProfile.companyId || ''
           };
           requestsData.push(request);
         }
@@ -125,7 +125,7 @@ export default function VacationPage() {
 
       employeesSnapshot.forEach((doc) => {
         const data = doc.data();
-        if (data.companyId === userProfile.companyName && data.status === 'active') {
+        if (data.companyId === userProfile.companyId && data.status === 'active') {
           const employee: Employee = {
             id: doc.id,
             firstName: data.firstName || '',
@@ -169,7 +169,7 @@ export default function VacationPage() {
     setSaving(true);
 
     try {
-      if (!userProfile?.companyName) {
+      if (!userProfile?.companyId) {
         throw new Error('Company not found');
       }
 
@@ -193,7 +193,7 @@ export default function VacationPage() {
         status: 'pending' as const,
         days,
         submittedAt: new Date().toISOString(),
-        companyId: userProfile.companyName,
+        companyId: userProfile.companyId,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       };

@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { collection, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
+import { firebaseService } from '@/lib/firebase-services';
 
 // Prevent pre-rendering since this page uses useRouter and Firebase
 export const dynamic = 'force-dynamic';
@@ -80,32 +81,8 @@ export default function CompaniesPage() {
         return;
       }
 
-      const companiesQuery = collection(db, 'companies');
-      const snapshot = await getDocs(companiesQuery);
-      
-      const companiesData = snapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          name: data.name || '',
-          orgNumber: data.orgNumber || '',
-          phone: data.phone || '',
-          email: data.email || '',
-          adminEmail: data.adminEmail || '',
-          address: data.address || '',
-          industry: data.industry || '',
-          employeeCount: data.employeeCount || 0,
-          status: data.status || 'active',
-          createdAt: data.createdAt || new Date().toISOString(),
-          updatedAt: data.updatedAt || new Date().toISOString(),
-          subscriptionPlan: data.subscriptionPlan || 'basic',
-          contactPerson: {
-            name: data.contactPerson?.name || '',
-            phone: data.contactPerson?.phone || '',
-            email: data.contactPerson?.email || ''
-          }
-        };
-      }) as Company[];
+      // Load companies from Firebase
+      const companiesData = await firebaseService.getCompanies();
       
       setCompanies(companiesData);
       setFilteredCompanies(companiesData);

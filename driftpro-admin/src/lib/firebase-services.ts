@@ -231,6 +231,12 @@ export interface Company {
     phone: string;
     position: string;
   };
+  permissions?: Array<{
+    id: string;
+    name: string;
+    href: string;
+    category: string;
+  }>;
   businessHours?: {
     monday: string;
     tuesday: string;
@@ -348,6 +354,20 @@ export interface Partner {
   contractEnd?: string;
   paymentTerms?: string;
   creditLimit?: number;
+  vehicles?: Array<{
+    registrationNumber: string;
+    year: string;
+    model: string;
+    euroClass: string;
+    payload: string;
+  }>;
+  uploadedFiles?: Array<{
+    name: string;
+    url: string;
+    size: number;
+    type: string;
+    uploadedAt: string;
+  }>;
   companyId: string;
   createdBy: string;
   createdAt: string;
@@ -1198,18 +1218,39 @@ class FirebaseService {
 
   // Company Management
   async getCompanies(): Promise<Company[]> {
-    if (!db) return [];
+    if (typeof window === 'undefined') {
+      console.log('Server-side rendering, returning empty companies array');
+      return [];
+    }
+
+    if (!db) {
+      console.error('Firebase database not initialized');
+      return [];
+    }
 
     try {
-      const q = query(collection(db, 'companies'));
-      const snapshot = await getDocs(q);
-      const companies = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Company[];
+      console.log('Fetching companies from Firebase...');
+      const companiesQuery = collection(db, 'companies');
+      const snapshot = await getDocs(companiesQuery);
+      console.log('Companies snapshot size:', snapshot.docs.length);
+      
+      const companies = snapshot.docs.map(doc => {
+        const data = doc.data();
+        console.log('Company data:', doc.id, data.name);
+        return {
+          id: doc.id,
+          ...data
+        };
+      }) as Company[];
       
       // Sort by createdAt in memory
-      companies.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+      companies.sort((a, b) => {
+        const dateA = new Date(a.createdAt || 0).getTime();
+        const dateB = new Date(b.createdAt || 0).getTime();
+        return dateB - dateA;
+      });
+      
+      console.log('Returning companies:', companies.length);
       return companies;
     } catch (error) {
       console.error('Error fetching companies:', error);
@@ -1218,6 +1259,11 @@ class FirebaseService {
   }
 
   async getCompany(id: string): Promise<Company | null> {
+    if (typeof window === 'undefined') {
+      console.log('Server-side rendering, returning null company');
+      return null;
+    }
+
     if (!db) return null;
 
     try {
@@ -1260,6 +1306,104 @@ class FirebaseService {
       return docRef.id;
     } catch (error) {
       console.error('Error creating company:', error);
+      throw error;
+    }
+  }
+
+  async createCompanyWithAdmin(companyData: any): Promise<{ companyId: string; adminUserId: string }> {
+    if (typeof window === 'undefined') {
+      throw new Error('Cannot create company on server-side');
+    }
+
+    if (!db) throw new Error('Database not initialized');
+
+    try {
+      // Check if company with same name already exists
+      const existingCompaniesQuery = query(
+        collection(db, 'companies'),
+        where('name', '==', companyData.name)
+      );
+      const existingSnapshot = await getDocs(existingCompaniesQuery);
+      
+      if (!existingSnapshot.empty) {
+        throw new Error(`En bedrift med navnet "${companyData.name}" eksisterer allerede.`);
+      }
+
+      // Check if admin email already exists
+      const existingUsersQuery = query(
+        collection(db, 'users'),
+        where('email', '==', companyData.adminEmail)
+      );
+      const existingUsersSnapshot = await getDocs(existingUsersQuery);
+      
+      if (!existingUsersSnapshot.empty) {
+        throw new Error(`En bruker med e-post "${companyData.adminEmail}" eksisterer allerede.`);
+      }
+
+      // Create company
+      const companyRef = await addDoc(collection(db, 'companies'), {
+        name: companyData.name,
+        orgNumber: companyData.orgNumber,
+        phone: companyData.phone,
+        email: companyData.email,
+        address: companyData.address,
+        industry: companyData.industry,
+        adminEmail: companyData.adminEmail,
+        employeeCount: 0,
+        status: companyData.status,
+        subscriptionPlan: companyData.subscriptionPlan,
+        permissions: companyData.permissions || [],
+        contactPerson: companyData.contactPerson,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      // Create admin user
+      const adminUserId = `admin_${companyRef.id}`;
+      await setDoc(doc(db, 'users', adminUserId), {
+        displayName: companyData.adminName,
+        email: companyData.adminEmail,
+        role: 'admin',
+        companyId: companyRef.id,
+        phone: companyData.adminPhone,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        status: 'active',
+        permissions: companyData.permissions || []
+      });
+
+      // Create Firebase Authentication user
+      const response = await fetch('/api/create-admin-user', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: companyData.adminEmail,
+          password: companyData.adminPassword,
+          displayName: companyData.adminName,
+          companyId: companyRef.id
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Kunne ikke opprette Firebase Authentication bruker');
+      }
+
+      const { uid } = await response.json();
+
+      // Update user document with Firebase UID
+      await updateDoc(doc(db, 'users', adminUserId), {
+        uid: uid,
+        updatedAt: new Date().toISOString()
+      });
+
+      return {
+        companyId: companyRef.id,
+        adminUserId: adminUserId
+      };
+    } catch (error) {
+      console.error('Error creating company with admin:', error);
       throw error;
     }
   }
@@ -1635,6 +1779,84 @@ class FirebaseService {
     }
   }
 
+  // Route assignments
+  async createRouteAssignment(assignmentData: {
+    partnerId: string;
+    partnerName: string;
+    date: string;
+    files: any[];
+    title: string;
+    job?: string;
+    users?: string[];
+    companyId: string;
+  }): Promise<string> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      const docRef = await addDoc(collection(db, 'routeAssignments'), {
+        ...assignmentData,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+      });
+
+      return docRef.id;
+    } catch (error) {
+      console.error('Error creating route assignment:', error);
+      throw error;
+    }
+  }
+
+  async getRouteAssignments(companyId: string, startDate?: string, endDate?: string): Promise<any[]> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      let q = query(collection(db, 'routeAssignments'), where('companyId', '==', companyId));
+      
+      if (startDate && endDate) {
+        q = query(
+          collection(db, 'routeAssignments'), 
+          where('companyId', '==', companyId),
+          where('date', '>=', startDate),
+          where('date', '<=', endDate)
+        );
+      }
+      
+      const snapshot = await getDocs(q);
+      return snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+    } catch (error) {
+      console.error('Error getting route assignments:', error);
+      return [];
+    }
+  }
+
+  async updateRouteAssignment(assignmentId: string, updateData: Partial<any>): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await updateDoc(doc(db, 'routeAssignments', assignmentId), {
+        ...updateData,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating route assignment:', error);
+      throw error;
+    }
+  }
+
+  async deleteRouteAssignment(assignmentId: string): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      await deleteDoc(doc(db, 'routeAssignments', assignmentId));
+    } catch (error) {
+      console.error('Error deleting route assignment:', error);
+      throw error;
+    }
+  }
+
   async updatePartner(id: string, data: Partial<Partner>): Promise<void> {
     if (!db) throw new Error('Firebase not initialized');
 
@@ -2004,6 +2226,85 @@ class FirebaseService {
       console.error('Error uploading partner assignment file:', error);
       throw error;
     }
+  }
+
+  // Audit functions
+  async createAudit(auditData: {
+    partnerId: string;
+    partnerName: string;
+    scheduledDate: string;
+    status: 'scheduled' | 'completed' | 'overdue';
+    companyId: string;
+    createdBy: string;
+    notes?: string;
+  }): Promise<string> {
+    const docRef = await addDoc(collection(db, 'audits'), {
+      ...auditData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    return docRef.id;
+  }
+
+  async getAudits(companyId: string): Promise<any[]> {
+    const q = query(
+      collection(db, 'audits'),
+      where('companyId', '==', companyId),
+      orderBy('scheduledDate', 'asc')
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  }
+
+  async updateAudit(auditId: string, updateData: Partial<any>): Promise<void> {
+    await updateDoc(doc(db, 'audits', auditId), {
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async deleteAudit(auditId: string): Promise<void> {
+    await deleteDoc(doc(db, 'audits', auditId));
+  }
+
+  // Check for overdue audits and send notifications
+  async checkOverdueAudits(companyId: string): Promise<any[]> {
+    const audits = await this.getAudits(companyId);
+    const today = new Date();
+    const overdueAudits = audits.filter(audit => {
+      const scheduledDate = new Date(audit.scheduledDate);
+      return scheduledDate < today && audit.status !== 'completed';
+    });
+    
+    // Update status to overdue
+    for (const audit of overdueAudits) {
+      await this.updateAudit(audit.id, { status: 'overdue' });
+    }
+    
+    return overdueAudits;
+  }
+
+  // Schedule next audit (3 months from completion)
+  async scheduleNextAudit(completedAuditId: string): Promise<string> {
+    const auditDoc = await getDoc(doc(db, 'audits', completedAuditId));
+    if (!auditDoc.exists()) {
+      throw new Error('Audit not found');
+    }
+    
+    const auditData = auditDoc.data();
+    const completedDate = new Date();
+    const nextAuditDate = new Date(completedDate);
+    nextAuditDate.setMonth(nextAuditDate.getMonth() + 3);
+    
+    return await this.createAudit({
+      partnerId: auditData.partnerId,
+      partnerName: auditData.partnerName,
+      scheduledDate: nextAuditDate.toISOString(),
+      status: 'scheduled',
+      companyId: auditData.companyId,
+      createdBy: auditData.createdBy,
+      notes: `Neste audit planlagt 3 måneder etter forrige audit (${completedDate.toLocaleDateString('no-NO')})`
+    });
   }
 }
 

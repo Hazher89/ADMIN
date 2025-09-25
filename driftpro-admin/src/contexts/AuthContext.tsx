@@ -149,7 +149,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Check if user has been set up with Firebase Authentication
       if (!userData.uid) {
-        throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
+        // For DriftPro admin, we'll create the Firebase user if it doesn't exist
+        if (userData.companyId === 'driftpro_main' && userData.role === 'admin') {
+          console.log('Creating Firebase user for DriftPro admin');
+          // Update the user document with the Firebase UID after authentication
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          await updateDoc(doc(db, 'users', userDoc.id), {
+            uid: userCredential.user.uid,
+            updatedAt: new Date().toISOString()
+          });
+          return;
+        } else {
+          throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
+        }
       }
       
       if (userData.status !== 'active') {

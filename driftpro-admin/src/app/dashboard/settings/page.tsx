@@ -43,7 +43,6 @@ import {
   Sun,
   Moon,
   Languages,
-  CreditCard,
   Shield as ShieldIcon,
   Activity,
   TrendingUp,
@@ -79,6 +78,30 @@ export default function SettingsPage() {
   const [editingSetting, setEditingSetting] = useState<string | null>(null);
   const [tempValues, setTempValues] = useState<{[key: string]: string | number | boolean | null}>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
+  
+  // Email-specific states
+  const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
+  const [emailTestMessage, setEmailTestMessage] = useState('');
+  const [testEmailAddress, setTestEmailAddress] = useState('');
+  const [emailLogs, setEmailLogs] = useState<any[]>([]);
+  const [showEmailLogs, setShowEmailLogs] = useState(false);
+  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
+  const [notificationSettings, setNotificationSettings] = useState<any[]>([]);
+  
+  // Office 365 Login states
+  const [showLoginModal, setShowLoginModal] = useState(false);
+  const [loginEmail, setLoginEmail] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [loginStatus, setLoginStatus] = useState<'not_logged_in' | 'logging_in' | 'logged_in' | 'error'>('not_logged_in');
+  const [loginMessage, setLoginMessage] = useState('');
+  const [office365Credentials, setOffice365Credentials] = useState<{email: string, password: string} | null>(null);
+  
+  // Two-step process states
+  const [currentStep, setCurrentStep] = useState<'login' | 'sender_config'>('login');
+  const [senderName, setSenderName] = useState('DriftPro System');
+  const [senderEmail, setSenderEmail] = useState('');
+  const [showSenderConfig, setShowSenderConfig] = useState(false);
 
   // Initialize default system settings
   const defaultSettings: SystemSetting[] = [
@@ -367,8 +390,272 @@ export default function SettingsPage() {
       defaultValue: 15,
       validation: 'min:1,max:1440',
       updatedAt: new Date().toISOString()
+    },
+
+    // Email Settings - Only basic settings, detailed config after login
+    {
+      id: 'email_enabled',
+      category: 'email',
+      name: 'E-post aktivert',
+      description: 'Aktiver e-postfunksjonalitet i systemet',
+      type: 'toggle',
+      value: true,
+      defaultValue: true,
+      updatedAt: new Date().toISOString()
+    },
+    // Hidden settings that will be populated after login
+    {
+      id: 'from_name',
+      category: 'email',
+      name: 'Avsender navn',
+      description: 'Navn som vises som avsender',
+      type: 'text',
+      value: 'DriftPro System',
+      defaultValue: 'DriftPro System',
+      updatedAt: new Date().toISOString()
+    },
+    {
+      id: 'from_email',
+      category: 'email',
+      name: 'Avsender e-post',
+      description: 'E-postadresse som vises som avsender',
+      type: 'text',
+      value: '',
+      defaultValue: '',
+      updatedAt: new Date().toISOString()
     }
   ];
+
+  // Email functions
+  const testEmailConnection = async () => {
+    if (!testEmailAddress) {
+      setEmailTestMessage('Vennligst skriv inn en e-postadresse for testing');
+      setEmailTestStatus('error');
+      return;
+    }
+
+    // Check if user is logged in - if not, show login modal
+    if (loginStatus !== 'logged_in' || !office365Credentials) {
+      setEmailTestMessage('⚠️ Du må logge inn til Office 365 først!');
+      setEmailTestStatus('error');
+      setShowLoginModal(true); // Automatically show login modal
+      return;
+    }
+
+    setEmailTestStatus('testing');
+    setEmailTestMessage('Tester e-posttilkobling...');
+
+    try {
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/email/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: 'smtp-mail.outlook.com',
+          port: 587,
+          user: office365Credentials.email,
+          pass: office365Credentials.password,
+          secure: false,
+          testEmail: testEmailAddress
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setEmailTestStatus('success');
+        setEmailTestMessage(`✅ E-posttest vellykket! Test-e-post sendt til ${testEmailAddress}`);
+      } else {
+        setEmailTestStatus('error');
+        setEmailTestMessage(result.error || 'E-posttest feilet');
+      }
+    } catch (error) {
+      setEmailTestStatus('error');
+      setEmailTestMessage('Feil ved testing av e-posttilkobling');
+    }
+  };
+
+  const loadEmailLogs = async () => {
+    // Check if user is logged in - if not, show login modal
+    if (loginStatus !== 'logged_in' || !office365Credentials) {
+      setShowLoginModal(true); // Automatically show login modal
+      return;
+    }
+
+    try {
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/email/logs`);
+      const logs = await response.json();
+      setEmailLogs(logs);
+    } catch (error) {
+      console.error('Error loading email logs:', error);
+    }
+  };
+
+  const loginToOffice365 = async () => {
+    if (!loginEmail || !loginPassword) {
+      setLoginMessage('Vennligst skriv inn e-post og passord');
+      setLoginStatus('error');
+      return;
+    }
+
+    setIsLoggingIn(true);
+    setLoginStatus('logging_in');
+    setLoginMessage('Logger inn til Office 365...');
+
+    try {
+      // Test Office 365 connection
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/email/test`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          host: 'smtp-mail.outlook.com',
+          port: 587,
+          user: loginEmail,
+          pass: loginPassword,
+          secure: false,
+          testEmail: loginEmail // Send test to same email
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setLoginStatus('logged_in');
+        setLoginMessage(`✅ PERMANENT INNLOGGING VELLYKKET! Logget inn som ${loginEmail} (gjelder i 10.000 år!)`);
+        setOffice365Credentials({ email: loginEmail, password: loginPassword });
+        setSenderEmail(loginEmail); // Pre-fill sender email with login email
+        setShowLoginModal(false);
+        
+        // Save login state to localStorage for PERMANENT persistence (10,000 years!)
+        localStorage.setItem('office365_login_status', 'logged_in');
+        localStorage.setItem('office365_credentials', JSON.stringify({ 
+          email: loginEmail, 
+          password: loginPassword,
+          loginTime: new Date().toISOString(),
+          expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000 // 10,000 years in milliseconds
+        }));
+        
+        // Go to next step: sender configuration
+        setCurrentStep('sender_config');
+        setShowSenderConfig(true);
+      } else {
+        setLoginStatus('error');
+        setLoginMessage(result.error || 'Innlogging feilet');
+      }
+    } catch (error) {
+      setLoginStatus('error');
+      setLoginMessage('Feil ved innlogging til Office 365');
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const logoutFromOffice365 = () => {
+    // Only allow logout if user explicitly clicks logout button
+    const confirmLogout = window.confirm('⚠️ ADVARSEL: Dette vil logge deg ut av Office 365 PERMANENT!\n\nEr du HELT sikker på at du vil logge ut?');
+    
+    if (!confirmLogout) {
+      return; // User cancelled - stay logged in forever!
+    }
+    
+    setLoginStatus('not_logged_in');
+    setLoginMessage('');
+    setOffice365Credentials(null);
+    setLoginEmail('');
+    setLoginPassword('');
+    setCurrentStep('login');
+    setShowSenderConfig(false);
+    setSenderName('DriftPro System');
+    setSenderEmail('');
+    
+    // Clear localStorage data (only when user explicitly wants to logout)
+    localStorage.removeItem('office365_login_status');
+    localStorage.removeItem('office365_credentials');
+    localStorage.removeItem('office365_sender_config');
+    
+    // Clear credentials from settings
+    setSettings(prev => prev.map(setting => {
+      if (setting.id === 'smtp_password') return { ...setting, value: '' };
+      return setting;
+    }));
+  };
+
+  const saveSenderConfiguration = () => {
+    if (!senderName || !senderEmail) {
+      alert('Vennligst fyll ut både avsender navn og e-post');
+      return;
+    }
+    
+    // Update settings with sender configuration
+    setSettings(prev => prev.map(setting => {
+      if (setting.id === 'from_name') return { ...setting, value: senderName };
+      if (setting.id === 'from_email') return { ...setting, value: senderEmail };
+      return setting;
+    }));
+    
+    // Save sender configuration to localStorage for PERMANENT persistence (10,000 years!)
+    localStorage.setItem('office365_sender_config', JSON.stringify({
+      name: senderName,
+      email: senderEmail,
+      configTime: new Date().toISOString(),
+      expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000 // 10,000 years in milliseconds
+    }));
+    
+    setShowSenderConfig(false);
+    setCurrentStep('login');
+    
+    // Show success message
+    setLoginMessage(`✅ Avsender konfigurert: ${senderName} <${senderEmail}> (permanent!)`);
+  };
+
+  const sendTestEmail = async (template: string) => {
+    if (!testEmailAddress) {
+      setEmailTestMessage('Vennligst skriv inn en e-postadresse for testing');
+      setEmailTestStatus('error');
+      return;
+    }
+
+    // Check if user is logged in - if not, show login modal
+    if (loginStatus !== 'logged_in' || !office365Credentials) {
+      setEmailTestMessage('⚠️ Du må logge inn til Office 365 først!');
+      setEmailTestStatus('error');
+      setShowLoginModal(true); // Automatically show login modal
+      return;
+    }
+
+    setEmailTestStatus('testing');
+    setEmailTestMessage(`Sender ${template} til ${testEmailAddress}...`);
+
+    try {
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/email/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: testEmailAddress,
+          subject: `DriftPro Test - ${template}`,
+          html: `<h1>Test ${template}</h1><p>Dette er en test-e-post fra DriftPro.</p>`,
+          text: `Test ${template} - Dette er en test-e-post fra DriftPro.`,
+          credentials: office365Credentials // Send credentials
+        })
+      });
+
+      const result = await response.json();
+
+      if (result.success) {
+        setEmailTestStatus('success');
+        setEmailTestMessage(`✅ ${template} sendt til ${testEmailAddress}!`);
+      } else {
+        setEmailTestStatus('error');
+        setEmailTestMessage(result.error || 'E-postsending feilet');
+      }
+    } catch (error) {
+      setEmailTestStatus('error');
+      setEmailTestMessage('Feil ved sending av e-post');
+    }
+  };
 
   useEffect(() => {
     const loadSettings = async () => {
@@ -381,6 +668,75 @@ export default function SettingsPage() {
         // For now, use default settings
         // In production, load from Firebase
         setSettings(defaultSettings);
+        
+        // Initialize email templates
+        setEmailTemplates([
+          { id: 'welcome', name: 'Velkommen', description: 'Velkommen til DriftPro' },
+          { id: 'password_reset', name: 'Glemt passord', description: 'Tilbakestill passord' },
+          { id: 'user_created', name: 'Bruker opprettet', description: 'Ny bruker opprettet' },
+          { id: 'vacation_request', name: 'Ferieforespørsel', description: 'Ny ferieforespørsel' },
+          { id: 'deviation_report', name: 'HMS-avvik', description: 'Rapportert HMS-avvik' },
+          { id: 'system_alert', name: 'Systemvarsel', description: 'Viktig systemvarsel' }
+        ]);
+
+        // Initialize notification settings
+        setNotificationSettings([
+          { id: 'email_welcome', name: 'Velkommen-e-post', enabled: true, recipients: ['admin'] },
+          { id: 'email_password_reset', name: 'Glemt passord', enabled: true, recipients: ['user'] },
+          { id: 'email_vacation_request', name: 'Ferieforespørsel', enabled: true, recipients: ['manager', 'admin'] },
+          { id: 'email_deviation_report', name: 'HMS-avvik', enabled: true, recipients: ['safety_manager', 'admin'] },
+          { id: 'email_system_alerts', name: 'Systemvarsler', enabled: true, recipients: ['admin'] },
+          { id: 'email_shift_changes', name: 'Vaktendringer', enabled: false, recipients: ['employee', 'manager'] },
+          { id: 'email_document_updates', name: 'Dokumentoppdateringer', enabled: false, recipients: ['employee'] }
+        ]);
+
+        // Load persistent Office 365 login state
+        const savedLoginStatus = localStorage.getItem('office365_login_status');
+        const savedCredentials = localStorage.getItem('office365_credentials');
+        const savedSenderConfig = localStorage.getItem('office365_sender_config');
+
+        if (savedLoginStatus === 'logged_in' && savedCredentials) {
+          try {
+            const credentials = JSON.parse(savedCredentials);
+            
+            // Check if login is still valid (should be valid for 10,000 years!)
+            const loginTime = new Date(credentials.loginTime || new Date());
+            const expiresIn = credentials.expiresIn || (10000 * 365 * 24 * 60 * 60 * 1000);
+            const now = new Date();
+            
+            // Login is valid for 10,000 years - basically forever!
+            if (now.getTime() - loginTime.getTime() < expiresIn) {
+              setLoginStatus('logged_in');
+              setOffice365Credentials(credentials);
+              setLoginMessage(`✅ PERMANENT INNLOGGING: ${credentials.email} (gjelder i 10.000 år!)`);
+              
+              if (savedSenderConfig) {
+                const senderConfig = JSON.parse(savedSenderConfig);
+                setSenderName(senderConfig.name);
+                setSenderEmail(senderConfig.email);
+                setCurrentStep('sender_config');
+              }
+            } else {
+              // This should never happen in 10,000 years, but just in case...
+              console.log('🕰️ Login expired after 10,000 years - refreshing...');
+              // Re-save with new timestamp
+              localStorage.setItem('office365_credentials', JSON.stringify({ 
+                ...credentials,
+                loginTime: new Date().toISOString(),
+                expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000
+              }));
+              setLoginStatus('logged_in');
+              setOffice365Credentials(credentials);
+              setLoginMessage(`✅ PERMANENT INNLOGGING FORNYET: ${credentials.email}`);
+            }
+          } catch (error) {
+            console.error('Error loading saved Office 365 state:', error);
+            // Clear corrupted data
+            localStorage.removeItem('office365_login_status');
+            localStorage.removeItem('office365_credentials');
+            localStorage.removeItem('office365_sender_config');
+          }
+        }
       } catch (error) {
         console.error('Error loading settings:', error);
         setSettings(defaultSettings);
@@ -396,6 +752,7 @@ export default function SettingsPage() {
     { id: 'general', name: 'Generelt', icon: Settings },
     { id: 'users', name: 'Brukere', icon: Users },
     { id: 'company', name: 'Bedrift', icon: Building },
+    { id: 'email', name: 'E-postadministrasjon', icon: Mail },
     { id: 'notifications', name: 'Varsler', icon: Bell },
     { id: 'security', name: 'Sikkerhet', icon: Shield },
     { id: 'database', name: 'Database', icon: Database },
@@ -454,6 +811,7 @@ export default function SettingsPage() {
     }
   };
 
+
   const renderSettingValue = (setting: SystemSetting) => {
     if (editingSetting === setting.id) {
       const tempValue = tempValues[setting.id];
@@ -477,7 +835,7 @@ export default function SettingsPage() {
           return (
             <input
               type="text"
-              value={tempValue || ''}
+              value={String(tempValue || '')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: e.target.value })}
               className="form-input"
               style={{ width: '100%', padding: '0.5rem' }}
@@ -488,7 +846,7 @@ export default function SettingsPage() {
           return (
             <input
               type="number"
-              value={tempValue || ''}
+              value={String(tempValue || '')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: Number(e.target.value) })}
               className="form-input"
               style={{ width: '100%', padding: '0.5rem' }}
@@ -498,7 +856,7 @@ export default function SettingsPage() {
         case 'select':
           return (
             <select
-              value={tempValue || ''}
+              value={String(tempValue || '')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: e.target.value })}
               className="form-select"
               style={{ width: '100%', padding: '0.5rem' }}
@@ -512,7 +870,7 @@ export default function SettingsPage() {
         case 'textarea':
           return (
             <textarea
-              value={tempValue || ''}
+              value={String(tempValue || '')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: e.target.value })}
               className="form-textarea"
               style={{ width: '100%', padding: '0.5rem', minHeight: '80px' }}
@@ -523,7 +881,7 @@ export default function SettingsPage() {
           return (
             <input
               type="color"
-              value={tempValue || '#3b82f6'}
+              value={String(tempValue || '#3b82f6')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: e.target.value })}
               style={{ width: '50px', height: '40px', border: 'none', borderRadius: '4px' }}
             />
@@ -533,7 +891,12 @@ export default function SettingsPage() {
           return (
             <input
               type="file"
-              onChange={(e) => setTempValues({ ...tempValues, [setting.id]: e.target.files?.[0] })}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  setTempValues({ ...tempValues, [setting.id]: file.name });
+                }
+              }}
               className="form-input"
               style={{ width: '100%', padding: '0.5rem' }}
             />
@@ -730,6 +1093,7 @@ export default function SettingsPage() {
             </div>
           </div>
 
+
           {/* Settings List */}
           {filteredSettings.length === 0 ? (
             <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
@@ -849,6 +1213,501 @@ export default function SettingsPage() {
           )}
         </div>
       </div>
+
+      {/* Email Administration Section */}
+      {activeCategory === 'email' && (
+        <div style={{ marginTop: '2rem' }}>
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', margin: 0 }}>
+                <Mail size={20} />
+                E-postadministrasjon
+              </h2>
+              
+              {/* Office 365 Login Status */}
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <div style={{
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    background: loginStatus === 'logged_in' ? '#10b981' : 
+                               loginStatus === 'logging_in' ? '#f59e0b' : 
+                               loginStatus === 'error' ? '#ef4444' : '#6b7280'
+                  }}></div>
+                  <span style={{ 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500',
+                    color: loginStatus === 'logged_in' ? '#10b981' : 
+                           loginStatus === 'logging_in' ? '#f59e0b' : 
+                           loginStatus === 'error' ? '#ef4444' : '#6b7280'
+                  }}>
+                    {loginStatus === 'logged_in' ? 'Logget inn' : 
+                     loginStatus === 'logging_in' ? 'Logger inn...' : 
+                     loginStatus === 'error' ? 'Feil' : 'Ikke logget inn'}
+                  </span>
+                </div>
+                
+                {loginStatus === 'logged_in' ? (
+                  <button
+                    className="btn btn-secondary"
+                    onClick={logoutFromOffice365}
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                  >
+                    Logg ut
+                  </button>
+                ) : (
+                  <button
+                    className="btn btn-primary"
+                    onClick={() => setShowLoginModal(true)}
+                    style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
+                  >
+                    Logg inn Office 365
+                  </button>
+                )}
+              </div>
+            </div>
+            
+            {/* Login Status Message */}
+            {loginMessage && (
+              <div style={{
+                padding: '1rem',
+                borderRadius: '6px',
+                background: loginStatus === 'logged_in' ? '#d4edda' : 
+                           loginStatus === 'error' ? '#f8d7da' : '#d1ecf1',
+                color: loginStatus === 'logged_in' ? '#155724' : 
+                       loginStatus === 'error' ? '#721c24' : '#0c5460',
+                border: `1px solid ${loginStatus === 'logged_in' ? '#c3e6cb' : 
+                                   loginStatus === 'error' ? '#f5c6cb' : '#bee5eb'}`,
+                marginBottom: '1.5rem'
+              }}>
+                {loginMessage}
+              </div>
+            )}
+            
+            {/* Email Test Section */}
+            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#f8f9fa', borderRadius: '8px' }}>
+              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>🧪 Test e-posttilkobling</h3>
+              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem' }}>
+                <div style={{ flex: 1 }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                    Test e-postadresse:
+                  </label>
+                  <input
+                    type="email"
+                    value={testEmailAddress}
+                    onChange={(e) => setTestEmailAddress(e.target.value)}
+                    placeholder="skriv@din-epost.no"
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #ddd',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem'
+                    }}
+                  />
+                </div>
+                <button
+                  className="btn btn-primary"
+                  onClick={testEmailConnection}
+                  disabled={emailTestStatus === 'testing'}
+                  style={{ padding: '0.75rem 1.5rem' }}
+                >
+                  {emailTestStatus === 'testing' ? 'Tester...' : '🔗 Test tilkobling'}
+                </button>
+              </div>
+              
+              {emailTestMessage && (
+                <div style={{
+                  padding: '1rem',
+                  borderRadius: '6px',
+                  background: emailTestStatus === 'success' ? '#d4edda' : emailTestStatus === 'error' ? '#f8d7da' : '#d1ecf1',
+                  color: emailTestStatus === 'success' ? '#155724' : emailTestStatus === 'error' ? '#721c24' : '#0c5460',
+                  border: `1px solid ${emailTestStatus === 'success' ? '#c3e6cb' : emailTestStatus === 'error' ? '#f5c6cb' : '#bee5eb'}`
+                }}>
+                  {emailTestMessage}
+                </div>
+              )}
+            </div>
+
+            {/* Email Templates Section */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FileText size={16} />
+                E-postmaler
+              </h3>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1rem' }}>
+                {emailTemplates.map((template) => (
+                  <div key={template.id} className="card" style={{ padding: '1rem' }}>
+                    <h4 style={{ marginBottom: '0.5rem', fontSize: '1rem' }}>{template.name}</h4>
+                    <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '1rem' }}>
+                      {template.description}
+                    </p>
+                    <button
+                      className="btn btn-secondary"
+                      onClick={() => sendTestEmail(template.name)}
+                      disabled={emailTestStatus === 'testing'}
+                      style={{ width: '100%', padding: '0.5rem' }}
+                    >
+                      📧 Send test
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Notification Settings Section */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Bell size={16} />
+                Varslingsinnstillinger
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {notificationSettings.map((notification) => (
+                  <div key={notification.id} className="card" style={{ padding: '1rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                      <div>
+                        <h4 style={{ marginBottom: '0.25rem', fontSize: '1rem' }}>{notification.name}</h4>
+                        <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                          {notification.recipients.map((recipient: string) => (
+                            <span key={recipient} className="badge badge-secondary" style={{ fontSize: '0.75rem' }}>
+                              {recipient}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        className={`btn ${notification.enabled ? 'btn-success' : 'btn-secondary'}`}
+                        onClick={() => {
+                          setNotificationSettings(prev => 
+                            prev.map(n => 
+                              n.id === notification.id 
+                                ? { ...n, enabled: !n.enabled }
+                                : n
+                            )
+                          );
+                        }}
+                        style={{ padding: '0.5rem 1rem' }}
+                      >
+                        {notification.enabled ? 'Aktivert' : 'Deaktivert'}
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Email Logs Section */}
+            <div>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: '1.1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Activity size={16} />
+                  E-postlogg
+                </h3>
+                <button
+                  className="btn btn-secondary"
+                  onClick={() => {
+                    setShowEmailLogs(!showEmailLogs);
+                    if (!showEmailLogs) loadEmailLogs();
+                  }}
+                  style={{ padding: '0.5rem 1rem' }}
+                >
+                  {showEmailLogs ? '📋 Skjul logg' : '📋 Vis logg'}
+                </button>
+              </div>
+              
+              {showEmailLogs && (
+                <div className="card">
+                  <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
+                    {emailLogs.length === 0 ? (
+                      <p style={{ color: '#666', textAlign: 'center', padding: '2rem' }}>
+                        Ingen e-postlogg tilgjengelig
+                      </p>
+                    ) : (
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {emailLogs.map((log) => (
+                          <div key={log.id} style={{ 
+                            padding: '1rem', 
+                            borderBottom: '1px solid #eee',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}>
+                            <div>
+                              <div style={{ fontWeight: '500', marginBottom: '0.25rem' }}>
+                                {log.subject}
+                              </div>
+                              <div style={{ fontSize: '0.875rem', color: '#666' }}>
+                                Til: {log.to} • {log.type}
+                              </div>
+                            </div>
+                            <div style={{ textAlign: 'right' }}>
+                              <span className={`badge ${log.status === 'sent' ? 'badge-success' : 'badge-error'}`}>
+                                {log.status}
+                              </span>
+                              <div style={{ fontSize: '0.75rem', color: '#999', marginTop: '0.25rem' }}>
+                                {new Date(log.timestamp).toLocaleString('no-NO')}
+                              </div>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Office 365 Login Modal */}
+      {showLoginModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '90%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '600' }}>
+                🔐 Logg inn til Office 365
+              </h2>
+              <button
+                onClick={() => setShowLoginModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+              Skriv inn dine Office 365-legitimasjoner for å aktivere e-postfunksjonalitet.
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                  E-postadresse:
+                </label>
+                <input
+                  type="email"
+                  value={loginEmail}
+                  onChange={(e) => setLoginEmail(e.target.value)}
+                  placeholder="din-epost@dittdomene.no"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                  Passord:
+                </label>
+                <input
+                  type="password"
+                  value={loginPassword}
+                  onChange={(e) => setLoginPassword(e.target.value)}
+                  placeholder="Ditt Office 365 passord"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+              </div>
+            </div>
+            
+            {loginMessage && (
+              <div style={{
+                padding: '1rem',
+                borderRadius: '6px',
+                background: loginStatus === 'logged_in' ? '#d4edda' : 
+                           loginStatus === 'error' ? '#f8d7da' : '#d1ecf1',
+                color: loginStatus === 'logged_in' ? '#155724' : 
+                       loginStatus === 'error' ? '#721c24' : '#0c5460',
+                border: `1px solid ${loginStatus === 'logged_in' ? '#c3e6cb' : 
+                                   loginStatus === 'error' ? '#f5c6cb' : '#bee5eb'}`,
+                marginBottom: '1rem'
+              }}>
+                {loginMessage}
+              </div>
+            )}
+            
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowLoginModal(false)}
+                disabled={isLoggingIn}
+                style={{ padding: '0.75rem 1.5rem' }}
+              >
+                Avbryt
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={loginToOffice365}
+                disabled={isLoggingIn || !loginEmail || !loginPassword}
+                style={{ padding: '0.75rem 1.5rem' }}
+              >
+                {isLoggingIn ? 'Logger inn...' : 'Logg inn'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Sender Configuration Modal */}
+      {showSenderConfig && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '90%',
+            maxWidth: '500px',
+            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ margin: 0, fontSize: '1.5rem', fontWeight: '600' }}>
+                ✉️ Konfigurer avsender
+              </h2>
+              <button
+                onClick={() => setShowSenderConfig(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontSize: '1.5rem',
+                  cursor: 'pointer',
+                  color: '#6b7280'
+                }}
+              >
+                ×
+              </button>
+            </div>
+            
+            <p style={{ color: '#666', marginBottom: '1.5rem' }}>
+              Konfigurer hvordan e-postene fra DriftPro skal vises som avsender.
+            </p>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginBottom: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                  Avsender navn:
+                </label>
+                <input
+                  type="text"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder="DriftPro System"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                  Dette navnet vil vises som avsender i alle e-poster
+                </p>
+              </div>
+              
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
+                  Avsender e-post:
+                </label>
+                <input
+                  type="email"
+                  value={senderEmail}
+                  onChange={(e) => setSenderEmail(e.target.value)}
+                  placeholder="din-epost@dittdomene.no"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #ddd',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem'
+                  }}
+                />
+                <p style={{ fontSize: '0.75rem', color: '#666', marginTop: '0.25rem' }}>
+                  Denne e-postadressen vil vises som avsender (kan være forskjellig fra innloggings-e-post)
+                </p>
+              </div>
+            </div>
+            
+            <div style={{ 
+              background: '#f8f9fa', 
+              padding: '1rem', 
+              borderRadius: '6px', 
+              marginBottom: '1rem',
+              border: '1px solid #e9ecef'
+            }}>
+              <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.875rem', fontWeight: '600' }}>
+                📧 Forhåndsvisning:
+              </h4>
+              <p style={{ margin: 0, fontSize: '0.875rem', color: '#666' }}>
+                Fra: <strong>{senderName || 'DriftPro System'}</strong> &lt;{senderEmail || 'din-epost@dittdomene.no'}&gt;
+              </p>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+              <button
+                className="btn btn-secondary"
+                onClick={() => setShowSenderConfig(false)}
+                style={{ padding: '0.75rem 1.5rem' }}
+              >
+                Avbryt
+              </button>
+              <button
+                className="btn btn-primary"
+                onClick={saveSenderConfiguration}
+                disabled={!senderName || !senderEmail}
+                style={{ padding: '0.75rem 1.5rem' }}
+              >
+                Lagre konfigurasjon
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 } 

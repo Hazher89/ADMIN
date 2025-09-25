@@ -402,8 +402,8 @@ export async function fixBaxigshtiCompany() {
     const userData = userDoc.data();
     
     // Update to DriftPro company only
-    // You need to replace 'DRIFTPRO_COMPANY_ID' with the actual DriftPro company ID
-    const driftproCompanyId = 'DRIFTPRO_COMPANY_ID'; // Replace with actual DriftPro company ID
+    // DriftPro company ID
+    const driftproCompanyId = 'driftpro_main';
     
     await updateDoc(doc(db, 'users', userDoc.id), {
       companyId: driftproCompanyId,

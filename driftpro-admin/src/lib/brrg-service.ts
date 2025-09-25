@@ -1,324 +1,209 @@
-// BRRG Service for fetching company information and managing admins
-
-export interface BRRGCompany {
+interface BrrgCompany {
   organisasjonsnummer: string;
   navn: string;
-  organisasjonsform: {
-    kode: string;
-    beskrivelse: string;
-  };
+  organisasjonsform: string;
   registreringsdatoEnhetsregisteret: string;
   registrertIMvaregisteret: boolean;
   naeringskode1: {
     kode: string;
     beskrivelse: string;
   };
-  antallAnsatte: number;
-  forretningsadresse: {
-    adresse: string;
+  adresse: {
+    adresse: string[];
     postnummer: string;
     poststed: string;
-    land: string;
+    kommune: string;
+    landkode: string;
   };
-  kontaktinformasjon?: {
-    telefon?: string;
-    epost?: string;
+  antallAnsatte: number;
+  forretningsadresse?: {
+    adresse: string[];
+    postnummer: string;
+    poststed: string;
+    kommune: string;
+    landkode: string;
   };
-  // Extended BRRG information
-  stiftelsesdato?: string;
-  konkurs?: boolean;
-  underAvvikling?: boolean;
-  underTvangsavviklingEllerTvangsopplosning?: boolean;
-  maalform?: string;
-  institusjonellSektorkode?: {
-    kode: string;
-    beskrivelse: string;
+  postadresse?: {
+    adresse: string[];
+    postnummer: string;
+    poststed: string;
+    kommune: string;
+    landkode: string;
   };
-  naeringskode2?: {
-    kode: string;
-    beskrivelse: string;
-  };
-  naeringskode3?: {
-    kode: string;
-    beskrivelse: string;
-  };
-  hjemmeside?: string;
-  ansatte?: {
-    interval: string;
-    antall: number;
-  };
-  registreringIMvaregisteret?: {
-    registrertIMvaregisteret: boolean;
-    varemerkebeskyttelse: string[];
-  };
-  rolleregister?: {
-    enheter?: Array<{
-      organisasjonsnummer: string;
-      navn: string;
-      rolle: string;
-    }>;
-  };
-  registre?: {
-    enhetsregisteret?: boolean;
-    foretaksregisteret?: boolean;
-    mvaregisteret?: boolean;
-    frivillighetsregisteret?: boolean;
-    stiftelsesregisteret?: boolean;
-  };
-  tilknyttedeVirksomheter?: Array<{
-    organisasjonsnummer: string;
-    navn: string;
-    organisasjonsform: string;
-    rolle: string;
-  }>;
 }
 
-export interface BRRGAdmin {
-  id: string;
-  email: string;
-  name: string;
-  role: 'admin' | 'super_admin';
-  companyId: string;
-  companyName: string;
-  createdAt: string;
-  updatedAt: string;
-  permissions: string[];
+interface BrrgSearchResponse {
+  _embedded: {
+    enheter: BrrgCompany[];
+  };
+  page: {
+    size: number;
+    totalElements: number;
+    totalPages: number;
+    number: number;
+  };
 }
 
-class BRRGService {
-  private baseUrl = 'https://data.brreg.no/enhetsregisteret/api/enheter';
-  private adminApiUrl = '/api/admins'; // For managing admins
+export class BrrgService {
+  private baseUrl = 'https://data.brreg.no/enhetsregisteret/api';
 
-  /**
-   * Fetch company information from BRRG
-   */
-  async getCompanyInfo(orgNumber: string): Promise<BRRGCompany | null> {
+  async searchCompanies(query: string): Promise<BrrgCompany[]> {
     try {
-      const response = await fetch(`${this.baseUrl}/${orgNumber}`);
+      console.log('🔍 Searching BRRG API for:', query);
+      
+      // Search by company name
+      const nameResponse = await fetch(
+        `${this.baseUrl}/enheter?navn=${encodeURIComponent(query)}&size=20`
+      );
+      
+      if (!nameResponse.ok) {
+        throw new Error(`HTTP error! status: ${nameResponse.status}`);
+      }
+      
+      const nameData: BrrgSearchResponse = await nameResponse.json();
+      console.log('✅ BRRG name search results:', nameData);
+      
+      let results = nameData._embedded?.enheter || [];
+      
+      // If query looks like an organization number, also search by that
+      if (/^\d{9}$/.test(query.trim())) {
+        try {
+          const orgResponse = await fetch(
+            `${this.baseUrl}/enheter/${query.trim()}`
+          );
+          
+          if (orgResponse.ok) {
+            const orgData: BrrgCompany = await orgResponse.json();
+            console.log('✅ BRRG org number search result:', orgData);
+            // Add to results if not already present
+            if (!results.find(r => r.organisasjonsnummer === orgData.organisasjonsnummer)) {
+              results.unshift(orgData);
+            }
+          }
+        } catch (orgError) {
+          console.log('ℹ️ No org number match found');
+        }
+      }
+      
+      console.log('📊 Total BRRG results:', results.length);
+      return results;
+      
+    } catch (error) {
+      console.error('❌ Error searching BRRG API:', error);
+      throw new Error('Kunne ikke søke i BRRG. Prøv igjen senere.');
+    }
+  }
+
+  async getCompanyDetails(orgNumber: string): Promise<BrrgCompany | null> {
+    try {
+      console.log('🔍 Getting BRRG company details for:', orgNumber);
+      
+      const response = await fetch(`${this.baseUrl}/enheter/${orgNumber}`);
       
       if (!response.ok) {
         if (response.status === 404) {
-          console.warn(`Company with org number ${orgNumber} not found in BRRG`);
           return null;
         }
-        throw new Error(`BRRG API error: ${response.status}`);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
-
-      const data = await response.json();
-      return this.transformBRRGData(data);
+      
+      const data: BrrgCompany = await response.json();
+      console.log('✅ BRRG company details:', data);
+      
+      return data;
+      
     } catch (error) {
-      console.error('Error fetching company from BRRG:', error);
-      return null;
+      console.error('❌ Error getting BRRG company details:', error);
+      throw new Error('Kunne ikke hente bedriftsdetaljer fra BRRG.');
     }
   }
 
-  /**
-   * Transform BRRG data to our format
-   */
-  private transformBRRGData(data: any): BRRGCompany {
+  // Helper function to format BRRG data for our partner form
+  formatCompanyForPartner(brrgCompany: BrrgCompany) {
+    const address = brrgCompany.adresse;
+    const addressString = address.adresse.join(', ');
+    
     return {
-      organisasjonsnummer: data.organisasjonsnummer,
-      navn: data.navn,
-      organisasjonsform: {
-        kode: data.organisasjonsform?.kode || '',
-        beskrivelse: data.organisasjonsform?.beskrivelse || ''
-      },
-      registreringsdatoEnhetsregisteret: data.registreringsdatoEnhetsregisteret,
-      registrertIMvaregisteret: data.registrertIMvaregisteret || false,
-      naeringskode1: {
-        kode: data.naeringskode1?.kode || '',
-        beskrivelse: data.naeringskode1?.beskrivelse || ''
-      },
-      antallAnsatte: data.antallAnsatte || 0,
-      forretningsadresse: {
-        adresse: data.forretningsadresse?.adresse || '',
-        postnummer: data.forretningsadresse?.postnummer || '',
-        poststed: data.forretningsadresse?.poststed || '',
-        land: data.forretningsadresse?.land || 'Norge'
-      },
-      kontaktinformasjon: {
-        telefon: data.kontaktinformasjon?.telefon || '',
-        epost: data.kontaktinformasjon?.epost || ''
-      },
-      // Extended BRRG information
-      stiftelsesdato: data.stiftelsesdato,
-      konkurs: data.konkurs,
-      underAvvikling: data.underAvvikling,
-      underTvangsavviklingEllerTvangsopplosning: data.underTvangsavviklingEllerTvangsopplosning,
-      maalform: data.maalform,
-      institusjonellSektorkode: data.institusjonellSektorkode,
-      naeringskode2: data.naeringskode2,
-      naeringskode3: data.naeringskode3,
-      hjemmeside: data.hjemmeside,
-      ansatte: data.ansatte,
-      registreringIMvaregisteret: data.registreringIMvaregisteret,
-      rolleregister: data.rolleregister,
-      registre: data.registre,
-      tilknyttedeVirksomheter: data.tilknyttedeVirksomheter
+      name: brrgCompany.navn,
+      orgNumber: brrgCompany.organisasjonsnummer,
+      industry: brrgCompany.naeringskode1?.beskrivelse || 'Ukjent',
+      address: addressString,
+      city: address.poststed,
+      postalCode: address.postnummer,
+      county: address.kommune,
+      employees: brrgCompany.antallAnsatte || 0,
+      registrationDate: brrgCompany.registreringsdatoEnhetsregisteret,
+      organizationForm: brrgCompany.organisasjonsform,
+      description: `${brrgCompany.naeringskode1?.beskrivelse || 'Ukjent bransje'} • ${brrgCompany.organisasjonsform} • Registrert ${new Date(brrgCompany.registreringsdatoEnhetsregisteret).toLocaleDateString('no-NO')}`
     };
   }
 
-  /**
-   * Search companies in BRRG
-   */
-  async searchCompanies(query: string): Promise<BRRGCompany[]> {
+  // Add admin user function
+  async addAdmin(adminData: {
+    email: string;
+    name: string;
+    companyName: string;
+    companyId: string;
+    role?: string;
+    permissions?: string[];
+  }) {
     try {
-      const response = await fetch(`${this.baseUrl}?navn=${encodeURIComponent(query)}`);
+      console.log('👤 Adding admin user:', adminData);
       
-      if (!response.ok) {
-        throw new Error(`BRRG search error: ${response.status}`);
-      }
-
-      const data = await response.json();
-      return data._embedded?.enheter?.map((company: any) => this.transformBRRGData(company)) || [];
-    } catch (error) {
-      console.error('Error searching companies in BRRG:', error);
-      return [];
-    }
-  }
-
-  /**
-   * Get all admins for a company
-   */
-  async getAdmins(companyId: string): Promise<BRRGAdmin[]> {
-    try {
-      const response = await fetch(`${this.adminApiUrl}?companyId=${companyId}`);
-      
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to fetch admins: ${response.status}`);
-      }
-
-      return await response.json();
-    } catch (error) {
-      console.error('Error fetching admins:', error);
-      throw error; // Re-throw to let the calling code handle it
-    }
-  }
-
-  /**
-   * Add a new admin
-   */
-  async addAdmin(adminData: Omit<BRRGAdmin, 'id' | 'createdAt' | 'updatedAt'>): Promise<BRRGAdmin | null> {
-    try {
-      const response = await fetch(this.adminApiUrl, {
+      // Call the API to add admin
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/admins`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          ...adminData,
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }),
+          email: adminData.email,
+          name: adminData.name,
+          role: adminData.role || 'admin',
+          companyId: adminData.companyId,
+          companyName: adminData.companyName,
+          permissions: adminData.permissions || []
+        })
       });
 
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to add admin: ${response.status}`);
+        throw new Error(errorData.error || 'Failed to add admin');
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ Admin added successfully:', result);
+      
+      return result;
     } catch (error) {
-      console.error('Error adding admin:', error);
-      throw error; // Re-throw to let the calling code handle it
+      console.error('❌ Error adding admin:', error);
+      throw error;
     }
   }
 
-  /**
-   * Update admin permissions
-   */
-  async updateAdmin(adminId: string, updates: Partial<BRRGAdmin>): Promise<BRRGAdmin | null> {
+  // Get admins for a company
+  async getAdmins(companyId: string) {
     try {
-      const response = await fetch(`${this.adminApiUrl}/${adminId}`, {
-        method: 'PATCH',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          ...updates,
-          updatedAt: new Date().toISOString(),
-        }),
-      });
-
+      console.log('👥 Getting admins for company:', companyId);
+      
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/admins?companyId=${companyId}`);
+      
       if (!response.ok) {
         const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to update admin: ${response.status}`);
+        throw new Error(errorData.error || 'Failed to get admins');
       }
 
-      return await response.json();
+      const result = await response.json();
+      console.log('✅ Admins retrieved successfully:', result);
+      
+      return result;
     } catch (error) {
-      console.error('Error updating admin:', error);
-      throw error; // Re-throw to let the calling code handle it
+      console.error('❌ Error getting admins:', error);
+      throw error;
     }
-  }
-
-  /**
-   * Remove admin
-   */
-  async removeAdmin(adminId: string): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.adminApiUrl}/${adminId}`, {
-        method: 'DELETE',
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || `Failed to remove admin: ${response.status}`);
-      }
-
-      return response.ok;
-    } catch (error) {
-      console.error('Error removing admin:', error);
-      throw error; // Re-throw to let the calling code handle it
-    }
-  }
-
-  /**
-   * Sync company data from BRRG to our system
-   */
-  async syncCompanyData(orgNumber: string): Promise<BRRGCompany | null> {
-    const brrgData = await this.getCompanyInfo(orgNumber);
-    
-    if (!brrgData) {
-      return null;
-    }
-
-    // Here you would typically save this data to your database
-    // For now, we'll just return the transformed data
-    return brrgData;
-  }
-
-  /**
-   * Validate organization number format
-   */
-  validateOrgNumber(orgNumber: string): boolean {
-    // Norwegian organization number validation
-    const cleanOrgNumber = orgNumber.replace(/\s/g, '');
-    
-    if (cleanOrgNumber.length !== 9) {
-      return false;
-    }
-
-    // Check if it's all digits
-    if (!/^\d{9}$/.test(cleanOrgNumber)) {
-      return false;
-    }
-
-    // Validate checksum (simplified validation)
-    const digits = cleanOrgNumber.split('').map(Number);
-    const weights = [3, 2, 7, 6, 5, 4, 3, 2];
-    
-    let sum = 0;
-    for (let i = 0; i < 8; i++) {
-      sum += digits[i] * weights[i];
-    }
-    
-    const remainder = sum % 11;
-    const checksum = remainder === 0 ? 0 : 11 - remainder;
-    
-    return digits[8] === checksum;
   }
 }
 
-export const brrgService = new BRRGService(); 
+export const brrgService = new BrrgService();

@@ -3,6 +3,7 @@
 
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, doc, setDoc, addDoc } = require('firebase/firestore');
+const { getAuth, createUserWithEmailAndPassword } = require('firebase/auth');
 
 const firebaseConfig = {
   apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
@@ -16,6 +17,7 @@ const firebaseConfig = {
 // Initialize Firebase
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
+const auth = getAuth(app);
 
 async function setupFirebaseData() {
   try {
@@ -36,17 +38,30 @@ async function setupFirebaseData() {
 
     // 2. Create admin user - 100% REAL
     const adminUserId = 'driftpro_admin';
+    
+    // First create Firebase Authentication user
+    let firebaseUser;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, 'admin2@driftpro.no', 'admin123');
+      firebaseUser = userCredential.user;
+      console.log('✅ Firebase Auth user created - admin2@driftpro.no');
+    } catch (error) {
+      console.log('⚠️ Firebase Auth user might already exist:', error.message);
+      // Continue anyway, user might already exist
+    }
+    
     await setDoc(doc(db, 'users', adminUserId), {
       displayName: 'DriftPro Administrator',
-      email: 'admin@driftpro.no',
+      email: 'admin2@driftpro.no',
       role: 'admin',
       companyId: companyId,
       phone: '+47 123 45 679',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
-      status: 'active'
+      status: 'active',
+      uid: firebaseUser?.uid || adminUserId // Use Firebase UID if available
     });
-    console.log('✅ Admin user created - admin@driftpro.no');
+    console.log('✅ Admin user created - admin2@driftpro.no');
 
     // 3. Create departments - 100% REAL
     const departments = [
@@ -283,7 +298,7 @@ async function setupFirebaseData() {
 
     console.log('');
     console.log('🎉 ALL FIREBASE DATA SETUP COMPLETE - 100% REAL!');
-    console.log('📧 Admin login: admin@driftpro.no');
+    console.log('📧 Admin login: admin2@driftpro.no');
     console.log('🏢 Company: DriftPro AS');
     console.log('🆔 Company ID:', companyId);
     console.log('');

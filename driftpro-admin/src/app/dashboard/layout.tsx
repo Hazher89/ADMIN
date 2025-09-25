@@ -40,6 +40,7 @@ import {
   Phone
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
+import { firebaseService } from '@/lib/firebase-services';
 import NotificationBell from '@/components/NotificationBell';
 
 interface SidebarItem {
@@ -50,6 +51,7 @@ interface SidebarItem {
   badgeColor?: string;
   category?: string;
   isAdmin?: boolean;
+  id?: string;
 }
 
 // Prevent pre-rendering since this layout uses usePathname
@@ -120,76 +122,114 @@ export default function DashboardLayout({
   }, [user, userProfile, logout, router]);
 
   // Check if user is DriftPro admin
-  const isDriftProAdmin = userProfile?.companyId === 'driftpro-as';
+  const isDriftProAdmin = userProfile?.companyId === 'driftpro_main';
+  
+  // Get company permissions for non-DriftPro users
+  const [companyPermissions, setCompanyPermissions] = useState<string[]>([]);
+  
+  useEffect(() => {
+    if (userProfile?.companyId && !isDriftProAdmin) {
+      // Load company permissions
+      const loadCompanyPermissions = async () => {
+        try {
+          const company = await firebaseService.getCompany(userProfile.companyId!);
+          if (company?.permissions) {
+            setCompanyPermissions(company.permissions.map(p => p.id));
+          }
+        } catch (error) {
+          console.error('Error loading company permissions:', error);
+        }
+      };
+      loadCompanyPermissions();
+    }
+  }, [userProfile?.companyId, isDriftProAdmin]);
 
   // Sidebar items configuration
-  const sidebarItems: SidebarItem[] = [
+  const allSidebarItems: SidebarItem[] = [
     // Main navigation
     {
       name: 'Dashboard',
       href: '/dashboard',
       icon: <Home size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'dashboard'
     },
     {
       name: 'Ansatte',
       href: '/dashboard/employees',
       icon: <Users size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'employees'
     },
     {
       name: 'Vakter',
       href: '/dashboard/shifts',
       icon: <Calendar size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'shifts'
     },
     {
       name: 'Fravær og ferie',
       href: '/dashboard/absence-vacation',
       icon: <Heart size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'absence-vacation'
     },
     {
       name: 'BUD priser',
       href: '/dashboard/bud-priser',
       icon: <Target size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'bud-priser'
     },
     {
       name: 'HMS',
       href: '/dashboard/deviations',
       icon: <Shield size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'deviations'
+    },
+    {
+      name: 'Internrevisjon',
+      href: '/dashboard/audit',
+      icon: <Activity size={20} />,
+      category: 'main',
+      id: 'audit'
     },
     {
       name: 'Dokumenter',
       href: '/dashboard/documents',
       icon: <FileText size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'documents'
     },
     {
       name: 'Chat',
       href: '/dashboard/chat',
       icon: <MessageSquare size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'chat'
     },
     {
       name: 'Rapporter',
       href: '/dashboard/reports',
       icon: <BarChart3 size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'reports'
     },
     {
       name: 'Tidsregistrering',
       href: '/dashboard/timeclock',
       icon: <Clock size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'timeclock'
     },
     {
       name: 'SMS Logg & Telefonbok',
       href: '/dashboard/sms-logs',
       icon: <Phone size={20} />,
-      category: 'main'
+      category: 'main',
+      id: 'sms-logs'
     },
     
     // Management
@@ -197,21 +237,24 @@ export default function DashboardLayout({
       name: 'Avdelinger',
       href: '/dashboard/departments',
       icon: <Building size={20} />,
-      category: 'management'
+      category: 'management',
+      id: 'departments'
     },
     {
       name: 'Samarbeidspartnere',
       href: '/dashboard/partners',
       icon: <Handshake size={20} />,
-      category: 'management'
+      category: 'management',
+      id: 'partners'
     },
     
     // Partner Portal (only for single users, not companies)
-    ...(userProfile?.role === 'user' ? [{
+    ...(userProfile?.role === 'employee' ? [{
       name: 'Partner Portal',
       href: '/partner-login',
       icon: <Globe size={20} />,
-      category: 'management'
+      category: 'management',
+      id: 'partner-portal'
     }] : []),
     
     // Settings (available for all companies)
@@ -219,7 +262,8 @@ export default function DashboardLayout({
       name: 'Innstillinger',
       href: '/dashboard/settings',
       icon: <Settings size={20} />,
-      category: 'settings'
+      category: 'settings',
+      id: 'settings'
     },
     
     // Admin-only pages (only visible for DriftPro AS)
@@ -231,18 +275,30 @@ export default function DashboardLayout({
         badge: 'DEV',
         badgeColor: 'badge-primary',
         category: 'admin',
-        isAdmin: true
+        isAdmin: true,
+        id: 'development'
       },
       {
         name: 'Bedrifter',
         href: '/dashboard/companies',
         icon: <Globe size={20} />,
         category: 'admin',
-        isAdmin: true
+        isAdmin: true,
+        id: 'companies'
       },
 
     ] : [])
   ];
+
+  // Filter sidebar items based on permissions
+  const sidebarItems = isDriftProAdmin 
+    ? allSidebarItems 
+    : allSidebarItems.filter(item => 
+        item.isAdmin || 
+        (item.id && companyPermissions.includes(item.id)) ||
+        item.id === 'dashboard' || 
+        item.id === 'settings'
+      );
 
   const handleLogout = async () => {
     setShowLogoutModal(true);

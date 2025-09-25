@@ -1,0 +1,3256 @@
+'use client';
+
+import React, { useState, useEffect } from 'react';
+import { firebaseService, Partner } from '@/lib/firebase-services';
+import { useAuth } from '@/contexts/AuthContext';
+import { 
+  Plus, 
+  Search, 
+  UserPlus, 
+  Building2,
+  Phone,
+  Mail,
+  MapPin,
+  Users,
+  FileUp,
+  X,
+  Calendar,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  FileText,
+  MoreHorizontal
+} from 'lucide-react';
+
+
+export default function PartnersPage() {
+  const { userProfile } = useAuth();
+  const [partners, setPartners] = useState<Partner[]>([]);
+  const [filteredPartners, setFilteredPartners] = useState<Partner[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  // Partner creation
+  const [showCreatePartnerModal, setShowCreatePartnerModal] = useState(false);
+  const [newPartner, setNewPartner] = useState({
+    name: '',
+    description: '',
+    type: 'supplier' as const,
+    orgNumber: '',
+    industry: '',
+    address: {
+      street: '',
+      city: '',
+      postalCode: '',
+      country: 'Norge'
+    },
+    contactPerson: {
+      name: '',
+      email: '',
+      phone: '',
+      position: ''
+    }
+  });
+  
+  // File upload state
+  const [uploadedFiles, setUploadedFiles] = useState<File[]>([]);
+  const [uploadingFiles, setUploadingFiles] = useState(false);
+  
+  // Vehicle state
+  const [vehicles, setVehicles] = useState<Array<{
+    registrationNumber: string;
+    year: string;
+    model: string;
+    euroClass: string;
+    payload: string;
+  }>>([]);
+  
+  // Modal tabs
+  const [activeTab, setActiveTab] = useState<'info' | 'vehicles' | 'files'>('info');
+  const [fileShareTab, setFileShareTab] = useState<'files' | 'shareAll'>('files');
+  
+  // Routes/Routes tab state
+  const [activeView, setActiveView] = useState<'partners' | 'routes'>('partners');
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState<Date | null>(null);
+  const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
+  const [showFileShareModal, setShowFileShareModal] = useState(false);
+  const [routeAssignments, setRouteAssignments] = useState<{[key: string]: any}>({});
+  const [routeTitle, setRouteTitle] = useState('');
+  const [selectedJob, setSelectedJob] = useState('');
+  const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
+  const [availableUsers] = useState([
+    'M18', '82', '83', '194', '195', '196', '197', '198', '199', '200'
+  ]);
+
+  // Job management
+  const [showJobManagementModal, setShowJobManagementModal] = useState(false);
+  const [jobs, setJobs] = useState<Array<{
+    id: string;
+    name: string;
+    color: string;
+    startTime: string;
+    endTime: string;
+    description: string;
+  }>>([
+    { id: '1', name: 'Kveldsrute - Hønefoss', color: '#ef4444', startTime: '18:00', endTime: '22:00', description: 'Kveldsrute til Hønefoss' },
+    { id: '2', name: 'Fri Dagrute - Østfold', color: '#f97316', startTime: '08:00', endTime: '16:00', description: 'Fri dagrute til Østfold' },
+    { id: '3', name: 'Gitt bort Dagrute - Ski', color: '#eab308', startTime: '07:30', endTime: '15:30', description: 'Gitt bort dagrute til Ski' },
+    { id: '4', name: 'Syk Dagrute - Drammen', color: '#22c55e', startTime: '09:00', endTime: '17:00', description: 'Syk dagrute til Drammen' },
+    { id: '5', name: 'Dagrute - Jessheim', color: '#06b6d4', startTime: '08:30', endTime: '16:30', description: 'Dagrute til Jessheim' },
+    { id: '6', name: 'Indre Dagrute - Nesodden', color: '#3b82f6', startTime: '07:00', endTime: '15:00', description: 'Indre dagrute til Nesodden' },
+    { id: '7', name: 'Dagrute - Bærum', color: '#8b5cf6', startTime: '08:00', endTime: '16:00', description: 'Dagrute til Bærum' },
+    { id: '8', name: 'Dagrute - Nittedal', color: '#ec4899', startTime: '08:15', endTime: '16:15', description: 'Dagrute til Nittedal' },
+    { id: '9', name: 'Geilo LEDIG DAG', color: '#6b7280', startTime: '00:00', endTime: '23:59', description: 'Geilo ledig dag' },
+    { id: '10', name: 'LEDIG KVELD', color: '#9ca3af', startTime: '18:00', endTime: '23:59', description: 'Ledig kveld' },
+    { id: '11', name: 'DAWID ADAM', color: '#10b981', startTime: '08:00', endTime: '16:00', description: 'Dawid Adam rute' },
+    { id: '12', name: 'Dag-Hadeland', color: '#f59e0b', startTime: '07:30', endTime: '15:30', description: 'Dag rute til Hadeland' },
+    { id: '13', name: 'Kveld-Hadeland', color: '#ef4444', startTime: '18:30', endTime: '22:30', description: 'Kveld rute til Hadeland' },
+    { id: '14', name: 'KVELD-KONGSVINGER', color: '#dc2626', startTime: '19:00', endTime: '23:00', description: 'Kveld rute til Kongsvinger' }
+  ]);
+  const [editingJob, setEditingJob] = useState<{
+    id: string;
+    name: string;
+    color: string;
+    startTime: string;
+    endTime: string;
+    description: string;
+  } | null>(null);
+
+  useEffect(() => {
+    if (userProfile?.companyId) {
+      loadPartners();
+      loadRouteAssignments();
+    }
+  }, [userProfile?.companyId]);
+
+  useEffect(() => {
+    if (activeView === 'routes') {
+      loadRouteAssignments();
+    }
+  }, [activeView, currentDate]);
+
+  const loadPartners = async () => {
+    if (!userProfile?.companyId) return;
+    
+    try {
+      const partnersData = await firebaseService.getPartners(userProfile.companyId);
+      setPartners(partnersData);
+      setFilteredPartners(partnersData);
+    } catch (error) {
+      setError('Kunne ikke laste partnere');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(event.target.files || []);
+    setUploadedFiles(prev => [...prev, ...files]);
+  };
+
+  const removeFile = (index: number) => {
+    setUploadedFiles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const addVehicle = () => {
+    setVehicles(prev => [...prev, {
+      registrationNumber: '',
+      year: '',
+      model: '',
+      euroClass: '',
+      payload: ''
+    }]);
+  };
+
+  const updateVehicle = (index: number, field: string, value: string) => {
+    setVehicles(prev => prev.map((vehicle, i) => 
+      i === index ? { ...vehicle, [field]: value } : vehicle
+    ));
+  };
+
+  const removeVehicle = (index: number) => {
+    setVehicles(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const uploadFilesToFirebase = async (files: File[], partnerId: string) => {
+    const { ref, uploadBytes, getDownloadURL } = await import('firebase/storage');
+    const { storage } = await import('@/lib/firebase');
+    
+    if (!storage) {
+      throw new Error('Firebase Storage not initialized');
+    }
+    
+    const uploadPromises = files.map(async (file) => {
+      const fileName = `${partnerId}/${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, `partner-files/${fileName}`);
+      const snapshot = await uploadBytes(storageRef, file);
+      const downloadURL = await getDownloadURL(snapshot.ref);
+      return {
+        name: file.name,
+        url: downloadURL,
+        size: file.size,
+        type: file.type,
+        uploadedAt: new Date().toISOString()
+      };
+    });
+    
+    return Promise.all(uploadPromises);
+  };
+
+  const handleCreatePartner = async () => {
+    if (!userProfile?.companyId) {
+      setError('Mangler bedrifts-ID');
+      return;
+    }
+
+    if (!newPartner.name.trim()) {
+      setError('Bedriftsnavn er påkrevd');
+      return;
+    }
+
+    try {
+      setLoading(true);
+      setUploadingFiles(true);
+      
+      // Create partner first to get ID
+      const partnerData = {
+        ...newPartner,
+        companyId: userProfile.companyId,
+        status: 'active' as const,
+        rating: 0,
+        projects: 0,
+        revenue: 0,
+        createdBy: userProfile.id,
+        vehicles: vehicles,
+        uploadedFiles: []
+      };
+      
+      const partnerId = await firebaseService.createPartner(partnerData);
+      
+      // Upload files if any
+      let uploadedFileData: any[] = [];
+      if (uploadedFiles.length > 0) {
+        try {
+          uploadedFileData = await uploadFilesToFirebase(uploadedFiles, partnerId);
+          
+          // Update partner with file URLs
+          await firebaseService.updatePartner(partnerId, {
+            uploadedFiles: uploadedFileData
+          });
+        } catch (fileError) {
+          console.error('Error uploading files:', fileError);
+          setError('Partner opprettet, men filopplasting feilet');
+        }
+      }
+      
+      // Refresh partners list
+      const updatedPartners = await firebaseService.getPartners(userProfile.companyId);
+      setPartners(updatedPartners);
+      setFilteredPartners(updatedPartners);
+      
+      setSuccess('Partner opprettet!');
+      setShowCreatePartnerModal(false);
+      setNewPartner({
+        name: '',
+        description: '',
+        type: 'supplier' as const,
+        orgNumber: '',
+        industry: '',
+        address: { street: '', city: '', postalCode: '', country: 'Norge' },
+        contactPerson: { name: '', email: '', phone: '', position: '' }
+      });
+      setUploadedFiles([]);
+      setVehicles([]);
+      setActiveTab('info');
+      
+    } catch (err: any) {
+      setError(err.message || 'Kunne ikke opprette partner');
+    } finally {
+      setLoading(false);
+      setUploadingFiles(false);
+    }
+  };
+
+  const handleSearch = (query: string) => {
+    setSearchQuery(query);
+    if (query.trim() === '') {
+      setFilteredPartners(partners);
+    } else {
+      const filtered = partners.filter(partner =>
+        partner.name.toLowerCase().includes(query.toLowerCase()) ||
+        (partner.orgNumber && partner.orgNumber.includes(query)) ||
+        (partner.contactPerson?.name && partner.contactPerson.name.toLowerCase().includes(query.toLowerCase()))
+      );
+      setFilteredPartners(filtered);
+    }
+  };
+
+  // Calendar functions
+  const getWeekDates = (date: Date) => {
+    const startOfWeek = new Date(date);
+    const day = startOfWeek.getDay();
+    const diff = startOfWeek.getDate() - day + (day === 0 ? -6 : 1); // Monday start
+    startOfWeek.setDate(diff);
+    
+    const weekDates = [];
+    for (let i = 0; i < 7; i++) {
+      const date = new Date(startOfWeek);
+      date.setDate(startOfWeek.getDate() + i);
+      weekDates.push(date);
+    }
+    return weekDates;
+  };
+
+  const navigateWeek = (direction: 'prev' | 'next') => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7));
+    setCurrentDate(newDate);
+  };
+
+  const formatDate = (date: Date) => {
+    return date.toLocaleDateString('no-NO', { 
+      weekday: 'short', 
+      day: 'numeric', 
+      month: 'numeric' 
+    });
+  };
+
+  const handleDateClick = (date: Date, partner: Partner) => {
+    setSelectedDate(date);
+    setSelectedPartner(partner);
+    setShowFileShareModal(true);
+  };
+
+  const getRouteAssignment = (partnerId: string, date: Date) => {
+    const key = `${partnerId}_${date.toISOString().split('T')[0]}`;
+    return routeAssignments[key] || null;
+  };
+
+  const handleShareFiles = async () => {
+    if (!selectedPartner || !selectedDate || !userProfile?.companyId) return;
+    
+    if (!routeTitle.trim() && uploadedFiles.length === 0) {
+      setError('Skriv inn en rute tittel eller last opp filer');
+      return;
+    }
+
+    try {
+      setUploadingFiles(true);
+      
+      let uploadedFileData: any[] = [];
+      if (uploadedFiles.length > 0) {
+        uploadedFileData = await uploadFilesToFirebase(uploadedFiles, selectedPartner.id);
+      }
+
+      const assignmentId = await firebaseService.createRouteAssignment({
+        partnerId: selectedPartner.id,
+        partnerName: selectedPartner.name,
+        date: selectedDate.toISOString(),
+        files: uploadedFileData,
+        title: routeTitle.trim() || `Rute ${selectedDate.toLocaleDateString('no-NO')}`,
+        job: selectedJob,
+        users: selectedUsers,
+        companyId: userProfile.companyId
+      });
+
+      const assignmentKey = `${selectedPartner.id}_${selectedDate.toISOString().split('T')[0]}`;
+      const assignment = {
+        id: assignmentId,
+        partnerId: selectedPartner.id,
+        partnerName: selectedPartner.name,
+        date: selectedDate.toISOString(),
+        files: uploadedFileData,
+        title: routeTitle.trim() || `Rute ${selectedDate.toLocaleDateString('no-NO')}`,
+        job: selectedJob,
+        users: selectedUsers,
+        createdAt: new Date().toISOString()
+      };
+
+      setRouteAssignments(prev => ({
+        ...prev,
+        [assignmentKey]: assignment
+      }));
+
+      setSuccess(`Rute delt med ${selectedPartner.name} for ${selectedDate.toLocaleDateString('no-NO')}`);
+      setShowFileShareModal(false);
+      setUploadedFiles([]);
+      setRouteTitle('');
+      setSelectedJob('');
+      setSelectedUsers([]);
+    } catch (error) {
+      console.error('Error sharing files:', error);
+      setError('Feil ved opplasting av filer');
+    } finally {
+      setUploadingFiles(false);
+    }
+  };
+
+  const loadRouteAssignments = async () => {
+    if (!userProfile?.companyId) return;
+    
+    try {
+      // Get start and end of current week
+      const weekDates = getWeekDates(currentDate);
+      const startDate = weekDates[0].toISOString().split('T')[0];
+      const endDate = weekDates[6].toISOString().split('T')[0];
+      
+      const assignments = await firebaseService.getRouteAssignments(
+        userProfile.companyId, 
+        startDate, 
+        endDate
+      );
+      
+      // Convert to key-value format for easy lookup
+      const assignmentMap: {[key: string]: any} = {};
+      assignments.forEach(assignment => {
+        const key = `${assignment.partnerId}_${assignment.date.split('T')[0]}`;
+        assignmentMap[key] = assignment;
+      });
+      
+      setRouteAssignments(assignmentMap);
+    } catch (error) {
+      console.error('Error loading route assignments:', error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-blue-600 mx-auto"></div>
+          <p className="mt-4 text-gray-600">Laster partnere...</p>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div>
+      {/* Page Header */}
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card-icon">
+            <Building2 />
+          </div>
+          <div>
+            <h1 className="page-title">🤝 Samarbeidspartnere</h1>
+            <p className="page-subtitle">
+              Administrer og oversikt over alle samarbeidspartnere
+            </p>
+          </div>
+        </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <span className="badge badge-primary">
+            {partners.length} partnere
+          </span>
+          
+          {/* Tab Navigation */}
+          <div style={{ display: 'flex', gap: '0.5rem', marginRight: 'auto' }}>
+            <button
+              onClick={() => setActiveView('partners')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: activeView === 'partners' ? 'var(--primary)' : 'transparent',
+                color: activeView === 'partners' ? 'var(--white)' : 'var(--gray-600)',
+                border: '1px solid var(--gray-300)',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                fontWeight: '500',
+                fontSize: 'var(--font-size-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Users style={{ width: '16px', height: '16px' }} />
+              Samarbeidspartnere
+            </button>
+            <button
+              onClick={() => setActiveView('routes')}
+              style={{
+                padding: '0.5rem 1rem',
+                background: activeView === 'routes' ? 'var(--primary)' : 'transparent',
+                color: activeView === 'routes' ? 'var(--white)' : 'var(--gray-600)',
+                border: '1px solid var(--gray-300)',
+                borderRadius: 'var(--radius-md)',
+                cursor: 'pointer',
+                fontWeight: '500',
+                fontSize: 'var(--font-size-sm)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Calendar style={{ width: '16px', height: '16px' }} />
+              Ruter Tildelt
+            </button>
+          </div>
+          
+            <div style={{ display: 'flex', gap: '0.75rem' }}>
+              <button 
+                className="btn"
+                onClick={() => setShowJobManagementModal(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                  border: '1px solid #d1d5db',
+                  color: '#374151',
+                  fontWeight: '500',
+                  fontSize: 'var(--font-size-sm)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Clock style={{ width: '16px', height: '16px' }} />
+                Administrer Jobber
+              </button>
+              <button 
+                className="btn btn-primary"
+                onClick={() => setShowCreatePartnerModal(true)}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Ny Partner
+              </button>
+            </div>
+        </div>
+      </div>
+
+      {/* Search and Filters */}
+      {activeView === 'partners' && (
+        <div className="card" style={{ marginBottom: '2rem' }}>
+          <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
+            <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
+              <Search className="search-icon" />
+              <input
+                type="text"
+                placeholder="Søk i partnere..."
+                className="search-input"
+                value={searchQuery}
+                onChange={(e) => handleSearch(e.target.value)}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Content based on active view */}
+      {activeView === 'partners' ? (
+        /* Partners Grid */
+        <div className="grid grid-cols-3">
+          {filteredPartners.map((partner, index) => (
+          <div key={partner.id || `partner-${index}`} className="card">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
+              <div className="card-icon">
+                <Building2 />
+              </div>
+              <div style={{ flex: '1' }}>
+                <h3 style={{ 
+                  fontWeight: '600', 
+                  color: '#333',
+                  fontSize: '1.1rem',
+                  marginBottom: '0.25rem'
+                }}>
+                  {partner.name}
+                </h3>
+                <p style={{ 
+                  color: '#666',
+                  fontSize: '0.875rem',
+                  marginBottom: '0.5rem'
+                }}>
+                  Org.nr: {partner.orgNumber || 'Ikke oppgitt'}
+                </p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{
+                    padding: '0.25rem 0.5rem',
+                    borderRadius: '0.375rem',
+                    fontSize: '0.75rem',
+                    fontWeight: '500',
+                    backgroundColor: partner.status === 'active' ? '#dcfce7' : '#fef2f2',
+                    color: partner.status === 'active' ? '#166534' : '#dc2626'
+                  }}>
+                    {partner.status === 'active' ? 'Aktiv' : 'Inaktiv'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            <div style={{ marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                <MapPin style={{ width: '16px', height: '16px' }} />
+                <span>{partner.address.street}, {partner.address.postalCode} {partner.address.city}</span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                <Users style={{ width: '16px', height: '16px' }} />
+                <span>{partner.contactPerson?.name || 'Ikke oppgitt'} - {partner.contactPerson?.position || 'Ikke oppgitt'}</span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                <Mail style={{ width: '16px', height: '16px' }} />
+                <span>{partner.contactPerson?.email || 'Ikke oppgitt'}</span>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                <Phone style={{ width: '16px', height: '16px' }} />
+                <span>{partner.contactPerson?.phone || 'Ikke oppgitt'}</span>
+              </div>
+              
+              {partner.vehicles && partner.vehicles.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                  <Building2 style={{ width: '16px', height: '16px' }} />
+                  <span>{partner.vehicles.length} kjøretøy registrert</span>
+                </div>
+              )}
+              
+              {partner.uploadedFiles && partner.uploadedFiles.length > 0 && (
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                  <FileUp style={{ width: '16px', height: '16px' }} />
+                  <span>{partner.uploadedFiles.length} filer lastet opp</span>
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <button
+                onClick={() => {
+                  console.log('Create user for partner:', partner.id);
+                }}
+                className="btn btn-success"
+                style={{ flex: '1', fontSize: '0.875rem', padding: '0.5rem' }}
+              >
+                <UserPlus style={{ width: '14px', height: '14px' }} />
+                Opprett Bruker
+              </button>
+              <button
+                onClick={() => {
+                  console.log('Upload files for partner:', partner.id);
+                }}
+                className="btn btn-primary"
+                style={{ flex: '1', fontSize: '0.875rem', padding: '0.5rem' }}
+              >
+                <FileUp style={{ width: '14px', height: '14px' }} />
+                Last Opp Filer
+              </button>
+            </div>
+          </div>
+        ))}
+        </div>
+      ) : (
+        /* Routes Calendar View - Calendar Only */
+        <div style={{ 
+          background: 'white',
+          borderRadius: '12px',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          overflow: 'hidden'
+        }}>
+            {/* Calendar Header */}
+            <div style={{ 
+              padding: '1.5rem', 
+              borderBottom: '1px solid #e2e8f0',
+              background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
+                <h3 style={{ 
+                  fontSize: '1.5rem', 
+                  fontWeight: '700', 
+                  margin: 0,
+                  color: '#1e293b',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  <Clock style={{ width: '24px', height: '24px', color: '#667eea' }} />
+                  Ukeplan
+                </h3>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  background: 'white',
+                  padding: '0.5rem',
+                  borderRadius: '8px',
+                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}>
+                  <button
+                    onClick={() => navigateWeek('prev')}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'transparent',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      color: '#64748b'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
+                    <ChevronLeft style={{ width: '18px', height: '18px' }} />
+                  </button>
+                  <span style={{ 
+                    fontSize: '0.875rem', 
+                    fontWeight: '600',
+                    minWidth: '180px',
+                    textAlign: 'center',
+                    color: '#374151',
+                    padding: '0 1rem'
+                  }}>
+                    {formatDate(getWeekDates(currentDate)[0])} - {formatDate(getWeekDates(currentDate)[6])}
+                  </span>
+                  <button
+                    onClick={() => navigateWeek('next')}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'transparent',
+                      border: '1px solid #e2e8f0',
+                      borderRadius: '6px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s',
+                      color: '#64748b'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.background = '#f1f5f9';
+                      e.currentTarget.style.borderColor = '#cbd5e1';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.background = 'transparent';
+                      e.currentTarget.style.borderColor = '#e2e8f0';
+                    }}
+                  >
+                    <ChevronRight style={{ width: '18px', height: '18px' }} />
+                  </button>
+                </div>
+              </div>
+              
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                <button
+                  onClick={() => setCurrentDate(new Date())}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s',
+                    boxShadow: '0 2px 4px rgba(102, 126, 234, 0.3)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
+                  }}
+                >
+                  I dag
+                </button>
+              </div>
+            </div>
+
+            {/* Enhanced Calendar Grid */}
+            <div style={{ flex: '1', overflow: 'auto', background: '#f8fafc' }}>
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: '250px repeat(7, 1fr)', 
+                minHeight: '100%',
+                background: 'white'
+              }}>
+                {/* Partner names column */}
+                <div style={{ 
+                  borderRight: '2px solid #e2e8f0',
+                  background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                  padding: '1rem 0'
+                }}>
+                  <div style={{
+                    padding: '1rem 1.25rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '700',
+                    color: '#374151',
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.05em',
+                    borderBottom: '2px solid #e2e8f0'
+                  }}>
+                    Partnere
+                  </div>
+                  {filteredPartners.map((partner, index) => (
+                    <div 
+                      key={partner.id || `partner-row-${index}`}
+                      style={{
+                        padding: '1rem 1.25rem',
+                        borderBottom: '1px solid #f1f5f9',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        minHeight: '80px',
+                        background: selectedPartner?.id === partner.id ? '#f0f4ff' : 'transparent',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: selectedPartner?.id === partner.id 
+                          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                          : 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '1rem',
+                        flexShrink: 0,
+                        boxShadow: '0 3px 6px rgba(0, 0, 0, 0.15)'
+                      }}>
+                        {partner.name.charAt(0).toUpperCase()}
+                      </div>
+                      <div style={{ flex: '1', minWidth: 0 }}>
+                        <div style={{
+                          fontSize: '0.875rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          marginBottom: '0.25rem'
+                        }}>
+                          {partner.name}
+                        </div>
+                        <div style={{
+                          fontSize: '0.75rem',
+                          color: '#64748b',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {partner.contactPerson?.name || 'Ikke oppgitt'}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Days of the week */}
+                {getWeekDates(currentDate).map((date, dayIndex) => {
+                  const isToday = date.toDateString() === new Date().toDateString();
+                  const isWeekend = dayIndex === 0 || dayIndex === 6;
+                  
+                  return (
+                    <div key={dayIndex} style={{
+                      borderRight: dayIndex < 6 ? '1px solid #e2e8f0' : 'none',
+                      background: isWeekend ? '#f8fafc' : 'white'
+                    }}>
+                      {/* Day header */}
+                      <div style={{
+                        padding: '0.75rem',
+                        background: isToday 
+                          ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                          : isWeekend 
+                            ? 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'
+                            : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                        borderBottom: '2px solid #e2e8f0',
+                        textAlign: 'center'
+                      }}>
+                        <div style={{
+                          fontSize: '0.875rem',
+                          fontWeight: '700',
+                          color: isToday ? 'white' : '#64748b',
+                          textTransform: 'uppercase',
+                          letterSpacing: '0.05em',
+                          marginBottom: '0.5rem'
+                        }}>
+                          {['Søn', 'Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør'][dayIndex]}
+                        </div>
+                        <div style={{
+                          fontSize: '1.5rem',
+                          fontWeight: '800',
+                          color: isToday ? 'white' : '#1e293b'
+                        }}>
+                          {date.getDate()}
+                        </div>
+                      </div>
+
+                      {/* Day cells for each partner */}
+                      <div style={{ minHeight: '400px' }}>
+                        {filteredPartners.map((partner, partnerIndex) => {
+                          const assignment = getRouteAssignment(partner.id, date);
+                          
+                          return (
+                            <div 
+                              key={`${partner.id}-${dayIndex}`}
+                              onClick={() => {
+                                setSelectedPartner(partner);
+                                setSelectedDate(date);
+                                setShowFileShareModal(true);
+                              }}
+                              style={{
+                                minHeight: '80px',
+                                padding: '0.75rem',
+                                borderBottom: '1px solid #f1f5f9',
+                                cursor: 'pointer',
+                                transition: 'all 0.2s ease',
+                                background: assignment 
+                                  ? 'linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%)'
+                                  : 'transparent',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                justifyContent: 'center',
+                                alignItems: 'center'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = assignment 
+                                  ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
+                                  : '#f8fafc';
+                                e.currentTarget.style.transform = 'scale(1.02)';
+                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = assignment 
+                                  ? 'linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%)'
+                                  : 'transparent';
+                                e.currentTarget.style.transform = 'scale(1)';
+                                e.currentTarget.style.boxShadow = 'none';
+                              }}
+                            >
+                              {assignment ? (
+                                <div style={{
+                                  display: 'flex',
+                                  flexDirection: 'column',
+                                  alignItems: 'center',
+                                  gap: '0.25rem',
+                                  width: '100%'
+                                }}>
+                                  <div style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontSize: '0.75rem',
+                                    color: '#667eea',
+                                    fontWeight: '700'
+                                  }}>
+                                    <FileText style={{ width: '12px', height: '12px' }} />
+                                    {assignment.files?.length || 0} filer
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.75rem',
+                                    color: '#64748b',
+                                    textAlign: 'center',
+                                    lineHeight: '1.3',
+                                    fontWeight: '500'
+                                  }}>
+                                    {assignment.title || 'Rute tildelt'}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div style={{
+                                  fontSize: '0.75rem',
+                                  color: '#cbd5e1',
+                                  textAlign: 'center',
+                                  fontStyle: 'italic',
+                                  fontWeight: '500'
+                                }}>
+                                  Klikk for å tildele
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+        </div>
+      )}
+
+      {/* Create Partner Modal */}
+      {showCreatePartnerModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'var(--white)',
+            borderRadius: 'var(--radius-lg)',
+            padding: '2rem',
+            maxWidth: '800px',
+            width: '90%',
+            maxHeight: '90vh',
+            overflow: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+              <div>
+                <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                  <Building2 style={{ width: '24px', height: '24px', marginRight: '0.5rem' }} />
+                  Opprett Ny Partner
+                </h2>
+                <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)' }}>
+                  Fyll ut partnerinformasjon og legg til kontaktperson
+                </p>
+              </div>
+              <button
+                onClick={() => setShowCreatePartnerModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px', color: 'var(--gray-400)' }} />
+              </button>
+            </div>
+            
+            {/* Tabs */}
+            <div style={{ 
+              display: 'flex', 
+              borderBottom: '1px solid var(--gray-200)', 
+              marginBottom: '2rem',
+              gap: '0.5rem'
+            }}>
+              <button
+                onClick={() => setActiveTab('info')}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: activeTab === 'info' ? 'var(--primary)' : 'transparent',
+                  color: activeTab === 'info' ? 'var(--white)' : 'var(--gray-600)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: 'var(--font-size-sm)'
+                }}
+              >
+                📋 Partnerinformasjon
+              </button>
+              <button
+                onClick={() => setActiveTab('vehicles')}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: activeTab === 'vehicles' ? 'var(--primary)' : 'transparent',
+                  color: activeTab === 'vehicles' ? 'var(--white)' : 'var(--gray-600)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: 'var(--font-size-sm)'
+                }}
+              >
+                🚛 Kjøretøy
+              </button>
+              <button
+                onClick={() => setActiveTab('files')}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: activeTab === 'files' ? 'var(--primary)' : 'transparent',
+                  color: activeTab === 'files' ? 'var(--white)' : 'var(--gray-600)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md) var(--radius-md) 0 0',
+                  cursor: 'pointer',
+                  fontWeight: '500',
+                  fontSize: 'var(--font-size-sm)'
+                }}
+              >
+                📁 Filer
+              </button>
+            </div>
+
+            {/* Tab Content */}
+            {activeTab === 'info' && (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.5rem', marginBottom: '2rem' }}>
+                <div>
+                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', marginBottom: '1rem', color: 'var(--gray-900)' }}>
+                    Bedriftsinformasjon
+                  </h3>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Bedriftsnavn *
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Bedriftsnavn"
+                    value={newPartner.name}
+                    onChange={(e) => setNewPartner(prev => ({ ...prev, name: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-sm)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Organisasjonsnummer
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Organisasjonsnummer"
+                    value={newPartner.orgNumber}
+                    onChange={(e) => setNewPartner(prev => ({ ...prev, orgNumber: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-sm)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Bransje
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Bransje"
+                    value={newPartner.industry}
+                    onChange={(e) => setNewPartner(prev => ({ ...prev, industry: e.target.value }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-sm)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Gateadresse
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Gateadresse"
+                    value={newPartner.address.street}
+                    onChange={(e) => setNewPartner(prev => ({ 
+                      ...prev, 
+                      address: { ...prev.address, street: e.target.value }
+                    }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-sm)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                      Postnummer
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="Postnummer"
+                      value={newPartner.address.postalCode}
+                      onChange={(e) => setNewPartner(prev => ({ 
+                        ...prev, 
+                        address: { ...prev.address, postalCode: e.target.value }
+                      }))}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid var(--gray-300)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: 'var(--font-size-sm)',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                      By
+                    </label>
+                    <input
+                      type="text"
+                      placeholder="By"
+                      value={newPartner.address.city}
+                      onChange={(e) => setNewPartner(prev => ({ 
+                        ...prev, 
+                        address: { ...prev.address, city: e.target.value }
+                      }))}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid var(--gray-300)',
+                        borderRadius: 'var(--radius-md)',
+                        fontSize: 'var(--font-size-sm)',
+                        outline: 'none'
+                      }}
+                    />
+                  </div>
+                </div>
+              </div>
+              
+              <div>
+                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', marginBottom: '1rem', color: 'var(--gray-900)' }}>
+                  Kontaktperson
+                </h3>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Navn
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Kontaktperson navn"
+                    value={newPartner.contactPerson.name}
+                    onChange={(e) => setNewPartner(prev => ({ 
+                      ...prev, 
+                      contactPerson: { ...prev.contactPerson, name: e.target.value }
+                    }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-sm)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Stilling
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Kontaktperson stilling"
+                    value={newPartner.contactPerson.position}
+                    onChange={(e) => setNewPartner(prev => ({ 
+                      ...prev, 
+                      contactPerson: { ...prev.contactPerson, position: e.target.value }
+                    }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-sm)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    E-post
+                  </label>
+                  <input
+                    type="email"
+                    placeholder="E-post"
+                    value={newPartner.contactPerson.email}
+                    onChange={(e) => setNewPartner(prev => ({ 
+                      ...prev, 
+                      contactPerson: { ...prev.contactPerson, email: e.target.value }
+                    }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-sm)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
+                    Telefon
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="Telefon"
+                    value={newPartner.contactPerson.phone}
+                    onChange={(e) => setNewPartner(prev => ({ 
+                      ...prev, 
+                      contactPerson: { ...prev.contactPerson, phone: e.target.value }
+                    }))}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: 'var(--radius-md)',
+                      fontSize: 'var(--font-size-sm)',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              </div>
+            </div>
+            )}
+
+            {/* Vehicles Tab */}
+            {activeTab === 'vehicles' && (
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                    Kjøretøy
+                  </h3>
+                  <button
+                    onClick={addVehicle}
+                    style={{
+                      padding: '0.5rem 1rem',
+                      background: 'var(--primary)',
+                      color: 'var(--white)',
+                      border: 'none',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                      fontSize: 'var(--font-size-sm)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem'
+                    }}
+                  >
+                    <Plus style={{ width: '16px', height: '16px' }} />
+                    Legg til kjøretøy
+                  </button>
+                </div>
+                
+                {vehicles.map((vehicle, index) => (
+                  <div key={index} style={{
+                    border: '1px solid var(--gray-200)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem',
+                    marginBottom: '1rem',
+                    background: 'var(--gray-50)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                      <h4 style={{ fontSize: 'var(--font-size-md)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                        Kjøretøy {index + 1}
+                      </h4>
+                      <button
+                        onClick={() => removeVehicle(index)}
+                        style={{
+                          background: 'var(--red-500)',
+                          color: 'var(--white)',
+                          border: 'none',
+                          borderRadius: 'var(--radius-sm)',
+                          padding: '0.25rem 0.5rem',
+                          cursor: 'pointer',
+                          fontSize: 'var(--font-size-xs)'
+                        }}
+                      >
+                        Slett
+                      </button>
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Registreringsnummer
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="AB12345"
+                          value={vehicle.registrationNumber}
+                          onChange={(e) => updateVehicle(index, 'registrationNumber', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Årsmodell
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="2023"
+                          value={vehicle.year}
+                          onChange={(e) => updateVehicle(index, 'year', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Modell
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Volvo FH"
+                          value={vehicle.model}
+                          onChange={(e) => updateVehicle(index, 'model', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Euroklasse
+                        </label>
+                        <select
+                          value={vehicle.euroClass}
+                          onChange={(e) => updateVehicle(index, 'euroClass', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        >
+                          <option value="">Velg euroklasse</option>
+                          <option value="Euro 1">Euro 1</option>
+                          <option value="Euro 2">Euro 2</option>
+                          <option value="Euro 3">Euro 3</option>
+                          <option value="Euro 4">Euro 4</option>
+                          <option value="Euro 5">Euro 5</option>
+                          <option value="Euro 6">Euro 6</option>
+                          <option value="Euro 6d">Euro 6d</option>
+                        </select>
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Nyttevekt (kg)
+                        </label>
+                        <input
+                          type="number"
+                          placeholder="25000"
+                          value={vehicle.payload}
+                          onChange={(e) => updateVehicle(index, 'payload', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                  </div>
+                ))}
+                
+                {vehicles.length === 0 && (
+                  <div style={{
+                    textAlign: 'center',
+                    padding: '2rem',
+                    color: 'var(--gray-500)',
+                    background: 'var(--gray-50)',
+                    borderRadius: 'var(--radius-md)',
+                    border: '2px dashed var(--gray-300)'
+                  }}>
+                    <p>Ingen kjøretøy lagt til ennå</p>
+                    <p style={{ fontSize: 'var(--font-size-sm)', marginTop: '0.5rem' }}>
+                      Klikk "Legg til kjøretøy" for å begynne
+                    </p>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Files Tab */}
+            {activeTab === 'files' && (
+              <div style={{ marginBottom: '2rem' }}>
+                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', marginBottom: '1rem', color: 'var(--gray-900)' }}>
+                  Filer
+                </h3>
+                
+                <div style={{
+                  border: '2px dashed var(--gray-300)',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '2rem',
+                  textAlign: 'center',
+                  background: 'var(--gray-50)',
+                  marginBottom: '1rem'
+                }}>
+                  <input
+                    type="file"
+                    multiple
+                    onChange={handleFileUpload}
+                    style={{ display: 'none' }}
+                    id="file-upload"
+                  />
+                  <label
+                    htmlFor="file-upload"
+                    style={{
+                      display: 'inline-block',
+                      padding: '0.75rem 1.5rem',
+                      background: 'var(--primary)',
+                      color: 'var(--white)',
+                      borderRadius: 'var(--radius-md)',
+                      cursor: 'pointer',
+                      fontSize: 'var(--font-size-sm)',
+                      fontWeight: '500'
+                    }}
+                  >
+                    <FileUp style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                    Velg filer
+                  </label>
+                  <p style={{ marginTop: '0.5rem', color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)' }}>
+                    Du kan laste opp flere filer samtidig
+                  </p>
+                </div>
+                
+                {uploadedFiles.length > 0 && (
+                  <div>
+                    <h4 style={{ fontSize: 'var(--font-size-md)', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--gray-900)' }}>
+                      Valgte filer:
+                    </h4>
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} style={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        padding: '0.5rem',
+                        background: 'var(--white)',
+                        border: '1px solid var(--gray-200)',
+                        borderRadius: 'var(--radius-sm)',
+                        marginBottom: '0.5rem'
+                      }}>
+                        <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)' }}>
+                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                        </span>
+                        <button
+                          onClick={() => removeFile(index)}
+                          style={{
+                            background: 'var(--red-500)',
+                            color: 'var(--white)',
+                            border: 'none',
+                            borderRadius: 'var(--radius-sm)',
+                            padding: '0.25rem 0.5rem',
+                            cursor: 'pointer',
+                            fontSize: 'var(--font-size-xs)'
+                          }}
+                        >
+                          Slett
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+            
+            <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '2rem' }}>
+              <button
+                onClick={() => setShowCreatePartnerModal(false)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'var(--gray-200)',
+                  color: 'var(--gray-700)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  marginRight: '1rem'
+                }}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleCreatePartner}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'var(--primary)',
+                  color: 'var(--white)',
+                  border: 'none',
+                  borderRadius: 'var(--radius-md)',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Opprett Partner
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Connecteam-Inspired Route Details Modal */}
+      {showFileShareModal && selectedDate && selectedPartner && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.6)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          backdropFilter: 'blur(4px)'
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '12px',
+            padding: '0',
+            maxWidth: '900px',
+            width: '95%',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
+            border: '1px solid #e2e8f0'
+          }}>
+            {/* Modal Header */}
+            <div style={{
+              padding: '1.5rem 2rem',
+              borderBottom: '1px solid #e2e8f0',
+              background: 'white',
+              position: 'relative'
+            }}>
+              <button
+                onClick={() => {
+                  setShowFileShareModal(false);
+                  setSelectedPartner(null);
+                  setSelectedDate(null);
+                }}
+                style={{
+                  position: 'absolute',
+                  top: '1.5rem',
+                  right: '2rem',
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  borderRadius: '6px',
+                  color: '#64748b',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = '#f1f5f9';
+                  e.currentTarget.style.color = '#374151';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'none';
+                  e.currentTarget.style.color = '#64748b';
+                }}
+              >
+                <X style={{ width: '20px', height: '20px' }} />
+              </button>
+              
+              <div style={{ marginBottom: '1.5rem' }}>
+                <h2 style={{ 
+                  fontSize: '1.25rem', 
+                  fontWeight: '600', 
+                  margin: '0 0 0.5rem 0',
+                  color: '#1e293b'
+                }}>
+                  {selectedDate.toLocaleDateString('no-NO', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}
+                </h2>
+                <p style={{ 
+                  color: '#64748b', 
+                  fontSize: '0.875rem',
+                  margin: 0
+                }}>
+                  Ruteplanlegging med {selectedPartner.name}
+                </p>
+              </div>
+
+              {/* Tabs */}
+              <div style={{ display: 'flex', gap: '2rem', borderBottom: '1px solid #e2e8f0' }}>
+                <button 
+                  onClick={() => setFileShareTab('files')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0.75rem 0',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: fileShareTab === 'files' ? '#2563eb' : '#64748b',
+                    borderBottom: fileShareTab === 'files' ? '2px solid #2563eb' : '2px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Rute detaljer
+                </button>
+                <button 
+                  onClick={() => setFileShareTab('shareAll')}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    padding: '0.75rem 0',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    color: fileShareTab === 'shareAll' ? '#2563eb' : '#64748b',
+                    borderBottom: fileShareTab === 'shareAll' ? '2px solid #2563eb' : '2px solid transparent',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Del rute med alle
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Content */}
+            <div style={{ padding: '2rem', maxHeight: '60vh', overflowY: 'auto' }}>
+              {fileShareTab === 'files' ? (
+                <>
+              {/* Date and Time Section */}
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                  <div style={{ flex: '1' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '0.5rem', 
+                      fontWeight: '500', 
+                      color: '#374151',
+                      fontSize: '0.875rem'
+                    }}>
+                      Dato
+                    </label>
+                    <input
+                      type="date"
+                      value={selectedDate.toISOString().split('T')[0]}
+                      onChange={(e) => setSelectedDate(new Date(e.target.value))}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        background: 'white',
+                        color: '#374151',
+                        cursor: 'pointer'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#2563eb';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    />
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', marginTop: '1.75rem' }}>
+                    <input
+                      type="checkbox"
+                      id="all-day"
+                      style={{ marginRight: '0.5rem' }}
+                    />
+                    <label htmlFor="all-day" style={{ 
+                      fontSize: '0.875rem', 
+                      color: '#374151',
+                      cursor: 'pointer'
+                    }}>
+                      Hele dagen
+                    </label>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem' }}>
+                  <div style={{ flex: '1' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '0.5rem', 
+                      fontWeight: '500', 
+                      color: '#374151',
+                      fontSize: '0.875rem'
+                    }}>
+                      Start
+                    </label>
+                    <input
+                      type="time"
+                      defaultValue="06:00"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem'
+                      }}
+                    />
+                  </div>
+                  <div style={{ flex: '1' }}>
+                    <label style={{ 
+                      display: 'block', 
+                      marginBottom: '0.5rem', 
+                      fontWeight: '500', 
+                      color: '#374151',
+                      fontSize: '0.875rem'
+                    }}>
+                      Slutt
+                    </label>
+                    <input
+                      type="time"
+                      defaultValue="18:00"
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem'
+                      }}
+                    />
+                  </div>
+                  <div style={{ 
+                    padding: '0.75rem 1rem',
+                    background: '#f3f4f6',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    color: '#6b7280',
+                    minWidth: '100px',
+                    textAlign: 'center'
+                  }}>
+                    12:00 Timer
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', gap: '1rem', marginBottom: '1rem' }}>
+                  <button style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'none',
+                    border: 'none',
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    padding: '0.5rem 0'
+                  }}>
+                    ☕ Legg til pause
+                  </button>
+                  <button style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'none',
+                    border: 'none',
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    padding: '0.5rem 0'
+                  }}>
+                    🔄 Gjentar ikke
+                  </button>
+                  <button style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'none',
+                    border: 'none',
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    padding: '0.5rem 0'
+                  }}>
+                    🌍 Europe/Oslo ℹ️
+                  </button>
+                </div>
+              </div>
+
+              {/* Route Information Section */}
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    fontSize: '0.875rem'
+                  }}>
+                    Rute tittel
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Skriv her..."
+                    value={routeTitle}
+                    onChange={(e) => setRouteTitle(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      transition: 'all 0.2s'
+                    }}
+                    onFocus={(e) => {
+                      e.currentTarget.style.borderColor = '#2563eb';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                    }}
+                    onBlur={(e) => {
+                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    fontSize: '0.875rem'
+                  }}>
+                    Jobb
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <select
+                      value={selectedJob}
+                      onChange={(e) => setSelectedJob(e.target.value)}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        background: 'white',
+                        color: '#374151',
+                        cursor: 'pointer'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#2563eb';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <option value="">Velg jobb...</option>
+                      <option value="kveldsrute-honefoss" style={{ color: '#dc2626' }}>🔴 Kveldsrute - Hønefoss</option>
+                      <option value="fri" style={{ color: '#059669' }}>🟢 Fri</option>
+                      <option value="dagrute-ostfold" style={{ color: '#2563eb' }}>🔵 Dagrute - Østfold</option>
+                      <option value="gitt-bort" style={{ color: '#7c3aed' }}>🟣 Gitt bort</option>
+                      <option value="dagrute-ski" style={{ color: '#ea580c' }}>🟠 Dagrute - Ski</option>
+                      <option value="syk" style={{ color: '#dc2626' }}>🔴 Syk</option>
+                      <option value="dagrute-drammen" style={{ color: '#0891b2' }}>🔵 Dagrute - Drammen</option>
+                      <option value="dagrute-jessheim" style={{ color: '#16a34a' }}>🟢 Dagrute - Jessheim</option>
+                      <option value="dagrute-indre" style={{ color: '#ca8a04' }}>🟡 Dagrute - Indre</option>
+                      <option value="dagrute-nesodden" style={{ color: '#9333ea' }}>🟣 Dagrute - Nesodden</option>
+                      <option value="dagrute-baerum" style={{ color: '#0891b2' }}>🔵 Dagrute - Bærum</option>
+                      <option value="dagrute-nittedal" style={{ color: '#16a34a' }}>🟢 Dagrute - Nittedal</option>
+                      <option value="geilo" style={{ color: '#dc2626' }}>🔴 Geilo</option>
+                      <option value="ledig-dag" style={{ color: '#6b7280' }}>⚪ LEDIG DAG</option>
+                      <option value="ledig-kveld" style={{ color: '#6b7280' }}>⚪ LEDIG KVELD</option>
+                      <option value="dawid" style={{ color: '#2563eb' }}>🔵 DAWID</option>
+                      <option value="adam" style={{ color: '#16a34a' }}>🟢 ADAM</option>
+                      <option value="dag-hadeland" style={{ color: '#ea580c' }}>🟠 Dag-Hadeland</option>
+                      <option value="kveld-hadeland" style={{ color: '#dc2626' }}>🔴 Kveld-Hadeland</option>
+                      <option value="kveld-kongsvinger" style={{ color: '#7c3aed' }}>🟣 KVELD-KONGSVINGER</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    fontSize: '0.875rem'
+                  }}>
+                    Partner
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <select
+                      value={selectedPartner?.id || ''}
+                      onChange={(e) => {
+                        const partner = partners.find(p => p.id === e.target.value);
+                        setSelectedPartner(partner || null);
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        background: 'white',
+                        color: '#374151',
+                        cursor: 'pointer'
+                      }}
+                      onFocus={(e) => {
+                        e.currentTarget.style.borderColor = '#2563eb';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      }}
+                      onBlur={(e) => {
+                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.boxShadow = 'none';
+                      }}
+                    >
+                      <option value="">Velg partner...</option>
+                      {partners.map(partner => (
+                        <option key={partner.id} value={partner.id}>
+                          {partner.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    fontSize: '0.875rem'
+                  }}>
+                    Brukere
+                  </label>
+                  
+                  {/* Selected Users Display */}
+                  {selectedUsers.length > 0 && (
+                    <div style={{
+                      padding: '0.75rem 1rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      background: '#f9fafb',
+                      marginBottom: '0.5rem'
+                    }}>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        {selectedUsers.map((user, index) => (
+                          <div key={user} style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '0.25rem',
+                            padding: '0.25rem 0.5rem',
+                            background: '#e5e7eb',
+                            borderRadius: '4px',
+                            fontSize: '0.75rem'
+                          }}>
+                            <span>{user}</span>
+                            <button
+                              onClick={() => setSelectedUsers(prev => prev.filter((_, i) => i !== index))}
+                              style={{
+                                background: 'none',
+                                border: 'none',
+                                color: '#6b7280',
+                                cursor: 'pointer',
+                                padding: '0',
+                                fontSize: '0.75rem'
+                              }}
+                            >
+                              ✕
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                      <button
+                        onClick={() => setSelectedUsers([])}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: '#dc2626',
+                          fontSize: '0.75rem',
+                          cursor: 'pointer',
+                          textDecoration: 'underline'
+                        }}
+                      >
+                        Fjern alle
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Add Users Dropdown */}
+                  <div style={{ position: 'relative' }}>
+                    <select
+                      value=""
+                      onChange={(e) => {
+                        if (e.target.value && !selectedUsers.includes(e.target.value)) {
+                          setSelectedUsers(prev => [...prev, e.target.value]);
+                        }
+                      }}
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem',
+                        background: 'white',
+                        color: '#374151',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <option value="">+ Legg til brukere</option>
+                      {availableUsers
+                        .filter(user => !selectedUsers.includes(user))
+                        .map(user => (
+                          <option key={user} value={user}>
+                            {user}
+                          </option>
+                        ))}
+                    </select>
+                  </div>
+
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                    {selectedUsers.length === 0 ? 'Ingen brukere valgt' : `${selectedUsers.length} brukere valgt`}
+                    <button style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#2563eb',
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      marginLeft: '0.5rem'
+                    }}>
+                      Rediger
+                    </button>
+                  </div>
+                  <div style={{ marginTop: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <input type="checkbox" id="enable-claim" />
+                    <label htmlFor="enable-claim" style={{ 
+                      fontSize: '0.875rem', 
+                      color: '#374151',
+                      cursor: 'pointer'
+                    }}>
+                      Aktiver at brukere kan melde seg på denne ruten
+                    </label>
+                    <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>ℹ️</span>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    fontSize: '0.875rem'
+                  }}>
+                    Adresse
+                  </label>
+                  <div style={{ position: 'relative' }}>
+                    <input
+                      type="text"
+                      placeholder="Skriv her..."
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem 1rem 0.75rem 2.5rem',
+                        border: '1px solid #d1d5db',
+                        borderRadius: '6px',
+                        fontSize: '0.875rem'
+                      }}
+                    />
+                    <div style={{
+                      position: 'absolute',
+                      left: '0.75rem',
+                      top: '50%',
+                      transform: 'translateY(-50%)',
+                      color: '#6b7280'
+                    }}>
+                      📍
+                    </div>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ 
+                    display: 'block', 
+                    marginBottom: '0.5rem', 
+                    fontWeight: '500', 
+                    color: '#374151',
+                    fontSize: '0.875rem'
+                  }}>
+                    Notat
+                  </label>
+                  <textarea
+                    placeholder="Skriv beskrivelse"
+                    rows={3}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem 1rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '6px',
+                      fontSize: '0.875rem',
+                      resize: 'vertical',
+                      minHeight: '80px'
+                    }}
+                  />
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <button style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.5rem',
+                      background: 'none',
+                      border: 'none',
+                      color: '#6b7280',
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      padding: '0.25rem 0'
+                    }}>
+                      📎 Vedlegg
+                    </button>
+                  </div>
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <button style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'none',
+                    border: 'none',
+                    color: '#6b7280',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    padding: '0.5rem 0'
+                  }}>
+                    + Legg til felt ▼
+                  </button>
+                </div>
+              </div>
+
+              {/* File Upload Section */}
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ 
+                  border: '2px dashed #d1d5db',
+                  borderRadius: '8px',
+                  padding: '2rem',
+                  textAlign: 'center',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s',
+                  background: '#f9fafb'
+                }}
+                onDragOver={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.style.borderColor = '#2563eb';
+                  e.currentTarget.style.background = '#f0f4ff';
+                }}
+                onDragLeave={(e) => {
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                  e.currentTarget.style.background = '#f9fafb';
+                }}
+                onDrop={(e) => {
+                  e.preventDefault();
+                  e.currentTarget.style.borderColor = '#d1d5db';
+                  e.currentTarget.style.background = '#f9fafb';
+                  const files = Array.from(e.dataTransfer.files);
+                  setUploadedFiles(prev => [...prev, ...files]);
+                }}
+                onClick={() => document.getElementById('file-upload')?.click()}
+                >
+                  <div style={{
+                    width: '48px',
+                    height: '48px',
+                    borderRadius: '8px',
+                    background: '#e5e7eb',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    margin: '0 auto 1rem auto'
+                  }}>
+                    <FileText style={{ width: '24px', height: '24px', color: '#6b7280' }} />
+                  </div>
+                  <p style={{ 
+                    color: '#6b7280', 
+                    margin: '0 0 0.5rem 0',
+                    fontSize: '0.875rem'
+                  }}>
+                    Dra og slipp filer her, eller klikk for å velge
+                  </p>
+                  <button style={{
+                    display: 'inline-flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    padding: '0.5rem 1rem',
+                    background: 'white',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    color: '#374151',
+                    cursor: 'pointer'
+                  }}>
+                    <FileText style={{ width: '16px', height: '16px' }} />
+                    Velg filer
+                  </button>
+                </div>
+                <input
+                  id="file-upload"
+                  type="file"
+                  multiple
+                  style={{ display: 'none' }}
+                  onChange={(e) => {
+                    if (e.target.files) {
+                      setUploadedFiles(prev => [...prev, ...Array.from(e.target.files!)]);
+                    }
+                  }}
+                />
+              </div>
+
+              {/* Route Tasks Section */}
+              <div style={{ marginBottom: '2rem' }}>
+                <div style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'space-between',
+                  marginBottom: '1rem' 
+                }}>
+                  <h3 style={{ 
+                    fontSize: '1rem', 
+                    fontWeight: '600', 
+                    color: '#374151',
+                    margin: 0
+                  }}>
+                    Rute oppgaver
+                  </h3>
+                  <button style={{
+                    background: 'none',
+                    border: 'none',
+                    color: '#2563eb',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    textDecoration: 'underline'
+                  }}>
+                    Se rute oppgaver
+                  </button>
+                </div>
+                <div style={{
+                  padding: '1rem',
+                  background: '#f9fafb',
+                  borderRadius: '6px',
+                  textAlign: 'center',
+                  color: '#6b7280',
+                  fontSize: '0.875rem'
+                }}>
+                  Ingen oppgaver opprettet
+                </div>
+              </div>
+
+              {/* File List */}
+              {uploadedFiles.length > 0 && (
+                <div style={{ marginBottom: '2rem' }}>
+                  <h3 style={{ 
+                    fontSize: '1rem', 
+                    fontWeight: '600', 
+                    color: '#374151',
+                    margin: '0 0 1rem 0'
+                  }}>
+                    Vedlegg ({uploadedFiles.length})
+                  </h3>
+                  <div style={{ 
+                    maxHeight: '150px', 
+                    overflowY: 'auto',
+                    background: '#f9fafb',
+                    borderRadius: '6px',
+                    padding: '0.5rem'
+                  }}>
+                    {uploadedFiles.map((file, index) => (
+                      <div key={index} style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        padding: '0.75rem',
+                        background: 'white',
+                        borderRadius: '6px',
+                        marginBottom: '0.5rem',
+                        border: '1px solid #e5e7eb'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
+                          <div style={{
+                            width: '32px',
+                            height: '32px',
+                            borderRadius: '6px',
+                            background: '#e5e7eb',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            flexShrink: 0
+                          }}>
+                            <FileText style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+                          </div>
+                          <div style={{ flex: 1, minWidth: 0 }}>
+                            <div style={{ 
+                              fontSize: '0.875rem', 
+                              fontWeight: '500',
+                              color: '#374151',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              marginBottom: '0.125rem'
+                            }}>
+                              {file.name}
+                            </div>
+                            <div style={{ 
+                              fontSize: '0.75rem', 
+                              color: '#6b7280' 
+                            }}>
+                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                            </div>
+                          </div>
+                        </div>
+                        <button
+                          onClick={() => removeFile(index)}
+                          style={{
+                            background: 'none',
+                            border: 'none',
+                            cursor: 'pointer',
+                            padding: '0.5rem',
+                            borderRadius: '6px',
+                            color: '#6b7280',
+                            transition: 'all 0.2s',
+                            flexShrink: 0
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#fee2e2';
+                            e.currentTarget.style.color = '#dc2626';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = 'none';
+                            e.currentTarget.style.color = '#6b7280';
+                          }}
+                        >
+                          <X style={{ width: '16px', height: '16px' }} />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Footer Actions */}
+            <div style={{ 
+              padding: '1.5rem 2rem',
+              borderTop: '1px solid #e2e8f0',
+              background: '#f9fafb',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center'
+            }}>
+              <div style={{ display: 'flex', gap: '1rem' }}>
+                <button
+                  onClick={() => {
+                    setShowFileShareModal(false);
+                    setSelectedPartner(null);
+                    setSelectedDate(null);
+                    setUploadedFiles([]);
+                    setRouteTitle('');
+                    setSelectedJob('');
+                    setSelectedUsers([]);
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'white',
+                    color: '#6b7280',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.borderColor = '#9ca3af';
+                    e.currentTarget.style.color = '#374151';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                    e.currentTarget.style.color = '#6b7280';
+                  }}
+                >
+                  Lagre utkast
+                </button>
+                <button style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'white',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  🗑️
+                </button>
+                <button style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'white',
+                  color: '#6b7280',
+                  border: '1px solid #d1d5db',
+                  borderRadius: '6px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}>
+                  🕐 Lagre som mal
+                </button>
+                <button
+                  onClick={() => {
+                    // Set all available users as selected
+                    setSelectedUsers([...availableUsers]);
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    transition: 'all 0.2s',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  }}
+                >
+                  📢 Del ruten med alle
+                </button>
+              </div>
+              
+              <button
+                onClick={handleShareFiles}
+                disabled={uploadingFiles || (!routeTitle.trim() && uploadedFiles.length === 0)}
+                style={{
+                  padding: '0.75rem 2rem',
+                  background: uploadingFiles || (!routeTitle.trim() && uploadedFiles.length === 0) 
+                    ? '#d1d5db' 
+                    : '#2563eb',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '6px',
+                  cursor: uploadingFiles || (!routeTitle.trim() && uploadedFiles.length === 0) 
+                    ? 'not-allowed' 
+                    : 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '600',
+                  transition: 'all 0.2s',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem',
+                  boxShadow: uploadingFiles || (!routeTitle.trim() && uploadedFiles.length === 0) 
+                    ? 'none' 
+                    : '0 1px 3px rgba(0, 0, 0, 0.1)'
+                }}
+                onMouseEnter={(e) => {
+                  if (!uploadingFiles && (routeTitle.trim() || uploadedFiles.length > 0)) {
+                    e.currentTarget.style.background = '#1d4ed8';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(37, 99, 235, 0.3)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  if (!uploadingFiles && (routeTitle.trim() || uploadedFiles.length > 0)) {
+                    e.currentTarget.style.background = '#2563eb';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = '0 1px 3px rgba(0, 0, 0, 0.1)';
+                  }
+                }}
+              >
+                {uploadingFiles ? (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <div style={{
+                      width: '16px',
+                      height: '16px',
+                      border: '2px solid rgba(255, 255, 255, 0.3)',
+                      borderTop: '2px solid white',
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }} />
+                    Laster opp...
+                  </div>
+                ) : (
+                  <>
+                    🔔 Publiser
+                  </>
+                )}
+              </button>
+            </div>
+                </>
+              ) : (
+                /* Del rute med alle fane */
+                <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                  <div style={{
+                    background: 'linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%)',
+                    borderRadius: '16px',
+                    padding: '3rem 2rem',
+                    marginBottom: '2rem',
+                    border: '1px solid #bae6fd'
+                  }}>
+                    <div style={{
+                      width: '80px',
+                      height: '80px',
+                      background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                      borderRadius: '50%',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      margin: '0 auto 1.5rem auto',
+                      boxShadow: '0 8px 25px rgba(59, 130, 246, 0.3)'
+                    }}>
+                      <span style={{ fontSize: '2rem' }}>🚀</span>
+                    </div>
+                    
+                    <h3 style={{
+                      fontSize: '1.5rem',
+                      fontWeight: '700',
+                      color: '#1e293b',
+                      margin: '0 0 1rem 0'
+                    }}>
+                      Sliter du med en rute?
+                    </h3>
+                    
+                    <p style={{
+                      fontSize: '1.125rem',
+                      color: '#475569',
+                      margin: '0 0 1.5rem 0',
+                      lineHeight: '1.6'
+                    }}>
+                      Del ruten med alle og se hvem som aksepterer den! Good luck! 🍀
+                    </p>
+                    
+                    <div style={{
+                      background: 'white',
+                      borderRadius: '12px',
+                      padding: '1.5rem',
+                      marginBottom: '2rem',
+                      border: '1px solid #e2e8f0',
+                      boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                    }}>
+                      <h4 style={{
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        color: '#374151',
+                        margin: '0 0 1rem 0'
+                      }}>
+                        Hvordan fungerer det?
+                      </h4>
+                      <ul style={{
+                        textAlign: 'left',
+                        padding: 0,
+                        margin: 0,
+                        listStyle: 'none'
+                      }}>
+                        <li style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          marginBottom: '0.75rem',
+                          fontSize: '0.875rem',
+                          color: '#4b5563'
+                        }}>
+                          <span style={{
+                            width: '24px',
+                            height: '24px',
+                            background: '#10b981',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            flexShrink: 0
+                          }}>1</span>
+                          Ruten deles med alle tilgjengelige partnere
+                        </li>
+                        <li style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          marginBottom: '0.75rem',
+                          fontSize: '0.875rem',
+                          color: '#4b5563'
+                        }}>
+                          <span style={{
+                            width: '24px',
+                            height: '24px',
+                            background: '#10b981',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            flexShrink: 0
+                          }}>2</span>
+                          Partnere kan se ruten og melde sin interesse
+                        </li>
+                        <li style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.75rem',
+                          fontSize: '0.875rem',
+                          color: '#4b5563'
+                        }}>
+                          <span style={{
+                            width: '24px',
+                            height: '24px',
+                            background: '#10b981',
+                            borderRadius: '50%',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            color: 'white',
+                            fontSize: '0.75rem',
+                            fontWeight: '600',
+                            flexShrink: 0
+                          }}>3</span>
+                          Du velger hvilken partner som skal få ruten
+                        </li>
+                      </ul>
+                    </div>
+                    
+                    <button
+                      onClick={() => {
+                        setSelectedUsers(availableUsers);
+                        setFileShareTab('files');
+                      }}
+                      style={{
+                        background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                        color: 'white',
+                        border: 'none',
+                        borderRadius: '12px',
+                        padding: '1rem 2rem',
+                        fontSize: '1rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s',
+                        boxShadow: '0 4px 12px rgba(16, 185, 129, 0.3)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        margin: '0 auto'
+                      }}
+                      onMouseEnter={(e) => {
+                        e.currentTarget.style.transform = 'translateY(-2px)';
+                        e.currentTarget.style.boxShadow = '0 8px 25px rgba(16, 185, 129, 0.4)';
+                      }}
+                      onMouseLeave={(e) => {
+                        e.currentTarget.style.transform = 'translateY(0)';
+                        e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.3)';
+                      }}
+                    >
+                      <span style={{ fontSize: '1.25rem' }}>📢</span>
+                      Del rute med alle
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Error and Success Messages */}
+      {error && (
+        <div className="fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+          {error}
+        </div>
+      )}
+      
+      {success && (
+        <div className="fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg z-50">
+          {success}
+        </div>
+      )}
+
+      {/* Job Management Modal */}
+      {showJobManagementModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            width: '90%',
+            maxWidth: '1000px',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '2rem',
+              borderBottom: '1px solid #e5e7eb',
+              background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <h2 style={{ 
+                  fontSize: '1.5rem', 
+                  fontWeight: '700', 
+                  margin: '0 0 0.5rem 0',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
+                  <Clock style={{ width: '24px', height: '24px' }} />
+                  Administrer Jobber og Skift
+                </h2>
+                <p style={{ 
+                  fontSize: '0.875rem', 
+                  opacity: 0.9, 
+                  margin: 0 
+                }}>
+                  Rediger navn, farger, datoer og beskrivelser for alle jobber
+                </p>
+              </div>
+              <button
+                onClick={() => setShowJobManagementModal(false)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.5rem',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  transition: 'all 0.2s'
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.3)';
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)';
+                }}
+              >
+                <X style={{ width: '20px', height: '20px' }} />
+              </button>
+            </div>
+
+            {/* Content */}
+            <div style={{ padding: '2rem', maxHeight: '70vh', overflowY: 'auto' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#374151' }}>
+                  Alle Jobber ({jobs.length})
+                </h3>
+                <button
+                  onClick={() => setEditingJob({
+                    id: Date.now().toString(),
+                    name: '',
+                    color: '#3b82f6',
+                    startTime: '08:00',
+                    endTime: '16:00',
+                    description: ''
+                  })}
+                  style={{
+                    background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '600',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #1d4ed8 0%, #1e40af 100%)';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                  }}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  Legg til ny jobb
+                </button>
+              </div>
+
+              {/* Jobs Grid */}
+              <div style={{ 
+                display: 'grid', 
+                gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', 
+                gap: '1rem' 
+              }}>
+                {jobs.map((job) => (
+                  <div 
+                    key={job.id}
+                    style={{
+                      background: 'white',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '12px',
+                      padding: '1.5rem',
+                      transition: 'all 0.2s',
+                      cursor: 'pointer',
+                      position: 'relative',
+                      overflow: 'hidden'
+                    }}
+                    onMouseEnter={(e) => {
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                      e.currentTarget.style.boxShadow = '0 4px 12px rgba(59, 130, 246, 0.15)';
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                    }}
+                    onMouseLeave={(e) => {
+                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.boxShadow = 'none';
+                      e.currentTarget.style.transform = 'translateY(0)';
+                    }}
+                    onClick={() => setEditingJob(job)}
+                  >
+                    {/* Color indicator */}
+                    <div style={{
+                      position: 'absolute',
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: '4px',
+                      background: job.color
+                    }} />
+                    
+                    <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem' }}>
+                      <div style={{
+                        width: '40px',
+                        height: '40px',
+                        borderRadius: '10px',
+                        background: job.color,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        color: 'white',
+                        fontWeight: '700',
+                        fontSize: '1rem',
+                        flexShrink: 0
+                      }}>
+                        {job.name.charAt(0).toUpperCase()}
+                      </div>
+                      
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{
+                          fontSize: '1rem',
+                          fontWeight: '600',
+                          color: '#374151',
+                          margin: '0 0 0.5rem 0',
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis'
+                        }}>
+                          {job.name}
+                        </h4>
+                        
+                        <p style={{
+                          fontSize: '0.875rem',
+                          color: '#6b7280',
+                          margin: '0 0 0.75rem 0',
+                          lineHeight: '1.4'
+                        }}>
+                          {job.description}
+                        </p>
+                        
+                        <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                          <span>Start: {job.startTime}</span>
+                          <span>Slutt: {job.endTime}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Job Edit Modal */}
+      {editingJob && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div style={{
+            background: 'white',
+            borderRadius: '16px',
+            width: '90%',
+            maxWidth: '500px',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '1.5rem',
+              borderBottom: '1px solid #e5e7eb',
+              background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
+              color: 'white',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0 }}>
+                {editingJob.id === Date.now().toString() ? 'Legg til ny jobb' : 'Rediger jobb'}
+              </h3>
+              <button
+                onClick={() => setEditingJob(null)}
+                style={{
+                  background: 'rgba(255, 255, 255, 0.2)',
+                  border: 'none',
+                  borderRadius: '8px',
+                  padding: '0.5rem',
+                  color: 'white',
+                  cursor: 'pointer',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px' }} />
+              </button>
+            </div>
+
+            {/* Form */}
+            <div style={{ padding: '1.5rem' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  Navn
+                </label>
+                <input
+                  type="text"
+                  value={editingJob.name}
+                  onChange={(e) => setEditingJob(prev => prev ? { ...prev, name: e.target.value } : null)}
+                  placeholder="Skriv inn jobb-navn"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  Beskrivelse
+                </label>
+                <textarea
+                  value={editingJob.description}
+                  onChange={(e) => setEditingJob(prev => prev ? { ...prev, description: e.target.value } : null)}
+                  placeholder="Skriv inn beskrivelse"
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                    Start klokkeslett
+                  </label>
+                  <input
+                    type="time"
+                    value={editingJob.startTime}
+                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, startTime: e.target.value } : null)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                    Slutt klokkeslett
+                  </label>
+                  <input
+                    type="time"
+                    value={editingJob.endTime}
+                    onChange={(e) => setEditingJob(prev => prev ? { ...prev, endTime: e.target.value } : null)}
+                    style={{
+                      width: '100%',
+                      padding: '0.75rem',
+                      border: '1px solid #d1d5db',
+                      borderRadius: '8px',
+                      fontSize: '0.875rem',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  Farge
+                </label>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                  {['#ef4444', '#f97316', '#eab308', '#22c55e', '#06b6d4', '#3b82f6', '#8b5cf6', '#ec4899', '#6b7280', '#9ca3af', '#10b981', '#f59e0b', '#dc2626'].map((color) => (
+                    <button
+                      key={color}
+                      onClick={() => setEditingJob(prev => prev ? { ...prev, color } : null)}
+                      style={{
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '8px',
+                        background: color,
+                        border: editingJob.color === color ? '3px solid #374151' : '2px solid #e5e7eb',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => setEditingJob(null)}
+                  style={{
+                    background: '#f3f4f6',
+                    color: '#374151',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={() => {
+                    if (editingJob.id === Date.now().toString()) {
+                      // Add new job
+                      setJobs(prev => [...prev, { ...editingJob, id: Date.now().toString() }]);
+                    } else {
+                      // Update existing job
+                      setJobs(prev => prev.map(job => job.id === editingJob.id ? editingJob : job));
+                    }
+                    setEditingJob(null);
+                  }}
+                  disabled={!editingJob.name.trim()}
+                  style={{
+                    background: editingJob.name.trim() ? 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)' : '#9ca3af',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.75rem 1.5rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: editingJob.name.trim() ? 'pointer' : 'not-allowed',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  {editingJob.id === Date.now().toString() ? 'Legg til' : 'Lagre endringer'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
