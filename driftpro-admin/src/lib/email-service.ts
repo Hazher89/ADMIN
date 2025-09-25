@@ -101,54 +101,58 @@ export class EmailService {
         provider: 'office365_smtp'
       });
       
-      // Use API endpoint for email sending (works in browser)
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/email/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: Array.isArray(to) ? to.join(', ') : to,
-          subject: subject,
-          html: html,
-          text: text || undefined,
-          credentials: {
-            email: emailSettings.smtpUser,
-            password: emailSettings.smtpPassword
-          }
-        })
+      // Use nodemailer directly instead of fetch request
+      const nodemailer = await import('nodemailer');
+      
+      const transporter = nodemailer.default.createTransporter({
+        host: emailSettings.smtpHost,
+        port: emailSettings.smtpPort,
+        secure: emailSettings.smtpSecure,
+        auth: {
+          user: emailSettings.smtpUser,
+          pass: emailSettings.smtpPassword
+        },
+        tls: emailSettings.tls,
+        connectionTimeout: emailSettings.connectionTimeout,
+        greetingTimeout: emailSettings.greetingTimeout,
+        socketTimeout: emailSettings.socketTimeout
       });
 
-      const result = await response.json();
+      const mailOptions = {
+        from: `${emailSettings.fromName} <${emailSettings.fromEmail}>`,
+        to: Array.isArray(to) ? to.join(', ') : to,
+        subject: subject,
+        html: html,
+        text: text || this.htmlToText(html)
+      };
 
-      if (result.success) {
-        // Log email to Firestore
-        await addDoc(collection(db, 'emailLogs'), {
-          to: Array.isArray(to) ? to : [to],
-          subject: subject,
-          content: html,
-          type: 'system',
-          status: 'sent',
-          sentAt: serverTimestamp(),
-          messageId: result.messageId || 'unknown',
-          metadata: {
-            provider: 'office365_smtp',
-            timestamp: new Date().toISOString(),
-            smtpHost: emailSettings.smtpHost,
-            fromEmail: emailSettings.fromEmail
-          }
-        });
+      const info = await transporter.sendMail(mailOptions);
 
-        console.log('✅ Email sent successfully via Office 365 SMTP:', {
-          messageId: result.messageId,
-          to: Array.isArray(to) ? to : [to],
-          subject,
-          provider: 'office365_smtp'
-        });
-        
-        return { success: true, messageId: result.messageId || 'unknown' };
-      } else {
-        throw new Error(result.error || 'Email sending failed');
-      }
+      // Log email to Firestore
+      await addDoc(collection(db, 'emailLogs'), {
+        to: Array.isArray(to) ? to : [to],
+        subject: subject,
+        content: html,
+        type: 'system',
+        status: 'sent',
+        sentAt: serverTimestamp(),
+        messageId: info.messageId || 'unknown',
+        metadata: {
+          provider: 'office365_smtp',
+          timestamp: new Date().toISOString(),
+          smtpHost: emailSettings.smtpHost,
+          fromEmail: emailSettings.fromEmail
+        }
+      });
+
+      console.log('✅ Email sent successfully via Office 365 SMTP:', {
+        messageId: info.messageId,
+        to: Array.isArray(to) ? to : [to],
+        subject,
+        provider: 'office365_smtp'
+      });
+      
+      return { success: true, messageId: info.messageId || 'unknown' };
     } catch (error) {
       console.error('❌ Email sending failed:', {
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -175,6 +179,18 @@ export class EmailService {
 
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
     }
+  }
+
+  private htmlToText(html: string): string {
+    // Simple HTML to text conversion
+    return html
+      .replace(/<[^>]*>/g, '') // Remove HTML tags
+      .replace(/&nbsp;/g, ' ') // Replace &nbsp; with space
+      .replace(/&amp;/g, '&') // Replace &amp; with &
+      .replace(/&lt;/g, '<') // Replace &lt; with <
+      .replace(/&gt;/g, '>') // Replace &gt; with >
+      .replace(/\s+/g, ' ') // Replace multiple spaces with single space
+      .trim();
   }
 
   async sendAdminSetupEmail(adminEmail: string, adminName: string, companyName: string, setupToken: string) {
