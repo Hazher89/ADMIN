@@ -102,9 +102,10 @@ export class EmailService {
         provider: 'office365_smtp'
       });
       
-      // Use nodemailer directly instead of fetch request
-      const nodemailerLib = require('nodemailer');
-      const transporter = nodemailerLib.createTransporter({
+      // Import nodemailer with dynamic require
+      const { createTransporter } = require('nodemailer');
+      
+      const transporter = createTransporter({
         host: emailSettings.smtpHost,
         port: emailSettings.smtpPort,
         secure: emailSettings.smtpSecure,
