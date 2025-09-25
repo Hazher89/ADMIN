@@ -215,7 +215,7 @@ export class AdminEmailService {
   }
 
   private getPasswordSetupEmailHTML(adminName: string, companyName: string, setupToken: string): string {
-    const setupUrl = `https://driftpro-admin.netlify.app/setup-password/${setupToken}`;
+    const setupUrl = `https://admin.driftpro.no/setup-password/${setupToken}`;
     
     return `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f9fafb; padding: 20px;">
@@ -258,7 +258,7 @@ export class AdminEmailService {
   }
 
   private getPasswordSetupEmailText(adminName: string, companyName: string, setupToken: string): string {
-    const setupUrl = `https://driftpro-admin.netlify.app/setup-password/${setupToken}`;
+    const setupUrl = `https://admin.driftpro.no/setup-password/${setupToken}`;
     
     return `
       Velkommen til ${companyName}!

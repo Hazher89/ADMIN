@@ -118,7 +118,7 @@ class CloudflareEmailService {
           <div style="background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #2563eb;">Neste steg:</h3>
             <p>For å komme i gang, må du sette opp passordet ditt:</p>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${setupToken}" 
+            <a href="https://admin.driftpro.no/setup-password/${setupToken}" 
                style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">
               Sett opp passord
             </a>
@@ -126,7 +126,7 @@ class CloudflareEmailService {
           
           <p>Hvis lenken ikke fungerer, kan du kopiere denne adressen til nettleseren:</p>
           <p style="background-color: #f1f5f9; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all;">
-            ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${setupToken}
+            https://admin.driftpro.no/setup-password/${setupToken}
           </p>
           
           <p>Hvis du har spørsmål, ikke nøl med å ta kontakt.</p>
@@ -161,7 +161,7 @@ class CloudflareEmailService {
           
           <div style="background-color: #fef2f2; border-left: 4px solid #dc2626; padding: 15px; margin: 20px 0;">
             <h3 style="margin-top: 0; color: #dc2626;">Klikk her for å tilbakestille passordet:</h3>
-            <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}" 
+            <a href="https://admin.driftpro.no/reset-password?token=${resetToken}" 
                style="display: inline-block; background-color: #dc2626; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 10px;">
               Tilbakestill passord
             </a>
@@ -169,7 +169,7 @@ class CloudflareEmailService {
           
           <p>Hvis lenken ikke fungerer, kan du kopiere denne adressen til nettleseren:</p>
           <p style="background-color: #f1f5f9; padding: 10px; border-radius: 4px; font-family: monospace; word-break: break-all;">
-            ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/reset-password?token=${resetToken}
+            https://admin.driftpro.no/reset-password?token=${resetToken}
           </p>
           
           <p>Denne lenken er gyldig i 1 time.</p>

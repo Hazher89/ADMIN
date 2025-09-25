@@ -50,7 +50,7 @@ export async function POST(request: NextRequest) {
 
     // Generate reset token
     const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const resetUrl = `https://driftpro-admin.netlify.app/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
+    const resetUrl = `https://admin.driftpro.no/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
 
     // Store reset token in Firestore
     await addDoc(collection(db, 'passwordResetTokens'), {

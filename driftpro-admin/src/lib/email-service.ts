@@ -21,7 +21,7 @@ export class EmailService {
 
   constructor() {
     // Use Netlify domain for emails
-    this.baseUrl = 'https://driftpro-admin.netlify.app';
+    this.baseUrl = 'https://admin.driftpro.no';
     console.log('📧 EMAIL SERVICE: Base URL set to:', this.baseUrl);
   }
 
