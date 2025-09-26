@@ -26,7 +26,7 @@ exports.handler = async function(event, context) {
       secure: false, // Use TLS
       auth: {
         user: config?.smtpUser || 'noreply@driftpro.no',
-        pass: config?.smtpPass || 'HazGada1989!'
+        pass: config?.smtpPass || process.env.SMTP_PASSWORD || 'HazGada1989'
       },
       tls: {
         rejectUnauthorized: false
