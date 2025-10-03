@@ -38,7 +38,7 @@ import {
   Star
 } from 'lucide-react';
 import { microsoftGraphService } from '@/lib/microsoft-graph-service';
-import { smtpAuthService } from '@/lib/smtp-auth-service';
+import { firebaseService } from '@/lib/firebase-services';
 import type { AccountInfo } from '@azure/msal-browser';
 
 // Use the service interfaces for consistency
@@ -259,7 +259,18 @@ export default function MailPage() {
       setIsSmtpAuthenticating(true);
       setSmtpAuthError(null);
       
-      const result = await smtpAuthService.authenticate(smtpEmail, smtpPassword);
+      const response = await fetch('/api/smtp-auth', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: smtpEmail,
+          password: smtpPassword,
+        }),
+      });
+      
+      const result = await response.json();
       
       if (result.success && result.user) {
         setIsAuthenticated(true);
