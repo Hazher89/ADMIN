@@ -14,7 +14,7 @@ import {
   Search, Filter, SortAsc, SortDesc, MoreHorizontal, Copy,
   Scissors, Move, RotateCw, RotateCcw, FlipHorizontal, FlipVertical,
   Home, Building, Clock, Phone, Handshake, Terminal, Heart, Target, Activity,
-  Minus, Bell, Play, Power, DollarSign, Calculator, CreditCard, PieChart, Package, Box, Truck, ShoppingCart, UserCheck, TrendingUp, FileSignature, Headphones, FolderOpen, CheckSquare, BarChart, Flag, Megaphone, Archive, Database
+  Minus, Bell, Play, Power, DollarSign, Calculator, CreditCard, PieChart, Package, Box, Truck, ShoppingCart, UserCheck, TrendingUp, FileSignature, Headphones, FolderOpen, CheckSquare, BarChart, Flag, Megaphone, Archive
 } from 'lucide-react';
 
 interface PageConfig {
