@@ -3,10 +3,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
+import CompactWYSIWYG from './wysiwyg/page';
 // import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 import { 
   Code, Database, Server, Shield, Activity, 
-  CheckCircle, Mail, PenTool, Rocket
+  CheckCircle, Mail, PenTool, Rocket, Palette, Settings
 } from 'lucide-react';
 import { collection, getDocs, updateDoc, doc, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
@@ -54,6 +55,7 @@ export default function DevelopmentPage() {
   const [loading, setLoading] = useState(false);
   const [showModal, setShowModal] = useState<string | null>(null);
   const [aiResults, setAiResults] = useState<AIResult | null>(null);
+  const [activeTab, setActiveTab] = useState<'tools' | 'wysiwyg'>('tools');
   const [systemMetrics, setSystemMetrics] = useState<SystemMetrics>({
     performance: 0,
     memory: 0,
@@ -614,143 +616,350 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         </p>
       </div>
 
-      {/* System Metrics Overview */}
+      {/* Tab Navigation */}
       <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#333' }}>
-          System Metrics
-        </h2>
-        <div className="stats-grid">
-          {Object.entries(systemMetrics).map(([key, value]) => (
-            <div key={key} className="stat-card">
-              <div className="stat-number">{Math.round(value)}%</div>
-              <div className="stat-label">{key.charAt(0).toUpperCase() + key.slice(1)}</div>
-              <div style={{ 
-                width: '100%', 
-                height: '4px', 
-                backgroundColor: '#e5e7eb', 
-                borderRadius: '2px', 
-                marginTop: '0.5rem' 
-              }}>
-                <div style={{ 
-                  width: `${value}%`, 
-                  height: '100%', 
-                  backgroundColor: value > 80 ? '#ef4444' : value > 60 ? '#f59e0b' : '#10b981',
-                  borderRadius: '2px',
-                  transition: 'width 0.3s ease'
-                }} />
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Email Test Section */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#333' }}>
-          Email System Test
-        </h2>
-        <div className="card">
-          <div className="card-header">
-            <div className="card-icon">
-              <Mail />
-            </div>
-            <h3 className="card-title">Test Email Service</h3>
-          </div>
-          <p className="card-description">Test the email functionality to ensure it's working properly</p>
+        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '2px solid #e5e7eb' }}>
           <button
-            className="btn btn-primary"
-            onClick={async () => {
-              try {
-                // Email functionality moved to API routes - use /api/send-test-email instead
-                const response = await fetch('/api/send-test-email', {
-                  method: 'POST',
-                  headers: {
-                    'Content-Type': 'application/json',
-                  },
-                  body: JSON.stringify({
-                    to: 'test@example.com',
-                    subject: 'Test Email from DriftPro',
-                    body: '<h2>Test Email</h2><p>This is a test email to verify the email service is working.</p>'
-                  })
-                });
-                
-                if (response.ok) {
-                  alert('Test email sent successfully!');
-                } else {
-                  alert('Failed to send test email. Check console for details.');
-                }
-              } catch (error) {
-                console.error('Test email error:', error);
-                alert('Error sending test email: ' + (error instanceof Error ? error.message : 'Unknown error'));
-              }
+            onClick={() => setActiveTab('tools')}
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              color: activeTab === 'tools' ? '#3b82f6' : '#6b7280',
+              borderBottom: activeTab === 'tools' ? '2px solid #3b82f6' : '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: activeTab === 'tools' ? '600' : '400',
+              transition: 'all 0.2s ease'
             }}
           >
-            Send Test Email
+            <Code size={20} style={{ marginRight: '0.5rem', display: 'inline' }} />
+            AI Tools
           </button>
-        </div>
-      </div>
-
-      {/* Fix User Company Section */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#333' }}>
-          GDPR Compliance Fix
-        </h2>
-        <div className="card">
-          <div className="card-header">
-            <div className="card-icon">
-              <Shield />
-            </div>
-            <h3 className="card-title">Fix baxigshti@hotmail.de Company Assignment</h3>
-          </div>
-          <p className="card-description">Fix baxigshti@hotmail.de to only belong to DriftPro company</p>
-          <button
-            className="btn btn-error"
-            onClick={fixBaxigshtiCompany}
-            disabled={loading}
+          <a
+            href="/dashboard/development/wysiwyg"
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              color: '#6b7280',
+              borderBottom: '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: '400',
+              transition: 'all 0.2s ease',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.color = '#3b82f6';
+              e.target.style.borderBottom = '2px solid #3b82f6';
+              e.target.style.fontWeight = '600';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.color = '#6b7280';
+              e.target.style.borderBottom = '2px solid transparent';
+              e.target.style.fontWeight = '400';
+            }}
           >
-            {loading ? 'Fixing...' : 'Fix User Company Assignment'}
-          </button>
+            <Palette size={20} style={{ marginRight: '0.5rem', display: 'inline' }} />
+            WYSIWYG Editor
+          </a>
+          <a
+            href="/dashboard/development/super-admin"
+            style={{
+              padding: '0.75rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              color: '#6b7280',
+              borderBottom: '2px solid transparent',
+              cursor: 'pointer',
+              fontWeight: '400',
+              transition: 'all 0.2s ease',
+              textDecoration: 'none',
+              display: 'flex',
+              alignItems: 'center'
+            }}
+            onMouseOver={(e) => {
+              e.target.style.color = '#3b82f6';
+              e.target.style.borderBottom = '2px solid #3b82f6';
+              e.target.style.fontWeight = '600';
+            }}
+            onMouseOut={(e) => {
+              e.target.style.color = '#6b7280';
+              e.target.style.borderBottom = '2px solid transparent';
+              e.target.style.fontWeight = '400';
+            }}
+          >
+            <Settings size={20} style={{ marginRight: '0.5rem', display: 'inline' }} />
+            Super Admin
+          </a>
         </div>
       </div>
 
-      {/* AI Tools Grid */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#333' }}>
-          AI Development Tools
-        </h2>
-        <div className="grid grid-cols-4">
-          {aiTools.map((tool) => {
-            const IconComponent = tool.icon;
-            return (
-              <div
-                key={tool.id}
-                className="card"
-                onClick={() => !loading && executeAITool(tool.id)}
-                style={{ cursor: loading ? 'not-allowed' : 'pointer', opacity: loading ? 0.7 : 1 }}
-              >
-                <div className="card-header">
-                  <div className="card-icon">
-                    {React.createElement(tool.icon as React.ComponentType, {})}
+      {/* Tab Content */}
+      {activeTab === 'tools' && (
+        <>
+          {/* System Metrics Overview */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#1f2937' }}>
+              System Metrics
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+              {Object.entries(systemMetrics).map(([key, value]) => (
+                <div key={key} style={{ 
+                  backgroundColor: 'white', 
+                  borderRadius: '12px', 
+                  padding: '1.5rem', 
+                  boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                  border: '1px solid #f3f4f6'
+                }}>
+                  <div style={{ fontSize: '2rem', fontWeight: 'bold', color: '#2563eb', marginBottom: '0.5rem' }}>
+                    {Math.round(value)}%
                   </div>
-                  <h3 className="card-title">{tool.name}</h3>
+                  <div style={{ fontSize: '0.875rem', fontWeight: '500', color: '#4b5563', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: '0.75rem' }}>
+                    {key.charAt(0).toUpperCase() + key.slice(1)}
+                  </div>
+                  <div style={{ 
+                    width: '100%', 
+                    height: '6px', 
+                    backgroundColor: '#f3f4f6', 
+                    borderRadius: '3px', 
+                    overflow: 'hidden'
+                  }}>
+                    <div style={{ 
+                      width: `${value}%`, 
+                      height: '100%', 
+                      backgroundColor: value > 80 ? '#ef4444' : value > 60 ? '#f59e0b' : '#14b8a6',
+                      borderRadius: '3px',
+                      transition: 'width 0.3s ease'
+                    }} />
+                  </div>
                 </div>
-                <p className="card-description">{tool.description}</p>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                  <span className="badge badge-primary">
-                    {tool.category}
-                  </span>
-                  <button
-                    className="btn btn-primary"
-                    disabled={loading}
-                  >
-                    {loading ? 'Processing...' : 'Execute'}
-                  </button>
-                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Email Test Section */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#1f2937' }}>
+              Email System Test
+            </h2>
+            <div style={{ 
+              backgroundColor: 'white', 
+              borderRadius: '12px', 
+              padding: '1.5rem', 
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+              border: '1px solid #f3f4f6',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{ 
+                width: '48px', 
+                height: '48px', 
+                backgroundColor: '#2563eb', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Mail className="w-6 h-6 text-white" />
               </div>
-            );
-          })}
-        </div>
-      </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: '0 0 0.5rem 0' }}>
+                  Test Email Service
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
+                  Test the email functionality to ensure it's working properly
+                </p>
+                <button
+                  style={{
+                    backgroundColor: '#2563eb',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: 'pointer',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseOver={(e) => e.target.style.backgroundColor = '#1d4ed8'}
+                  onMouseOut={(e) => e.target.style.backgroundColor = '#2563eb'}
+                  onClick={async () => {
+                    try {
+                      const response = await fetch('/api/send-test-email', {
+                        method: 'POST',
+                        headers: {
+                          'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                          to: 'test@example.com',
+                          subject: 'Test Email from DriftPro',
+                          body: '<h2>Test Email</h2><p>This is a test email to verify the email service is working.</p>'
+                        })
+                      });
+                      
+                      if (response.ok) {
+                        alert('Test email sent successfully!');
+                      } else {
+                        alert('Failed to send test email. Check console for details.');
+                      }
+                    } catch (error) {
+                      console.error('Test email error:', error);
+                      alert('Error sending test email: ' + (error instanceof Error ? error.message : 'Unknown error'));
+                    }
+                  }}
+                >
+                  Send Test Email
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* Fix User Company Section */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#1f2937' }}>
+              GDPR Compliance Fix
+            </h2>
+            <div style={{ 
+              backgroundColor: 'white', 
+              borderRadius: '12px', 
+              padding: '1.5rem', 
+              boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+              border: '1px solid #f3f4f6',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '1rem'
+            }}>
+              <div style={{ 
+                width: '48px', 
+                height: '48px', 
+                backgroundColor: '#ef4444', 
+                borderRadius: '8px', 
+                display: 'flex', 
+                alignItems: 'center', 
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Shield className="w-6 h-6 text-white" />
+              </div>
+              <div style={{ flex: 1 }}>
+                <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: '0 0 0.5rem 0' }}>
+                  Fix baxigshti@hotmail.de Company Assignment
+                </h3>
+                <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0 0 1rem 0' }}>
+                  Fix baxigshti@hotmail.de to only belong to DriftPro company
+                </p>
+                <button
+                  style={{
+                    backgroundColor: loading ? '#9ca3af' : '#ef4444',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    padding: '0.5rem 1rem',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    cursor: loading ? 'not-allowed' : 'pointer',
+                    transition: 'background-color 0.2s ease'
+                  }}
+                  onMouseOver={(e) => !loading && (e.target.style.backgroundColor = '#dc2626')}
+                  onMouseOut={(e) => !loading && (e.target.style.backgroundColor = '#ef4444')}
+                  onClick={fixBaxigshtiCompany}
+                  disabled={loading}
+                >
+                  {loading ? 'Fixing...' : 'Fix User Company Assignment'}
+                </button>
+              </div>
+            </div>
+          </div>
+
+          {/* AI Tools Grid */}
+          <div style={{ marginBottom: '2rem' }}>
+            <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1rem', color: '#1f2937' }}>
+              AI Development Tools
+            </h2>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+              {aiTools.map((tool) => {
+                const IconComponent = tool.icon;
+                return (
+                  <div
+                    key={tool.id}
+                    onClick={() => !loading && executeAITool(tool.id)}
+                    style={{ 
+                      cursor: loading ? 'not-allowed' : 'pointer', 
+                      opacity: loading ? 0.7 : 1,
+                      backgroundColor: 'white', 
+                      borderRadius: '12px', 
+                      padding: '1.5rem', 
+                      boxShadow: '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)',
+                      border: '1px solid #f3f4f6',
+                      transition: 'all 0.2s ease',
+                      display: 'flex',
+                      flexDirection: 'column',
+                      gap: '1rem'
+                    }}
+                    onMouseOver={(e) => !loading && (e.target.style.boxShadow = '0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)')}
+                    onMouseOut={(e) => !loading && (e.target.style.boxShadow = '0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06)')}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                      <div style={{ 
+                        width: '48px', 
+                        height: '48px', 
+                        backgroundColor: '#2563eb', 
+                        borderRadius: '8px', 
+                        display: 'flex', 
+                        alignItems: 'center', 
+                        justifyContent: 'center',
+                        flexShrink: 0
+                      }}>
+                        {React.createElement(tool.icon as React.ComponentType, { className: 'w-6 h-6 text-white' })}
+                      </div>
+                      <div style={{ flex: 1 }}>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#1f2937', margin: '0 0 0.25rem 0' }}>
+                          {tool.name}
+                        </h3>
+                        <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: '0' }}>
+                          {tool.description}
+                        </p>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span style={{
+                        backgroundColor: '#dbeafe',
+                        color: '#1e40af',
+                        padding: '0.25rem 0.75rem',
+                        borderRadius: '6px',
+                        fontSize: '0.75rem',
+                        fontWeight: '500',
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.05em'
+                      }}>
+                        {tool.category}
+                      </span>
+                      <button
+                        style={{
+                          backgroundColor: loading ? '#9ca3af' : '#2563eb',
+                          color: 'white',
+                          border: 'none',
+                          borderRadius: '8px',
+                          padding: '0.5rem 1rem',
+                          fontSize: '0.875rem',
+                          fontWeight: '500',
+                          cursor: loading ? 'not-allowed' : 'pointer',
+                          transition: 'background-color 0.2s ease'
+                        }}
+                        disabled={loading}
+                      >
+                        {loading ? 'Processing...' : 'Execute'}
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
 
       {/* AI Results Modal */}
       {showModal === 'ai-results' && aiResults && (
@@ -861,6 +1070,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
               )}
             </div>
           </div>
+        </div>
+      )}
+        </>
+      )}
+
+      {/* WYSIWYG Editor Tab */}
+      {activeTab === 'wysiwyg' && (
+        <div style={{ height: 'calc(100vh - 200px)', border: '1px solid #e5e7eb', borderRadius: '8px', overflow: 'hidden' }}>
+          <CompactWYSIWYG />
         </div>
       )}
     </div>

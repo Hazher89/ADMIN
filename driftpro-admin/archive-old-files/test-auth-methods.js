@@ -1,53 +1,34 @@
 const nodemailer = require('nodemailer');
 
-async function testOutlookWeb() {
-  console.log('🔍 Testing with Outlook web settings...\n');
+async function testAuthMethods() {
+  console.log('🔍 Testing different authentication methods...\n');
   
   const email = 'skanner@mavilogistikk.no';
-  const password = 'HazGada1989!';
+  const password = 'HazGada89';
   
   console.log(`📧 Email: ${email}`);
   console.log(`🔑 Password: ${password.replace(/./g, '*')}\n`);
   
-  // Test different Outlook configurations that work for web
+  // Test different authentication configurations
   const configs = [
     {
-      name: 'Outlook Web (smtp-mail.outlook.com:587)',
-      host: 'smtp-mail.outlook.com',
-      port: 587,
-      secure: false,
+      name: 'Basic Auth (standard)',
       auth: {
         user: email,
         pass: password
       }
     },
     {
-      name: 'Outlook Web (smtp-mail.outlook.com:25)',
-      host: 'smtp-mail.outlook.com',
-      port: 25,
-      secure: false,
+      name: 'Basic Auth with full email',
       auth: {
-        user: email,
+        user: `${email}`,
         pass: password
       }
     },
     {
-      name: 'Outlook Web (smtp-mail.outlook.com:2525)',
-      host: 'smtp-mail.outlook.com',
-      port: 2525,
-      secure: false,
+      name: 'Basic Auth with domain',
       auth: {
-        user: email,
-        pass: password
-      }
-    },
-    {
-      name: 'Outlook Web (smtp-mail.outlook.com:465)',
-      host: 'smtp-mail.outlook.com',
-      port: 465,
-      secure: true,
-      auth: {
-        user: email,
+        user: `skanner@mavilogistikk.no`,
         pass: password
       }
     }
@@ -58,9 +39,9 @@ async function testOutlookWeb() {
     
     try {
       const transporter = nodemailer.createTransport({
-        host: config.host,
-        port: config.port,
-        secure: config.secure,
+        host: 'smtp-mail.outlook.com',
+        port: 587,
+        secure: false,
         auth: config.auth,
         tls: {
           rejectUnauthorized: false,
@@ -68,12 +49,9 @@ async function testOutlookWeb() {
         },
         connectionTimeout: 15000,
         greetingTimeout: 10000,
-        socketTimeout: 15000,
-        debug: true, // Enable debug to see what's happening
-        logger: true
+        socketTimeout: 15000
       });
 
-      console.log('   Verifying connection...');
       await transporter.verify();
       console.log(`✅ ${config.name} - Connection verified successfully!\n`);
       
@@ -92,32 +70,30 @@ async function testOutlookWeb() {
       
       // If we get here, this config works!
       console.log(`🎉 SUCCESS! Use this configuration:`);
-      console.log(`   Host: ${config.host}`);
-      console.log(`   Port: ${config.port}`);
-      console.log(`   Secure: ${config.secure}`);
-      console.log(`   Email: ${email}`);
-      console.log(`   Password: ${password.replace(/./g, '*')}\n`);
+      console.log(`   Host: smtp-mail.outlook.com`);
+      console.log(`   Port: 587`);
+      console.log(`   Secure: false`);
+      console.log(`   Auth: ${JSON.stringify(config.auth)}\n`);
       
       return; // Exit on first success
       
     } catch (error) {
-      console.log(`❌ ${config.name} - ${error.code}: ${error.message}`);
-      if (error.response) {
-        console.log(`   Response: ${error.response}`);
-      }
-      console.log('');
+      console.log(`❌ ${config.name} - ${error.code}: ${error.message}\n`);
     }
   }
   
-  console.log('❌ All Outlook web configurations failed');
+  console.log('❌ All authentication methods failed');
   console.log('\n💡 Possible solutions:');
   console.log('   1. The account might need App Password (if 2FA is enabled)');
   console.log('   2. The account might need SMTP AUTH enabled in Office 365');
   console.log('   3. The account might be locked by organization policy');
   console.log('   4. Try using a personal Outlook account instead');
-  console.log('   5. The account might need OAuth2 authentication instead of basic auth');
 }
 
 // Run the test
-testOutlookWeb();
+testAuthMethods();
+
+
+
+
 

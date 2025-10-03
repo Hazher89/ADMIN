@@ -8,7 +8,6 @@ import {
   Home, 
   Users, 
   Building, 
-  FileText, 
   Calendar, 
   MessageSquare, 
   AlertTriangle, 
@@ -26,7 +25,6 @@ import {
   TrendingUp,
   Shield,
   Zap,
-  Heart,
   Star,
   BookOpen,
   Target,
@@ -37,7 +35,20 @@ import {
   Palette,
   Terminal,
   Handshake,
-  Phone
+  Phone,
+  DollarSign,
+  FileText,
+  CreditCard,
+  Package,
+  Box,
+  Truck,
+  Heart,
+  UserCheck,
+  CheckSquare,
+  BarChart,
+  MapPin,
+  ShoppingCart,
+  Navigation
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import { firebaseService } from '@/lib/firebase-services';
@@ -92,6 +103,7 @@ export default function DashboardLayout({
   useEffect(() => {
     if (user && userProfile) {
       if (!userProfile.companyId) {
+        console.error('🚨 Security breach: User missing companyId:', userProfile);
         alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
         logout();
         router.push('/companies');
@@ -100,10 +112,20 @@ export default function DashboardLayout({
       
       // Additional check: ensure userProfile is properly loaded
       if (!userProfile.id || !userProfile.email) {
+        console.error('🚨 Security breach: Incomplete user profile:', userProfile);
         alert('Ufullstendig brukerprofil oppdaget. Du blir logget ut.');
         logout();
         router.push('/companies');
         return;
+      }
+      
+      // Auto-set company for admin users if not already set
+      if (userProfile.role === 'admin' && userProfile.companyId) {
+        const selectedCompany = localStorage.getItem('selectedCompany');
+        if (!selectedCompany) {
+          console.log('🔧 Auto-setting company for admin user:', userProfile.companyId);
+          localStorage.setItem('selectedCompany', userProfile.companyId);
+        }
       }
     }
   }, [user, userProfile, logout, router]);
@@ -113,6 +135,13 @@ export default function DashboardLayout({
     if (user && userProfile) {
       const selectedCompany = localStorage.getItem('selectedCompany');
       if (!selectedCompany) {
+        // For admin users, automatically set their company
+        if (userProfile.role === 'admin' && userProfile.companyId) {
+          console.log('🔧 Auto-setting company for admin user:', userProfile.companyId);
+          localStorage.setItem('selectedCompany', userProfile.companyId);
+          return;
+        }
+        
         alert('Ingen bedrift valgt. Du blir logget ut.');
         logout();
         router.push('/companies');
@@ -256,6 +285,151 @@ export default function DashboardLayout({
       category: 'management',
       id: 'partner-portal'
     }] : []),
+    
+    // Finance & Accounting
+    {
+      name: 'Finans',
+      href: '/dashboard/finance',
+      icon: <DollarSign size={20} />,
+      category: 'finance',
+      id: 'finance'
+    },
+    {
+      name: 'Fakturering',
+      href: '/dashboard/invoicing',
+      icon: <FileText size={20} />,
+      category: 'finance',
+      id: 'invoicing'
+    },
+    {
+      name: 'Betalinger',
+      href: '/dashboard/payments',
+      icon: <CreditCard size={20} />,
+      category: 'finance',
+      id: 'payments'
+    },
+    
+    // HR & Personnel
+    {
+      name: 'HR',
+      href: '/dashboard/hr',
+      icon: <Users size={20} />,
+      category: 'hr',
+      id: 'hr'
+    },
+    {
+      name: 'Timeregistrering',
+      href: '/dashboard/timesheet',
+      icon: <Clock size={20} />,
+      category: 'hr',
+      id: 'timesheet'
+    },
+    {
+      name: 'Ferie',
+      href: '/dashboard/vacation',
+      icon: <Calendar size={20} />,
+      category: 'hr',
+      id: 'vacation'
+    },
+    
+    // Inventory & Stock
+    {
+      name: 'Lager',
+      href: '/dashboard/inventory',
+      icon: <Package size={20} />,
+      category: 'inventory',
+      id: 'inventory'
+    },
+    {
+      name: 'Produkter',
+      href: '/dashboard/products',
+      icon: <Box size={20} />,
+      category: 'inventory',
+      id: 'products'
+    },
+    {
+      name: 'Leverandører',
+      href: '/dashboard/suppliers',
+      icon: <Truck size={20} />,
+      category: 'inventory',
+      id: 'suppliers'
+    },
+    
+    // CRM & Customers
+    {
+      name: 'CRM',
+      href: '/dashboard/crm',
+      icon: <Heart size={20} />,
+      category: 'crm',
+      id: 'crm'
+    },
+    {
+      name: 'Kunder',
+      href: '/dashboard/customers',
+      icon: <UserCheck size={20} />,
+      category: 'crm',
+      id: 'customers'
+    },
+    {
+      name: 'Leads',
+      href: '/dashboard/leads',
+      icon: <Target size={20} />,
+      category: 'crm',
+      id: 'leads'
+    },
+    
+    // Project Management
+    {
+      name: 'Prosjekter',
+      href: '/dashboard/projects',
+      icon: <FolderOpen size={20} />,
+      category: 'projects',
+      id: 'projects'
+    },
+    {
+      name: 'Oppgaver',
+      href: '/dashboard/tasks',
+      icon: <CheckSquare size={20} />,
+      category: 'projects',
+      id: 'tasks'
+    },
+    {
+      name: 'Gantt',
+      href: '/dashboard/gantt',
+      icon: <BarChart size={20} />,
+      category: 'projects',
+      id: 'gantt'
+    },
+    
+    // Advanced Planning & Logistics
+    {
+      name: 'Planlegging',
+      href: '/dashboard/advanced-planning',
+      icon: <Navigation size={20} />,
+      category: 'logistics',
+      id: 'advanced-planning'
+    },
+    {
+      name: 'Levering',
+      href: '/dashboard/delivery',
+      icon: <Truck size={20} />,
+      category: 'logistics',
+      id: 'delivery'
+    },
+    {
+      name: 'Ordre',
+      href: '/dashboard/orders',
+      icon: <ShoppingCart size={20} />,
+      category: 'logistics',
+      id: 'orders'
+    },
+    {
+      name: 'Arkiv',
+      href: '/dashboard/archive',
+      icon: <FolderOpen size={20} />,
+      category: 'logistics',
+      id: 'archive'
+    },
     
     // Settings (available for all companies)
     {
@@ -462,6 +636,12 @@ export default function DashboardLayout({
                 }}>
                   {category === 'main' && 'Hovedmeny'}
                   {category === 'management' && 'Ledelse'}
+                  {category === 'finance' && 'Finans & Regnskap'}
+                  {category === 'hr' && 'HR & Personal'}
+                  {category === 'inventory' && 'Lager & Inventar'}
+                  {category === 'crm' && 'CRM & Kunder'}
+                  {category === 'projects' && 'Prosjektstyring'}
+                  {category === 'logistics' && 'Logistikk & Planlegging'}
                   {category === 'settings' && 'Innstillinger'}
                   {category === 'admin' && 'Administrasjon'}
                 </div>

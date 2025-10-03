@@ -1,30 +1,32 @@
 const nodemailer = require('nodemailer');
 
-async function testSimpleSMTP() {
-  console.log('🔍 Testing with simple SMTP configuration...\n');
+async function testDriftproFinal() {
+  console.log('🔍 Testing driftpro@mavilogistikk.no...\n');
   
   const email = 'driftpro@mavilogistikk.no';
-  const password = 'HazGada1989';
+  const password = 'HazGada89';
   
   console.log(`📧 Email: ${email}`);
   console.log(`🔑 Password: ${password.replace(/./g, '*')}\n`);
   
-  // Simple, basic configuration
-  const transporter = nodemailer.createTransport({
-    host: 'smtp-mail.outlook.com',
-    port: 587,
-    secure: false, // STARTTLS
-    auth: {
-      user: email,
-      pass: password
-    },
-    tls: {
-      rejectUnauthorized: false
-    }
-  });
-
   try {
-    console.log('🔌 Testing basic connection...');
+    const transporter = nodemailer.createTransport({
+      host: 'smtp.office365.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: email,
+        pass: password
+      },
+      tls: {
+        rejectUnauthorized: false
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 5000,
+      socketTimeout: 10000
+    });
+
+    console.log('🔌 Testing connection...');
     await transporter.verify();
     console.log('✅ Connection verified successfully!\n');
     
@@ -49,7 +51,7 @@ async function testSimpleSMTP() {
             <div style="background: #f8f9fa; padding: 1rem; border-radius: 8px; margin: 1rem 0;">
               <h3 style="color: #333; margin-top: 0;">📧 Konfigurasjonsdetaljer:</h3>
               <ul style="color: #666; margin: 0;">
-                <li><strong>SMTP Server:</strong> smtp-mail.outlook.com</li>
+                <li><strong>SMTP Server:</strong> smtp.office365.com</li>
                 <li><strong>Port:</strong> 587</li>
                 <li><strong>E-postadresse:</strong> ${email}</li>
                 <li><strong>Sikkerhet:</strong> STARTTLS</li>
@@ -84,7 +86,7 @@ async function testSimpleSMTP() {
         Din Office 365 SMTP-konfigurasjon er nå aktivert og fungerer perfekt!
         
         Konfigurasjonsdetaljer:
-        - SMTP Server: smtp-mail.outlook.com
+        - SMTP Server: smtp.office365.com
         - Port: 587
         - E-postadresse: ${email}
         - Sikkerhet: STARTTLS
@@ -102,49 +104,49 @@ async function testSimpleSMTP() {
     });
     
     console.log('✅ Email sent successfully!');
-    console.log(`📧 Message ID: ${info.messageId}\n`);
+    console.log(`📧 Message ID: ${info.messageId}`);
+    console.log(`📬 Response: ${info.response}\n`);
     
-    console.log('🎉 SUCCESS! SMTP configuration works!');
-    console.log('🚀 You can now use this in DriftPro:');
-    console.log(`   Email: ${email}`);
-    console.log(`   Password: ${password.replace(/./g, '*')}`);
-    console.log('   Host: smtp-mail.outlook.com');
-    console.log('   Port: 587\n');
+    console.log('🎉 Office 365 connection test completed successfully!');
+    console.log('💡 You can now use these credentials in the DriftPro admin panel.');
     
   } catch (error) {
-    console.log(`❌ Error: ${error.code || 'Unknown'}`);
-    console.log(`   Message: ${error.message}\n`);
+    console.error('❌ Error testing Office 365 connection:');
+    console.error(`   Code: ${error.code}`);
+    console.error(`   Message: ${error.message}\n`);
     
     if (error.code === 'EAUTH') {
-      console.log('🔐 Authentication failed:');
-      console.log('   - Check email address');
-      console.log('   - Check password');
-      console.log('   - Make sure SMTP AUTH is enabled');
+      console.error('🔐 Authentication failed!');
+      console.error('   - Check your email address');
+      console.error('   - Check your password');
+      console.error('   - Make sure you have SMTP enabled in Office 365');
+      console.error('   - Try using an App Password if 2FA is enabled\n');
     } else if (error.code === 'ECONNECTION') {
-      console.log('🌐 Connection failed:');
-      console.log('   - Check network connection');
-      console.log('   - Check firewall settings');
-      console.log('   - Try different network (mobile hotspot)');
-    } else if (error.code === 'ESOCKET') {
-      console.log('🔌 Socket error:');
-      console.log('   - Network interruption');
-      console.log('   - Firewall blocking');
-      console.log('   - Try different network');
-    } else if (error.code === 'EPROTOCOL') {
-      console.log('📡 Protocol error:');
-      console.log('   - SMTP protocol mismatch');
-      console.log('   - Try different port or host');
-      console.log('   - Check TLS settings');
+      console.error('🌐 Connection failed!');
+      console.error('   - Check your internet connection');
+      console.error('   - Check if smtp.office365.com is accessible');
+      console.error('   - Check firewall settings\n');
+    } else if (error.code === 'ETIMEDOUT') {
+      console.error('⏰ Connection timeout!');
+      console.error('   - Check your internet connection');
+      console.error('   - Check firewall settings');
+      console.error('   - Try again in a few minutes\n');
     }
     
-    console.log('\n💡 Troubleshooting tips:');
-    console.log('   1. Try from different network (mobile hotspot)');
-    console.log('   2. Check firewall/antivirus settings');
-    console.log('   3. Convert to shared mailbox');
-    console.log('   4. Contact IT administrator');
+    console.log('💡 Troubleshooting tips:');
+    console.log('   1. Make sure you have the correct Office 365 email and password');
+    console.log('   2. Enable SMTP authentication in Office 365 admin center');
+    console.log('   3. If you have 2FA enabled, create an App Password');
+    console.log('   4. Check that your Office 365 account has mail sending permissions');
+    
+    process.exit(1);
   }
 }
 
 // Run the test
-testSimpleSMTP();
+testDriftproFinal();
+
+
+
+
 

@@ -2,6 +2,30 @@
 
 import React, { useState, useEffect } from 'react';
 import { firebaseService, Partner } from '@/lib/firebase-services';
+
+interface RouteAssignment {
+  id: string;
+  routeName: string;
+  date: string;
+  vehicle: string;
+  driver: string;
+  partnerId?: string;
+  partnerName?: string;
+  stops: Array<{
+    customer: string;
+    address: string;
+    weight: number;
+    volume: number;
+    priority: string;
+    description: string;
+  }>;
+  totalWeight: number;
+  totalVolume: number;
+  cost: number;
+  status: 'assigned' | 'in_progress' | 'completed';
+  assignedAt: string;
+  companyId: string;
+}
 import { useAuth } from '@/contexts/AuthContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -72,6 +96,10 @@ export default function PartnersPage() {
     model: string;
     euroClass: string;
     payload: string;
+    vehicleName?: string;
+    vehicleNumber?: string;
+    driverName?: string;
+    vehicleType?: 'company_car' | 'one_man' | 'two_man';
   }>>([]);
   
   // Modal tabs
@@ -83,7 +111,8 @@ export default function PartnersPage() {
   const [selectedDate, setSelectedDate] = useState<Date | null>(null);
   const [selectedPartner, setSelectedPartner] = useState<Partner | null>(null);
   const [showFileShareModal, setShowFileShareModal] = useState(false);
-  const [routeAssignments, setRouteAssignments] = useState<{[key: string]: any}>({});
+  const [routeAssignments, setRouteAssignments] = useState<RouteAssignment[]>([]);
+  const [expandedDriver, setExpandedDriver] = useState<string | null>(null);
   const [routeTitle, setRouteTitle] = useState('');
   const [selectedJob, setSelectedJob] = useState('');
   const [selectedUsers, setSelectedUsers] = useState<string[]>([]);
@@ -146,6 +175,10 @@ export default function PartnersPage() {
     model: string;
     euroClass: string;
     payload: string;
+    vehicleName?: string;
+    vehicleNumber?: string;
+    driverName?: string;
+    vehicleType?: 'company_car' | 'one_man' | 'two_man';
   }>>([]);
   const [editingFiles, setEditingFiles] = useState<File[]>([]);
   
@@ -194,14 +227,14 @@ export default function PartnersPage() {
   useEffect(() => {
     if (userProfile?.companyId) {
       loadPartners();
-      loadRouteAssignments();
+      loadRouteAssignmentsData();
       loadAudits();
     }
   }, [userProfile?.companyId]);
 
   // Check for overdue audits when partners or audits change
   useEffect(() => {
-    if (partners.length > 0 && audits.length > 0) {
+    if (Array.isArray(partners) && partners.length > 0 && Array.isArray(audits) && audits.length > 0) {
       checkAndNotifyOverdueAudits();
     }
   }, [partners, audits]);
@@ -209,7 +242,7 @@ export default function PartnersPage() {
   // Set up interval to check for overdue audits every hour
   useEffect(() => {
     const interval = setInterval(() => {
-      if (partners.length > 0 && audits.length > 0) {
+      if (Array.isArray(partners) && partners.length > 0 && Array.isArray(audits) && audits.length > 0) {
         checkAndNotifyOverdueAudits();
       }
     }, 60 * 60 * 1000); // Check every hour
@@ -219,7 +252,7 @@ export default function PartnersPage() {
 
   useEffect(() => {
     if (activeView === 'routes') {
-      loadRouteAssignments();
+      loadRouteAssignmentsData();
     }
   }, [activeView, currentDate]);
 
@@ -228,13 +261,55 @@ export default function PartnersPage() {
     
     try {
       const partnersData = await firebaseService.getPartners(userProfile.companyId);
-      setPartners(partnersData);
-      setFilteredPartners(partnersData);
+      const validPartners = Array.isArray(partnersData) ? partnersData.filter(p => p && p.name) : [];
+      setPartners(validPartners);
+      setFilteredPartners(validPartners);
     } catch (error) {
       setError('Kunne ikke laste partnere');
+      setPartners([]);
+      setFilteredPartners([]);
     } finally {
       setLoading(false);
     }
+  };
+
+  const loadRouteAssignmentsData = async () => {
+    if (!userProfile?.companyId) return;
+    
+    try {
+      const assignments = await firebaseService.getRouteAssignments(userProfile.companyId);
+      console.log('📋 Hentet route assignments:', Array.isArray(assignments) ? assignments.length : 0);
+      setRouteAssignments(Array.isArray(assignments) ? assignments as RouteAssignment[] : []);
+    } catch (error) {
+      console.error('Error loading route assignments:', error);
+      setRouteAssignments([]);
+    }
+  };
+
+  // Get routes for a specific driver
+  const getDriverRoutes = (driverName: string) => {
+    if (!Array.isArray(routeAssignments)) return [];
+    return routeAssignments.filter(route => route && route.driver === driverName);
+  };
+
+  // Get routes for a specific partner
+  const getPartnerRoutes = (partnerId: string) => {
+    if (!Array.isArray(routeAssignments)) return [];
+    return routeAssignments.filter(route => route && route.partnerId === partnerId);
+  };
+
+  // Group routes by date
+  const groupRoutesByDate = (routes: RouteAssignment[]) => {
+    if (!Array.isArray(routes)) return {};
+    return routes.reduce((groups, route) => {
+      if (!route || !route.date) return groups;
+      const date = route.date;
+      if (!groups[date]) {
+        groups[date] = [];
+      }
+      groups[date].push(route);
+      return groups;
+    }, {} as Record<string, RouteAssignment[]>);
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
@@ -252,7 +327,11 @@ export default function PartnersPage() {
       year: '',
       model: '',
       euroClass: '',
-      payload: ''
+      payload: '',
+      vehicleName: '',
+      vehicleNumber: '',
+      driverName: '',
+      vehicleType: 'one_man'
     }]);
   };
 
@@ -339,8 +418,9 @@ export default function PartnersPage() {
       
       // Refresh partners list
       const updatedPartners = await firebaseService.getPartners(userProfile.companyId);
-      setPartners(updatedPartners);
-      setFilteredPartners(updatedPartners);
+      const validPartners = Array.isArray(updatedPartners) ? updatedPartners.filter(p => p && p.name) : [];
+      setPartners(validPartners);
+      setFilteredPartners(validPartners);
       
       setSuccess('Partner opprettet!');
       setShowCreatePartnerModal(false);
@@ -368,12 +448,12 @@ export default function PartnersPage() {
   const handleSearch = (query: string) => {
     setSearchQuery(query);
     if (query.trim() === '') {
-      setFilteredPartners(partners);
+      setFilteredPartners(Array.isArray(partners) ? partners : []);
     } else {
-      const filtered = partners.filter(partner =>
-        partner.name.toLowerCase().includes(query.toLowerCase()) ||
-        (partner.orgNumber && partner.orgNumber.includes(query)) ||
-        (partner.contactPerson?.name && partner.contactPerson.name.toLowerCase().includes(query.toLowerCase()))
+      const filtered = (Array.isArray(partners) ? partners : []).filter(partner =>
+        partner && partner.name && partner.name.toLowerCase().includes(query.toLowerCase()) ||
+        (partner && partner.orgNumber && partner.orgNumber.includes(query)) ||
+        (partner && partner.contactPerson?.name && partner.contactPerson.name.toLowerCase().includes(query.toLowerCase()))
       );
       setFilteredPartners(filtered);
     }
@@ -416,8 +496,16 @@ export default function PartnersPage() {
   };
 
   const getRouteAssignment = (partnerId: string, date: Date) => {
-    const key = `${partnerId}_${date.toISOString().split('T')[0]}`;
-    return routeAssignments[key] || null;
+    if (!Array.isArray(routeAssignments)) return null;
+    
+    const dateString = date.toISOString().split('T')[0];
+    
+    // Find route assignment for this partner and date
+    const assignment = routeAssignments.find(route => 
+      route.partnerId === partnerId && route.date === dateString
+    );
+    
+    return assignment || null;
   };
 
   // Load users for a specific partner
@@ -724,7 +812,7 @@ export default function PartnersPage() {
         assignmentMap[key] = assignment;
       });
       
-      setRouteAssignments(assignmentMap);
+      setRouteAssignments(Object.values(assignmentMap) as RouteAssignment[]);
     } catch (error) {
       console.error('Error loading route assignments:', error);
     }
@@ -749,7 +837,8 @@ export default function PartnersPage() {
 
   // Get audit status for a specific partner
   const getPartnerAuditStatus = (partnerId: string) => {
-    const partnerAudits = audits.filter(audit => audit.partnerId === partnerId);
+    if (!Array.isArray(audits)) return null;
+    const partnerAudits = audits.filter(audit => audit && audit.partnerId === partnerId);
     if (partnerAudits.length === 0) return null;
     
     // Get the most recent audit
@@ -977,7 +1066,7 @@ export default function PartnersPage() {
         category: newDocument.category,
         description: newDocument.description,
         uploadDate: new Date().toISOString().split('T')[0],
-        fileSize: (newDocument.file.size / 1024 / 1024).toFixed(1) + ' MB',
+        fileSize: newDocument.file && newDocument.file.size ? (newDocument.file.size / 1024 / 1024).toFixed(1) + ' MB' : '0 MB',
         fileType: newDocument.file.name.split('.').pop()?.toUpperCase() || 'UNKNOWN'
       };
       
@@ -1043,7 +1132,7 @@ export default function PartnersPage() {
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <span className="badge badge-primary">
-            {partners.length} partnere
+            {Array.isArray(partners) ? partners.length : 0} partnere
           </span>
           
           {/* Tab Navigation */}
@@ -1138,7 +1227,7 @@ export default function PartnersPage() {
                 }}
               >
                 <AlertTriangle style={{ width: '20px', height: '20px' }} />
-                {auditNotifications.length > 0 && (
+                {Array.isArray(auditNotifications) && auditNotifications.length > 0 && (
                   <span style={{
                     position: 'absolute',
                     top: '-2px',
@@ -1154,7 +1243,7 @@ export default function PartnersPage() {
                     alignItems: 'center',
                     justifyContent: 'center'
                   }}>
-                    {auditNotifications.length}
+                    {Array.isArray(auditNotifications) ? auditNotifications.length : 0}
                   </span>
                 )}
               </button>
@@ -1289,10 +1378,83 @@ export default function PartnersPage() {
                 <span>{partner.contactPerson?.phone || 'Ikke oppgitt'}</span>
               </div>
               
-              {partner.vehicles && partner.vehicles.length > 0 && (
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
-                  <Building2 style={{ width: '16px', height: '16px' }} />
-                  <span>{partner.vehicles.length} kjøretøy registrert</span>
+              {partner.vehicles && Array.isArray(partner.vehicles) && partner.vehicles.length > 0 && (
+                <div style={{ marginBottom: '0.5rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
+                    <Building2 style={{ width: '16px', height: '16px' }} />
+                    <span>{partner.vehicles.length} kjøretøy registrert</span>
+                  </div>
+                  
+                  {/* Show assigned routes for this partner */}
+                  {(() => {
+                    const partnerRoutes = getPartnerRoutes(partner.id);
+                    const routesByDate = groupRoutesByDate(partnerRoutes);
+                    
+                    if (!Array.isArray(partnerRoutes) || partnerRoutes.length === 0) return null;
+                    
+                    return (
+                      <div key={partner.id} style={{
+                        marginTop: '0.5rem',
+                        padding: '0.75rem',
+                        backgroundColor: '#f8fafc',
+                        borderRadius: '8px',
+                        border: '1px solid #e2e8f0'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <Building2 style={{ width: '14px', height: '14px', color: '#3b82f6' }} />
+                          <span style={{ fontSize: '0.8rem', fontWeight: '600', color: '#1e40af' }}>
+                            Tildelte ruter
+                          </span>
+                          <span style={{ fontSize: '0.7rem', color: '#64748b' }}>
+                            ({partnerRoutes.length} ruter)
+                          </span>
+                        </div>
+                        
+                        {Object.entries(routesByDate).map(([date, routes]) => (
+                          <div key={date} style={{ marginBottom: '0.5rem' }}>
+                            <div style={{ fontSize: '0.7rem', fontWeight: '600', color: '#374151', marginBottom: '0.25rem' }}>
+                              {new Date(date).toLocaleDateString('no-NO')}
+                            </div>
+                            {(routes as RouteAssignment[]).map((route) => (
+                              <div key={route.id} style={{
+                                padding: '0.5rem',
+                                backgroundColor: '#ffffff',
+                                borderRadius: '6px',
+                                border: '1px solid #d1d5db',
+                                marginBottom: '0.25rem'
+                              }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.25rem' }}>
+                                  <FileText style={{ width: '12px', height: '12px', color: '#10b981' }} />
+                                  <span style={{ fontSize: '0.75rem', fontWeight: '600', color: '#0f172a' }}>
+                                    {route.routeName}
+                                  </span>
+                                  <span style={{
+                                    fontSize: '0.65rem',
+                                    padding: '2px 6px',
+                                    backgroundColor: route.status === 'assigned' ? '#dbeafe' : 
+                                                   route.status === 'in_progress' ? '#fef3c7' : '#d1fae5',
+                                    color: route.status === 'assigned' ? '#1e40af' : 
+                                           route.status === 'in_progress' ? '#92400e' : '#065f46',
+                                    borderRadius: '4px',
+                                    fontWeight: '600'
+                                  }}>
+                                    {route.status === 'assigned' ? 'Tildelt' : 
+                                     route.status === 'in_progress' ? 'Pågår' : 'Fullført'}
+                                  </span>
+                                </div>
+                                <div style={{ fontSize: '0.65rem', color: '#64748b', marginBottom: '0.25rem' }}>
+                                  {Array.isArray(route.stops) ? route.stops.length : 0} stopp • {route.totalWeight}kg • {route.cost ? route.cost.toFixed(0) : '0'},- NOK
+                                </div>
+                                <div style={{ fontSize: '0.6rem', color: '#9ca3af' }}>
+                                  🚗 {route.vehicle} • 👤 {route.driver}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        ))}
+                      </div>
+                    );
+                  })()}
                 </div>
               )}
               
@@ -1715,16 +1877,23 @@ export default function PartnersPage() {
                                     fontWeight: '700'
                                   }}>
                                     <FileText style={{ width: '12px', height: '12px' }} />
-                                    {assignment.files?.length || 0} filer
+                                    {assignment.routeName || 'Rute tildelt'}
                                   </div>
                                   <div style={{
-                                    fontSize: '0.75rem',
+                                    fontSize: '0.65rem',
                                     color: '#64748b',
                                     textAlign: 'center',
                                     lineHeight: '1.3',
                                     fontWeight: '500'
                                   }}>
-                                    {assignment.title || 'Rute tildelt'}
+                                    🚗 {assignment.vehicle} • 👤 {assignment.driver}
+                                  </div>
+                                  <div style={{
+                                    fontSize: '0.6rem',
+                                    color: '#9ca3af',
+                                    textAlign: 'center'
+                                  }}>
+                                    {Array.isArray(assignment.stops) ? assignment.stops.length : 0} stopp • {assignment.totalWeight}kg
                                   </div>
                                 </div>
                               ) : (
@@ -1870,10 +2039,10 @@ export default function PartnersPage() {
                       onChange={(e) => {
                         const value = e.target.value;
                         console.log('📝 Input changed:', value);
-                        console.log('📏 Value length:', value.length);
+                        console.log('📏 Value length:', value ? value.length : 0);
                         setNewPartner(prev => ({ ...prev, name: value }));
                         setBrrgSearchQuery(value);
-                        if (value.length >= 2) {
+                        if (value && value.length >= 2) {
                           console.log('🚀 Triggering search for:', value);
                           searchBrrg(value);
                           setShowBrrgSearch(true);
@@ -1884,7 +2053,7 @@ export default function PartnersPage() {
                         }
                       }}
                       onFocus={() => {
-                        if (brrgSearchQuery.length >= 2) {
+                        if (brrgSearchQuery && brrgSearchQuery.length >= 2) {
                           setShowBrrgSearch(true);
                         }
                       }}
@@ -1902,7 +2071,7 @@ export default function PartnersPage() {
                       type="button"
                       onClick={() => {
                         setBrrgSearchQuery(newPartner.name);
-                        if (newPartner.name.length >= 2) {
+                        if (newPartner.name && newPartner.name.length >= 2) {
                           searchBrrg(newPartner.name);
                           setShowBrrgSearch(true);
                         }
@@ -1939,7 +2108,7 @@ export default function PartnersPage() {
                       overflowY: 'auto',
                       marginTop: '0.25rem'
                     }}>
-                      {brrgSearchResults.length > 0 ? (
+                      {Array.isArray(brrgSearchResults) && brrgSearchResults.length > 0 ? (
                         brrgSearchResults.map((company) => (
                         <div
                           key={company.organisasjonsnummer}
@@ -1993,7 +2162,7 @@ export default function PartnersPage() {
                       onChange={(e) => {
                         setNewPartner(prev => ({ ...prev, orgNumber: e.target.value }));
                         setBrrgSearchQuery(e.target.value);
-                        if (e.target.value.length >= 2) {
+                        if (e.target.value && e.target.value.length >= 2) {
                           searchBrrg(e.target.value);
                           setShowBrrgSearch(true);
                         } else {
@@ -2001,7 +2170,7 @@ export default function PartnersPage() {
                         }
                       }}
                       onFocus={() => {
-                        if (brrgSearchQuery.length >= 2) {
+                        if (brrgSearchQuery && brrgSearchQuery.length >= 2) {
                           setShowBrrgSearch(true);
                         }
                       }}
@@ -2019,7 +2188,7 @@ export default function PartnersPage() {
                       type="button"
                       onClick={() => {
                         setBrrgSearchQuery(newPartner.orgNumber);
-                        if (newPartner.orgNumber.length >= 2) {
+                        if (newPartner.orgNumber && newPartner.orgNumber.length >= 2) {
                           searchBrrg(newPartner.orgNumber);
                           setShowBrrgSearch(true);
                         }
@@ -2395,10 +2564,99 @@ export default function PartnersPage() {
                         />
                       </div>
                     </div>
+                    
+                    {/* NEW FIELDS - Row 2 */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Bil navn
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Eks: Vare 1, Lastebil Oslo"
+                          value={vehicle.vehicleName || ''}
+                          onChange={(e) => updateVehicle(index, 'vehicleName', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Bilnummer
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Eks: #101, VAN-5"
+                          value={vehicle.vehicleNumber || ''}
+                          onChange={(e) => updateVehicle(index, 'vehicleNumber', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Row 3 */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Sjåfør navn
+                        </label>
+                        <input
+                          type="text"
+                          placeholder="Eks: John Hansen"
+                          value={vehicle.driverName || ''}
+                          onChange={(e) => updateVehicle(index, 'driverName', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Type bil
+                        </label>
+                        <select
+                          value={vehicle.vehicleType || 'one_man'}
+                          onChange={(e) => updateVehicle(index, 'vehicleType', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none',
+                            backgroundColor: 'white'
+                          }}
+                        >
+                          <option value="company_car">🏢 Tjenstebil</option>
+                          <option value="one_man">👤 1-manns bil</option>
+                          <option value="two_man">👥 2-manns bil</option>
+                        </select>
+                      </div>
+                    </div>
                   </div>
                 ))}
                 
-                {vehicles.length === 0 && (
+                {Array.isArray(vehicles) && vehicles.length === 0 && (
                   <div style={{
                     textAlign: 'center',
                     padding: '2rem',
@@ -2459,7 +2717,7 @@ export default function PartnersPage() {
                   </p>
                 </div>
                 
-                {uploadedFiles.length > 0 && (
+                {Array.isArray(uploadedFiles) && uploadedFiles.length > 0 && (
                   <div>
                     <h4 style={{ fontSize: 'var(--font-size-md)', fontWeight: '600', marginBottom: '0.5rem', color: 'var(--gray-900)' }}>
                       Valgte filer:
@@ -2476,7 +2734,7 @@ export default function PartnersPage() {
                         marginBottom: '0.5rem'
                       }}>
                         <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)' }}>
-                          {file.name} ({(file.size / 1024 / 1024).toFixed(2)} MB)
+                          {file.name} ({file && file.size ? (file.size / 1024 / 1024).toFixed(2) : '0.00'} MB)
                         </span>
                         <button
                           onClick={() => removeFile(index)}
@@ -2932,7 +3190,7 @@ export default function PartnersPage() {
                   </label>
                   
                   {/* Selected Users Display */}
-                  {selectedUsers.length > 0 && (
+                  {Array.isArray(selectedUsers) && selectedUsers.length > 0 && (
                     <div style={{
                       padding: '0.75rem 1rem',
                       border: '1px solid #d1d5db',
@@ -3016,7 +3274,7 @@ export default function PartnersPage() {
                   </div>
 
                   <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
-                    {selectedUsers.length === 0 ? 'Ingen brukere valgt' : `${selectedUsers.length} brukere valgt`}
+                    {Array.isArray(selectedUsers) && selectedUsers.length === 0 ? 'Ingen brukere valgt' : `${Array.isArray(selectedUsers) ? selectedUsers.length : 0} brukere valgt`}
                     <button style={{
                       background: 'none',
                       border: 'none',
@@ -3337,7 +3595,7 @@ export default function PartnersPage() {
                               fontSize: '0.75rem', 
                               color: '#6b7280' 
                             }}>
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                              {file && file.size ? (file.size / 1024 / 1024).toFixed(2) : '0.00'} MB
                             </div>
                           </div>
                         </div>
@@ -3666,7 +3924,7 @@ export default function PartnersPage() {
             <div style={{ padding: '2rem', maxHeight: '70vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                 <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#374151' }}>
-                  Alle Jobber ({jobs.length})
+                  Alle Jobber ({Array.isArray(jobs) ? jobs.length : 0})
                 </h3>
                 <button
                   onClick={() => setEditingJob({
@@ -4315,10 +4573,10 @@ export default function PartnersPage() {
                       onChange={(e) => {
                         const value = e.target.value;
                         console.log('📝 Edit modal input changed:', value);
-                        console.log('📏 Value length:', value.length);
+                        console.log('📏 Value length:', value ? value.length : 0);
                         setEditingPartner(prev => prev ? { ...prev, name: value } : null);
                         setBrrgSearchQuery(value);
-                        if (value.length >= 2) {
+                        if (value && value.length >= 2) {
                           console.log('🚀 Edit modal triggering search for:', value);
                           searchBrrg(value);
                           setShowBrrgSearch(true);
@@ -4329,7 +4587,7 @@ export default function PartnersPage() {
                         }
                       }}
                       onFocus={() => {
-                        if (brrgSearchQuery.length >= 2) {
+                        if (brrgSearchQuery && brrgSearchQuery.length >= 2) {
                           setShowBrrgSearch(true);
                         }
                       }}
@@ -4384,7 +4642,7 @@ export default function PartnersPage() {
                       overflowY: 'auto',
                       marginTop: '0.25rem'
                     }}>
-                      {brrgSearchResults.length > 0 ? (
+                      {Array.isArray(brrgSearchResults) && brrgSearchResults.length > 0 ? (
                         brrgSearchResults.map((company) => (
                         <div
                           key={company.organisasjonsnummer}
@@ -4438,7 +4696,7 @@ export default function PartnersPage() {
                       onChange={(e) => {
                         setEditingPartner(prev => prev ? { ...prev, orgNumber: e.target.value } : null);
                         setBrrgSearchQuery(e.target.value);
-                        if (e.target.value.length >= 2) {
+                        if (e.target.value && e.target.value.length >= 2) {
                           searchBrrg(e.target.value);
                           setShowBrrgSearch(true);
                         } else {
@@ -4446,7 +4704,7 @@ export default function PartnersPage() {
                         }
                       }}
                       onFocus={() => {
-                        if (brrgSearchQuery.length >= 2) {
+                        if (brrgSearchQuery && brrgSearchQuery.length >= 2) {
                           setShowBrrgSearch(true);
                         }
                       }}
@@ -4612,7 +4870,7 @@ export default function PartnersPage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>
-                    Kjøretøy ({editingVehicles.length})
+                    Kjøretøy ({Array.isArray(editingVehicles) ? editingVehicles.length : 0})
                   </h3>
                   <button
                     onClick={() => {
@@ -4621,7 +4879,11 @@ export default function PartnersPage() {
                         year: new Date().getFullYear().toString(),
                         model: '',
                         euroClass: '',
-                        payload: ''
+                        payload: '',
+                        vehicleName: '',
+                        vehicleNumber: '',
+                        driverName: '',
+                        vehicleType: 'one_man'
                       }]);
                     }}
                     style={{
@@ -4643,7 +4905,7 @@ export default function PartnersPage() {
                   </button>
                 </div>
 
-                {editingVehicles.length === 0 ? (
+                {Array.isArray(editingVehicles) && editingVehicles.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                     <Building2 style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
                     <p>Ingen kjøretøy registrert</p>
@@ -4769,7 +5031,111 @@ export default function PartnersPage() {
                             />
                           </div>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                        
+                        {/* NEW FIELDS - Row 2 */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', fontWeight: '500', color: '#374151' }}>
+                              Bil navn
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Eks: Vare 1"
+                              value={vehicle.vehicleName || ''}
+                              onChange={(e) => {
+                                const newVehicles = [...editingVehicles];
+                                newVehicles[index].vehicleName = e.target.value;
+                                setEditingVehicles(newVehicles);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '0.5rem',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                fontSize: '0.875rem',
+                                outline: 'none'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', fontWeight: '500', color: '#374151' }}>
+                              Bilnummer
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Eks: #101"
+                              value={vehicle.vehicleNumber || ''}
+                              onChange={(e) => {
+                                const newVehicles = [...editingVehicles];
+                                newVehicles[index].vehicleNumber = e.target.value;
+                                setEditingVehicles(newVehicles);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '0.5rem',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                fontSize: '0.875rem',
+                                outline: 'none'
+                              }}
+                            />
+                          </div>
+                        </div>
+                        
+                        {/* Row 3 */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginTop: '1rem' }}>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', fontWeight: '500', color: '#374151' }}>
+                              Sjåfør navn
+                            </label>
+                            <input
+                              type="text"
+                              placeholder="Eks: John Hansen"
+                              value={vehicle.driverName || ''}
+                              onChange={(e) => {
+                                const newVehicles = [...editingVehicles];
+                                newVehicles[index].driverName = e.target.value;
+                                setEditingVehicles(newVehicles);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '0.5rem',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                fontSize: '0.875rem',
+                                outline: 'none'
+                              }}
+                            />
+                          </div>
+                          <div>
+                            <label style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.75rem', fontWeight: '500', color: '#374151' }}>
+                              Type bil
+                            </label>
+                            <select
+                              value={vehicle.vehicleType || 'one_man'}
+                              onChange={(e) => {
+                                const newVehicles = [...editingVehicles];
+                                newVehicles[index].vehicleType = e.target.value as 'company_car' | 'one_man' | 'two_man';
+                                setEditingVehicles(newVehicles);
+                              }}
+                              style={{
+                                width: '100%',
+                                padding: '0.5rem',
+                                border: '1px solid #d1d5db',
+                                borderRadius: '6px',
+                                fontSize: '0.875rem',
+                                outline: 'none',
+                                backgroundColor: 'white'
+                              }}
+                            >
+                              <option value="company_car">🏢 Tjenstebil</option>
+                              <option value="one_man">👤 1-manns bil</option>
+                              <option value="two_man">👥 2-manns bil</option>
+                            </select>
+                          </div>
+                        </div>
+                        
+                        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: '1rem' }}>
                           <button
                             onClick={() => {
                               setEditingVehicles(prev => prev.filter((_, i) => i !== index));
@@ -4798,7 +5164,7 @@ export default function PartnersPage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>
-                    Brukere ({partnerUsers.length})
+                    Brukere ({Array.isArray(partnerUsers) ? partnerUsers.length : 0})
                   </h3>
                   <button
                     onClick={() => setShowCreateUserModal(true)}
@@ -4821,7 +5187,7 @@ export default function PartnersPage() {
                   </button>
                 </div>
 
-                {partnerUsers.length === 0 ? (
+                {Array.isArray(partnerUsers) && partnerUsers.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                     <Users style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
                     <p>Ingen brukere registrert ennå</p>
@@ -4933,7 +5299,7 @@ export default function PartnersPage() {
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
                   <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>
-                    Filer ({editingFiles.length})
+                    Filer ({Array.isArray(editingFiles) ? editingFiles.length : 0})
                   </h3>
                   <input
                     type="file"
@@ -4967,7 +5333,7 @@ export default function PartnersPage() {
                   </label>
                 </div>
 
-                {editingFiles.length === 0 ? (
+                {Array.isArray(editingFiles) && editingFiles.length === 0 ? (
                   <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                     <FileUp style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
                     <p>Ingen filer lastet opp</p>
@@ -5003,7 +5369,7 @@ export default function PartnersPage() {
                               color: '#6b7280',
                               margin: 0
                             }}>
-                              {(file.size / 1024 / 1024).toFixed(2)} MB
+                              {file && file.size ? (file.size / 1024 / 1024).toFixed(2) : '0.00'} MB
                             </p>
                           </div>
                         </div>
@@ -5515,7 +5881,7 @@ export default function PartnersPage() {
               </button>
             </div>
 
-            {auditNotifications.length === 0 ? (
+            {Array.isArray(auditNotifications) && auditNotifications.length === 0 ? (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                 <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
                 <p>Ingen audit-varsler for øyeblikket</p>
@@ -5666,7 +6032,7 @@ export default function PartnersPage() {
               >
                 Lukk
               </button>
-              {auditNotifications.length > 0 && (
+              {Array.isArray(auditNotifications) && auditNotifications.length > 0 && (
                 <button
                   onClick={() => {
                     setAuditNotifications([]);
@@ -5798,7 +6164,7 @@ export default function PartnersPage() {
                         </span>
                       </div>
                       <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                        {categoryDocs.length} dokumenter
+                        {Array.isArray(categoryDocs) ? categoryDocs.length : 0} dokumenter
                       </div>
                     </div>
                   );
@@ -5809,10 +6175,10 @@ export default function PartnersPage() {
             {/* Documents List */}
             <div style={{ marginBottom: '2rem' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', marginBottom: '1rem' }}>
-                Alle Dokumenter ({partnerDocuments.length})
+                Alle Dokumenter ({Array.isArray(partnerDocuments) ? partnerDocuments.length : 0})
               </h3>
               
-              {partnerDocuments.length === 0 ? (
+              {Array.isArray(partnerDocuments) && partnerDocuments.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                   <FileText style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
                   <p>Ingen dokumenter lastet opp ennå</p>
@@ -6196,10 +6562,10 @@ export default function PartnersPage() {
             {/* Users List */}
             <div style={{ marginBottom: '2rem' }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', marginBottom: '1rem' }}>
-                Alle Brukere ({partnerUsers.length})
+                Alle Brukere ({Array.isArray(partnerUsers) ? partnerUsers.length : 0})
               </h3>
               
-              {partnerUsers.length === 0 ? (
+              {Array.isArray(partnerUsers) && partnerUsers.length === 0 ? (
                 <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
                   <Users style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
                   <p>Ingen brukere registrert ennå</p>

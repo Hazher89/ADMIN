@@ -1,7 +1,7 @@
 const nodemailer = require('nodemailer');
 
-async function testOffice365Fixed() {
-  console.log('🔍 Testing with fixed Office 365 SMTP configuration...\n');
+async function testOffice365SMTP() {
+  console.log('🔍 Testing with Office 365 SMTP configuration...\n');
   
   const email = 'driftpro@mavilogistikk.no';
   const password = 'HazGada1989';
@@ -9,10 +9,10 @@ async function testOffice365Fixed() {
   console.log(`📧 Email: ${email}`);
   console.log(`🔑 Password: ${password.replace(/./g, '*')}\n`);
   
-  // Fixed Office 365 SMTP configurations with proper HELO
+  // Office 365 SMTP configurations
   const configs = [
     {
-      name: 'Office 365 SMTP Fixed (smtp.office365.com:587)',
+      name: 'Office 365 SMTP (smtp.office365.com:587)',
       host: 'smtp.office365.com',
       port: 587,
       secure: false, // STARTTLS
@@ -22,16 +22,12 @@ async function testOffice365Fixed() {
       },
       tls: {
         rejectUnauthorized: false
-      },
-      // Fix HELO domain issue
-      name: 'mavilogistikk.no',
-      // Alternative: use IP or localhost
-      // name: 'localhost'
+      }
     },
     {
-      name: 'Office 365 SMTP Fixed (smtp-mail.outlook.com:587)',
-      host: 'smtp-mail.outlook.com',
-      port: 587,
+      name: 'Office 365 SMTP (smtp.office365.com:25)',
+      host: 'smtp.office365.com',
+      port: 25,
       secure: false,
       auth: {
         user: email,
@@ -39,11 +35,23 @@ async function testOffice365Fixed() {
       },
       tls: {
         rejectUnauthorized: false
-      },
-      name: 'mavilogistikk.no'
+      }
     },
     {
-      name: 'Exchange Online Fixed (outlook.office365.com:587)',
+      name: 'Office 365 SMTP (smtp.office365.com:465)',
+      host: 'smtp.office365.com',
+      port: 465,
+      secure: true, // SSL
+      auth: {
+        user: email,
+        pass: password
+      },
+      tls: {
+        rejectUnauthorized: false
+      }
+    },
+    {
+      name: 'Exchange Online (outlook.office365.com:587)',
       host: 'outlook.office365.com',
       port: 587,
       secure: false,
@@ -53,8 +61,20 @@ async function testOffice365Fixed() {
       },
       tls: {
         rejectUnauthorized: false
+      }
+    },
+    {
+      name: 'Exchange Online (outlook.office365.com:25)',
+      host: 'outlook.office365.com',
+      port: 25,
+      secure: false,
+      auth: {
+        user: email,
+        pass: password
       },
-      name: 'mavilogistikk.no'
+      tls: {
+        rejectUnauthorized: false
+      }
     }
   ];
   
@@ -94,7 +114,6 @@ async function testOffice365Fixed() {
                   <li><strong>Port:</strong> ${config.port}</li>
                   <li><strong>E-postadresse:</strong> ${email}</li>
                   <li><strong>Sikkerhet:</strong> ${config.secure ? 'SSL' : 'STARTTLS'}</li>
-                  <li><strong>HELO Domain:</strong> ${config.name}</li>
                 </ul>
               </div>
               
@@ -130,7 +149,6 @@ async function testOffice365Fixed() {
           - Port: ${config.port}
           - E-postadresse: ${email}
           - Sikkerhet: ${config.secure ? 'SSL' : 'STARTTLS'}
-          - HELO Domain: ${config.name}
         
           Neste steg:
           - Velkommen-e-poster vil bli sendt fra denne adressen
@@ -152,7 +170,6 @@ async function testOffice365Fixed() {
       console.log(`   Host: ${config.host}`);
       console.log(`   Port: ${config.port}`);
       console.log(`   Secure: ${config.secure}`);
-      console.log(`   HELO Domain: ${config.name}`);
       console.log(`   Email: ${email}`);
       console.log(`   Password: ${password.replace(/./g, '*')}\n`);
       
@@ -164,15 +181,19 @@ async function testOffice365Fixed() {
     }
   }
   
-  console.log('❌ All fixed Office 365 SMTP configurations failed');
-  console.log('\n💡 HELO domain troubleshooting:');
-  console.log('   1. The HELO domain must match your email domain');
-  console.log('   2. Try using "localhost" as HELO domain');
-  console.log('   3. Check that your domain is properly configured');
-  console.log('   4. Try converting to shared mailbox');
-  console.log('   5. Contact IT administrator about domain settings');
+  console.log('❌ All Office 365 SMTP configurations failed');
+  console.log('\n💡 Office 365 SMTP troubleshooting:');
+  console.log('   1. Make sure SMTP AUTH is enabled for the mailbox');
+  console.log('   2. Check that Security defaults is disabled');
+  console.log('   3. Try converting to shared mailbox');
+  console.log('   4. Check firewall/network restrictions');
+  console.log('   5. Try from different network (mobile hotspot)');
 }
 
 // Run the test
-testOffice365Fixed();
+testOffice365SMTP();
+
+
+
+
 

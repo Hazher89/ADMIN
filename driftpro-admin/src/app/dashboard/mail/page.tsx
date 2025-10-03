@@ -38,6 +38,7 @@ import {
   Star
 } from 'lucide-react';
 import { microsoftGraphService } from '@/lib/microsoft-graph-service';
+import { smtpAuthService } from '@/lib/smtp-auth-service';
 import type { AccountInfo } from '@azure/msal-browser';
 
 // Use the service interfaces for consistency
@@ -88,6 +89,14 @@ export default function MailPage() {
   const [isAuthenticating, setIsAuthenticating] = useState(false);
   const [userProfile, setUserProfile] = useState<AccountInfo | null>(null);
   const [authError, setAuthError] = useState<string | null>(null);
+  
+  // SMTP Authentication state
+  const [smtpEmail, setSmtpEmail] = useState('');
+  const [smtpPassword, setSmtpPassword] = useState('');
+  const [isSmtpAuthenticating, setIsSmtpAuthenticating] = useState(false);
+  const [smtpAuthError, setSmtpAuthError] = useState<string | null>(null);
+  const [showSmtpLogin, setShowSmtpLogin] = useState(false);
+  const [userSmtpPassword, setUserSmtpPassword] = useState(''); // Store user's password for sending emails
   
   // Email data
   const [emails, setEmails] = useState<EmailMessage[]>([]);
@@ -166,8 +175,19 @@ export default function MailPage() {
 
   const loadFolders = async () => {
     try {
-      const foldersData = await microsoftGraphService.getMailFolders();
-      setFolders(foldersData);
+      // Check if user is authenticated via SMTP
+      if (userProfile?.environment === 'smtp') {
+        // For SMTP users, we can't load folders from Microsoft Graph
+        // So we'll use the basic folders we set during authentication
+        setFolders([
+          { id: 'inbox', displayName: 'Innboks', totalItemCount: 0, unreadItemCount: 0 },
+          { id: 'sent', displayName: 'Sendt', totalItemCount: 0, unreadItemCount: 0 }
+        ]);
+      } else {
+        // For Microsoft Graph users, use the existing method
+        const foldersData = await microsoftGraphService.getMailFolders();
+        setFolders(foldersData);
+      }
     } catch (error) {
       console.error('Error loading folders:', error);
       setAuthError('Kunne ikke laste mapper');
@@ -177,9 +197,18 @@ export default function MailPage() {
   const loadEmails = async () => {
     try {
       setIsLoading(true);
-      const emailsData = await microsoftGraphService.getEmails(selectedFolder);
-      // The service already returns EmailMessage objects, so we can use them directly
-      setEmails(emailsData);
+      
+      // Check if user is authenticated via SMTP
+      if (userProfile?.environment === 'smtp') {
+        // For SMTP users, we can't load emails from Microsoft Graph
+        // So we'll show a message that email reading is not available
+        setEmails([]);
+        setAuthError('E-postlesing er ikke tilgjengelig med SMTP-autentisering. Du kan sende e-poster.');
+      } else {
+        // For Microsoft Graph users, use the existing method
+        const emailsData = await microsoftGraphService.getEmails(selectedFolder);
+        setEmails(emailsData);
+      }
     } catch (error) {
       console.error('Error loading emails:', error);
       setAuthError('Kunne ikke laste e-poster');
@@ -217,21 +246,84 @@ export default function MailPage() {
       setEmails([]);
       setFolders([]);
       setAuthError(null);
+      setSmtpAuthError(null);
+      setShowSmtpLogin(false);
+      setUserSmtpPassword(''); // Clear stored password
     } catch (error) {
       console.error('Error signing out:', error);
     }
   };
 
+  const handleSmtpSignIn = async () => {
+    try {
+      setIsSmtpAuthenticating(true);
+      setSmtpAuthError(null);
+      
+      const result = await smtpAuthService.authenticate(smtpEmail, smtpPassword);
+      
+      if (result.success && result.user) {
+        setIsAuthenticated(true);
+        setUserProfile({
+          name: result.user.name,
+          username: result.user.email,
+          localAccountId: result.user.email,
+          homeAccountId: result.user.email,
+          environment: 'smtp',
+          tenantId: 'smtp',
+          idTokenClaims: {},
+          nativeAccountId: result.user.email
+        } as AccountInfo);
+        
+        // Store user's password for sending emails
+        setUserSmtpPassword(smtpPassword);
+        
+        // For SMTP auth, we'll show a simplified email interface
+        // since we can't access Microsoft Graph API
+        setEmails([]);
+        setFolders([
+          { id: 'inbox', displayName: 'Innboks', totalItemCount: 0, unreadItemCount: 0 },
+          { id: 'sent', displayName: 'Sendt', totalItemCount: 0, unreadItemCount: 0 }
+        ]);
+        
+        setShowSmtpLogin(false);
+        setSmtpEmail('');
+        setSmtpPassword('');
+      } else {
+        setSmtpAuthError(result.error || 'SMTP-autentisering mislyktes');
+      }
+    } catch (error) {
+      console.error('Error with SMTP sign in:', error);
+      setSmtpAuthError('En feil oppstod under SMTP-autentisering');
+    } finally {
+      setIsSmtpAuthenticating(false);
+    }
+  };
+
   const sendEmail = async () => {
     try {
-      await microsoftGraphService.sendEmail({
-        toRecipients: composeEmail.to.split(',').map(email => email.trim()),
-        ccRecipients: composeEmail.cc ? composeEmail.cc.split(',').map(email => email.trim()) : undefined,
-        bccRecipients: composeEmail.bcc ? composeEmail.bcc.split(',').map(email => email.trim()) : undefined,
-        subject: composeEmail.subject,
-        body: composeEmail.body.content,
-        bodyType: composeEmail.body.contentType
-      });
+      // Check if user is authenticated via SMTP
+      if (userProfile?.environment === 'smtp') {
+        // For SMTP users, use the dynamic email service with their credentials
+        const { DynamicEmailService } = await import('@/lib/dynamic-email-service');
+        const emailService = new DynamicEmailService(userProfile.username || '', userSmtpPassword);
+        
+        await emailService.sendEmail(
+          composeEmail.to.split(',').map(email => email.trim()),
+          composeEmail.subject,
+          composeEmail.body.content,
+          composeEmail.body.content
+        );
+      } else {
+        // For Microsoft Graph users, use the existing method
+        await microsoftGraphService.sendEmail({
+          toRecipients: composeEmail.to.split(',').map(email => email.trim()),
+          ccRecipients: composeEmail.cc ? composeEmail.cc.split(',').map(email => email.trim()) : undefined,
+          bccRecipients: composeEmail.bcc ? composeEmail.bcc.split(',').map(email => email.trim()) : undefined,
+          subject: composeEmail.subject,
+          body: composeEmail.body.content,
+          bodyType: composeEmail.body.contentType
+        });
+      }
 
       setShowCompose(false);
       setComposeEmail({
@@ -410,9 +502,10 @@ export default function MailPage() {
             </div>
           )}
 
-          {/* Microsoft Login */}
-          {msalStatus.hasCredentials && msalStatus.isReady && (
-            <div className="space-y-4">
+          {/* Login Options */}
+          <div className="space-y-4">
+            {/* Microsoft Login */}
+            {msalStatus.hasCredentials && msalStatus.isReady && (
               <button
                 onClick={handleSignIn}
                 disabled={isAuthenticating}
@@ -430,7 +523,28 @@ export default function MailPage() {
                   </>
                 )}
               </button>
+            )}
 
+            {/* SMTP Login */}
+            <div className="relative">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-gray-300" />
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="px-2 bg-white text-gray-500">eller</span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowSmtpLogin(true)}
+              className="w-full bg-gradient-to-r from-green-600 to-emerald-700 hover:from-green-700 hover:to-emerald-800 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center"
+            >
+              <Mail className="w-5 h-5 mr-2" />
+              Logg inn med SMTP-passord
+            </button>
+
+            {/* Microsoft Login Info */}
+            {msalStatus.hasCredentials && msalStatus.isReady && (
               <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <div className="flex items-start space-x-3">
                   <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
@@ -440,17 +554,28 @@ export default function MailPage() {
                   </div>
                 </div>
               </div>
+            )}
+
+            {/* SMTP Login Info */}
+            <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+              <div className="flex items-start space-x-3">
+                <Info className="w-5 h-5 text-green-600 mt-0.5 flex-shrink-0" />
+                <div className="text-sm text-green-800">
+                  <p className="font-medium mb-1">SMTP-autentisering</p>
+                  <p>Logg inn med din e-postadresse og SMTP-passord for direkte tilgang til e-postfunksjoner.</p>
+                </div>
+              </div>
             </div>
-          )}
+          </div>
 
           {/* Error Display */}
-          {authError && (
+          {(authError || smtpAuthError) && (
             <div className="mt-6 bg-red-50 border border-red-200 rounded-xl p-4">
               <div className="flex items-start space-x-3">
                 <AlertTriangle className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
                 <div className="text-sm text-red-800">
                   <p className="font-medium mb-1">Feil oppstod</p>
-                  <p>{authError}</p>
+                  <p>{authError || smtpAuthError}</p>
                 </div>
               </div>
             </div>
@@ -500,6 +625,7 @@ export default function MailPage() {
                 <h1 className="text-xl font-semibold text-gray-900">DriftPro Mail</h1>
                 <p className="text-sm text-gray-500">
                   {userProfile?.name || userProfile?.username || 'Microsoft-konto'}
+                  {userProfile?.environment === 'smtp' && ' (SMTP)'}
                 </p>
               </div>
             </div>
@@ -696,8 +822,15 @@ export default function MailPage() {
                   <div className="flex items-center justify-center h-full text-gray-500">
                     <div className="text-center">
                       <Mail className="w-16 h-16 mx-auto mb-4 text-gray-300" />
-                      <p className="text-lg font-medium">Ingen e-poster</p>
-                      <p className="text-sm">Ingen e-poster funnet i denne mappen.</p>
+                      <p className="text-lg font-medium">
+                        {userProfile?.environment === 'smtp' ? 'SMTP-autentisering' : 'Ingen e-poster'}
+                      </p>
+                      <p className="text-sm">
+                        {userProfile?.environment === 'smtp' 
+                          ? 'E-postlesing er ikke tilgjengelig med SMTP-autentisering. Du kan sende e-poster ved å klikke på "Ny e-post".'
+                          : 'Ingen e-poster funnet i denne mappen.'
+                        }
+                      </p>
                     </div>
                   </div>
                 ) : (
@@ -1049,6 +1182,104 @@ export default function MailPage() {
               >
                 <Send className="w-4 h-4" />
                 <span>Send</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* SMTP Login Modal */}
+      {showSmtpLogin && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-2xl max-w-md w-full">
+            <div className="flex items-center justify-between p-6 border-b border-gray-200">
+              <h2 className="text-xl font-semibold text-gray-900">SMTP-innlogging</h2>
+              <button
+                onClick={() => {
+                  setShowSmtpLogin(false);
+                  setSmtpAuthError(null);
+                  setSmtpEmail('');
+                  setSmtpPassword('');
+                }}
+                className="p-2 rounded-lg hover:bg-gray-100"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">E-postadresse</label>
+                  <input
+                    type="email"
+                    value={smtpEmail}
+                    onChange={(e) => setSmtpEmail(e.target.value)}
+                    placeholder="Skriv inn e-postadressen som har App Password"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+                
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">App Password</label>
+                  <input
+                    type="password"
+                    value={smtpPassword}
+                    onChange={(e) => setSmtpPassword(e.target.value)}
+                    placeholder="Skriv inn App Password (ikke vanlig passord)"
+                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-green-500"
+                  />
+                </div>
+
+                {smtpAuthError && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-start space-x-2">
+                      <AlertTriangle className="w-4 h-4 text-red-600 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-red-800">{smtpAuthError}</p>
+                    </div>
+                  </div>
+                )}
+
+                <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                  <div className="flex items-start space-x-2">
+                    <Info className="w-4 h-4 text-green-600 mt-0.5 flex-shrink-0" />
+                    <div className="text-sm text-green-800">
+                      <p className="font-medium mb-1">SMTP-autentisering med App Password</p>
+                      <p>Skriv inn e-postadressen som har App Password og App Password-et selv. Dette fungerer selv med Security Defaults aktivert.</p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className="flex items-center justify-end p-6 border-t border-gray-200 space-x-3">
+              <button
+                onClick={() => {
+                  setShowSmtpLogin(false);
+                  setSmtpAuthError(null);
+                  setSmtpEmail('');
+                  setSmtpPassword('');
+                }}
+                className="px-4 py-2 text-gray-700 border border-gray-300 rounded-lg hover:bg-gray-50"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleSmtpSignIn}
+                disabled={!smtpEmail || !smtpPassword || isSmtpAuthenticating}
+                className="bg-green-600 hover:bg-green-700 disabled:bg-gray-400 text-white px-6 py-2 rounded-lg flex items-center space-x-2 transition-colors"
+              >
+                {isSmtpAuthenticating ? (
+                  <>
+                    <RefreshCw className="w-4 h-4 animate-spin" />
+                    <span>Logger inn...</span>
+                  </>
+                ) : (
+                  <>
+                    <Mail className="w-4 h-4" />
+                    <span>Logg inn</span>
+                  </>
+                )}
               </button>
             </div>
           </div>

@@ -7,8 +7,10 @@ import {
   addDoc,
   updateDoc,
   deleteDoc,
+  setDoc,
   query,
   where,
+  orderBy,
   getDocs,
   getDoc,
   writeBatch,
@@ -360,6 +362,10 @@ export interface Partner {
     model: string;
     euroClass: string;
     payload: string;
+    vehicleName?: string;
+    vehicleNumber?: string;
+    driverName?: string;
+    vehicleType?: 'company_car' | 'one_man' | 'two_man';
   }>;
   uploadedFiles?: Array<{
     name: string;
@@ -1789,6 +1795,7 @@ class FirebaseService {
     job?: string;
     users?: string[];
     companyId: string;
+    routeData?: any; // Added for permanent storage
   }): Promise<string> {
     if (!db) throw new Error('Firebase not initialized');
 
@@ -1796,7 +1803,9 @@ class FirebaseService {
       const docRef = await addDoc(collection(db, 'routeAssignments'), {
         ...assignmentData,
         createdAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
+        updatedAt: new Date().toISOString(),
+        // Store routeData for permanent storage if provided
+        ...(assignmentData.routeData && { routeData: assignmentData.routeData })
       });
 
       return docRef.id;
@@ -1846,6 +1855,7 @@ class FirebaseService {
     }
   }
 
+  // Delete route assignment
   async deleteRouteAssignment(assignmentId: string): Promise<void> {
     if (!db) throw new Error('Firebase not initialized');
 
@@ -1854,6 +1864,74 @@ class FirebaseService {
     } catch (error) {
       console.error('Error deleting route assignment:', error);
       throw error;
+    }
+  }
+
+  // Save planned routes for persistence
+  async savePlannedRoutes(companyId: string, routes: any[]): Promise<void> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      // Delete existing saved routes for this company
+      const existingRoutes = await this.getPlannedRoutes(companyId);
+      if (existingRoutes.length > 0) {
+        const batch = writeBatch(db);
+        existingRoutes.forEach(route => {
+          const routeRef = doc(db, 'plannedRoutes', route.id);
+          batch.delete(routeRef);
+        });
+        await batch.commit();
+      }
+
+      // Save new routes
+      const batch = writeBatch(db);
+      routes.forEach(route => {
+        const routeRef = doc(db, 'plannedRoutes', route.id);
+        
+        // Filter out undefined values to prevent Firebase errors
+        const cleanRoute = Object.fromEntries(
+          Object.entries(route).filter(([_, value]) => {
+            // Filter out undefined, null, and empty objects
+            if (value === undefined || value === null) return false;
+            if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+            return true;
+          })
+        );
+        
+        batch.set(routeRef, {
+          ...cleanRoute,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+      });
+      await batch.commit();
+
+    } catch (error) {
+      console.error('Error saving planned routes:', error);
+      throw error;
+    }
+  }
+
+  // Get saved planned routes
+  async getPlannedRoutes(companyId: string): Promise<any[]> {
+    if (!db) throw new Error('Firebase not initialized');
+
+    try {
+      const q = query(
+        collection(db, 'plannedRoutes'),
+        where('companyId', '==', companyId)
+      );
+      
+      const snapshot = await getDocs(q);
+      const routes = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+
+      return routes;
+    } catch (error) {
+      console.error('Error loading planned routes:', error);
+      return [];
     }
   }
 
@@ -2247,13 +2325,21 @@ class FirebaseService {
   }
 
   async getAudits(companyId: string): Promise<any[]> {
+    if (!db) throw new Error('Firebase not initialized');
+    
     const q = query(
       collection(db, 'audits'),
-      where('companyId', '==', companyId),
-      orderBy('scheduledDate', 'asc')
+      where('companyId', '==', companyId)
     );
     const snapshot = await getDocs(q);
-    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    const audits = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+    // Sort in JavaScript instead of Firestore to avoid index requirement
+    return audits.sort((a: any, b: any) => {
+      const dateA = new Date(a.scheduledDate).getTime();
+      const dateB = new Date(b.scheduledDate).getTime();
+      return dateA - dateB;
+    });
   }
 
   async updateAudit(auditId: string, updateData: Partial<any>): Promise<void> {
