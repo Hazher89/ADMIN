@@ -56,7 +56,6 @@ import {
   Activity,
   PieChart,
   GanttChart,
-  Timeline,
   Grid,
   List,
   Layout,
@@ -588,7 +587,7 @@ export default function AdvancedPlanningPage() {
   
   // UI state
   const [activeView, setActiveView] = useState<'map' | 'timeline' | 'gantt' | 'analytics'>('map');
-  const [selectedDate, setSelectedDate] = useState(new Date().toISOString().split('T')[0]);
+  const [selectedDate, setSelectedDate] = useState('');
   const [selectedDepot, setSelectedDepot] = useState<string>('all');
   const [selectedDriver, setSelectedDriver] = useState<string>('all');
   const [selectedRoute, setSelectedRoute] = useState<string>('');
@@ -645,8 +644,15 @@ export default function AdvancedPlanningPage() {
   
   // Real-time state
   const [realTimeEnabled, setRealTimeEnabled] = useState(true);
-  const [lastUpdate, setLastUpdate] = useState(new Date());
+  const [lastUpdate, setLastUpdate] = useState<Date | null>(null);
   
+  // Initialize date on client-side
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !selectedDate) {
+      setSelectedDate(new Date().toISOString().split('T')[0]);
+    }
+  }, []);
+
   // Load initial data
   useEffect(() => {
     loadInitialData();
@@ -1044,7 +1050,7 @@ export default function AdvancedPlanningPage() {
                       activeView === 'timeline' ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-600 hover:text-gray-900'
                     }`}
                   >
-                    <Timeline className="w-4 h-4 inline mr-2" />
+                    <Clock className="w-4 h-4 inline mr-2" />
                     Timeline
                   </button>
                   <button
