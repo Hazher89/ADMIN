@@ -435,69 +435,348 @@ export default function AdvancedPlanningPage() {
         </div>
       </div>
 
-      {/* Search and Filters */}
-      <div className="search-filters-section">
-        <div className="search-container">
-          <Search style={{ width: '20px', height: '20px' }} />
+      {/* Advanced Search and Filters */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+        borderRadius: '16px', 
+        padding: '2rem', 
+        marginBottom: '2rem',
+        boxShadow: '0 10px 30px rgba(102, 126, 234, 0.3)'
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1.5rem' }}>
+          <div style={{ 
+            background: 'rgba(255, 255, 255, 0.2)', 
+            borderRadius: '12px', 
+            padding: '0.75rem',
+            backdropFilter: 'blur(10px)',
+            border: '1px solid rgba(255, 255, 255, 0.3)'
+          }}>
+            <Search style={{ width: '20px', height: '20px', color: 'white' }} />
+          </div>
           <input
             type="text"
-            placeholder="Søk etter ordre, kunder, adresser..."
-            className="search-input"
+            placeholder="🔍 Søk etter ordre, kunder, adresser..."
+            style={{
+              flex: 1,
+              padding: '0.875rem 1.25rem',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'rgba(255, 255, 255, 0.95)',
+              fontSize: '1rem',
+              fontWeight: '500',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+              outline: 'none',
+              transition: 'all 0.3s ease'
+            }}
+            onFocus={(e) => {
+              e.target.style.transform = 'translateY(-2px)';
+              e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.15)';
+            }}
+            onBlur={(e) => {
+              e.target.style.transform = 'translateY(0)';
+              e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+            }}
           />
         </div>
-        <div className="filter-container">
-          <select className="filter-select">
-            <option value="all">Alle statuser</option>
-            <option value="pending">Ventende</option>
-            <option value="assigned">Tildelt</option>
-            <option value="in_progress">Pågående</option>
-            <option value="completed">Fullført</option>
-          </select>
-          <select className="filter-select">
-            <option value="all">Alle prioriteter</option>
-            <option value="high">Høy</option>
-            <option value="medium">Medium</option>
-            <option value="low">Lav</option>
-          </select>
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="filter-select"
-          />
+        
+        <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+          {/* Status Filter */}
+          <div style={{ position: 'relative' }}>
+            <select style={{
+              padding: '0.875rem 1.5rem 0.875rem 3rem',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'rgba(255, 255, 255, 0.95)',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              color: '#374151',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+              cursor: 'pointer',
+              appearance: 'none',
+              transition: 'all 0.3s ease',
+              minWidth: '160px'
+            }}>
+              <option value="all">📊 Alle statuser</option>
+              <option value="pending">⏳ Ventende</option>
+              <option value="assigned">✅ Tildelt</option>
+              <option value="in_progress">🚀 Pågående</option>
+              <option value="completed">🎯 Fullført</option>
+            </select>
+            <div style={{
+              position: 'absolute',
+              left: '1rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none'
+            }}>
+              <CheckCircle style={{ width: '18px', height: '18px', color: '#10b981' }} />
+            </div>
+          </div>
+
+          {/* Priority Filter */}
+          <div style={{ position: 'relative' }}>
+            <select style={{
+              padding: '0.875rem 1.5rem 0.875rem 3rem',
+              borderRadius: '12px',
+              border: 'none',
+              background: 'rgba(255, 255, 255, 0.95)',
+              fontSize: '0.95rem',
+              fontWeight: '600',
+              color: '#374151',
+              boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+              cursor: 'pointer',
+              appearance: 'none',
+              transition: 'all 0.3s ease',
+              minWidth: '160px'
+            }}>
+              <option value="all">⚡ Alle prioriteter</option>
+              <option value="high">🔴 Høy prioritet</option>
+              <option value="medium">🟡 Medium prioritet</option>
+              <option value="low">🟢 Lav prioritet</option>
+            </select>
+            <div style={{
+              position: 'absolute',
+              left: '1rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none'
+            }}>
+              <AlertTriangle style={{ width: '18px', height: '18px', color: '#f59e0b' }} />
+            </div>
+          </div>
+
+          {/* Date Filter */}
+          <div style={{ position: 'relative' }}>
+            <input
+              type="date"
+              value={selectedDate}
+              onChange={(e) => setSelectedDate(e.target.value)}
+              style={{
+                padding: '0.875rem 1.5rem 0.875rem 3rem',
+                borderRadius: '12px',
+                border: 'none',
+                background: 'rgba(255, 255, 255, 0.95)',
+                fontSize: '0.95rem',
+                fontWeight: '600',
+                color: '#374151',
+                boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
+                cursor: 'pointer',
+                transition: 'all 0.3s ease',
+                minWidth: '160px'
+              }}
+            />
+            <div style={{
+              position: 'absolute',
+              left: '1rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              pointerEvents: 'none'
+            }}>
+              <Calendar style={{ width: '18px', height: '18px', color: '#8b5cf6' }} />
+            </div>
+          </div>
+
+          {/* Filter Reset Button */}
+          <button style={{
+            padding: '0.875rem 1.5rem',
+            borderRadius: '12px',
+            border: 'none',
+            background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
+            color: 'white',
+            fontSize: '0.95rem',
+            fontWeight: '600',
+            cursor: 'pointer',
+            boxShadow: '0 4px 15px rgba(255, 107, 107, 0.3)',
+            transition: 'all 0.3s ease',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}>
+            <RefreshCw style={{ width: '18px', height: '18px' }} />
+            Tilbakestill
+          </button>
         </div>
       </div>
 
-      {/* View Tabs */}
-      <div style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', gap: '0.5rem', borderBottom: '1px solid #e5e7eb' }}>
+      {/* Advanced View Tabs */}
+      <div style={{ 
+        marginBottom: '2rem',
+        background: 'linear-gradient(135deg, #f093fb 0%, #f5576c 100%)',
+        borderRadius: '20px',
+        padding: '1rem',
+        boxShadow: '0 10px 30px rgba(245, 87, 108, 0.3)'
+      }}>
+        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
           <button
             onClick={() => setActiveView('map')}
-            className={`tab-button ${activeView === 'map' ? 'active' : ''}`}
+            style={{
+              padding: '1rem 2rem',
+              borderRadius: '16px',
+              border: 'none',
+              background: activeView === 'map' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                : 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: activeView === 'map' 
+                ? '0 8px 25px rgba(102, 126, 234, 0.4)' 
+                : '0 4px 15px rgba(0, 0, 0, 0.1)',
+              transform: activeView === 'map' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+            onMouseEnter={(e) => {
+              if (activeView !== 'map') {
+                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeView !== 'map') {
+                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+              }
+            }}
           >
-            <Map style={{ width: '16px', height: '16px' }} />
-            Kart
+            <Map style={{ width: '20px', height: '20px' }} />
+            <span>🗺️ Kart</span>
           </button>
+          
           <button
             onClick={() => setActiveView('timeline')}
-            className={`tab-button ${activeView === 'timeline' ? 'active' : ''}`}
+            style={{
+              padding: '1rem 2rem',
+              borderRadius: '16px',
+              border: 'none',
+              background: activeView === 'timeline' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                : 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: activeView === 'timeline' 
+                ? '0 8px 25px rgba(102, 126, 234, 0.4)' 
+                : '0 4px 15px rgba(0, 0, 0, 0.1)',
+              transform: activeView === 'timeline' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+            onMouseEnter={(e) => {
+              if (activeView !== 'timeline') {
+                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeView !== 'timeline') {
+                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+              }
+            }}
           >
-            <Clock style={{ width: '16px', height: '16px' }} />
-            Tidslinje
+            <Clock style={{ width: '20px', height: '20px' }} />
+            <span>⏰ Tidslinje</span>
           </button>
+          
           <button
             onClick={() => setActiveView('gantt')}
-            className={`tab-button ${activeView === 'gantt' ? 'active' : ''}`}
+            style={{
+              padding: '1rem 2rem',
+              borderRadius: '16px',
+              border: 'none',
+              background: activeView === 'gantt' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                : 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: activeView === 'gantt' 
+                ? '0 8px 25px rgba(102, 126, 234, 0.4)' 
+                : '0 4px 15px rgba(0, 0, 0, 0.1)',
+              transform: activeView === 'gantt' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+            onMouseEnter={(e) => {
+              if (activeView !== 'gantt') {
+                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeView !== 'gantt') {
+                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+              }
+            }}
           >
-            <GanttChart style={{ width: '16px', height: '16px' }} />
-            Gantt
+            <GanttChart style={{ width: '20px', height: '20px' }} />
+            <span>📊 Gantt</span>
           </button>
+          
           <button
             onClick={() => setActiveView('analytics')}
-            className={`tab-button ${activeView === 'analytics' ? 'active' : ''}`}
+            style={{
+              padding: '1rem 2rem',
+              borderRadius: '16px',
+              border: 'none',
+              background: activeView === 'analytics' 
+                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
+                : 'rgba(255, 255, 255, 0.2)',
+              color: 'white',
+              fontSize: '1rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.75rem',
+              transition: 'all 0.3s ease',
+              backdropFilter: 'blur(10px)',
+              border: '1px solid rgba(255, 255, 255, 0.3)',
+              boxShadow: activeView === 'analytics' 
+                ? '0 8px 25px rgba(102, 126, 234, 0.4)' 
+                : '0 4px 15px rgba(0, 0, 0, 0.1)',
+              transform: activeView === 'analytics' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+            onMouseEnter={(e) => {
+              if (activeView !== 'analytics') {
+                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
+                e.target.style.transform = 'translateY(-2px)';
+                e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeView !== 'analytics') {
+                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
+                e.target.style.transform = 'translateY(0)';
+                e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+              }
+            }}
           >
-            <BarChart3 style={{ width: '16px', height: '16px' }} />
-            Analyse
+            <BarChart3 style={{ width: '20px', height: '20px' }} />
+            <span>📈 Analyse</span>
           </button>
         </div>
       </div>
