@@ -7,6 +7,10 @@
   NODE_VERSION = "18"
   NEXT_PUBLIC_APP_URL = "https://admin.driftpro.no"
 
+# Disable secrets scanning for expected environment variables
+[build]
+  secrets_scan_omit_keys = ["NEXT_PUBLIC_MICROSOFT_CLIENT_ID", "NEXT_PUBLIC_MICROSOFT_TENANT_ID", "NEXT_PUBLIC_MICROSOFT_REDIRECT_URI"]
+
 [[plugins]]
   package = "@netlify/plugin-nextjs"
 
