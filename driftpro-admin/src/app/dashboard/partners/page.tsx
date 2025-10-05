@@ -99,6 +99,8 @@ export default function PartnersPage() {
     vehicleName?: string;
     vehicleNumber?: string;
     driverName?: string;
+    driverEmail?: string;
+    driverPhone?: string;
     vehicleType?: 'company_car' | 'one_man' | 'two_man';
   }>>([]);
   
@@ -178,6 +180,8 @@ export default function PartnersPage() {
     vehicleName?: string;
     vehicleNumber?: string;
     driverName?: string;
+    driverEmail?: string;
+    driverPhone?: string;
     vehicleType?: 'company_car' | 'one_man' | 'two_man';
   }>>([]);
   const [editingFiles, setEditingFiles] = useState<File[]>([]);
@@ -370,6 +374,58 @@ export default function PartnersPage() {
     return Promise.all(uploadPromises);
   };
 
+  const createDriverUser = async (vehicle: any, partnerId: string, partnerName: string) => {
+    if (!vehicle.driverName || !vehicle.driverName.trim()) {
+      return; // Skip if no driver name provided
+    }
+
+    try {
+      // Generate email and phone from driver name if not provided
+      const driverEmail = vehicle.driverEmail || `${vehicle.driverName.toLowerCase().replace(/\s+/g, '.')}@${partnerName.toLowerCase().replace(/\s+/g, '')}.no`;
+      const driverPhone = vehicle.driverPhone || '+47 123 45 678'; // Default phone
+
+      // Generate a temporary password
+      const tempPassword = Math.random().toString(36).slice(-8) + '123';
+
+      // Create Firebase Auth user
+      const { createUserWithEmailAndPassword } = await import('firebase/auth');
+      const { auth } = await import('@/lib/firebase');
+      
+      const userCredential = await createUserWithEmailAndPassword(auth, driverEmail, tempPassword);
+      const userId = userCredential.user.uid;
+
+      // Create user document in Firestore
+      const { doc, setDoc } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      const userData = {
+        id: userId,
+        name: vehicle.driverName,
+        email: driverEmail,
+        phone: driverPhone,
+        role: 'driver',
+        companyId: userProfile?.companyId || '',
+        companyName: partnerName,
+        vehicleId: vehicle.registrationNumber || `VEH-${Date.now()}`,
+        vehicleName: vehicle.vehicleName || vehicle.model || 'Ukjent kjøretøy',
+        status: 'active',
+        createdAt: new Date().toISOString(),
+        tempPassword: tempPassword, // Store temp password for admin reference
+        partnerId: partnerId
+      };
+
+      await setDoc(doc(db, 'users', userId), userData);
+
+      console.log(`✅ Driver user created: ${vehicle.driverName} (${driverEmail})`);
+      return userData;
+
+    } catch (error) {
+      console.error(`❌ Error creating driver user for ${vehicle.driverName}:`, error);
+      // Don't throw error to prevent partner creation from failing
+      return null;
+    }
+  };
+
   const handleCreatePartner = async () => {
     if (!userProfile?.companyId) {
       setError('Mangler bedrifts-ID');
@@ -399,6 +455,22 @@ export default function PartnersPage() {
       };
       
       const partnerId = await firebaseService.createPartner(partnerData);
+      
+      // Create driver users for vehicles with driver names
+      const driverCreationPromises = vehicles
+        .filter(vehicle => vehicle.driverName && vehicle.driverName.trim())
+        .map(vehicle => createDriverUser(vehicle, partnerId, newPartner.name));
+      
+      if (driverCreationPromises.length > 0) {
+        try {
+          const createdDrivers = await Promise.all(driverCreationPromises);
+          const successfulDrivers = createdDrivers.filter(driver => driver !== null);
+          console.log(`✅ Created ${successfulDrivers.length} driver users for partner ${newPartner.name}`);
+        } catch (driverError) {
+          console.error('Error creating driver users:', driverError);
+          // Don't fail partner creation if driver creation fails
+        }
+      }
       
       // Upload files if any
       let uploadedFileData: any[] = [];
@@ -2612,7 +2684,7 @@ export default function PartnersPage() {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1rem' }}>
                       <div>
                         <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
-                          Sjåfør navn
+                          Sjåfør navn *
                         </label>
                         <input
                           type="text"
@@ -2653,6 +2725,69 @@ export default function PartnersPage() {
                         </select>
                       </div>
                     </div>
+                    
+                    {/* Row 4 - Driver Contact Info */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem', marginTop: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Sjåfør e-post
+                        </label>
+                        <input
+                          type="email"
+                          placeholder="john.hansen@partner.no"
+                          value={vehicle.driverEmail || ''}
+                          onChange={(e) => updateVehicle(index, 'driverEmail', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      
+                      <div>
+                        <label style={{ display: 'block', marginBottom: '0.25rem', fontWeight: '500', color: 'var(--gray-700)', fontSize: 'var(--font-size-sm)' }}>
+                          Sjåfør telefon
+                        </label>
+                        <input
+                          type="tel"
+                          placeholder="+47 123 45 678"
+                          value={vehicle.driverPhone || ''}
+                          onChange={(e) => updateVehicle(index, 'driverPhone', e.target.value)}
+                          style={{
+                            width: '100%',
+                            padding: '0.5rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-sm)',
+                            fontSize: 'var(--font-size-sm)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+                    
+                    {/* Driver Creation Info */}
+                    {vehicle.driverName && vehicle.driverName.trim() && (
+                      <div style={{
+                        marginTop: '1rem',
+                        padding: '0.75rem',
+                        backgroundColor: '#f0f9ff',
+                        border: '1px solid #0ea5e9',
+                        borderRadius: 'var(--radius-sm)',
+                        fontSize: 'var(--font-size-sm)'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <div style={{ width: '16px', height: '16px', backgroundColor: '#0ea5e9', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontSize: '10px' }}>i</div>
+                          <strong style={{ color: '#0369a1' }}>Sjåfør-konto vil bli opprettet automatisk</strong>
+                        </div>
+                        <p style={{ color: '#0369a1', margin: 0, fontSize: 'var(--font-size-xs)' }}>
+                          Når du lagrer partneren, vil en sjåfør-konto bli opprettet for {vehicle.driverName} med tilgang til DriftPro Driver appen.
+                        </p>
+                      </div>
+                    )}
                   </div>
                 ))}
                 
