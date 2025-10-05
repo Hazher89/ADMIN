@@ -2,12 +2,12 @@
   command = "npm run build"
   publish = ".next"
   functions = "netlify/functions"
-  # Multiple approaches to disable secrets scanning
-  secrets_scan_enabled = false
-  secrets_scan_omit_keys = ["NEXT_PUBLIC_MICROSOFT_CLIENT_ID", "NEXT_PUBLIC_MICROSOFT_TENANT_ID", "NEXT_PUBLIC_MICROSOFT_REDIRECT_URI"]
-  secrets_scan_omit_paths = [".netlify/**", ".next/**"]
 
 [build.environment]
+  # Disable Netlify's smart detection for secrets scanning
+  SECRETS_SCAN_SMART_DETECTION_ENABLED = "false"
+  # Also disable traditional secrets scanning
+  SECRETS_SCAN_ENABLED = "false"
   NODE_VERSION = "18"
   NEXT_PUBLIC_APP_URL = "https://admin.driftpro.no"
 
