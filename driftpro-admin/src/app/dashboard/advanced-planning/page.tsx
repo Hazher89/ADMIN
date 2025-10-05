@@ -797,33 +797,33 @@ export default function AdvancedPlanningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-900">
       {/* Header */}
-      <div className="bg-white shadow-sm border-b">
+      <div className="bg-gray-800 shadow-lg border-b border-gray-700">
         <div className="px-6 py-4">
           <div className="flex items-center justify-between">
             <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-lg flex items-center justify-center">
-                <Navigation className="w-6 h-6 text-white" />
+              <div className="w-12 h-12 bg-gradient-to-br from-blue-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+                <Navigation className="w-7 h-7 text-white" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Advanced Route Planning</h1>
-                <p className="text-sm text-gray-500">eLogii-inspired optimization platform</p>
+                <h1 className="text-3xl font-bold text-white">Advanced Route Planning</h1>
+                <p className="text-sm text-gray-300">eLogii-inspired optimization platform</p>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
-                <span className="text-sm text-gray-600">
-                  {realTimeEnabled ? 'Real-time' : 'Offline'}
+            <div className="flex items-center space-x-6">
+              <div className="flex items-center space-x-3 bg-gray-700 px-4 py-2 rounded-lg">
+                <div className="w-3 h-3 bg-green-400 rounded-full animate-pulse shadow-lg"></div>
+                <span className="text-sm text-gray-200 font-medium">
+                  {realTimeEnabled ? 'Real-time Active' : 'Offline Mode'}
                 </span>
               </div>
               <button
                 onClick={() => setRealTimeEnabled(!realTimeEnabled)}
-                className="p-2 text-gray-400 hover:text-gray-600"
+                className="p-3 bg-gray-700 hover:bg-gray-600 rounded-lg transition-colors"
               >
-                {realTimeEnabled ? <Wifi className="w-5 h-5" /> : <WifiOff className="w-5 h-5" />}
+                {realTimeEnabled ? <Wifi className="w-5 h-5 text-green-400" /> : <WifiOff className="w-5 h-5 text-gray-400" />}
               </button>
             </div>
           </div>
@@ -833,88 +833,96 @@ export default function AdvancedPlanningPage() {
       {/* Main Content */}
       <div className="flex h-screen">
         {/* Sidebar */}
-        <div className="w-80 bg-white shadow-sm border-r flex flex-col">
+        <div className="w-80 bg-gray-800 shadow-xl border-r border-gray-700 flex flex-col">
           {/* Quick Stats */}
-          <div className="p-4 border-b">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">Quick Stats</h3>
-            <div className="grid grid-cols-2 gap-3">
-              <div className="bg-blue-50 p-3 rounded-lg">
+          <div className="p-6 border-b border-gray-700">
+            <h3 className="text-xl font-bold text-white mb-4">Quick Stats</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-gradient-to-br from-blue-600 to-blue-700 p-4 rounded-xl shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Total Tasks</p>
-                    <p className="text-2xl font-bold text-blue-600">{tasks.length}</p>
+                    <p className="text-sm text-blue-100">Total Tasks</p>
+                    <p className="text-3xl font-bold text-white">{tasks.length}</p>
                   </div>
-                  <Package className="w-8 h-8 text-blue-600" />
+                  <Package className="w-10 h-10 text-blue-200" />
                 </div>
               </div>
-              <div className="bg-green-50 p-3 rounded-lg">
+              <div className="bg-gradient-to-br from-green-600 to-green-700 p-4 rounded-xl shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Active Routes</p>
-                    <p className="text-2xl font-bold text-green-600">{routes.length}</p>
+                    <p className="text-sm text-green-100">Active Routes</p>
+                    <p className="text-3xl font-bold text-white">{routes.length}</p>
                   </div>
-                  <Route className="w-8 h-8 text-green-600" />
+                  <Route className="w-10 h-10 text-green-200" />
                 </div>
               </div>
-              <div className="bg-purple-50 p-3 rounded-lg">
+              <div className="bg-gradient-to-br from-purple-600 to-purple-700 p-4 rounded-xl shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Drivers</p>
-                    <p className="text-2xl font-bold text-purple-600">{drivers.length}</p>
+                    <p className="text-sm text-purple-100">Drivers</p>
+                    <p className="text-3xl font-bold text-white">{drivers.length}</p>
                   </div>
-                  <Truck className="w-8 h-8 text-purple-600" />
+                  <Truck className="w-10 h-10 text-purple-200" />
                 </div>
               </div>
-              <div className="bg-orange-50 p-3 rounded-lg">
+              <div className="bg-gradient-to-br from-orange-600 to-orange-700 p-4 rounded-xl shadow-lg">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-gray-600">Completion</p>
-                    <p className="text-2xl font-bold text-orange-600">87%</p>
+                    <p className="text-sm text-orange-100">Completion</p>
+                    <p className="text-3xl font-bold text-white">87%</p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-orange-600" />
+                  <TrendingUp className="w-10 h-10 text-orange-200" />
                 </div>
               </div>
             </div>
           </div>
 
           {/* View Controls */}
-          <div className="p-4 border-b">
-            <h3 className="text-lg font-semibold text-gray-900 mb-3">View Mode</h3>
-            <div className="space-y-2">
+          <div className="p-6 border-b border-gray-700">
+            <h3 className="text-xl font-bold text-white mb-4">View Mode</h3>
+            <div className="space-y-3">
               <button
                 onClick={() => setActiveView('map')}
-                className={`w-full flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'map' ? 'bg-blue-100 text-blue-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  activeView === 'map' 
+                    ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg transform scale-105' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
                 }`}
               >
-                <Map className="w-4 h-4 mr-3" />
+                <Map className="w-5 h-5 mr-3" />
                 Map View
               </button>
               <button
                 onClick={() => setActiveView('timeline')}
-                className={`w-full flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'timeline' ? 'bg-blue-100 text-blue-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  activeView === 'timeline' 
+                    ? 'bg-gradient-to-r from-green-500 to-green-600 text-white shadow-lg transform scale-105' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
                 }`}
               >
-                <Clock className="w-4 h-4 mr-3" />
+                <Clock className="w-5 h-5 mr-3" />
                 Timeline
               </button>
               <button
                 onClick={() => setActiveView('gantt')}
-                className={`w-full flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'gantt' ? 'bg-blue-100 text-blue-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  activeView === 'gantt' 
+                    ? 'bg-gradient-to-r from-purple-500 to-purple-600 text-white shadow-lg transform scale-105' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
                 }`}
               >
-                <GanttChart className="w-4 h-4 mr-3" />
+                <GanttChart className="w-5 h-5 mr-3" />
                 Gantt Chart
               </button>
               <button
                 onClick={() => setActiveView('analytics')}
-                className={`w-full flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors ${
-                  activeView === 'analytics' ? 'bg-blue-100 text-blue-900' : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                className={`w-full flex items-center px-4 py-3 rounded-xl text-sm font-semibold transition-all duration-200 ${
+                  activeView === 'analytics' 
+                    ? 'bg-gradient-to-r from-orange-500 to-orange-600 text-white shadow-lg transform scale-105' 
+                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600 hover:text-white'
                 }`}
               >
-                <BarChart3 className="w-4 h-4 mr-3" />
+                <BarChart3 className="w-5 h-5 mr-3" />
                 Analytics
               </button>
             </div>
@@ -1060,26 +1068,87 @@ export default function AdvancedPlanningPage() {
           </div>
 
           {/* Content Area */}
-          <div className="flex-1 p-6 overflow-auto">
+          <div className="flex-1 overflow-hidden">
             {activeView === 'map' && (
-              <div className="h-full">
-                <div className="bg-white rounded-lg shadow-sm border h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Map className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Interactive Map View</h3>
-                    <p className="text-gray-600 mb-4">Real-time route visualization with live driver tracking</p>
-                    <div className="grid grid-cols-3 gap-4 max-w-md mx-auto">
-                      <div className="bg-blue-50 p-3 rounded-lg">
-                        <div className="text-2xl font-bold text-blue-600">{tasks.length}</div>
-                        <div className="text-sm text-gray-600">Tasks</div>
+              <div className="h-full bg-gradient-to-br from-gray-800 to-gray-900 relative">
+                {/* Map Header */}
+                <div className="absolute top-0 left-0 right-0 bg-gray-800/90 backdrop-blur-sm border-b border-gray-700 z-10">
+                  <div className="px-6 py-4">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <h2 className="text-2xl font-bold text-white">Interactive Map View</h2>
+                        <p className="text-gray-300">Real-time route visualization with live driver tracking</p>
                       </div>
-                      <div className="bg-green-50 p-3 rounded-lg">
-                        <div className="text-2xl font-bold text-green-600">{routes.length}</div>
-                        <div className="text-sm text-gray-600">Routes</div>
+                      <div className="flex items-center space-x-4">
+                        <div className="bg-green-600 px-4 py-2 rounded-lg">
+                          <span className="text-white font-semibold">Live Tracking</span>
+                        </div>
+                        <div className="bg-blue-600 px-4 py-2 rounded-lg">
+                          <span className="text-white font-semibold">{drivers.length} Drivers Active</span>
+                        </div>
                       </div>
-                      <div className="bg-purple-50 p-3 rounded-lg">
-                        <div className="text-2xl font-bold text-purple-600">{drivers.length}</div>
-                        <div className="text-sm text-gray-600">Drivers</div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Map Content */}
+                <div className="pt-20 h-full">
+                  <div className="h-full bg-gradient-to-br from-blue-900 via-blue-800 to-purple-900 relative overflow-hidden">
+                    {/* Simulated Map Background */}
+                    <div className="absolute inset-0 opacity-20">
+                      <div className="absolute top-10 left-10 w-4 h-4 bg-green-400 rounded-full animate-pulse"></div>
+                      <div className="absolute top-32 left-24 w-4 h-4 bg-red-400 rounded-full animate-pulse"></div>
+                      <div className="absolute top-48 left-16 w-4 h-4 bg-yellow-400 rounded-full animate-pulse"></div>
+                      <div className="absolute top-64 left-40 w-4 h-4 bg-blue-400 rounded-full animate-pulse"></div>
+                      <div className="absolute top-20 right-20 w-4 h-4 bg-purple-400 rounded-full animate-pulse"></div>
+                      <div className="absolute top-40 right-32 w-4 h-4 bg-pink-400 rounded-full animate-pulse"></div>
+                      
+                      {/* Route Lines */}
+                      <svg className="absolute inset-0 w-full h-full">
+                        <line x1="40" y1="40" x2="160" y2="128" stroke="#10B981" strokeWidth="3" strokeDasharray="5,5" className="animate-pulse"/>
+                        <line x1="96" y2="192" x2="320" y2="80" stroke="#EF4444" strokeWidth="3" strokeDasharray="5,5" className="animate-pulse"/>
+                        <line x2="64" y1="192" x2="160" y2="256" stroke="#F59E0B" strokeWidth="3" strokeDasharray="5,5" className="animate-pulse"/>
+                      </svg>
+                    </div>
+
+                    {/* Map Controls */}
+                    <div className="absolute top-6 right-6 bg-gray-800/90 backdrop-blur-sm rounded-xl p-4 shadow-xl">
+                      <div className="space-y-3">
+                        <button className="w-full bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors">
+                          <Navigation className="w-4 h-4 inline mr-2" />
+                          Center Map
+                        </button>
+                        <button className="w-full bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors">
+                          <Users className="w-4 h-4 inline mr-2" />
+                          Show Drivers
+                        </button>
+                        <button className="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-2 rounded-lg font-semibold transition-colors">
+                          <Route className="w-4 h-4 inline mr-2" />
+                          Show Routes
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Live Stats Overlay */}
+                    <div className="absolute bottom-6 left-6 bg-gray-800/90 backdrop-blur-sm rounded-xl p-6 shadow-xl">
+                      <h3 className="text-lg font-bold text-white mb-4">Live Statistics</h3>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-blue-400">{tasks.length}</div>
+                          <div className="text-sm text-gray-300">Active Tasks</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-green-400">{routes.length}</div>
+                          <div className="text-sm text-gray-300">Active Routes</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-purple-400">{drivers.length}</div>
+                          <div className="text-sm text-gray-300">Online Drivers</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold text-orange-400">94.5%</div>
+                          <div className="text-sm text-gray-300">Optimization</div>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -1088,24 +1157,91 @@ export default function AdvancedPlanningPage() {
             )}
 
             {activeView === 'timeline' && (
-              <div className="h-full">
-                <div className="bg-white rounded-lg shadow-sm border h-full flex items-center justify-center">
-                  <div className="text-center">
-                    <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-                    <h3 className="text-lg font-semibold text-gray-900 mb-2">Timeline View</h3>
-                    <p className="text-gray-600 mb-4">Schedule optimization with time-window constraints</p>
-                    <div className="space-y-2 max-w-md mx-auto">
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium">Morning Routes</span>
-                        <span className="text-sm text-gray-600">08:00 - 12:00</span>
+              <div className="h-full bg-gradient-to-br from-gray-800 to-gray-900">
+                {/* Timeline Header */}
+                <div className="bg-gray-800/90 backdrop-blur-sm border-b border-gray-700 p-6">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h2 className="text-2xl font-bold text-white">Timeline View</h2>
+                      <p className="text-gray-300">Schedule optimization with time-window constraints</p>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="bg-green-600 px-4 py-2 rounded-lg">
+                        <span className="text-white font-semibold">Live Schedule</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium">Afternoon Routes</span>
-                        <span className="text-sm text-gray-600">13:00 - 17:00</span>
+                      <div className="bg-blue-600 px-4 py-2 rounded-lg">
+                        <span className="text-white font-semibold">Auto-Optimized</span>
                       </div>
-                      <div className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
-                        <span className="text-sm font-medium">Evening Routes</span>
-                        <span className="text-sm text-gray-600">17:00 - 20:00</span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Timeline Content */}
+                <div className="p-6 h-full overflow-auto">
+                  <div className="space-y-6">
+                    {/* Morning Routes */}
+                    <div className="bg-gradient-to-r from-blue-900 to-blue-800 rounded-xl p-6 shadow-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-bold text-white">Morning Routes</h3>
+                        <span className="bg-blue-600 text-white px-3 py-1 rounded-lg text-sm font-semibold">08:00 - 12:00</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-blue-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-200">15</div>
+                          <div className="text-sm text-blue-100">Tasks</div>
+                        </div>
+                        <div className="bg-blue-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-200">3</div>
+                          <div className="text-sm text-blue-100">Routes</div>
+                        </div>
+                        <div className="bg-blue-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-blue-200">92%</div>
+                          <div className="text-sm text-blue-100">Efficiency</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Afternoon Routes */}
+                    <div className="bg-gradient-to-r from-green-900 to-green-800 rounded-xl p-6 shadow-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-bold text-white">Afternoon Routes</h3>
+                        <span className="bg-green-600 text-white px-3 py-1 rounded-lg text-sm font-semibold">13:00 - 17:00</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-green-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-green-200">22</div>
+                          <div className="text-sm text-green-100">Tasks</div>
+                        </div>
+                        <div className="bg-green-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-green-200">4</div>
+                          <div className="text-sm text-green-100">Routes</div>
+                        </div>
+                        <div className="bg-green-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-green-200">88%</div>
+                          <div className="text-sm text-green-100">Efficiency</div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Evening Routes */}
+                    <div className="bg-gradient-to-r from-purple-900 to-purple-800 rounded-xl p-6 shadow-xl">
+                      <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-xl font-bold text-white">Evening Routes</h3>
+                        <span className="bg-purple-600 text-white px-3 py-1 rounded-lg text-sm font-semibold">17:00 - 20:00</span>
+                      </div>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="bg-purple-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-purple-200">8</div>
+                          <div className="text-sm text-purple-100">Tasks</div>
+                        </div>
+                        <div className="bg-purple-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-purple-200">2</div>
+                          <div className="text-sm text-purple-100">Routes</div>
+                        </div>
+                        <div className="bg-purple-700/50 p-4 rounded-lg">
+                          <div className="text-2xl font-bold text-purple-200">95%</div>
+                          <div className="text-sm text-purple-100">Efficiency</div>
+                        </div>
                       </div>
                     </div>
                   </div>
