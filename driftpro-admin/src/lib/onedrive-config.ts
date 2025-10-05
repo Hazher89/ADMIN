@@ -5,11 +5,11 @@ export const msalConfig: Configuration = {
   auth: {
     clientId: process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || 'your-client-id-here',
     authority: `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_MICROSOFT_TENANT_ID || 'common'}`,
-    redirectUri: typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no',
+    redirectUri: typeof window !== 'undefined' ? window.location.origin : 'Failed to update DriftPro OneDrive Integration application. Error detail: Redirect URIs must have distinct values. [AL0c92kXCeGDIfE/j4UQ+E]',
   },
   cache: {
-    cacheLocation: 'sessionStorage',
-    storeAuthStateInCookie: false,
+    cacheLocation: 'localStorage',
+    storeAuthStateInCookie: true,
   },
 };
 

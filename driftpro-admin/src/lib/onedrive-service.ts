@@ -90,6 +90,43 @@ export class OneDriveService {
     }
   }
 
+  // Sjekk og forny token automatisk
+  async ensureValidToken(): Promise<boolean> {
+    try {
+      await this.initialize();
+      
+      const account = msalInstance.getActiveAccount();
+      if (!account) {
+        return false;
+      }
+
+      // Prøv å hente token i stillhet
+      try {
+        await msalInstance.acquireTokenSilent({
+          scopes: graphScopes,
+          account: account,
+        });
+        return true;
+      } catch (error) {
+        // Token er utløpt, prøv å forny
+        console.log('Token expired, attempting to renew...');
+        try {
+          await msalInstance.acquireTokenPopup({
+            scopes: graphScopes,
+            account: account,
+          });
+          return true;
+        } catch (renewError) {
+          console.error('Failed to renew token:', renewError);
+          return false;
+        }
+      }
+    } catch (error) {
+      console.error('Error ensuring valid token:', error);
+      return false;
+    }
+  }
+
   // Hent aktiv bruker
   getActiveAccount(): AccountInfo | null {
     try {

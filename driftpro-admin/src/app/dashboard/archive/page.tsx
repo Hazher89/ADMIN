@@ -127,6 +127,13 @@ export default function ArchivePage() {
   };
 
   const loadFolderContents = async (folderPath: string = '') => {
+    // Sjekk og forny token først
+    const hasValidToken = await oneDriveService.ensureValidToken();
+    if (!hasValidToken) {
+      setError('❌ Du må være logget inn for å se filer');
+      return;
+    }
+
     setIsLoading(true);
     try {
       const files = await oneDriveService.getFilesInFolder(folderPath);
@@ -142,6 +149,13 @@ export default function ArchivePage() {
   const handleSearch = async () => {
     if (!searchQuery.trim()) {
       setSearchResults([]);
+      return;
+    }
+
+    // Sjekk og forny token først
+    const hasValidToken = await oneDriveService.ensureValidToken();
+    if (!hasValidToken) {
+      setError('❌ Du må være logget inn for å søke');
       return;
     }
 
@@ -204,6 +218,13 @@ export default function ArchivePage() {
   };
 
   const handleDownload = async (file: MockFile) => {
+    // Sjekk og forny token først
+    const hasValidToken = await oneDriveService.ensureValidToken();
+    if (!hasValidToken) {
+      setError('❌ Du må være logget inn for å laste ned filer');
+      return;
+    }
+
     try {
       const blob = await oneDriveService.downloadFile(file.id);
       const url = window.URL.createObjectURL(blob);
@@ -371,50 +392,62 @@ export default function ArchivePage() {
   // Main archive application UI - Standard dashboard layout
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Page Header */}
-      <div className="bg-white shadow-sm border-b border-gray-200">
-        <div className="px-6 py-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
-                <FolderOpen className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h1 className="text-2xl font-semibold text-gray-900">OneDrive Arkiv</h1>
-                <p className="text-sm text-gray-500">
-                  {activeAccount?.name || activeAccount?.username || 'Microsoft-konto'}
-                </p>
-              </div>
-            </div>
+      {/* Page Header - Using same CSS classes as employees page */}
+      <div className="page-header">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="page-title">📁 OneDrive Arkiv</h1>
+            <p className="page-subtitle">
+              {activeAccount?.name || activeAccount?.username || 'Microsoft-konto'} • Administrer og arkiver dokumenter
+            </p>
+          </div>
+          <div className="flex items-center space-x-3">
+            <button
+              onClick={() => loadFolderContents()}
+              disabled={isLoading}
+              className="btn btn-secondary"
+              title="Oppdater"
+            >
+              <RefreshCw className={`w-4 h-4 mr-2 ${isLoading ? 'animate-spin' : ''}`} />
+              Oppdater
+            </button>
             
-            <div className="flex items-center space-x-3">
-              <button
-                onClick={() => loadFolderContents()}
-                disabled={isLoading}
-                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center space-x-2"
-                title="Oppdater"
-              >
-                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
-                <span>Oppdater</span>
+            <div className="relative">
+              <button className="btn btn-secondary">
+                <User className="w-4 h-4 mr-2" />
+                Konto
               </button>
-              
-              <div className="relative">
-                <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
-                  <User className="w-4 h-4" />
-                  <span>Konto</span>
+              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Logg ut</span>
                 </button>
-                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                  <button
-                    onClick={handleLogout}
-                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                  >
-                    <LogOut className="w-4 h-4" />
-                    <span>Logg ut</span>
-                  </button>
-                </div>
               </div>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Stats Section */}
+      <div className="stats-section">
+        <div className="stat-item">
+          <div className="stat-number">{sortedFiles.length}</div>
+          <div className="stat-label">Totalt antall filer</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-number">{sortedFiles.filter(f => f.folder).length}</div>
+          <div className="stat-label">Mapper</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-number">{sortedFiles.filter(f => !f.folder).length}</div>
+          <div className="stat-label">Dokumenter</div>
+        </div>
+        <div className="stat-item">
+          <div className="stat-number">{sortedFiles.filter(f => f.name.toLowerCase().endsWith('.pdf')).length}</div>
+          <div className="stat-label">PDF-filer</div>
         </div>
       </div>
 
