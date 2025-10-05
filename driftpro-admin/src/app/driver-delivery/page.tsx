@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { 
   Truck, 
@@ -13,7 +13,7 @@ import {
   ArrowRight,
   Camera,
   QrCode,
-  Keypad,
+  Hash,
   Scan,
   Star,
   Heart,
@@ -148,7 +148,7 @@ const fieldMessages = [
   "⭐ Felt {fieldNumber} er din arena i dag!"
 ];
 
-export default function DriverDeliveryPage() {
+function DriverDeliveryContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const routeId = searchParams.get('routeId');
@@ -499,7 +499,7 @@ export default function DriverDeliveryPage() {
         {currentStep === 'code' && (
           <div className="bg-white rounded-2xl shadow-lg p-8 text-center">
             <div className="w-20 h-20 bg-gradient-to-br from-blue-600 to-green-600 rounded-full flex items-center justify-center mx-auto mb-6">
-              <Keypad className="w-10 h-10 text-white" />
+              <Hash className="w-10 h-10 text-white" />
             </div>
             
             <h2 className="text-2xl font-bold text-gray-900 mb-2">
@@ -529,7 +529,7 @@ export default function DriverDeliveryPage() {
                   onClick={() => setShowKeypad(!showKeypad)}
                   className="flex-1 bg-gray-100 text-gray-700 py-3 px-4 rounded-lg hover:bg-gray-200 transition-colors flex items-center justify-center space-x-2"
                 >
-                  <Keypad className="w-5 h-5" />
+                  <Hash className="w-5 h-5" />
                   <span>Numpad</span>
                 </button>
                 <button
@@ -866,5 +866,20 @@ export default function DriverDeliveryPage() {
         onScan={handleBarcodeScan}
       />
     </div>
+  );
+}
+
+export default function DriverDeliveryPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600">Laster leveringssiden...</p>
+        </div>
+      </div>
+    }>
+      <DriverDeliveryContent />
+    </Suspense>
   );
 }

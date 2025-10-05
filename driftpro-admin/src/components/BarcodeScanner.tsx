@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { Camera, X, AlertCircle, CheckCircle, Flashlight, FlashlightOff, RotateCw } from 'lucide-react';
+import { Camera, X, AlertCircle, CheckCircle, Flashlight, FlashlightOff, RotateCw, Hash } from 'lucide-react';
 
 interface BarcodeScannerProps {
   onScan: (code: string) => void;
@@ -209,7 +209,7 @@ export default function BarcodeScanner({ onScan, onClose, isOpen, className = ''
               className="p-2 bg-black/50 rounded-full text-white hover:bg-black/70 transition-colors"
               title="Tøm skannede koder"
             >
-              <RotateCw className="w-5 h-5" />
+              <Hash className="w-5 h-5" />
             </button>
           </div>
         </div>
