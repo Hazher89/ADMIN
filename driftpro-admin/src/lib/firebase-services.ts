@@ -1913,28 +1913,65 @@ class FirebaseService {
         
         const routeRef = doc(db, 'plannedRoutes', route.id);
         
-        // Filter out undefined values to prevent Firebase errors
-        const cleanRoute = Object.fromEntries(
-          Object.entries(route).filter(([key, value]) => {
-            // Filter out undefined, null, and empty objects
-            if (value === undefined || value === null) {
-              console.warn(`⚠️ Filtering out undefined/null value for key: ${key}`);
-              return false;
+        // Deep clean route data to remove all undefined values recursively
+        const cleanRoute = (obj: any): any => {
+          if (obj === null || obj === undefined) {
+            return null;
+          }
+          
+          if (Array.isArray(obj)) {
+            return obj
+              .filter(item => item !== undefined && item !== null)
+              .map(item => cleanRoute(item));
+          }
+          
+          if (typeof obj === 'object') {
+            const cleaned: any = {};
+            for (const [key, value] of Object.entries(obj)) {
+              if (value !== undefined && value !== null) {
+                const cleanedValue = cleanRoute(value);
+                if (cleanedValue !== undefined && cleanedValue !== null) {
+                  cleaned[key] = cleanedValue;
+                }
+              }
             }
-            if (typeof value === 'object' && Object.keys(value).length === 0) {
-              console.warn(`⚠️ Filtering out empty object for key: ${key}`);
-              return false;
-            }
-            return true;
-          })
-        );
+            return cleaned;
+          }
+          
+          return obj;
+        };
+
+        const cleanedRoute = cleanRoute(route);
         
-        batch.set(routeRef, {
-          ...cleanRoute,
+        // Log what was cleaned
+        const originalKeys = Object.keys(route).length;
+        const cleanedKeys = Object.keys(cleanedRoute).length;
+        if (originalKeys !== cleanedKeys) {
+          console.log(`🧹 Cleaned route ${index}: ${originalKeys} → ${cleanedKeys} keys`);
+        }
+        
+        // Additional validation
+        if (!cleanedRoute.id) {
+          console.error(`❌ Route ${index} missing ID after cleaning:`, cleanedRoute);
+          throw new Error(`Route ${index} is missing ID after cleaning`);
+        }
+        
+        // Final validation before Firebase write
+        const finalRoute = {
+          ...cleanedRoute,
           companyId, // Ensure companyId is set
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
-        });
+        };
+        
+        // Double-check for any remaining undefined values
+        const hasUndefined = JSON.stringify(finalRoute).includes('undefined');
+        if (hasUndefined) {
+          console.error(`❌ Route ${index} still contains undefined values after cleaning:`, finalRoute);
+          throw new Error(`Route ${index} still contains undefined values after cleaning`);
+        }
+        
+        batch.set(routeRef, finalRoute);
       });
       
       await batch.commit();
