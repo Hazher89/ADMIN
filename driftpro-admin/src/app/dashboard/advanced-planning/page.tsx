@@ -197,10 +197,14 @@ export default function AdvancedPlanningPage() {
   }, [userProfile?.companyId, isInitialized]);
 
   const loadRealData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile?.companyId) {
+      console.log('❌ No company ID found');
+      return;
+    }
 
     try {
       setLoading(true);
+      console.log('🔄 Loading real data for company:', userProfile.companyId);
 
       // Load orders from Firestore with ALL details
       const ordersQuery = query(
@@ -209,8 +213,11 @@ export default function AdvancedPlanningPage() {
         orderBy('createdAt', 'desc')
       );
       const ordersSnapshot = await getDocs(ordersQuery);
+      console.log('📦 Found orders:', ordersSnapshot.docs.length);
+      
       const ordersData = ordersSnapshot.docs.map(doc => {
         const data = doc.data();
+        console.log('📋 Order data:', data);
         return {
           id: doc.id,
           ...data,
@@ -222,18 +229,23 @@ export default function AdvancedPlanningPage() {
         };
       }) as Order[];
       setOrders(ordersData);
+      console.log('✅ Set orders:', ordersData.length);
 
       // Load partners and extract ALL vehicle details
+      console.log('🚛 Loading partners...');
       const partnersData = await firebaseService.getPartners(userProfile.companyId);
+      console.log('👥 Found partners:', partnersData.length);
       setPartners(partnersData);
       
       // Extract all vehicles with complete details
       const allVehicles: Vehicle[] = [];
       partnersData.forEach(partner => {
+        console.log('🔍 Processing partner:', partner.name, 'vehicles:', partner.vehicles?.length || 0);
         if (partner.vehicles) {
           partner.vehicles.forEach((vehicle: any) => {
+            console.log('🚛 Processing vehicle:', vehicle);
             allVehicles.push({
-              registrationNumber: vehicle.registrationNumber,
+              registrationNumber: vehicle.registrationNumber || 'Unknown',
               model: vehicle.model,
               vehicleType: vehicle.vehicleType,
               payload: vehicle.payload,
@@ -258,6 +270,7 @@ export default function AdvancedPlanningPage() {
         }
       });
       setVehicles(allVehicles);
+      console.log('✅ Set vehicles:', allVehicles.length);
 
       // Load planned routes with enhanced data
       const routesQuery = query(
@@ -272,9 +285,10 @@ export default function AdvancedPlanningPage() {
       })) as PlannedRoute[];
       setPlannedRoutes(routesData);
 
-      console.log(`✅ Loaded ${ordersData.length} orders, ${partnersData.length} partners, ${allVehicles.length} vehicles, ${routesData.length} routes`);
+      console.log(`✅ FINAL LOADED: ${ordersData.length} orders, ${partnersData.length} partners, ${allVehicles.length} vehicles, ${routesData.length} routes`);
     } catch (error) {
-      console.error('Error loading real data:', error);
+      console.error('❌ Error loading real data:', error);
+      alert(`Error loading data: ${error instanceof Error ? error.message : 'Unknown error'}`);
     } finally {
       setLoading(false);
     }
@@ -520,65 +534,24 @@ export default function AdvancedPlanningPage() {
           <h1>Ruteplanlegging</h1>
           <p className="page-subtitle">Avansert ruteoptimalisering og planlegging</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          <button 
-            onClick={loadRealData}
-            className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <RefreshCw style={{ width: '16px', height: '16px' }} />
-            Oppdater
-          </button>
-          <button 
-            onClick={() => window.open('/dashboard/orders', '_blank')}
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Ny ordre
-          </button>
-        </div>
       </div>
 
-      {/* Statistics Section */}
-      <div className="stats-section">
-        <div className="stat-item">
-          <div className="stat-icon">
-            <Package style={{ width: '24px', height: '24px' }} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{orders.length}</div>
-            <div className="stat-label">Totale ordre</div>
-          </div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-icon">
-            <Truck style={{ width: '24px', height: '24px' }} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{partners.reduce((sum, p) => sum + (p.vehicles?.length || 0), 0)}</div>
-            <div className="stat-label">Tilgjengelige sjåfører</div>
-          </div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-icon">
-            <Route style={{ width: '24px', height: '24px' }} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">{plannedRoutes.length}</div>
-            <div className="stat-label">Planlagte ruter</div>
-          </div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-icon">
-            <DollarSign style={{ width: '24px', height: '24px' }} />
-          </div>
-          <div className="stat-content">
-            <div className="stat-value">
-              {orders.reduce((sum, o) => sum + (o.products?.reduce((pSum, p) => pSum + (p.price * p.quantity), 0) || 0), 0).toLocaleString()} kr
-            </div>
-            <div className="stat-label">Total verdi</div>
-          </div>
+
+      {/* Debug Information */}
+      <div style={{ 
+        background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', 
+        borderRadius: '12px', 
+        padding: '1rem', 
+        marginBottom: '1rem',
+        boxShadow: '0 4px 12px rgba(245, 158, 11, 0.3)'
+      }}>
+        <div style={{ color: 'white', fontSize: '0.875rem', fontWeight: '600' }}>
+          🔍 DEBUG INFO: 
+          Ordre: {orders.length} | 
+          Kjøretøy: {vehicles.length} | 
+          Partnere: {partners.length} | 
+          Planlagte ruter: {plannedRoutes.length} |
+          Company ID: {userProfile?.companyId || 'Ikke funnet'}
         </div>
       </div>
 
@@ -1063,14 +1036,6 @@ export default function AdvancedPlanningPage() {
                     <option value="terrain">🏔️ Terreng</option>
                   </select>
                   
-                  <button 
-                    onClick={loadRealData}
-                    className="btn btn-sm btn-secondary"
-                    style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
-                  >
-                    <RefreshCw style={{ width: '12px', height: '12px' }} />
-                    Oppdater
-                  </button>
                   
                   <button 
                     onClick={() => setIsMapFullscreen(!isMapFullscreen)}
@@ -1097,12 +1062,8 @@ export default function AdvancedPlanningPage() {
                       width: '100%',
                       borderRadius: '8px',
                       position: 'relative',
-                      background: `linear-gradient(45deg, #f0f9ff 25%, transparent 25%), 
-                                  linear-gradient(-45deg, #f0f9ff 25%, transparent 25%), 
-                                  linear-gradient(45deg, transparent 75%, #f0f9ff 75%), 
-                                  linear-gradient(-45deg, transparent 75%, #f0f9ff 75%)`,
-                      backgroundSize: '20px 20px',
-                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+                      background: `url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse"><path d="M 10 0 L 0 0 0 10" fill="none" stroke="%23e5e7eb" stroke-width="0.5"/></pattern></defs><rect width="100" height="100" fill="url(%23grid)"/><rect width="100" height="100" fill="%23f8fafc"/></svg>')`,
+                      backgroundSize: '20px 20px'
                     }}
                   >
                     {/* Order Markers */}
