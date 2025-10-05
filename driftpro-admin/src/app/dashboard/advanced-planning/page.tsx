@@ -56,9 +56,19 @@ export default function AdvancedPlanningPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-900 flex">
+    <div className="min-h-screen bg-gray-900 flex" style={{ margin: 0, padding: 0 }}>
       {/* Left Sidebar */}
-      <div className={`${sidebarCollapsed ? 'w-16' : 'w-80'} bg-gray-800 transition-all duration-300 flex flex-col border-r border-gray-700`}>
+      <div 
+        className={`bg-gray-800 flex flex-col border-r border-gray-700 transition-all duration-300`}
+        style={{ 
+          width: sidebarCollapsed ? '64px' : '320px',
+          minHeight: '100vh',
+          position: 'fixed',
+          left: 0,
+          top: 0,
+          zIndex: 1000
+        }}
+      >
         {/* Header */}
         <div className="p-4 border-b border-gray-700">
           <div className="flex items-center justify-between">
@@ -260,7 +270,13 @@ export default function AdvancedPlanningPage() {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col">
+      <div 
+        className="flex-1 flex flex-col"
+        style={{ 
+          marginLeft: sidebarCollapsed ? '64px' : '320px',
+          minHeight: '100vh'
+        }}
+      >
         {/* Top Header */}
         <div className="bg-gray-800 border-b border-gray-700 p-4">
           <div className="flex items-center justify-between">
