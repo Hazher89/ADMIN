@@ -206,11 +206,10 @@ export default function AdvancedPlanningPage() {
       setLoading(true);
       console.log('🔄 Loading real data for company:', userProfile.companyId);
 
-      // Load orders from Firestore with ALL details
+      // Load orders from Firestore with ALL details (without orderBy to avoid index requirement)
       const ordersQuery = query(
         collection(db, 'orders'),
-        where('companyId', '==', userProfile.companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', userProfile.companyId)
       );
       const ordersSnapshot = await getDocs(ordersQuery);
       console.log('📦 Found orders:', ordersSnapshot.docs.length);
@@ -228,6 +227,15 @@ export default function AdvancedPlanningPage() {
           totalVolume: data.products?.reduce((sum: number, p: any) => sum + ((p.dimensions ? parseVolume(p.dimensions) : 0) * p.quantity), 0) || 0
         };
       }) as Order[];
+      
+      // Sort manually by createdAt (newest first)
+      ordersData.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+        }
+        return 0;
+      });
+      
       setOrders(ordersData);
       console.log('✅ Set orders:', ordersData.length);
 
@@ -272,17 +280,25 @@ export default function AdvancedPlanningPage() {
       setVehicles(allVehicles);
       console.log('✅ Set vehicles:', allVehicles.length);
 
-      // Load planned routes with enhanced data
+      // Load planned routes with enhanced data (without orderBy to avoid index requirement)
       const routesQuery = query(
         collection(db, 'plannedRoutes'),
-        where('companyId', '==', userProfile.companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', userProfile.companyId)
       );
       const routesSnapshot = await getDocs(routesQuery);
       const routesData = routesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as PlannedRoute[];
+      
+      // Sort manually by createdAt (newest first)
+      routesData.sort((a, b) => {
+        if (a.createdAt && b.createdAt) {
+          return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+        }
+        return 0;
+      });
+      
       setPlannedRoutes(routesData);
 
       console.log(`✅ FINAL LOADED: ${ordersData.length} orders, ${partnersData.length} partners, ${allVehicles.length} vehicles, ${routesData.length} routes`);
