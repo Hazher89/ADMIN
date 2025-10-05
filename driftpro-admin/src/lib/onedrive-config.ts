@@ -4,7 +4,7 @@ import { Configuration, PublicClientApplication } from '@azure/msal-browser';
 export const msalConfig: Configuration = {
   auth: {
     clientId: process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || 'your-client-id-here',
-    authority: `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_MICROSOFT_TENANT_ID || 'common'}`,
+    authority: `https://login.microsoftonline.com/common`,
     redirectUri: typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no',
   },
   cache: {
