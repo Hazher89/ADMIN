@@ -542,101 +542,287 @@ export default function AdvancedPlanningPage() {
         </button>
       </div>
 
-      {/* Main Content */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '2rem' }}>
+      {/* Main Content - Original 3-Column Layout */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '2rem', minHeight: '600px' }}>
         
-        {/* Pending Orders */}
+        {/* LEFT SIDE - Planned Routes */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3>Ventende ordre</h3>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <button 
-                onClick={() => {
-                  const pendingIds = orders.filter(o => o.status === 'pending').map(o => o.id || '');
-                  setSelectedOrders(pendingIds);
-                }}
-                className="btn btn-sm btn-primary"
-              >
-                Velg alle
-              </button>
-              <button 
-                onClick={() => setSelectedOrders([])}
-                className="btn btn-sm btn-secondary"
-              >
-                Fjern valg
-              </button>
-            </div>
+            <h3>Planlagte ruter</h3>
+            <span className="badge badge-blue">{plannedRoutes.length}</span>
           </div>
           
-          <div style={{ maxHeight: '400px', overflowY: 'auto' }}>
-            {orders.filter(o => o.status === 'pending').map((order) => (
-              <div 
-                key={order.id}
-                onClick={() => {
-                  if (selectedOrders.includes(order.id || '')) {
-                    setSelectedOrders(selectedOrders.filter(id => id !== order.id));
-                  } else {
-                    setSelectedOrders([...selectedOrders, order.id || '']);
-                  }
-                }}
-                className={`card ${selectedOrders.includes(order.id || '') ? 'selected' : ''}`}
-                style={{ 
-                  marginBottom: '0.5rem', 
-                  cursor: 'pointer',
-                  border: selectedOrders.includes(order.id || '') ? '2px solid #2563eb' : '1px solid #e5e7eb',
-                  backgroundColor: selectedOrders.includes(order.id || '') ? '#eff6ff' : 'white'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600' }}>
-                      {order.orderNumber}
-                    </h4>
-                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <strong>{order.customerName}</strong>
-                    </p>
-                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <Phone style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
-                      {order.customerPhone}
-                    </p>
-                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <Building style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
-                      {order.customerAddress}
-                    </p>
-                    <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <Calendar style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
-                      {order.deliveryDate}
-                    </p>
-                  </div>
-                  <div style={{ textAlign: 'right' }}>
-                    <span className={`badge ${order.priority === 'high' ? 'badge-red' : order.priority === 'medium' ? 'badge-yellow' : 'badge-green'}`}>
-                      {order.priority}
+          <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+            {plannedRoutes.length > 0 ? (
+              plannedRoutes.map((route) => (
+                <div key={route.id} className="card" style={{ marginBottom: '0.75rem', padding: '1rem' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', fontWeight: '600' }}>
+                        {route.routeName}
+                      </h4>
+                      <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.75rem', color: '#6b7280' }}>
+                        <Calendar style={{ width: '10px', height: '10px', display: 'inline', marginRight: '0.25rem' }} />
+                        {route.date}
+                      </p>
+                      <p style={{ margin: '0', fontSize: '0.75rem', color: '#6b7280' }}>
+                        <User style={{ width: '10px', height: '10px', display: 'inline', marginRight: '0.25rem' }} />
+                        {route.driverName}
+                      </p>
+                    </div>
+                    <span className={`badge ${route.status === 'active' ? 'badge-green' : route.status === 'completed' ? 'badge-blue' : 'badge-gray'}`} style={{ fontSize: '0.7rem' }}>
+                      {route.status}
                     </span>
-                    <div style={{ marginTop: '0.5rem' }}>
-                      <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
-                        {order.totalProducts} produkter
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', fontSize: '0.7rem' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Ordre:</span>
+                      <span style={{ fontWeight: '600' }}>{route.orders.length}</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Avstand:</span>
+                      <span style={{ fontWeight: '600' }}>{route.totalDistance} km</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Tid:</span>
+                      <span style={{ fontWeight: '600' }}>{route.totalTime}h</span>
+                    </div>
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>Verdi:</span>
+                      <span style={{ fontWeight: '600', color: '#059669' }}>{route.totalCost.toLocaleString()} kr</span>
+                    </div>
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                <Route style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
+                <p>Ingen planlagte ruter ennå</p>
+                <p style={{ fontSize: '0.875rem' }}>Optimaliser ordre for å lage ruter</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* MIDDLE - Map/Visualization */}
+        <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
+          <div style={{ height: '100%', minHeight: '500px', backgroundColor: '#f8fafc', position: 'relative' }}>
+            {/* Map Header */}
+            <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb', backgroundColor: 'white' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <div>
+                  <h3 style={{ margin: '0 0 0.25rem 0' }}>Kartvisning</h3>
+                  <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    {activeView === 'map' ? 'Geografisk rutevisning' : 
+                     activeView === 'timeline' ? 'Tidslinje visning' :
+                     activeView === 'gantt' ? 'Gantt diagram' : 'Analytisk visning'}
+                  </p>
+                </div>
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <button 
+                    onClick={loadRealData}
+                    className="btn btn-sm btn-secondary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    <RefreshCw style={{ width: '12px', height: '12px' }} />
+                    Oppdater
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Map Content */}
+            <div style={{ height: 'calc(100% - 80px)', padding: '1rem', position: 'relative' }}>
+              {activeView === 'map' && (
+                <div style={{ height: '100%', backgroundColor: '#e0f2fe', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
+                  {/* Simulated Map Elements */}
+                  <div style={{ position: 'absolute', inset: '0', opacity: 0.3 }}>
+                    <div style={{ position: 'absolute', top: '20px', left: '30px', width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
+                    <div style={{ position: 'absolute', top: '60px', left: '80px', width: '12px', height: '12px', backgroundColor: '#ef4444', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
+                    <div style={{ position: 'absolute', top: '100px', left: '50px', width: '12px', height: '12px', backgroundColor: '#f59e0b', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
+                    <div style={{ position: 'absolute', top: '40px', right: '60px', width: '12px', height: '12px', backgroundColor: '#8b5cf6', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
+                    
+                    {/* Route Lines */}
+                    <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%' }}>
+                      <line x1="42" y1="26" x2="92" y2="66" stroke="#10B981" strokeWidth="3" strokeDasharray="5,3" style={{ animation: 'pulse 2s infinite' }} />
+                      <line x1="92" y1="66" x2="140" y2="46" stroke="#EF4444" strokeWidth="3" strokeDasharray="5,3" style={{ animation: 'pulse 2s infinite' }} />
+                    </svg>
+                  </div>
+
+                  {/* Map Info Overlay */}
+                  <div style={{ position: 'absolute', top: '1rem', right: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Live Info</div>
+                    <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                      📍 {orders.filter(o => o.status === 'pending').length} ventende ordre<br/>
+                      🚛 {partners.reduce((sum, p) => sum + (p.vehicles?.length || 0), 0)} tilgjengelige sjåfører<br/>
+                      🛣️ {plannedRoutes.length} planlagte ruter
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {activeView === 'timeline' && (
+                <div style={{ height: '100%', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                  <div style={{ backgroundColor: '#dbeafe', padding: '1rem', borderRadius: '8px' }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '600' }}>Morgen ruter (08:00-12:00)</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '0.75rem' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: '600', fontSize: '1rem' }}>15</div>
+                        <div style={{ color: '#6b7280' }}>Ordre</div>
                       </div>
-                      <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#059669' }}>
-                        {order.products?.reduce((sum, p) => sum + (p.price * p.quantity), 0).toLocaleString()} kr
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: '600', fontSize: '1rem' }}>3</div>
+                        <div style={{ color: '#6b7280' }}>Ruter</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: '600', fontSize: '1rem', color: '#059669' }}>92%</div>
+                        <div style={{ color: '#6b7280' }}>Effektivitet</div>
+                      </div>
+                    </div>
+                  </div>
+                  
+                  <div style={{ backgroundColor: '#dcfce7', padding: '1rem', borderRadius: '8px' }}>
+                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '600' }}>Ettermiddag ruter (13:00-17:00)</h4>
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.5rem', fontSize: '0.75rem' }}>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: '600', fontSize: '1rem' }}>22</div>
+                        <div style={{ color: '#6b7280' }}>Ordre</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: '600', fontSize: '1rem' }}>4</div>
+                        <div style={{ color: '#6b7280' }}>Ruter</div>
+                      </div>
+                      <div style={{ textAlign: 'center' }}>
+                        <div style={{ fontWeight: '600', fontSize: '1rem', color: '#059669' }}>88%</div>
+                        <div style={{ color: '#6b7280' }}>Effektivitet</div>
                       </div>
                     </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              )}
+
+              {activeView === 'gantt' && (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <GanttChart style={{ width: '48px', height: '48px', color: '#6b7280', margin: '0 auto 1rem' }} />
+                    <h4 style={{ margin: '0 0 0.5rem 0' }}>Gantt Diagram</h4>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>Visuell ruteplanlegging</p>
+                  </div>
+                </div>
+              )}
+
+              {activeView === 'analytics' && (
+                <div style={{ height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                  <div style={{ textAlign: 'center' }}>
+                    <BarChart3 style={{ width: '48px', height: '48px', color: '#6b7280', margin: '0 auto 1rem' }} />
+                    <h4 style={{ margin: '0 0 0.5rem 0' }}>Analytisk Dashboard</h4>
+                    <p style={{ fontSize: '0.875rem', color: '#6b7280' }}>Ytelsesmetrikker og optimalisering</p>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
 
+        {/* RIGHT SIDE - Resources (Drivers) */}
+        <div className="card">
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+            <h3>Ressurser (Sjåfører)</h3>
+            <span className="badge badge-green">{partners.reduce((sum, p) => sum + (p.vehicles?.length || 0), 0)}</span>
+          </div>
+          
+          <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
+            {partners.length > 0 ? (
+              partners.map((partner) => (
+                <div key={partner.id} style={{ marginBottom: '1rem' }}>
+                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                    {partner.name}
+                  </h4>
+                  <div style={{ paddingLeft: '1rem' }}>
+                    {partner.vehicles?.map((vehicle, index) => (
+                      <div key={index} className="card" style={{ marginBottom: '0.5rem', padding: '0.75rem' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
+                          <div>
+                            <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem', fontWeight: '600' }}>
+                              {vehicle.driverName || `Sjåfør ${vehicle.registrationNumber}`}
+                            </p>
+                            <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.7rem', color: '#6b7280' }}>
+                              <Truck style={{ width: '10px', height: '10px', display: 'inline', marginRight: '0.25rem' }} />
+                              {vehicle.model || vehicle.registrationNumber}
+                            </p>
+                            <p style={{ margin: '0', fontSize: '0.7rem', color: '#6b7280' }}>
+                              <Phone style={{ width: '10px', height: '10px', display: 'inline', marginRight: '0.25rem' }} />
+                              {vehicle.driverPhone || 'Ikke oppgitt'}
+                            </p>
+                          </div>
+                          <span className={`badge ${vehicle.status === 'active' ? 'badge-green' : 'badge-gray'}`} style={{ fontSize: '0.7rem' }}>
+                            {vehicle.status || 'available'}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Type:</span>
+                            <span>{vehicle.vehicleType || 'company_car'}</span>
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Kapasitet:</span>
+                            <span>{vehicle.payload || '1000kg'}</span>
+                          </div>
+                        </div>
+                      </div>
+                    )) || (
+                      <p style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
+                        Ingen kjøretøy registrert
+                      </p>
+                    )}
+                  </div>
+                </div>
+              ))
+            ) : (
+              <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                <Users style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
+                <p>Ingen partnere registrert</p>
+                <p style={{ fontSize: '0.875rem' }}>Gå til samarbeidspartnere for å legge til</p>
+              </div>
+            )}
+          </div>
+        </div>
+
+      </div>
+
+      {/* Pending Orders Section - Below the main layout */}
+      <div className="card" style={{ marginTop: '2rem' }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+          <h3>Ventende ordre</h3>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button 
+              onClick={() => {
+                const pendingIds = orders.filter(o => o.status === 'pending').map(o => o.id || '');
+                setSelectedOrders(pendingIds);
+              }}
+              className="btn btn-sm btn-primary"
+            >
+              Velg alle
+            </button>
+            <button 
+              onClick={() => setSelectedOrders([])}
+              className="btn btn-sm btn-secondary"
+            >
+              Fjern valg
+            </button>
+          </div>
+        </div>
+        
         {/* Selected Orders Summary */}
         {selectedOrders.length > 0 && (
-          <div className="card">
-            <h3>Valgte ordre ({selectedOrders.length})</h3>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+          <div className="card" style={{ marginBottom: '1rem', backgroundColor: '#eff6ff', border: '2px solid #2563eb' }}>
+            <h4>Valgte ordre ({selectedOrders.length})</h4>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Antall ordre:</span>
                 <span style={{ fontWeight: '600' }}>{selectedOrders.length}</span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Total verdi:</span>
                 <span style={{ fontWeight: '600', color: '#059669' }}>
                   {orders
@@ -645,88 +831,92 @@ export default function AdvancedPlanningPage() {
                     .toLocaleString()} kr
                 </span>
               </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                 <span>Tilgjengelige sjåfører:</span>
                 <span style={{ fontWeight: '600' }}>
                   {partners.reduce((sum, p) => sum + (p.vehicles?.length || 0), 0)}
                 </span>
               </div>
-              <button 
-                onClick={handleOptimizeRoutes}
-                disabled={isOptimizing}
-                className="btn btn-primary"
-                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-              >
-                {isOptimizing ? (
-                  <>
-                    <RefreshCw style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
-                    <span>Optimaliserer...</span>
-                  </>
-                ) : (
-                  <>
-                    <Zap style={{ width: '20px', height: '20px' }} />
-                    <span>Optimaliser ruter</span>
-                  </>
-                )}
-              </button>
             </div>
+            <button 
+              onClick={handleOptimizeRoutes}
+              disabled={isOptimizing}
+              className="btn btn-primary"
+              style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+            >
+              {isOptimizing ? (
+                <>
+                  <RefreshCw style={{ width: '20px', height: '20px', animation: 'spin 1s linear infinite' }} />
+                  <span>Optimaliserer...</span>
+                </>
+              ) : (
+                <>
+                  <Zap style={{ width: '20px', height: '20px' }} />
+                  <span>Optimaliser ruter</span>
+                </>
+              )}
+            </button>
           </div>
         )}
-
-      </div>
-
-      {/* Planned Routes */}
-      {plannedRoutes.length > 0 && (
-        <div className="card" style={{ marginTop: '2rem' }}>
-          <h3>Planlagte ruter ({plannedRoutes.length})</h3>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-            {plannedRoutes.map((route) => (
-              <div key={route.id} className="card" style={{ border: '1px solid #e5e7eb' }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
-                  <div>
-                    <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600' }}>
-                      {route.routeName}
-                    </h4>
-                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <Calendar style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
-                      {route.date}
-                    </p>
-                    <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <User style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
-                      {route.driverName}
-                    </p>
-                    <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
-                      <Truck style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
-                      {route.vehicleName}
-                    </p>
-                  </div>
-                  <span className={`badge ${route.status === 'active' ? 'badge-green' : route.status === 'completed' ? 'badge-blue' : 'badge-gray'}`}>
-                    {route.status}
-                  </span>
+        
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+          {orders.filter(o => o.status === 'pending').map((order) => (
+            <div 
+              key={order.id}
+              onClick={() => {
+                if (selectedOrders.includes(order.id || '')) {
+                  setSelectedOrders(selectedOrders.filter(id => id !== order.id));
+                } else {
+                  setSelectedOrders([...selectedOrders, order.id || '']);
+                }
+              }}
+              className={`card ${selectedOrders.includes(order.id || '') ? 'selected' : ''}`}
+              style={{ 
+                cursor: 'pointer',
+                border: selectedOrders.includes(order.id || '') ? '2px solid #2563eb' : '1px solid #e5e7eb',
+                backgroundColor: selectedOrders.includes(order.id || '') ? '#eff6ff' : 'white'
+              }}
+            >
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start' }}>
+                <div>
+                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', fontWeight: '600' }}>
+                    {order.orderNumber}
+                  </h4>
+                  <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <strong>{order.customerName}</strong>
+                  </p>
+                  <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <Phone style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
+                    {order.customerPhone}
+                  </p>
+                  <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <Building style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
+                    {order.customerAddress}
+                  </p>
+                  <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
+                    <Calendar style={{ width: '12px', height: '12px', display: 'inline', marginRight: '0.25rem' }} />
+                    {order.deliveryDate}
+                  </p>
                 </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.875rem' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Ordre:</span>
-                    <span style={{ fontWeight: '600' }}>{route.orders.length}</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Avstand:</span>
-                    <span style={{ fontWeight: '600' }}>{route.totalDistance} km</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Tid:</span>
-                    <span style={{ fontWeight: '600' }}>{route.totalTime} timer</span>
-                  </div>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span>Verdi:</span>
-                    <span style={{ fontWeight: '600', color: '#059669' }}>{route.totalCost.toLocaleString()} kr</span>
+                <div style={{ textAlign: 'right' }}>
+                  <span className={`badge ${order.priority === 'high' ? 'badge-red' : order.priority === 'medium' ? 'badge-yellow' : 'badge-green'}`}>
+                    {order.priority}
+                  </span>
+                  <div style={{ marginTop: '0.5rem' }}>
+                    <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      {order.totalProducts} produkter
+                    </div>
+                    <div style={{ fontSize: '0.875rem', fontWeight: '600', color: '#059669' }}>
+                      {order.products?.reduce((sum, p) => sum + (p.price * p.quantity), 0).toLocaleString()} kr
+                    </div>
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
+            </div>
+          ))}
         </div>
-      )}
+      </div>
+
 
     </div>
   );
