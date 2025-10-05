@@ -947,10 +947,23 @@ Generert: ${new Date().toLocaleString('no-NO')}
   // Save planned routes to Firebase for persistence
   const handleSaveRoutes = async () => {
     try {
+      console.log('🚀 Starting route save process...');
+      
       if (freightOrders.length === 0) {
         alert('⚠️ Ingen ruter å lagre.');
         return;
       }
+
+      if (!userProfile?.companyId) {
+        console.error('❌ No company ID found in userProfile:', userProfile);
+        alert('❌ Ingen bedrift funnet. Logg inn på nytt.');
+        return;
+      }
+
+      console.log('📋 Saving routes:', { 
+        routesCount: freightOrders.length, 
+        companyId: userProfile.companyId 
+      });
 
       // Check for capacity warnings
       const routesWithWarnings = freightOrders.filter(fo => fo.warnings && fo.warnings.length > 0);
@@ -972,11 +985,13 @@ Generert: ${new Date().toLocaleString('no-NO')}
         .map(fo => ({
           ...fo,
           savedAt: new Date().toISOString(),
-          companyId: userProfile?.companyId
+          companyId: userProfile.companyId
         }));
 
+      console.log('💾 Routes prepared for saving:', routesToSave.length);
+
       // Save to Firebase
-      await firebaseService.savePlannedRoutes(userProfile?.companyId || '', routesToSave);
+      await firebaseService.savePlannedRoutes(userProfile.companyId, routesToSave);
       
       alert(`✅ ${freightOrders.length} ruter lagret permanent!`);
       
@@ -987,8 +1002,16 @@ Generert: ${new Date().toLocaleString('no-NO')}
       })));
 
     } catch (error) {
-      console.error('Error saving routes:', error);
-      alert('❌ Feil ved lagring av ruter. Prøv igjen.');
+      console.error('❌ Error saving routes:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        userProfile: userProfile ? { id: userProfile.id, companyId: userProfile.companyId } : 'No user profile',
+        freightOrdersCount: freightOrders.length
+      });
+      
+      const errorMessage = error instanceof Error ? error.message : 'Ukjent feil';
+      alert(`❌ Feil ved lagring av ruter: ${errorMessage}\n\nSjekk konsollen for mer informasjon.`);
     }
   };
 

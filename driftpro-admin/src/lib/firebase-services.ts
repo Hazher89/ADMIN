@@ -1869,11 +1869,29 @@ class FirebaseService {
 
   // Save planned routes for persistence
   async savePlannedRoutes(companyId: string, routes: any[]): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    console.log('🚀 Saving planned routes:', { companyId, routesCount: routes.length });
+    
+    if (!db) {
+      console.error('❌ Firebase not initialized');
+      throw new Error('Firebase not initialized');
+    }
+
+    if (!companyId) {
+      console.error('❌ Company ID is missing');
+      throw new Error('Company ID is required');
+    }
+
+    if (!routes || routes.length === 0) {
+      console.error('❌ No routes to save');
+      throw new Error('No routes to save');
+    }
 
     try {
+      console.log('🗑️ Deleting existing routes...');
       // Delete existing saved routes for this company
       const existingRoutes = await this.getPlannedRoutes(companyId);
+      console.log('📋 Found existing routes:', existingRoutes.length);
+      
       if (existingRoutes.length > 0) {
         const batch = writeBatch(db);
         existingRoutes.forEach(route => {
@@ -1881,40 +1899,72 @@ class FirebaseService {
           batch.delete(routeRef);
         });
         await batch.commit();
+        console.log('✅ Deleted existing routes');
       }
 
+      console.log('💾 Saving new routes...');
       // Save new routes
       const batch = writeBatch(db);
-      routes.forEach(route => {
+      routes.forEach((route, index) => {
+        if (!route.id) {
+          console.error(`❌ Route ${index} missing ID:`, route);
+          throw new Error(`Route ${index} is missing ID`);
+        }
+        
         const routeRef = doc(db, 'plannedRoutes', route.id);
         
         // Filter out undefined values to prevent Firebase errors
         const cleanRoute = Object.fromEntries(
-          Object.entries(route).filter(([_, value]) => {
+          Object.entries(route).filter(([key, value]) => {
             // Filter out undefined, null, and empty objects
-            if (value === undefined || value === null) return false;
-            if (typeof value === 'object' && Object.keys(value).length === 0) return false;
+            if (value === undefined || value === null) {
+              console.warn(`⚠️ Filtering out undefined/null value for key: ${key}`);
+              return false;
+            }
+            if (typeof value === 'object' && Object.keys(value).length === 0) {
+              console.warn(`⚠️ Filtering out empty object for key: ${key}`);
+              return false;
+            }
             return true;
           })
         );
         
         batch.set(routeRef, {
           ...cleanRoute,
+          companyId, // Ensure companyId is set
           createdAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
       });
+      
       await batch.commit();
+      console.log('✅ Successfully saved', routes.length, 'routes to Firebase');
 
     } catch (error) {
-      console.error('Error saving planned routes:', error);
+      console.error('❌ Error saving planned routes:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        companyId,
+        routesCount: routes?.length || 0
+      });
       throw error;
     }
   }
 
   // Get saved planned routes
   async getPlannedRoutes(companyId: string): Promise<any[]> {
-    if (!db) throw new Error('Firebase not initialized');
+    console.log('📋 Loading planned routes for company:', companyId);
+    
+    if (!db) {
+      console.error('❌ Firebase not initialized');
+      throw new Error('Firebase not initialized');
+    }
+
+    if (!companyId) {
+      console.error('❌ Company ID is missing');
+      throw new Error('Company ID is required');
+    }
 
     try {
       const q = query(
@@ -1928,9 +1978,15 @@ class FirebaseService {
         ...doc.data()
       }));
 
+      console.log('✅ Loaded', routes.length, 'planned routes');
       return routes;
     } catch (error) {
-      console.error('Error loading planned routes:', error);
+      console.error('❌ Error loading planned routes:', error);
+      console.error('Error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        companyId
+      });
       return [];
     }
   }
