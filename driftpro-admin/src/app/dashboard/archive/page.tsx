@@ -24,7 +24,6 @@ import {
   Info,
   Globe,
   Plus,
-  Menu,
   Star,
   FolderOpen,
   ChevronUp,
@@ -63,7 +62,6 @@ export default function ArchivePage() {
   const [sortBy, setSortBy] = useState('date');
   const [sortOrder, setSortOrder] = useState('desc');
   const [viewMode, setViewMode] = useState('list');
-  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<Set<string>>(new Set());
   const [filters, setFilters] = useState({
     foldersOnly: false,
@@ -230,11 +228,13 @@ export default function ArchivePage() {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
   };
 
+
   const formatDate = (dateString: string): string => {
-    return new Date(dateString).toLocaleDateString('no-NO', {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('nb-NO', {
+      day: '2-digit',
+      month: '2-digit',
       year: 'numeric',
-      month: 'short',
-      day: 'numeric',
       hour: '2-digit',
       minute: '2-digit'
     });
@@ -368,197 +368,194 @@ export default function ArchivePage() {
     );
   }
 
-  // Main archive application UI - EXACTLY like mail page
+  // Main archive application UI - Standard dashboard layout
   return (
-    <div className="h-screen bg-gray-50 flex flex-col">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200 px-6 py-4">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-4">
-            <button
-              onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 rounded-lg hover:bg-gray-100 lg:hidden"
-            >
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex items-center space-x-3">
+    <div className="min-h-screen bg-gray-50">
+      {/* Page Header */}
+      <div className="bg-white shadow-sm border-b border-gray-200">
+        <div className="px-6 py-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
               <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-lg flex items-center justify-center">
                 <FolderOpen className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-gray-900">OneDrive Arkiv</h1>
+                <h1 className="text-2xl font-semibold text-gray-900">OneDrive Arkiv</h1>
                 <p className="text-sm text-gray-500">
                   {activeAccount?.name || activeAccount?.username || 'Microsoft-konto'}
                 </p>
               </div>
             </div>
-          </div>
-          
-          <div className="flex items-center space-x-3">
-            <div className="relative">
+            
+            <div className="flex items-center space-x-3">
               <button
-                className="p-2 rounded-lg hover:bg-gray-100"
+                onClick={() => loadFolderContents()}
+                disabled={isLoading}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 disabled:opacity-50 flex items-center space-x-2"
+                title="Oppdater"
               >
-                <User className="w-5 h-5" />
+                <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                <span>Oppdater</span>
               </button>
-              <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
-                <button
-                  onClick={handleLogout}
-                  className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
-                >
-                  <LogOut className="w-4 h-4" />
-                  <span>Logg ut</span>
+              
+              <div className="relative">
+                <button className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 flex items-center space-x-2">
+                  <User className="w-4 h-4" />
+                  <span>Konto</span>
                 </button>
+                <div className="absolute right-0 mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100 flex items-center space-x-2"
+                  >
+                    <LogOut className="w-4 h-4" />
+                    <span>Logg ut</span>
+                  </button>
+                </div>
               </div>
             </div>
           </div>
         </div>
-      </header>
+      </div>
 
       {/* Main Content */}
-      <div className="flex-1 flex overflow-hidden">
-        {/* Sidebar */}
-        <aside className={`${sidebarOpen ? 'w-64' : 'w-0'} bg-white border-r border-gray-200 transition-all duration-300 overflow-hidden lg:w-64`}>
-          <div className="p-4">
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Mapper</h3>
-              <nav className="space-y-1">
-                {Object.values(ONEDRIVE_FOLDERS).map((folder: any) => (
-                  <button
-                    key={folder}
-                    onClick={() => {
-                      setSelectedFolder(folder.toLowerCase());
-                      loadFolderContents(folder);
-                    }}
-                    className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
-                      selectedFolder === folder.toLowerCase()
-                        ? 'bg-blue-50 text-blue-700'
-                        : 'text-gray-700 hover:bg-gray-50'
-                    }`}
-                  >
-                    <div className="flex items-center space-x-3">
-                      <Folder className="w-4 h-4" />
-                      <span>{folder}</span>
-                    </div>
-                    <span className="text-gray-400 text-xs">0</span>
-                  </button>
-                ))}
-              </nav>
-            </div>
-
-            <div className="mb-6">
-              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Filtre</h3>
-              <div className="space-y-2">
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.foldersOnly}
-                    onChange={(e) => setFilters(prev => ({ ...prev, foldersOnly: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Kun mapper</span>
-                </label>
-                <label className="flex items-center space-x-2">
-                  <input
-                    type="checkbox"
-                    checked={filters.pdfOnly}
-                    onChange={(e) => setFilters(prev => ({ ...prev, pdfOnly: e.target.checked }))}
-                    className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
-                  />
-                  <span className="text-sm text-gray-700">Kun PDF-filer</span>
-                </label>
+      <div className="px-6 py-6">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          {/* Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4">
+              {/* Folder Navigation */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Mapper</h3>
+                <nav className="space-y-1">
+                  {Object.values(ONEDRIVE_FOLDERS).map((folder: any) => (
+                    <button
+                      key={folder}
+                      onClick={() => {
+                        setSelectedFolder(folder.toLowerCase());
+                        loadFolderContents(folder);
+                      }}
+                      className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm transition-colors ${
+                        selectedFolder === folder.toLowerCase()
+                          ? 'bg-blue-50 text-blue-700'
+                          : 'text-gray-700 hover:bg-gray-50'
+                      }`}
+                    >
+                      <div className="flex items-center space-x-3">
+                        <Folder className="w-4 h-4" />
+                        <span>{folder}</span>
+                      </div>
+                      <span className="text-gray-400 text-xs">0</span>
+                    </button>
+                  ))}
+                </nav>
               </div>
-            </div>
 
-            <div>
-              <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Sortering</h3>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'size')}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="date">Dato</option>
-                <option value="name">Navn</option>
-                <option value="size">Størrelse</option>
-              </select>
-              <button
-                onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
-                className="mt-2 w-full px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center justify-center space-x-2"
-              >
-                {sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-                <span>{sortOrder === 'asc' ? 'Stigende' : 'Synkende'}</span>
-              </button>
-            </div>
-          </div>
-        </aside>
-
-        {/* Main Content Area */}
-        <main className="flex-1 flex flex-col overflow-hidden">
-          {/* Toolbar */}
-          <div className="bg-white border-b border-gray-200 px-6 py-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    placeholder="Søk i arkivet..."
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-                    className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
-                  />
+              {/* Filters */}
+              <div className="mb-6">
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Filtre</h3>
+                <div className="space-y-2">
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={filters.foldersOnly}
+                      onChange={(e) => setFilters(prev => ({ ...prev, foldersOnly: e.target.checked }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Kun mapper</span>
+                  </label>
+                  <label className="flex items-center space-x-2">
+                    <input
+                      type="checkbox"
+                      checked={filters.pdfOnly}
+                      onChange={(e) => setFilters(prev => ({ ...prev, pdfOnly: e.target.checked }))}
+                      className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                    />
+                    <span className="text-sm text-gray-700">Kun PDF-filer</span>
+                  </label>
                 </div>
-                
-                <button
-                  onClick={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
-                  className="p-2 rounded-lg hover:bg-gray-100"
-                  title={viewMode === 'list' ? 'Grid visning' : 'Liste visning'}
-                >
-                  <List className="w-4 h-4" />
-                </button>
               </div>
 
-              <div className="flex items-center space-x-2">
-                {selectedFiles.size > 0 && (
-                  <>
-                    <button
-                      onClick={() => setSelectedFiles(new Set())}
-                      className="text-sm text-gray-600 hover:text-gray-800"
-                    >
-                      Avbryt
-                    </button>
-                    <button
-                      className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50"
-                      title="Slett valgte filer"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </>
-                )}
-                
-                <button
-                  onClick={() => loadFolderContents()}
-                  disabled={isLoading}
-                  className="p-2 rounded-lg hover:bg-gray-100 disabled:opacity-50"
-                  title="Oppdater"
+              {/* Sorting */}
+              <div>
+                <h3 className="text-sm font-medium text-gray-500 uppercase tracking-wider mb-3">Sortering</h3>
+                <select
+                  value={sortBy}
+                  onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'size')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 mb-2"
                 >
-                  <RefreshCw className={`w-4 h-4 ${isLoading ? 'animate-spin' : ''}`} />
+                  <option value="date">Dato</option>
+                  <option value="name">Navn</option>
+                  <option value="size">Størrelse</option>
+                </select>
+                <button
+                  onClick={() => setSortOrder(prev => prev === 'asc' ? 'desc' : 'asc')}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm hover:bg-gray-50 flex items-center justify-center space-x-2"
+                >
+                  {sortOrder === 'asc' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                  <span>{sortOrder === 'asc' ? 'Stigende' : 'Synkende'}</span>
                 </button>
               </div>
             </div>
           </div>
 
-          {/* File List */}
-          <div className="flex-1 overflow-hidden">
-            {isLoading ? (
-              <div className="flex items-center justify-center h-full">
-                <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+          {/* Main Content Area */}
+          <div className="lg:col-span-3">
+            <div className="bg-white rounded-lg shadow-sm border border-gray-200">
+              {/* Search and Actions */}
+              <div className="px-6 py-4 border-b border-gray-200">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center space-x-4">
+                    <div className="relative">
+                      <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 text-gray-400" />
+                      <input
+                        type="text"
+                        placeholder="Søk i arkivet..."
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
+                        onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+                        className="pl-10 pr-4 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 w-80"
+                      />
+                    </div>
+                    
+                    <button
+                      onClick={() => setViewMode(prev => prev === 'list' ? 'grid' : 'list')}
+                      className="p-2 rounded-lg hover:bg-gray-100 border border-gray-300"
+                      title={viewMode === 'list' ? 'Grid visning' : 'Liste visning'}
+                    >
+                      <List className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                  <div className="flex items-center space-x-2">
+                    {selectedFiles.size > 0 && (
+                      <>
+                        <button
+                          onClick={() => setSelectedFiles(new Set())}
+                          className="text-sm text-gray-600 hover:text-gray-800 px-3 py-1"
+                        >
+                          Avbryt
+                        </button>
+                        <button
+                          className="text-red-600 hover:text-red-800 p-2 rounded-lg hover:bg-red-50 border border-red-200"
+                          title="Slett valgte filer"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
-            ) : (
-              <div className="h-full overflow-y-auto">
-                {sortedFiles.length === 0 ? (
-                  <div className="flex items-center justify-center h-full text-gray-500">
+
+              {/* File List */}
+              <div className="max-h-96 overflow-y-auto">
+                {isLoading ? (
+                  <div className="flex items-center justify-center py-12">
+                    <RefreshCw className="w-8 h-8 animate-spin text-blue-600" />
+                  </div>
+                ) : sortedFiles.length === 0 ? (
+                  <div className="flex items-center justify-center py-12 text-gray-500">
                     <div className="text-center">
                       <FolderOpen className="w-16 h-16 mx-auto mb-4 text-gray-300" />
                       <p className="text-lg font-medium">Ingen filer</p>
@@ -566,13 +563,13 @@ export default function ArchivePage() {
                     </div>
                   </div>
                 ) : (
-                  sortedFiles.map((file) => (
-                    <div
-                      key={file.id}
-                      className="border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors"
-                      onClick={() => handleFileClick(file)}
-                    >
-                      <div className="px-6 py-4">
+                  <div className="divide-y divide-gray-100">
+                    {sortedFiles.map((file) => (
+                      <div
+                        key={file.id}
+                        className="px-6 py-4 hover:bg-gray-50 cursor-pointer transition-colors"
+                        onClick={() => handleFileClick(file)}
+                      >
                         <div className="flex items-center justify-between">
                           <div className="flex items-center space-x-3 flex-1 min-w-0">
                             <input
@@ -591,40 +588,56 @@ export default function ArchivePage() {
                               className="rounded border-gray-300 text-blue-600 focus:ring-blue-500"
                             />
                             
-                            <div className="flex items-center space-x-2 min-w-0 flex-1">
+                            <div className="flex items-center space-x-3 min-w-0 flex-1">
                               {getFileIcon(file)}
-                              <span className="font-medium text-gray-900 truncate">
-                                {file.name}
-                              </span>
-                              {file.name.toLowerCase().endsWith('.pdf') && (
-                                <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
-                              )}
-                              {file.folder && (
-                                <Star className="w-4 h-4 text-yellow-500 flex-shrink-0" />
-                              )}
+                              <div className="min-w-0 flex-1">
+                                <p className="font-medium text-gray-900 truncate">
+                                  {file.name}
+                                </p>
+                                <p className="text-sm text-gray-500">
+                                  {file.size && formatFileSize(file.size)}
+                                  {file.folder && ' • Mappe'}
+                                </p>
+                              </div>
                             </div>
                           </div>
                           
-                          <div className="flex items-center space-x-2 text-sm text-gray-500 flex-shrink-0">
-                            <span>{new Date(file.lastModifiedDateTime).toLocaleDateString('nb-NO')}</span>
-                            <span>{new Date(file.lastModifiedDateTime).toLocaleTimeString('nb-NO', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <div className="flex items-center space-x-4 text-sm text-gray-500 flex-shrink-0">
+                            <span>{formatDate(file.lastModifiedDateTime)}</span>
+                            <div className="flex items-center space-x-2">
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  window.open(file.webUrl, '_blank');
+                                }}
+                                className="p-1 hover:bg-gray-100 rounded"
+                                title="Se fil"
+                              >
+                                <Eye className="w-4 h-4" />
+                              </button>
+                              {!file.folder && (
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleDownload(file);
+                                  }}
+                                  className="p-1 hover:bg-gray-100 rounded"
+                                  title="Last ned"
+                                >
+                                  <Download className="w-4 h-4" />
+                                </button>
+                              )}
+                            </div>
                           </div>
                         </div>
-                        
-                        <div className="mt-2">
-                          <p className="text-sm text-gray-500">
-                            {file.size && formatFileSize(file.size)}
-                            {file.folder && ' • Mappe'}
-                          </p>
-                        </div>
                       </div>
-                    </div>
-                  ))
+                    ))}
+                  </div>
                 )}
               </div>
-            )}
+            </div>
           </div>
-        </main>
+        </div>
       </div>
     </div>
   );
