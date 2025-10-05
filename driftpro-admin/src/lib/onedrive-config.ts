@@ -10,6 +10,14 @@ export const msalConfig: Configuration = {
   cache: {
     cacheLocation: 'localStorage',
     storeAuthStateInCookie: true,
+    secureCookies: false,
+  },
+  system: {
+    loggerOptions: {
+      loggerCallback: () => {},
+      piiLoggingEnabled: false,
+      logLevel: 'Warning',
+    },
   },
 };
 
