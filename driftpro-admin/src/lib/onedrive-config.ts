@@ -3,8 +3,8 @@ import { Configuration, PublicClientApplication } from '@azure/msal-browser';
 // OneDrive/MS Graph konfigurasjon
 export const msalConfig: Configuration = {
   auth: {
-    clientId: process.env.NEXT_PUBLIC_ONEDRIVE_CLIENT_ID || 'your-client-id-here',
-    authority: 'https://login.microsoftonline.com/common',
+    clientId: process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || 'your-client-id-here',
+    authority: `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_MICROSOFT_TENANT_ID || 'common'}`,
     redirectUri: typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no',
   },
   cache: {

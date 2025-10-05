@@ -54,13 +54,13 @@ export class OneDriveService {
       await this.initialize();
       
       // Sjekk om Client ID er konfigurert
-      if (msalConfig.auth.clientId === 'your-client-id-here') {
-        throw new Error('OneDrive Client ID er ikke konfigurert. Se ONEDRIVE_SETUP_GUIDE.md for instruksjoner.');
+      if (msalConfig.auth.clientId === 'your-client-id-here' || !msalConfig.auth.clientId) {
+        throw new Error('Microsoft Client ID er ikke konfigurert. Sjekk at NEXT_PUBLIC_MICROSOFT_CLIENT_ID er satt i miljøvariablene.');
       }
 
       const loginResponse = await msalInstance.loginPopup({
         scopes: graphScopes,
-        prompt: 'select_account',
+        prompt: 'consent', // Force consent prompt to allow user to grant permissions
       });
 
       return loginResponse.account;
