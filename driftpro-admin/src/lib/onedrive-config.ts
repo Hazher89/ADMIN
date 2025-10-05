@@ -1,23 +1,26 @@
 import { Configuration, PublicClientApplication } from '@azure/msal-browser';
 
-// OneDrive/MS Graph konfigurasjon
+// OneDrive/MS Graph konfigurasjon - Persistent session
 export const msalConfig: Configuration = {
   auth: {
     clientId: process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID || 'your-client-id-here',
     authority: `https://login.microsoftonline.com/${process.env.NEXT_PUBLIC_MICROSOFT_TENANT_ID || 'common'}`,
-    redirectUri: typeof window !== 'undefined' ? window.location.origin : 'Failed to update DriftPro OneDrive Integration application. Error detail: Redirect URIs must have distinct values. [AL0c92kXCeGDIfE/j4UQ+E]',
+    redirectUri: typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no',
   },
   cache: {
     cacheLocation: 'localStorage',
     storeAuthStateInCookie: true,
     secureCookies: false,
+    cacheMigrationEnabled: true,
+    claimsBasedCachingEnabled: false,
   },
   system: {
     loggerOptions: {
       loggerCallback: () => {},
       piiLoggingEnabled: false,
-      logLevel: 'Warning',
+      logLevel: 'Warning' as any,
     },
+    tokenRenewalOffsetSeconds: 300, // Renew tokens 5 minutes before expiry
   },
 };
 

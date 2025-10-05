@@ -40,15 +40,24 @@ export class OneDriveService {
     });
   }
 
-  // Initialize MSAL
-  private async initialize(): Promise<void> {
+  // Initialize MSAL with persistent session handling
+  async initialize(): Promise<void> {
     if (!this.initialized) {
       await msalInstance.initialize();
+      
+      // Try to restore account from localStorage
+      const accounts = msalInstance.getAllAccounts();
+      if (accounts.length > 0) {
+        // Set the first account as active
+        msalInstance.setActiveAccount(accounts[0]);
+        console.log('✅ Restored account from localStorage:', accounts[0].username);
+      }
+      
       this.initialized = true;
     }
   }
 
-  // Autentisering med 2FA
+  // Autentisering med 2FA - Persistent session
   async loginWith2FA(): Promise<AccountInfo | null> {
     try {
       await this.initialize();
@@ -63,6 +72,21 @@ export class OneDriveService {
         prompt: 'consent', // Force consent prompt to allow user to grant permissions
       });
 
+      // Set active account for persistent session
+      if (loginResponse.account) {
+        msalInstance.setActiveAccount(loginResponse.account);
+        
+        // Store account info in localStorage for persistence
+        localStorage.setItem('onedrive_account', JSON.stringify({
+          username: loginResponse.account.username,
+          name: loginResponse.account.name,
+          homeAccountId: loginResponse.account.homeAccountId,
+          timestamp: new Date().toISOString()
+        }));
+        
+        console.log('✅ Account stored in localStorage for persistent session');
+      }
+
       return loginResponse.account;
     } catch (error) {
       console.error('Login failed:', error);
@@ -70,21 +94,59 @@ export class OneDriveService {
     }
   }
 
-  // Logout
+  // Logout - Clear persistent session
   async logout(): Promise<void> {
     await this.initialize();
+    
+    // Clear localStorage
+    localStorage.removeItem('onedrive_account');
+    
     const account = msalInstance.getActiveAccount();
     if (account) {
       await msalInstance.logoutPopup({
         account: account,
       });
     }
+    
+    // Clear all accounts from cache
+    msalInstance.clearCache();
+    console.log('✅ OneDrive session cleared from localStorage');
   }
 
-  // Sjekk om bruker er logget inn
+  // Sjekk om bruker er logget inn - Check both MSAL and localStorage
   isLoggedIn(): boolean {
     try {
-      return msalInstance.getActiveAccount() !== null;
+      // First check MSAL active account
+      const activeAccount = msalInstance.getActiveAccount();
+      if (activeAccount) {
+        return true;
+      }
+      
+      // If no active account, check localStorage
+      const storedAccount = localStorage.getItem('onedrive_account');
+      if (storedAccount) {
+        try {
+          const accountData = JSON.parse(storedAccount);
+          // Check if account is not too old (30 days)
+          const accountAge = Date.now() - new Date(accountData.timestamp).getTime();
+          const maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
+          
+          if (accountAge < maxAge) {
+            // Try to restore account from MSAL cache
+            const accounts = msalInstance.getAllAccounts();
+            const matchingAccount = accounts.find(acc => acc.username === accountData.username);
+            if (matchingAccount) {
+              msalInstance.setActiveAccount(matchingAccount);
+              return true;
+            }
+          }
+        } catch (error) {
+          // Invalid localStorage data, remove it
+          localStorage.removeItem('onedrive_account');
+        }
+      }
+      
+      return false;
     } catch (error) {
       return false;
     }
@@ -127,10 +189,33 @@ export class OneDriveService {
     }
   }
 
-  // Hent aktiv bruker
+  // Hent aktiv bruker - Try to restore from localStorage if needed
   getActiveAccount(): AccountInfo | null {
     try {
-      return msalInstance.getActiveAccount();
+      // First try MSAL active account
+      const activeAccount = msalInstance.getActiveAccount();
+      if (activeAccount) {
+        return activeAccount;
+      }
+      
+      // Try to restore from localStorage
+      const storedAccount = localStorage.getItem('onedrive_account');
+      if (storedAccount) {
+        try {
+          const accountData = JSON.parse(storedAccount);
+          const accounts = msalInstance.getAllAccounts();
+          const matchingAccount = accounts.find(acc => acc.username === accountData.username);
+          if (matchingAccount) {
+            msalInstance.setActiveAccount(matchingAccount);
+            return matchingAccount;
+          }
+        } catch (error) {
+          // Invalid localStorage data, remove it
+          localStorage.removeItem('onedrive_account');
+        }
+      }
+      
+      return null;
     } catch (error) {
       return null;
     }

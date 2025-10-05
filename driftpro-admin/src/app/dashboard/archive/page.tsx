@@ -73,11 +73,18 @@ export default function ArchivePage() {
     const checkLoginStatus = async () => {
       setIsLoading(true);
       try {
+        // Always initialize to restore session from localStorage
+        await oneDriveService.initialize();
+        
         const loggedIn = oneDriveService.isLoggedIn();
         setIsLoggedIn(loggedIn);
         if (loggedIn) {
-          setActiveAccount(oneDriveService.getActiveAccount());
+          const account = oneDriveService.getActiveAccount();
+          setActiveAccount(account);
           await loadFolderContents();
+          console.log('✅ OneDrive session restored from localStorage');
+        } else {
+          console.log('ℹ️ No OneDrive session found');
         }
       } catch (error) {
         console.error('Error checking login status:', error);
