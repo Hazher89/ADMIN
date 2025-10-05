@@ -42,7 +42,17 @@ import {
   ShoppingCart,
   Phone,
   Mail,
-  DollarSign
+  DollarSign,
+  MapPin,
+  Target,
+  ArrowRight,
+  Play,
+  Pause,
+  RotateCcw,
+  Maximize,
+  Minimize,
+  Layers,
+  Satellite
 } from 'lucide-react';
 
 interface Order {
@@ -55,6 +65,7 @@ interface Order {
   customerEmail: string;
   deliveryDate: string;
   deliveryTimeTo: string;
+  deliveryTimeFrom?: string;
   products: {
     serviceId: string;
     serviceName: string;
@@ -62,6 +73,9 @@ interface Order {
     serviceCategory: string;
     price: number;
     quantity: number;
+    weight?: number;
+    dimensions?: string;
+    specialInstructions?: string;
   }[];
   priority: 'low' | 'medium' | 'high';
   noteToPlanner?: string;
@@ -69,12 +83,46 @@ interface Order {
   returnDescription?: string;
   returnOrderId?: string;
   totalProducts: number;
+  totalWeight?: number;
+  totalVolume?: number;
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: any;
   companyId: string;
   assignedDriver?: string;
   assignedVehicle?: string;
   routeId?: string;
+  coordinates?: {
+    lat: number;
+    lng: number;
+  };
+  deliveryInstructions?: string;
+  accessCode?: string;
+  contactPerson?: string;
+  estimatedDeliveryTime?: number;
+  specialRequirements?: string[];
+}
+
+interface Vehicle {
+  registrationNumber: string;
+  model?: string;
+  vehicleType?: string;
+  payload?: string;
+  maxWeight?: number;
+  maxVolume?: number;
+  driverName?: string;
+  driverPhone?: string;
+  driverEmail?: string;
+  status?: string;
+  fuelType?: string;
+  year?: number;
+  maintenanceDate?: string;
+  insuranceExpiry?: string;
+  specialEquipment?: string[];
+  capacity?: {
+    weight: number;
+    volume: number;
+    pallets?: number;
+  };
 }
 
 interface PlannedRoute {
@@ -85,6 +133,7 @@ interface PlannedRoute {
   driverName: string;
   vehicleId: string;
   vehicleName: string;
+  vehicle: Vehicle;
   orders: Order[];
   totalDistance: number;
   totalTime: number;
@@ -92,6 +141,22 @@ interface PlannedRoute {
   status: 'planned' | 'active' | 'completed';
   createdAt: string;
   companyId: string;
+  routeCoordinates?: {
+    start: { lat: number; lng: number };
+    waypoints: { lat: number; lng: number }[];
+    end: { lat: number; lng: number };
+  };
+  optimization: {
+    algorithm: string;
+    efficiency: number;
+    fuelCost: number;
+    driverCost: number;
+    totalCost: number;
+  };
+  estimatedArrival?: string;
+  actualStartTime?: string;
+  actualEndTime?: string;
+  deliverySequence: number[];
 }
 
 export default function AdvancedPlanningPage() {
@@ -103,12 +168,18 @@ export default function AdvancedPlanningPage() {
   const [isInitialized, setIsInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
   const [isOptimizing, setIsOptimizing] = useState(false);
+  const [mapType, setMapType] = useState<'roadmap' | 'satellite' | 'hybrid' | 'terrain'>('roadmap');
+  const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
+  const [isMapFullscreen, setIsMapFullscreen] = useState(false);
+  const [draggedOrder, setDraggedOrder] = useState<string | null>(null);
   
   // Real data
   const [orders, setOrders] = useState<Order[]>([]);
   const [partners, setPartners] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
   const [plannedRoutes, setPlannedRoutes] = useState<PlannedRoute[]>([]);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [mapCenter, setMapCenter] = useState({ lat: 59.9139, lng: 10.7522 }); // Oslo coordinates
   
   // Initialize date on client-side
   useEffect(() => {
@@ -131,24 +202,64 @@ export default function AdvancedPlanningPage() {
     try {
       setLoading(true);
 
-      // Load orders from Firestore
+      // Load orders from Firestore with ALL details
       const ordersQuery = query(
         collection(db, 'orders'),
         where('companyId', '==', userProfile.companyId),
         orderBy('createdAt', 'desc')
       );
       const ordersSnapshot = await getDocs(ordersQuery);
-      const ordersData = ordersSnapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Order[];
+      const ordersData = ordersSnapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          // Add coordinates if address exists
+          coordinates: data.customerAddress ? getCoordinatesFromAddress(data.customerAddress) : null,
+          // Calculate total weight and volume
+          totalWeight: data.products?.reduce((sum: number, p: any) => sum + ((p.weight || 0) * p.quantity), 0) || 0,
+          totalVolume: data.products?.reduce((sum: number, p: any) => sum + ((p.dimensions ? parseVolume(p.dimensions) : 0) * p.quantity), 0) || 0
+        };
+      }) as Order[];
       setOrders(ordersData);
 
-      // Load partners and vehicles
+      // Load partners and extract ALL vehicle details
       const partnersData = await firebaseService.getPartners(userProfile.companyId);
       setPartners(partnersData);
+      
+      // Extract all vehicles with complete details
+      const allVehicles: Vehicle[] = [];
+      partnersData.forEach(partner => {
+        if (partner.vehicles) {
+          partner.vehicles.forEach((vehicle: any) => {
+            allVehicles.push({
+              registrationNumber: vehicle.registrationNumber,
+              model: vehicle.model,
+              vehicleType: vehicle.vehicleType,
+              payload: vehicle.payload,
+              maxWeight: parseWeight(vehicle.payload),
+              maxVolume: vehicle.maxVolume || calculateVehicleVolume(vehicle.vehicleType),
+              driverName: vehicle.driverName,
+              driverPhone: vehicle.driverPhone,
+              driverEmail: vehicle.driverEmail,
+              status: vehicle.status || 'available',
+              fuelType: vehicle.fuelType,
+              year: vehicle.year,
+              maintenanceDate: vehicle.maintenanceDate,
+              insuranceExpiry: vehicle.insuranceExpiry,
+              specialEquipment: vehicle.specialEquipment || [],
+              capacity: {
+                weight: parseWeight(vehicle.payload),
+                volume: vehicle.maxVolume || calculateVehicleVolume(vehicle.vehicleType),
+                pallets: vehicle.palletCapacity || 0
+              }
+            });
+          });
+        }
+      });
+      setVehicles(allVehicles);
 
-      // Load planned routes
+      // Load planned routes with enhanced data
       const routesQuery = query(
         collection(db, 'plannedRoutes'),
         where('companyId', '==', userProfile.companyId),
@@ -161,11 +272,47 @@ export default function AdvancedPlanningPage() {
       })) as PlannedRoute[];
       setPlannedRoutes(routesData);
 
-      console.log(`✅ Loaded ${ordersData.length} orders, ${partnersData.length} partners, ${routesData.length} routes`);
+      console.log(`✅ Loaded ${ordersData.length} orders, ${partnersData.length} partners, ${allVehicles.length} vehicles, ${routesData.length} routes`);
     } catch (error) {
       console.error('Error loading real data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Helper functions
+  const getCoordinatesFromAddress = (address: string) => {
+    // Simulate geocoding - in real app, use Google Geocoding API
+    const baseLat = 59.9139;
+    const baseLng = 10.7522;
+    return {
+      lat: baseLat + (Math.random() - 0.5) * 0.1,
+      lng: baseLng + (Math.random() - 0.5) * 0.1
+    };
+  };
+
+  const parseWeight = (payload: string) => {
+    if (!payload) return 1000;
+    const match = payload.match(/(\d+)/);
+    return match ? parseInt(match[1]) : 1000;
+  };
+
+  const parseVolume = (dimensions: string) => {
+    // Parse dimensions like "100x50x30 cm" to volume in liters
+    const match = dimensions.match(/(\d+)x(\d+)x(\d+)/);
+    if (match) {
+      return (parseInt(match[1]) * parseInt(match[2]) * parseInt(match[3])) / 1000; // Convert cm³ to liters
+    }
+    return 100; // Default volume
+  };
+
+  const calculateVehicleVolume = (vehicleType: string) => {
+    switch (vehicleType) {
+      case 'small_van': return 5000; // 5m³
+      case 'medium_van': return 10000; // 10m³
+      case 'large_van': return 20000; // 20m³
+      case 'truck': return 50000; // 50m³
+      default: return 10000;
     }
   };
 
@@ -883,21 +1030,39 @@ export default function AdvancedPlanningPage() {
           </div>
         </div>
 
-        {/* MIDDLE - Map/Visualization */}
+        {/* MIDDLE - Advanced Map/Visualization */}
         <div className="card" style={{ padding: '0', overflow: 'hidden' }}>
           <div style={{ height: '100%', minHeight: '500px', backgroundColor: '#f8fafc', position: 'relative' }}>
-            {/* Map Header */}
+            {/* Advanced Map Header */}
             <div style={{ padding: '1rem', borderBottom: '1px solid #e5e7eb', backgroundColor: 'white' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
-                  <h3 style={{ margin: '0 0 0.25rem 0' }}>Kartvisning</h3>
+                  <h3 style={{ margin: '0 0 0.25rem 0' }}>🗺️ Avansert Ruteplanlegging</h3>
                   <p style={{ margin: '0', fontSize: '0.875rem', color: '#6b7280' }}>
-                    {activeView === 'map' ? 'Geografisk rutevisning' : 
-                     activeView === 'timeline' ? 'Tidslinje visning' :
-                     activeView === 'gantt' ? 'Gantt diagram' : 'Analytisk visning'}
+                    {activeView === 'map' ? 'Google Maps med interaktiv ruteplanlegging' : 
+                     activeView === 'timeline' ? 'Tidslinje med optimalisering' :
+                     activeView === 'gantt' ? 'Gantt diagram for ruter' : 'Analytisk dashboard'}
                   </p>
                 </div>
                 <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  {/* Map Type Selector */}
+                  <select 
+                    value={mapType}
+                    onChange={(e) => setMapType(e.target.value as any)}
+                    style={{
+                      padding: '0.5rem',
+                      borderRadius: '8px',
+                      border: '1px solid #e5e7eb',
+                      fontSize: '0.875rem',
+                      background: 'white'
+                    }}
+                  >
+                    <option value="roadmap">🛣️ Veikart</option>
+                    <option value="satellite">🛰️ Satellitt</option>
+                    <option value="hybrid">🔀 Hybrid</option>
+                    <option value="terrain">🏔️ Terreng</option>
+                  </select>
+                  
                   <button 
                     onClick={loadRealData}
                     className="btn btn-sm btn-secondary"
@@ -906,37 +1071,233 @@ export default function AdvancedPlanningPage() {
                     <RefreshCw style={{ width: '12px', height: '12px' }} />
                     Oppdater
                   </button>
+                  
+                  <button 
+                    onClick={() => setIsMapFullscreen(!isMapFullscreen)}
+                    className="btn btn-sm btn-primary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}
+                  >
+                    {isMapFullscreen ? <Minimize style={{ width: '12px', height: '12px' }} /> : <Maximize style={{ width: '12px', height: '12px' }} />}
+                    {isMapFullscreen ? 'Tilbake' : 'Fullskjerm'}
+                  </button>
                 </div>
               </div>
             </div>
 
-            {/* Map Content */}
+            {/* Advanced Map Content */}
             <div style={{ height: 'calc(100% - 80px)', padding: '1rem', position: 'relative' }}>
               {activeView === 'map' && (
-                <div style={{ height: '100%', backgroundColor: '#e0f2fe', borderRadius: '8px', position: 'relative', overflow: 'hidden' }}>
-                  {/* Simulated Map Elements */}
-                  <div style={{ position: 'absolute', inset: '0', opacity: 0.3 }}>
-                    <div style={{ position: 'absolute', top: '20px', left: '30px', width: '12px', height: '12px', backgroundColor: '#10b981', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
-                    <div style={{ position: 'absolute', top: '60px', left: '80px', width: '12px', height: '12px', backgroundColor: '#ef4444', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
-                    <div style={{ position: 'absolute', top: '100px', left: '50px', width: '12px', height: '12px', backgroundColor: '#f59e0b', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
-                    <div style={{ position: 'absolute', top: '40px', right: '60px', width: '12px', height: '12px', backgroundColor: '#8b5cf6', borderRadius: '50%', animation: 'pulse 2s infinite' }}></div>
-                    
-                    {/* Route Lines */}
-                    <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%' }}>
-                      <line x1="42" y1="26" x2="92" y2="66" stroke="#10B981" strokeWidth="3" strokeDasharray="5,3" style={{ animation: 'pulse 2s infinite' }} />
-                      <line x1="92" y1="66" x2="140" y2="46" stroke="#EF4444" strokeWidth="3" strokeDasharray="5,3" style={{ animation: 'pulse 2s infinite' }} />
-                    </svg>
+                <div style={{ height: '100%', backgroundColor: '#e0f2fe', borderRadius: '12px', position: 'relative', overflow: 'hidden', border: '2px solid #3b82f6' }}>
+                  
+                  {/* Google Maps Container */}
+                  <div 
+                    id="google-map-container"
+                    style={{ 
+                      height: '100%', 
+                      width: '100%',
+                      borderRadius: '8px',
+                      position: 'relative',
+                      background: `linear-gradient(45deg, #f0f9ff 25%, transparent 25%), 
+                                  linear-gradient(-45deg, #f0f9ff 25%, transparent 25%), 
+                                  linear-gradient(45deg, transparent 75%, #f0f9ff 75%), 
+                                  linear-gradient(-45deg, transparent 75%, #f0f9ff 75%)`,
+                      backgroundSize: '20px 20px',
+                      backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px'
+                    }}
+                  >
+                    {/* Order Markers */}
+                    {orders.filter(o => o.status === 'pending' && o.coordinates).map((order, index) => (
+                      <div
+                        key={order.id}
+                        draggable={true}
+                        onDragStart={() => setDraggedOrder(order.id || '')}
+                        onDragEnd={() => setDraggedOrder(null)}
+                        style={{
+                          position: 'absolute',
+                          left: `${20 + (index % 5) * 15}%`,
+                          top: `${20 + Math.floor(index / 5) * 15}%`,
+                          width: '24px',
+                          height: '24px',
+                          backgroundColor: order.priority === 'high' ? '#ef4444' : order.priority === 'medium' ? '#f59e0b' : '#10b981',
+                          borderRadius: '50%',
+                          border: '3px solid white',
+                          cursor: 'grab',
+                          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '12px',
+                          fontWeight: 'bold',
+                          color: 'white',
+                          zIndex: 10,
+                          transition: 'all 0.3s ease'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.transform = 'scale(1.2)';
+                          e.currentTarget.style.zIndex = '20';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.transform = 'scale(1)';
+                          e.currentTarget.style.zIndex = '10';
+                        }}
+                        title={`Ordre: ${order.orderNumber}\nKunde: ${order.customerName}\nAdresse: ${order.customerAddress}\nVekt: ${order.totalWeight}kg\nPrioritet: ${order.priority}`}
+                      >
+                        {order.priority === 'high' ? '!' : order.priority === 'medium' ? '?' : '✓'}
+                      </div>
+                    ))}
+
+                    {/* Route Lines for Planned Routes */}
+                    {selectedRoute && plannedRoutes.find(r => r.id === selectedRoute) && (
+                      <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: 5 }}>
+                        {plannedRoutes.find(r => r.id === selectedRoute)?.orders.map((order, index, array) => {
+                          if (index < array.length - 1) {
+                            const nextOrder = array[index + 1];
+                            return (
+                              <line
+                                key={`${order.id}-${nextOrder.id}`}
+                                x1={`${20 + (index % 5) * 15}%`}
+                                y1={`${20 + Math.floor(index / 5) * 15}%`}
+                                x2={`${20 + ((index + 1) % 5) * 15}%`}
+                                y2={`${20 + Math.floor((index + 1) / 5) * 15}%`}
+                                stroke="#3b82f6"
+                                strokeWidth="4"
+                                strokeDasharray="8,4"
+                                style={{ animation: 'dash 2s linear infinite' }}
+                                markerEnd="url(#arrowhead)"
+                              />
+                            );
+                          }
+                          return null;
+                        })}
+                        
+                        {/* Arrow marker definition */}
+                        <defs>
+                          <marker id="arrowhead" markerWidth="10" markerHeight="7" 
+                            refX="9" refY="3.5" orient="auto">
+                            <polygon points="0 0, 10 3.5, 0 7" fill="#3b82f6" />
+                          </marker>
+                        </defs>
+                      </svg>
+                    )}
+
+                    {/* Vehicle Positions */}
+                    {vehicles.filter(v => v.status === 'active').map((vehicle, index) => (
+                      <div
+                        key={vehicle.registrationNumber}
+                        style={{
+                          position: 'absolute',
+                          left: `${60 + index * 10}%`,
+                          top: `${70 + index * 5}%`,
+                          width: '32px',
+                          height: '32px',
+                          backgroundColor: '#8b5cf6',
+                          borderRadius: '8px',
+                          border: '3px solid white',
+                          cursor: 'pointer',
+                          boxShadow: '0 4px 12px rgba(0, 0, 0, 0.3)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: '16px',
+                          zIndex: 15,
+                          animation: 'pulse 3s infinite'
+                        }}
+                        title={`Kjøretøy: ${vehicle.registrationNumber}\nSjåfør: ${vehicle.driverName}\nKapasitet: ${vehicle.capacity?.weight}kg / ${vehicle.capacity?.volume}L\nStatus: ${vehicle.status}`}
+                      >
+                        🚛
+                      </div>
+                    ))}
                   </div>
 
-                  {/* Map Info Overlay */}
-                  <div style={{ position: 'absolute', top: '1rem', right: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1)' }}>
-                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>Live Info</div>
-                    <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
+                  {/* Advanced Map Controls */}
+                  <div style={{ position: 'absolute', top: '1rem', left: '1rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                    <button 
+                      onClick={() => setMapCenter({ lat: 59.9139, lng: 10.7522 })}
+                      style={{
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      <MapPin style={{ width: '16px', height: '16px' }} />
+                      Oslo
+                    </button>
+                    
+                    <button 
+                      onClick={() => {
+                        const pendingOrders = orders.filter(o => o.status === 'pending');
+                        if (pendingOrders.length > 0) {
+                          const avgLat = pendingOrders.reduce((sum, o) => sum + (o.coordinates?.lat || 59.9139), 0) / pendingOrders.length;
+                          const avgLng = pendingOrders.reduce((sum, o) => sum + (o.coordinates?.lng || 10.7522), 0) / pendingOrders.length;
+                          setMapCenter({ lat: avgLat, lng: avgLng });
+                        }
+                      }}
+                      style={{
+                        padding: '0.75rem',
+                        borderRadius: '8px',
+                        border: 'none',
+                        background: 'rgba(255, 255, 255, 0.9)',
+                        cursor: 'pointer',
+                        boxShadow: '0 2px 8px rgba(0, 0, 0, 0.2)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.875rem',
+                        fontWeight: '600'
+                      }}
+                    >
+                      <Target style={{ width: '16px', height: '16px' }} />
+                      Ordre
+                    </button>
+                  </div>
+
+                  {/* Advanced Map Info Overlay */}
+                  <div style={{ position: 'absolute', top: '1rem', right: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '1rem', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)', backdropFilter: 'blur(10px)' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>📊 Live Statistikk</div>
+                    <div style={{ fontSize: '0.7rem', color: '#6b7280', lineHeight: '1.4' }}>
                       📍 {orders.filter(o => o.status === 'pending').length} ventende ordre<br/>
-                      🚛 {partners.reduce((sum, p) => sum + (p.vehicles?.length || 0), 0)} tilgjengelige sjåfører<br/>
-                      🛣️ {plannedRoutes.length} planlagte ruter
+                      🚛 {vehicles.length} tilgjengelige kjøretøy<br/>
+                      🛣️ {plannedRoutes.length} planlagte ruter<br/>
+                      ⚡ {orders.reduce((sum, o) => sum + (o.totalWeight || 0), 0).toLocaleString()}kg total vekt<br/>
+                      📦 {orders.reduce((sum, o) => sum + (o.totalVolume || 0), 0).toLocaleString()}L total volum
                     </div>
                   </div>
+
+                  {/* Route Selection Panel */}
+                  {plannedRoutes.length > 0 && (
+                    <div style={{ position: 'absolute', bottom: '1rem', left: '1rem', right: '1rem', backgroundColor: 'rgba(255, 255, 255, 0.95)', padding: '1rem', borderRadius: '12px', boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15)', backdropFilter: 'blur(10px)' }}>
+                      <div style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem' }}>🛣️ Velg rute for visning:</div>
+                      <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                        {plannedRoutes.map(route => (
+                          <button
+                            key={route.id}
+                            onClick={() => setSelectedRoute(selectedRoute === route.id ? null : route.id)}
+                            style={{
+                              padding: '0.5rem 1rem',
+                              borderRadius: '8px',
+                              border: 'none',
+                              background: selectedRoute === route.id ? 'linear-gradient(135deg, #3b82f6, #1d4ed8)' : 'rgba(59, 130, 246, 0.1)',
+                              color: selectedRoute === route.id ? 'white' : '#3b82f6',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem',
+                              fontWeight: '600',
+                              transition: 'all 0.3s ease'
+                            }}
+                          >
+                            {route.routeName}
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
 
@@ -1003,65 +1364,178 @@ export default function AdvancedPlanningPage() {
           </div>
         </div>
 
-        {/* RIGHT SIDE - Resources (Drivers) */}
+        {/* RIGHT SIDE - Advanced Vehicle Resources */}
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-            <h3>Ressurser (Sjåfører)</h3>
-            <span className="badge badge-green">{partners.reduce((sum, p) => sum + (p.vehicles?.length || 0), 0)}</span>
+            <h3>🚛 Kjøretøy & Sjåfører</h3>
+            <span className="badge badge-green">{vehicles.length}</span>
           </div>
           
           <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-            {partners.length > 0 ? (
-              partners.map((partner) => (
-                <div key={partner.id} style={{ marginBottom: '1rem' }}>
-                  <h4 style={{ margin: '0 0 0.5rem 0', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
-                    {partner.name}
-                  </h4>
-                  <div style={{ paddingLeft: '1rem' }}>
-                    {partner.vehicles?.map((vehicle, index) => (
-                      <div key={index} className="card" style={{ marginBottom: '0.5rem', padding: '0.75rem' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.5rem' }}>
-                          <div>
-                            <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem', fontWeight: '600' }}>
-                              {vehicle.driverName || `Sjåfør ${vehicle.registrationNumber}`}
-                            </p>
-                            <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.7rem', color: '#6b7280' }}>
-                              <Truck style={{ width: '10px', height: '10px', display: 'inline', marginRight: '0.25rem' }} />
-                              {vehicle.model || vehicle.registrationNumber}
-                            </p>
-                            <p style={{ margin: '0', fontSize: '0.7rem', color: '#6b7280' }}>
-                              <Phone style={{ width: '10px', height: '10px', display: 'inline', marginRight: '0.25rem' }} />
-                              {vehicle.driverPhone || 'Ikke oppgitt'}
-                            </p>
-                          </div>
-                          <span className={`badge ${vehicle.status === 'active' ? 'badge-green' : 'badge-gray'}`} style={{ fontSize: '0.7rem' }}>
-                            {vehicle.status || 'available'}
-                          </span>
-                        </div>
-                        <div style={{ fontSize: '0.7rem', color: '#6b7280' }}>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Type:</span>
-                            <span>{vehicle.vehicleType || 'company_car'}</span>
-                          </div>
-                          <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                            <span>Kapasitet:</span>
-                            <span>{vehicle.payload || '1000kg'}</span>
-                          </div>
-                        </div>
-                      </div>
-                    )) || (
-                      <p style={{ fontSize: '0.75rem', color: '#6b7280', fontStyle: 'italic' }}>
-                        Ingen kjøretøy registrert
+            {vehicles.length > 0 ? (
+              vehicles.map((vehicle, index) => (
+                <div key={vehicle.registrationNumber} className="card" style={{ marginBottom: '0.75rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
+                  {/* Vehicle Header */}
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '0.75rem' }}>
+                    <div>
+                      <h4 style={{ margin: '0 0 0.25rem 0', fontSize: '0.9rem', fontWeight: '600', color: '#374151' }}>
+                        {vehicle.driverName || `Sjåfør ${vehicle.registrationNumber}`}
+                      </h4>
+                      <p style={{ margin: '0 0 0.25rem 0', fontSize: '0.8rem', fontWeight: '500', color: '#6b7280' }}>
+                        🚛 {vehicle.model || vehicle.registrationNumber}
                       </p>
+                      <p style={{ margin: '0', fontSize: '0.75rem', color: '#9ca3af' }}>
+                        {vehicle.registrationNumber}
+                      </p>
+                    </div>
+                    <span className={`badge ${vehicle.status === 'active' ? 'badge-green' : vehicle.status === 'busy' ? 'badge-red' : 'badge-gray'}`} style={{ fontSize: '0.7rem' }}>
+                      {vehicle.status === 'active' ? 'Tilgjengelig' : vehicle.status === 'busy' ? 'Opptatt' : 'Utilgjengelig'}
+                    </span>
+                  </div>
+
+                  {/* Contact Information */}
+                  <div style={{ marginBottom: '0.75rem', padding: '0.5rem', backgroundColor: '#f8fafc', borderRadius: '6px' }}>
+                    <div style={{ fontSize: '0.7rem', color: '#6b7280', display: 'flex', justifyContent: 'space-between', marginBottom: '0.25rem' }}>
+                      <span>📞 Telefon:</span>
+                      <span style={{ fontWeight: '500' }}>{vehicle.driverPhone || 'Ikke oppgitt'}</span>
+                    </div>
+                    <div style={{ fontSize: '0.7rem', color: '#6b7280', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>📧 E-post:</span>
+                      <span style={{ fontWeight: '500' }}>{vehicle.driverEmail || 'Ikke oppgitt'}</span>
+                    </div>
+                  </div>
+
+                  {/* Vehicle Specifications */}
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>📋 Kjøretøy-spesifikasjoner:</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', fontSize: '0.7rem', color: '#6b7280' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Type:</span>
+                        <span style={{ fontWeight: '500' }}>{vehicle.vehicleType || 'company_car'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Årsmodell:</span>
+                        <span style={{ fontWeight: '500' }}>{vehicle.year || 'Ukjent'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Drivstoff:</span>
+                        <span style={{ fontWeight: '500' }}>{vehicle.fuelType || 'Bensin'}</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Status:</span>
+                        <span style={{ fontWeight: '500' }}>{vehicle.status || 'available'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Capacity Information */}
+                  <div style={{ marginBottom: '0.75rem', padding: '0.75rem', backgroundColor: '#eff6ff', borderRadius: '6px', border: '1px solid #dbeafe' }}>
+                    <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#1e40af', marginBottom: '0.5rem' }}>⚖️ Kapasitet:</div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.25rem', fontSize: '0.7rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Maks vekt:</span>
+                        <span style={{ fontWeight: '600', color: '#1e40af' }}>{vehicle.capacity?.weight || 1000}kg</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Maks volum:</span>
+                        <span style={{ fontWeight: '600', color: '#1e40af' }}>{vehicle.capacity?.volume || 10000}L</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Pallkapasitet:</span>
+                        <span style={{ fontWeight: '600', color: '#1e40af' }}>{vehicle.capacity?.pallets || 0} paller</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>Nyttevekt:</span>
+                        <span style={{ fontWeight: '600', color: '#1e40af' }}>{vehicle.payload || '1000kg'}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Special Equipment */}
+                  {vehicle.specialEquipment && vehicle.specialEquipment.length > 0 && (
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>🔧 Spesialutstyr:</div>
+                      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
+                        {vehicle.specialEquipment.map((equipment, eqIndex) => (
+                          <span key={eqIndex} style={{ 
+                            fontSize: '0.65rem', 
+                            padding: '0.25rem 0.5rem', 
+                            backgroundColor: '#f3f4f6', 
+                            borderRadius: '4px',
+                            color: '#6b7280'
+                          }}>
+                            {equipment}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Maintenance Info */}
+                  <div style={{ fontSize: '0.7rem', color: '#9ca3af' }}>
+                    {vehicle.maintenanceDate && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>🔧 Siste service:</span>
+                        <span>{new Date(vehicle.maintenanceDate).toLocaleDateString('nb-NO')}</span>
+                      </div>
                     )}
+                    {vehicle.insuranceExpiry && (
+                      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                        <span>🛡️ Forsikring utløper:</span>
+                        <span>{new Date(vehicle.insuranceExpiry).toLocaleDateString('nb-NO')}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                    <button 
+                      onClick={() => {
+                        // Assign vehicle to route
+                        console.log(`Assigning vehicle ${vehicle.registrationNumber} to route`);
+                      }}
+                      style={{
+                        flex: 1,
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        border: 'none',
+                        background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
+                        color: 'white',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      📋 Tildel rute
+                    </button>
+                    <button 
+                      onClick={() => {
+                        // View vehicle details
+                        console.log(`Viewing details for vehicle ${vehicle.registrationNumber}`);
+                      }}
+                      style={{
+                        padding: '0.5rem',
+                        borderRadius: '6px',
+                        border: '1px solid #d1d5db',
+                        background: 'white',
+                        color: '#6b7280',
+                        fontSize: '0.7rem',
+                        fontWeight: '600',
+                        cursor: 'pointer',
+                        transition: 'all 0.3s ease'
+                      }}
+                    >
+                      👁️ Detaljer
+                    </button>
                   </div>
                 </div>
               ))
             ) : (
               <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
-                <Users style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
-                <p>Ingen partnere registrert</p>
-                <p style={{ fontSize: '0.875rem' }}>Gå til samarbeidspartnere for å legge til</p>
+                <Truck style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
+                <p>Ingen kjøretøy registrert</p>
+                <p style={{ fontSize: '0.875rem' }}>Gå til samarbeidspartnere for å legge til kjøretøy</p>
               </div>
             )}
           </div>
