@@ -2,8 +2,8 @@
   command = "npm run build"
   publish = ".next"
   functions = "netlify/functions"
-  # Disable secrets scanning completely for this deployment
-  secrets_scan_enabled = false
+  # Configure secrets scanning to ignore Microsoft variables
+  secrets_scan_omit_keys = ["NEXT_PUBLIC_MICROSOFT_CLIENT_ID", "NEXT_PUBLIC_MICROSOFT_TENANT_ID", "NEXT_PUBLIC_MICROSOFT_REDIRECT_URI"]
 
 [build.environment]
   NODE_VERSION = "18"
