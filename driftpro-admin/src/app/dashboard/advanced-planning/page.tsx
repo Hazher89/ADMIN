@@ -5,7 +5,14 @@ import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
 import { collection, getDocs, query, orderBy, where, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
-import { oneDriveService } from '@/lib/onedrive-service';
+// Safe OneDrive import with fallback
+let oneDriveService: any = null;
+try {
+  const onedriveModule = require('@/lib/onedrive-service');
+  oneDriveService = onedriveModule.oneDriveService;
+} catch (error) {
+  console.log('OneDrive service not available:', error);
+}
 import { 
   Map, 
   Clock, 
@@ -172,6 +179,7 @@ export default function AdvancedPlanningPage() {
   const [selectedRoute, setSelectedRoute] = useState<string | null>(null);
   const [isMapFullscreen, setIsMapFullscreen] = useState(false);
   const [draggedOrder, setDraggedOrder] = useState<string | null>(null);
+  const [oneDriveAvailable, setOneDriveAvailable] = useState(false);
   
   // Real data
   const [orders, setOrders] = useState<Order[]>([]);
@@ -188,6 +196,22 @@ export default function AdvancedPlanningPage() {
       setIsInitialized(true);
     }
   }, [selectedDate]);
+
+  // Check OneDrive availability
+  useEffect(() => {
+    try {
+      const clientId = process.env.NEXT_PUBLIC_MICROSOFT_CLIENT_ID;
+      const isAvailable = Boolean(
+        clientId && 
+        clientId !== 'your-client-id-here' && 
+        clientId !== 'your_client_id_here'
+      );
+      setOneDriveAvailable(isAvailable);
+    } catch (error) {
+      console.log('OneDrive not available:', error);
+      setOneDriveAvailable(false);
+    }
+  }, []);
 
   // Load real data
   useEffect(() => {
@@ -237,8 +261,12 @@ export default function AdvancedPlanningPage() {
       ordersData.sort((a, b) => {
         if (a.createdAt && b.createdAt) {
           // Handle both Firestore Timestamp and string dates
-          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
-          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
+          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : 
+                       (a.createdAt as any).toDate ? (a.createdAt as any).toDate().getTime() : 
+                       new Date(a.createdAt as any).getTime();
+          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : 
+                       (b.createdAt as any).toDate ? (b.createdAt as any).toDate().getTime() : 
+                       new Date(b.createdAt as any).getTime();
           return bTime - aTime;
         }
         return 0;
@@ -303,8 +331,12 @@ export default function AdvancedPlanningPage() {
       routesData.sort((a, b) => {
         if (a.createdAt && b.createdAt) {
           // Handle both Firestore Timestamp and string dates
-          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
-          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
+          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : 
+                       (a.createdAt as any).toDate ? (a.createdAt as any).toDate().getTime() : 
+                       new Date(a.createdAt as any).getTime();
+          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : 
+                       (b.createdAt as any).toDate ? (b.createdAt as any).toDate().getTime() : 
+                       new Date(b.createdAt as any).getTime();
           return bTime - aTime;
         }
         return 0;
@@ -371,7 +403,7 @@ export default function AdvancedPlanningPage() {
       
       // Get available drivers from partners
       const availableDrivers = partners.flatMap(partner => 
-        partner.vehicles?.map(vehicle => ({
+        partner.vehicles?.map((vehicle: any) => ({
           partnerId: partner.id,
           partnerName: partner.name,
           driverName: vehicle.driverName || `Sjåfør ${vehicle.registrationNumber}`,
@@ -402,7 +434,7 @@ export default function AdvancedPlanningPage() {
       const createdRoutes = [];
       for (const [date, dateOrders] of Object.entries(routesByDate)) {
         // Assign drivers to routes (round-robin)
-        const assignedDriver = availableDrivers[createdRoutes.length % availableDrivers.length];
+        const assignedDriver: any = availableDrivers[createdRoutes.length % availableDrivers.length];
         
         const routeId = `route-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
         
@@ -414,7 +446,7 @@ export default function AdvancedPlanningPage() {
         const estimatedDistance = dateOrders.length * 15 + Math.random() * 20;
         const estimatedTime = dateOrders.length * 0.5 + Math.random() * 2;
         
-        const routeData = {
+        const routeData: any = {
           id: routeId,
           routeName: `Rute ${date} - ${assignedDriver.driverName}`,
           date: date,
@@ -486,6 +518,12 @@ export default function AdvancedPlanningPage() {
 
   const archiveRoutesToOneDrive = async (routes: any[]) => {
     try {
+      // Check if OneDrive service is available
+      if (!oneDriveAvailable || !oneDriveService) {
+        console.log('⚠️ OneDrive not configured - skipping archive');
+        return;
+      }
+
       // Ensure OneDrive is logged in
       if (!oneDriveService.isLoggedIn()) {
         await oneDriveService.loginPopup();
@@ -529,6 +567,7 @@ export default function AdvancedPlanningPage() {
       console.log('✅ Routes archived to OneDrive');
     } catch (error) {
       console.error('Error archiving to OneDrive:', error);
+      // Don't throw error - just log it so the main optimization process continues
     }
   };
 
