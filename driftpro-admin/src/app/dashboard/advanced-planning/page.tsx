@@ -202,6 +202,11 @@ export default function AdvancedPlanningPage() {
       return;
     }
 
+    if (!db) {
+      console.log('❌ Firebase not initialized');
+      return;
+    }
+
     try {
       setLoading(true);
       console.log('🔄 Loading real data for company:', userProfile.companyId);
@@ -231,7 +236,10 @@ export default function AdvancedPlanningPage() {
       // Sort manually by createdAt (newest first)
       ordersData.sort((a, b) => {
         if (a.createdAt && b.createdAt) {
-          return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+          // Handle both Firestore Timestamp and string dates
+          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
+          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
+          return bTime - aTime;
         }
         return 0;
       });
@@ -250,7 +258,7 @@ export default function AdvancedPlanningPage() {
       partnersData.forEach(partner => {
         console.log('🔍 Processing partner:', partner.name, 'vehicles:', partner.vehicles?.length || 0);
         if (partner.vehicles) {
-          partner.vehicles.forEach((vehicle: any) => {
+          partner.vehicles.forEach((vehicle: any, index: number) => {
             console.log('🚛 Processing vehicle:', vehicle);
             allVehicles.push({
               registrationNumber: vehicle.registrationNumber || 'Unknown',
@@ -294,7 +302,10 @@ export default function AdvancedPlanningPage() {
       // Sort manually by createdAt (newest first)
       routesData.sort((a, b) => {
         if (a.createdAt && b.createdAt) {
-          return b.createdAt.toDate().getTime() - a.createdAt.toDate().getTime();
+          // Handle both Firestore Timestamp and string dates
+          const aTime = typeof a.createdAt === 'string' ? new Date(a.createdAt).getTime() : a.createdAt.toDate().getTime();
+          const bTime = typeof b.createdAt === 'string' ? new Date(b.createdAt).getTime() : b.createdAt.toDate().getTime();
+          return bTime - aTime;
         }
         return 0;
       });
@@ -431,20 +442,22 @@ export default function AdvancedPlanningPage() {
         };
 
         // Save route to Firestore
-        await addDoc(collection(db, 'plannedRoutes'), routeData);
-        createdRoutes.push(routeData);
-        
-        // Update orders with route assignment
-        for (const order of dateOrders) {
-          if (order.id) {
-            await updateDoc(doc(db, 'orders', order.id), {
-              routeId: routeId,
-              status: 'assigned',
-              assignedDriver: assignedDriver.driverName,
-              assignedVehicle: assignedDriver.vehicleName,
-              assignedAt: new Date().toISOString(),
-              assignedBy: userProfile?.displayName || 'System'
-            });
+        if (db) {
+          await addDoc(collection(db, 'plannedRoutes'), routeData);
+          createdRoutes.push(routeData);
+          
+          // Update orders with route assignment
+          for (const order of dateOrders) {
+            if (order.id) {
+              await updateDoc(doc(db, 'orders', order.id), {
+                routeId: routeId,
+                status: 'assigned',
+                assignedDriver: assignedDriver.driverName,
+                assignedVehicle: assignedDriver.vehicleName,
+                assignedAt: new Date().toISOString(),
+                assignedBy: userProfile?.displayName || 'System'
+              });
+            }
           }
         }
       }
@@ -604,14 +617,14 @@ export default function AdvancedPlanningPage() {
               outline: 'none',
               transition: 'all 0.3s ease'
             }}
-            onFocus={(e) => {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.15)';
-            }}
-            onBlur={(e) => {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
-            }}
+         onFocus={(e) => {
+           (e.target as HTMLInputElement).style.transform = 'translateY(-2px)';
+           (e.target as HTMLInputElement).style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.15)';
+         }}
+         onBlur={(e) => {
+           (e.target as HTMLInputElement).style.transform = 'translateY(0)';
+           (e.target as HTMLInputElement).style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+         }}
           />
         </div>
         
@@ -749,38 +762,37 @@ export default function AdvancedPlanningPage() {
               padding: '1rem 2rem',
               borderRadius: '16px',
               border: 'none',
-              background: activeView === 'map' 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-                : 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+           background: activeView === 'map'
+             ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+             : 'rgba(255, 255, 255, 0.2)',
+           color: 'white',
+           fontSize: '1rem',
+           fontWeight: '600',
+           cursor: 'pointer',
+           display: 'flex',
+           alignItems: 'center',
+           gap: '0.75rem',
+           transition: 'all 0.3s ease',
+           backdropFilter: 'blur(10px)',
               boxShadow: activeView === 'map' 
                 ? '0 8px 25px rgba(102, 126, 234, 0.4)' 
                 : '0 4px 15px rgba(0, 0, 0, 0.1)',
               transform: activeView === 'map' ? 'translateY(-2px)' : 'translateY(0)'
             }}
-            onMouseEnter={(e) => {
-              if (activeView !== 'map') {
-                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeView !== 'map') {
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
-              }
-            }}
+         onMouseEnter={(e) => {
+           if (activeView !== 'map') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.3)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+           }
+         }}
+         onMouseLeave={(e) => {
+           if (activeView !== 'map') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.2)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+           }
+         }}
           >
             <Map style={{ width: '20px', height: '20px' }} />
             <span>🗺️ Kart</span>
@@ -792,38 +804,37 @@ export default function AdvancedPlanningPage() {
               padding: '1rem 2rem',
               borderRadius: '16px',
               border: 'none',
-              background: activeView === 'timeline' 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-                : 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+           background: activeView === 'timeline'
+             ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+             : 'rgba(255, 255, 255, 0.2)',
+           color: 'white',
+           fontSize: '1rem',
+           fontWeight: '600',
+           cursor: 'pointer',
+           display: 'flex',
+           alignItems: 'center',
+           gap: '0.75rem',
+           transition: 'all 0.3s ease',
+           backdropFilter: 'blur(10px)',
               boxShadow: activeView === 'timeline' 
                 ? '0 8px 25px rgba(102, 126, 234, 0.4)' 
                 : '0 4px 15px rgba(0, 0, 0, 0.1)',
               transform: activeView === 'timeline' ? 'translateY(-2px)' : 'translateY(0)'
             }}
-            onMouseEnter={(e) => {
-              if (activeView !== 'timeline') {
-                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeView !== 'timeline') {
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
-              }
-            }}
+         onMouseEnter={(e) => {
+           if (activeView !== 'timeline') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.3)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+           }
+         }}
+         onMouseLeave={(e) => {
+           if (activeView !== 'timeline') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.2)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+           }
+         }}
           >
             <Clock style={{ width: '20px', height: '20px' }} />
             <span>⏰ Tidslinje</span>
@@ -835,38 +846,37 @@ export default function AdvancedPlanningPage() {
               padding: '1rem 2rem',
               borderRadius: '16px',
               border: 'none',
-              background: activeView === 'gantt' 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-                : 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+           background: activeView === 'gantt'
+             ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+             : 'rgba(255, 255, 255, 0.2)',
+           color: 'white',
+           fontSize: '1rem',
+           fontWeight: '600',
+           cursor: 'pointer',
+           display: 'flex',
+           alignItems: 'center',
+           gap: '0.75rem',
+           transition: 'all 0.3s ease',
+           backdropFilter: 'blur(10px)',
               boxShadow: activeView === 'gantt' 
                 ? '0 8px 25px rgba(102, 126, 234, 0.4)' 
                 : '0 4px 15px rgba(0, 0, 0, 0.1)',
               transform: activeView === 'gantt' ? 'translateY(-2px)' : 'translateY(0)'
             }}
-            onMouseEnter={(e) => {
-              if (activeView !== 'gantt') {
-                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeView !== 'gantt') {
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
-              }
-            }}
+         onMouseEnter={(e) => {
+           if (activeView !== 'gantt') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.3)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+           }
+         }}
+         onMouseLeave={(e) => {
+           if (activeView !== 'gantt') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.2)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+           }
+         }}
           >
             <GanttChart style={{ width: '20px', height: '20px' }} />
             <span>📊 Gantt</span>
@@ -878,38 +888,37 @@ export default function AdvancedPlanningPage() {
               padding: '1rem 2rem',
               borderRadius: '16px',
               border: 'none',
-              background: activeView === 'analytics' 
-                ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
-                : 'rgba(255, 255, 255, 0.2)',
-              color: 'white',
-              fontSize: '1rem',
-              fontWeight: '600',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem',
-              transition: 'all 0.3s ease',
-              backdropFilter: 'blur(10px)',
-              border: '1px solid rgba(255, 255, 255, 0.3)',
+           background: activeView === 'analytics'
+             ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
+             : 'rgba(255, 255, 255, 0.2)',
+           color: 'white',
+           fontSize: '1rem',
+           fontWeight: '600',
+           cursor: 'pointer',
+           display: 'flex',
+           alignItems: 'center',
+           gap: '0.75rem',
+           transition: 'all 0.3s ease',
+           backdropFilter: 'blur(10px)',
               boxShadow: activeView === 'analytics' 
                 ? '0 8px 25px rgba(102, 126, 234, 0.4)' 
                 : '0 4px 15px rgba(0, 0, 0, 0.1)',
               transform: activeView === 'analytics' ? 'translateY(-2px)' : 'translateY(0)'
             }}
-            onMouseEnter={(e) => {
-              if (activeView !== 'analytics') {
-                e.target.style.background = 'rgba(255, 255, 255, 0.3)';
-                e.target.style.transform = 'translateY(-2px)';
-                e.target.style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (activeView !== 'analytics') {
-                e.target.style.background = 'rgba(255, 255, 255, 0.2)';
-                e.target.style.transform = 'translateY(0)';
-                e.target.style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
-              }
-            }}
+         onMouseEnter={(e) => {
+           if (activeView !== 'analytics') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.3)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+           }
+         }}
+         onMouseLeave={(e) => {
+           if (activeView !== 'analytics') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.2)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+           }
+         }}
           >
             <BarChart3 style={{ width: '20px', height: '20px' }} />
             <span>📈 Analyse</span>
