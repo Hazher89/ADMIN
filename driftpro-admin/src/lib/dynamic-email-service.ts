@@ -1,20 +1,6 @@
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp, doc, getDoc } from 'firebase/firestore';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { EmailTemplates } from './email-templates';
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-  authDomain: "driftpro-40ccd.firebaseapp.com",
-  projectId: "driftpro-40ccd",
-  storageBucket: "driftpro-40ccd.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+import { db } from './firebase';
 
 export class DynamicEmailService {
   private baseUrl: string;
@@ -67,20 +53,24 @@ export class DynamicEmailService {
       const info = { messageId: result.messageId || 'unknown' };
 
       // Log email to Firestore
-      try {
-        await addDoc(collection(db, 'emailLogs'), {
-          to: Array.isArray(to) ? to : [to],
-          subject: subject,
-          from: this.userEmail,
-          provider: 'user_smtp',
-          messageId: info.messageId,
-          status: 'sent',
-          timestamp: serverTimestamp(),
-          userAgent: 'DriftPro Mail System'
-        });
-        console.log('📝 Email logged to Firestore');
-      } catch (logError) {
-        console.warn('⚠️ Could not log email to Firestore:', logError);
+      if (db) {
+        try {
+          await addDoc(collection(db, 'emailLogs'), {
+            to: Array.isArray(to) ? to : [to],
+            subject: subject,
+            from: this.userEmail,
+            provider: 'user_smtp',
+            messageId: info.messageId,
+            status: 'sent',
+            timestamp: serverTimestamp(),
+            userAgent: 'DriftPro Mail System'
+          });
+          console.log('📝 Email logged to Firestore');
+        } catch (logError) {
+          console.warn('⚠️ Could not log email to Firestore:', logError);
+        }
+      } else {
+        console.warn('⚠️ Firebase database not available for logging');
       }
 
       return { success: true, messageId: info.messageId || 'unknown' };
@@ -88,19 +78,23 @@ export class DynamicEmailService {
       console.error('❌ Error sending email:', error);
       
       // Log error to Firestore
-      try {
-        await addDoc(collection(db, 'emailLogs'), {
-          to: Array.isArray(to) ? to : [to],
-          subject: subject,
-          from: this.userEmail,
-          provider: 'user_smtp',
-          status: 'failed',
-          error: error instanceof Error ? error.message : 'Unknown error',
-          timestamp: serverTimestamp(),
-          userAgent: 'DriftPro Mail System'
-        });
-      } catch (logError) {
-        console.warn('⚠️ Could not log error to Firestore:', logError);
+      if (db) {
+        try {
+          await addDoc(collection(db, 'emailLogs'), {
+            to: Array.isArray(to) ? to : [to],
+            subject: subject,
+            from: this.userEmail,
+            provider: 'user_smtp',
+            status: 'failed',
+            error: error instanceof Error ? error.message : 'Unknown error',
+            timestamp: serverTimestamp(),
+            userAgent: 'DriftPro Mail System'
+          });
+        } catch (logError) {
+          console.warn('⚠️ Could not log error to Firestore:', logError);
+        }
+      } else {
+        console.warn('⚠️ Firebase database not available for error logging');
       }
       
       return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
@@ -130,6 +124,7 @@ export class DynamicEmailService {
     return this.sendEmail(email, 'Sett opp passord - DriftPro', html, text);
   }
 }
+
 
 
 

@@ -280,7 +280,140 @@ export class EmailTemplates {
       `
     };
   }
+
+  static passwordReset(resetUrl: string) {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 2rem; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+          <h1 style="margin: 0; font-size: 2rem;">🔐 DriftPro</h1>
+          <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Tilbakestill passord</p>
+        </div>
+        
+        <div style="background-color: white; padding: 2rem; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <h2 style="color: #1f2937; margin-top: 0;">Du har bedt om å tilbakestille passordet ditt</h2>
+          
+          <div style="background-color: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="color: #0c4a6e; margin: 0;">
+              Klikk på lenken nedenfor for å tilbakestille passordet ditt. Denne lenken er gyldig i 1 time.
+            </p>
+            <div style="text-align: center; margin: 1.5rem 0;">
+              <a href="${resetUrl}" style="background-color: #0ea5e9; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+                Tilbakestill passord
+              </a>
+            </div>
+          </div>
+          
+          <div style="background-color: #fef2f2; border: 1px solid #ef4444; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="color: #dc2626; margin: 0; font-size: 0.9rem;">
+              <strong>Sikkerhetstips:</strong> Hvis du ikke ba om denne e-posten, kan du trygt ignorere den. 
+              Passordet ditt vil ikke bli endret før du klikker på lenken ovenfor.
+            </p>
+          </div>
+          
+          <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center;">
+            <p style="color: #6b7280; font-size: 0.9rem; margin: 0;">
+              Dette er en automatisk e-post fra DriftPro-systemet.<br>
+              Med vennlig hilsen,<br>
+              <strong>DriftPro Team</strong><br>
+              driftpro@mavilogistikk.no
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  static passwordSetup(setupUrl: string) {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 2rem; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+          <h1 style="margin: 0; font-size: 2rem;">👋 DriftPro</h1>
+          <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Velkommen til systemet!</p>
+        </div>
+        
+        <div style="background-color: white; padding: 2rem; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <h2 style="color: #1f2937; margin-top: 0;">Du har blitt invitert til DriftPro</h2>
+          
+          <div style="background-color: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="color: #15803d; margin: 0;">
+              For å fullføre registreringen og få tilgang til systemet, må du sette opp et passord.
+            </p>
+            <div style="text-align: center; margin: 1.5rem 0;">
+              <a href="${setupUrl}" style="background-color: #22c55e; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; font-weight: 600;">
+                Sett opp passord
+              </a>
+            </div>
+          </div>
+          
+          <div style="background-color: #fef3c7; border: 1px solid #f59e0b; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="color: #92400e; margin: 0; font-size: 0.9rem;">
+              <strong>Viktig:</strong> Denne lenken er gyldig i 24 timer. Etter at du har satt opp passordet, 
+              kan du logge inn på systemet med din e-postadresse og det nye passordet.
+            </p>
+          </div>
+          
+          <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center;">
+            <p style="color: #6b7280; font-size: 0.9rem; margin: 0;">
+              Dette er en automatisk invitasjon fra DriftPro-systemet.<br>
+              Med vennlig hilsen,<br>
+              <strong>DriftPro Team</strong><br>
+              driftpro@mavilogistikk.no
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
+
+  static welcome(name: string, companyName: string) {
+    return `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%); padding: 2rem; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+          <h1 style="margin: 0; font-size: 2rem;">🎉 DriftPro</h1>
+          <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Velkommen til teamet!</p>
+        </div>
+        
+        <div style="background-color: white; padding: 2rem; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+          <h2 style="color: #1f2937; margin-top: 0;">Hei ${name}! 🎊</h2>
+          
+          <div style="background-color: #faf5ff; border: 1px solid #a855f7; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+            <p style="color: #7c2d12; margin: 0;">
+              Velkommen til <strong>${companyName}</strong> og DriftPro-systemet! 
+              Vi er glade for å ha deg med i teamet.
+            </p>
+          </div>
+          
+          <div style="background-color: #f0f9ff; border: 1px solid #0ea5e9; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+            <h3 style="color: #0c4a6e; margin-top: 0;">🚀 Neste steg:</h3>
+            <ul style="color: #0c4a6e; margin: 0; padding-left: 1.5rem;">
+              <li>Logg inn på DriftPro med dine oppgitte påloggingsdetaljer</li>
+              <li>Opprett din brukerprofil og legg til nødvendig informasjon</li>
+              <li>Familiariser deg med systemets funksjoner</li>
+              <li>Kontakt din leder hvis du har spørsmål</li>
+            </ul>
+          </div>
+          
+          <div style="background-color: #f0fdf4; border: 1px solid #22c55e; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+            <h3 style="color: #15803d; margin-top: 0;">📱 Tilgang til systemet:</h3>
+            <p style="color: #15803d; margin: 0;">
+              Du kan nå logge inn på DriftPro via: <strong>https://admin.driftpro.no</strong>
+            </p>
+          </div>
+          
+          <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center;">
+            <p style="color: #6b7280; font-size: 0.9rem; margin: 0;">
+              Dette er en automatisk velkomstmelding fra DriftPro-systemet.<br>
+              Med vennlig hilsen,<br>
+              <strong>DriftPro Team</strong><br>
+              driftpro@mavilogistikk.no
+            </p>
+          </div>
+        </div>
+      </div>
+    `;
+  }
 }
+
 
 
 
