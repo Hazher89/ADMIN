@@ -428,6 +428,116 @@ export class EmailService {
     const template = EmailTemplates.getAuditNotificationTemplate(adminEmail, auditType, findings, severity);
     return this.sendEmail(adminEmail, template.subject, template.html);
   }
+
+  async sendWelcomeEmail(
+    email: string, 
+    displayName: string, 
+    companyName: string, 
+    adminName: string, 
+    departmentName: string, 
+    position: string, 
+    setupUrl: string
+  ) {
+    const subject = `Velkommen til DriftPro - ${companyName}`;
+    
+    const html = `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <title>Velkommen til DriftPro</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .header h1 { color: #2563eb; margin: 0; }
+          .content { background-color: #f8fafc; border-left: 4px solid #2563eb; padding: 20px; margin: 20px 0; border-radius: 6px; }
+          .button { display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin-top: 15px; font-weight: bold; }
+          .button:hover { background-color: #1d4ed8; }
+          .url-box { background-color: #f1f5f9; padding: 15px; border-radius: 6px; font-family: monospace; word-break: break-all; margin: 15px 0; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0; color: #64748b; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <h1>Velkommen til DriftPro!</h1>
+          </div>
+          
+          <p>Hei <strong>${displayName}</strong>,</p>
+          
+          <p>Velkommen til DriftPro! Du har blitt lagt til som ansatt i bedriften <strong>${companyName}</strong>.</p>
+          
+          <div class="content">
+            <h3 style="margin-top: 0; color: #2563eb;">Din informasjon:</h3>
+            <ul style="margin: 10px 0; padding-left: 20px;">
+              <li><strong>Navn:</strong> ${displayName}</li>
+              <li><strong>Bedrift:</strong> ${companyName}</li>
+              <li><strong>Avdeling:</strong> ${departmentName}</li>
+              <li><strong>Stilling:</strong> ${position}</li>
+              <li><strong>Administrator:</strong> ${adminName}</li>
+            </ul>
+            
+            <h3 style="color: #2563eb;">Neste steg:</h3>
+            <p>For å komme i gang, må du sette opp passordet ditt:</p>
+            <a href="${setupUrl}" class="button">
+              Sett opp passord
+            </a>
+          </div>
+          
+          <p>Hvis lenken ikke fungerer, kan du kopiere denne adressen til nettleseren:</p>
+          <div class="url-box">
+            ${setupUrl}
+          </div>
+          
+          <p>Etter at du har satt opp passordet, kan du logge inn på:</p>
+          <div class="url-box">
+            https://admin.driftpro.no/login
+          </div>
+          
+          <p>Hvis du har spørsmål, ikke nøl med å ta kontakt med din administrator.</p>
+          
+          <div class="footer">
+            <p>Med vennlig hilsen,<br>
+            <strong>DriftPro Team</strong></p>
+            <p style="font-size: 12px; margin-top: 20px;">
+              Denne e-posten ble sendt automatisk fra DriftPro systemet.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `;
+
+    const text = `
+Velkommen til DriftPro!
+
+Hei ${displayName},
+
+Velkommen til DriftPro! Du har blitt lagt til som ansatt i bedriften ${companyName}.
+
+Din informasjon:
+- Navn: ${displayName}
+- Bedrift: ${companyName}
+- Avdeling: ${departmentName}
+- Stilling: ${position}
+- Administrator: ${adminName}
+
+Neste steg:
+For å komme i gang, må du sette opp passordet ditt ved å besøke denne lenken:
+${setupUrl}
+
+Etter at du har satt opp passordet, kan du logge inn på:
+https://admin.driftpro.no/login
+
+Hvis du har spørsmål, ikke nøl med å ta kontakt med din administrator.
+
+Med vennlig hilsen,
+DriftPro Team
+    `;
+
+    return this.sendEmail(email, subject, html, text);
+  }
 }
 
 // Export singleton instance

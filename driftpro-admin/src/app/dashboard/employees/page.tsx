@@ -237,10 +237,20 @@ export default function EmployeesPage() {
 
       // Send welcome email to the new employee
       let emailSent = false;
+      let emailError = null;
       try {
         const departmentName = getDepartmentName(newEmployee.departmentId);
         const adminName = userProfile?.displayName || 'System Administrator';
         const companyName = userProfile?.companyId || 'Bedrift';
+
+        console.log('📧 Sending welcome email to new employee:', {
+          email: newEmployee.email,
+          displayName: newEmployee.displayName,
+          adminName,
+          companyName,
+          departmentName,
+          position: newEmployee.position || 'Ansatt'
+        });
 
         // Email functionality moved to API routes
         const response = await fetch('/api/send-welcome-email', {
@@ -259,14 +269,17 @@ export default function EmployeesPage() {
         });
 
         if (response.ok) {
+          const result = await response.json();
           emailSent = true;
-          console.log('Welcome email sent successfully to:', newEmployee.email);
+          console.log('✅ Welcome email sent successfully to:', newEmployee.email);
         } else {
+          const errorResult = await response.json();
+          emailError = errorResult.error || 'Unknown error';
           emailSent = false;
-          console.warn('Failed to send welcome email to:', newEmployee.email);
+          console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
         }
       } catch (emailError) {
-        console.error('Error sending welcome email:', emailError);
+        console.error('❌ Error sending welcome email:', emailError);
         emailSent = false;
         // Don't fail the employee creation if email fails
       }
@@ -304,8 +317,8 @@ export default function EmployeesPage() {
       }, 1000);
       
       const message = emailSent 
-        ? `Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}`
-        : `Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email} - sjekk e-postinnstillinger.`;
+        ? `✅ Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}`
+        : `⚠️ Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email}${emailError ? ` - ${emailError}` : ' - sjekk e-postinnstillinger.'}`;
       alert(message);
     } catch (error) {
       console.error('Error adding employee:', error);
