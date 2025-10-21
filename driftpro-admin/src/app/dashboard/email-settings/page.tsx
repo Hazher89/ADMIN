@@ -27,6 +27,8 @@ import {
   AlertTriangle,
   X
 } from 'lucide-react';
+import { msalInstance, graphScopes, msalConfig } from '@/lib/onedrive-config';
+import { PublicClientApplication, AccountInfo } from '@azure/msal-browser';
 
 interface EmailSettings {
   smtpHost: string;
@@ -53,10 +55,7 @@ export default function EmailSettingsPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   
-  // Login states
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [showPassword, setShowPassword] = useState(false);
+  // Login states - Using Microsoft Graph OAuth2 like archive page
   const [loginStatus, setLoginStatus] = useState<'not_logged_in' | 'logging_in' | 'logged_in' | 'error'>('not_logged_in');
   const [loginMessage, setLoginMessage] = useState('');
   
@@ -84,36 +83,24 @@ export default function EmailSettingsPage() {
     const checkLoginStatus = async () => {
       setIsLoading(true);
       try {
-        // Check localStorage for existing login
-        const savedStatus = localStorage.getItem('office365_email_login_status');
-        const savedCredentials = localStorage.getItem('office365_email_credentials');
+        // Always initialize to restore session from localStorage
+        await msalInstance.initialize();
         
-        if (savedStatus === 'logged_in' && savedCredentials) {
-          const credentials = JSON.parse(savedCredentials);
-          const now = new Date().getTime();
-          const loginTime = new Date(credentials.loginTime).getTime();
-          const expiresIn = credentials.expiresIn || (7 * 24 * 60 * 60 * 1000); // Default 7 days
-          
-          if (now - loginTime < expiresIn) {
-            setIsLoggedIn(true);
-            setActiveAccount({
-              email: credentials.email,
-              name: credentials.email.split('@')[0]
-            });
-            setEmailSettings(prev => ({
-              ...prev,
-              smtpUser: credentials.email,
-              smtpPassword: credentials.password,
-              fromEmail: credentials.email
-            }));
-            setLoginStatus('logged_in');
-            console.log('✅ Office 365 email session restored from localStorage');
-          } else {
-            // Session expired, clear it
-            localStorage.removeItem('office365_email_login_status');
-            localStorage.removeItem('office365_email_credentials');
-            console.log('ℹ️ Office 365 email session expired');
-          }
+        const loggedIn = msalInstance.getActiveAccount() !== null;
+        setIsLoggedIn(loggedIn);
+        if (loggedIn) {
+          const account = msalInstance.getActiveAccount();
+          setActiveAccount({
+            email: account?.username,
+            name: account?.name || account?.username?.split('@')[0]
+          });
+          setEmailSettings(prev => ({
+            ...prev,
+            smtpUser: account?.username || '',
+            fromEmail: account?.username || ''
+          }));
+          setLoginStatus('logged_in');
+          console.log('✅ Office 365 email session restored from MSAL');
         } else {
           console.log('ℹ️ No Office 365 email session found');
         }
@@ -127,66 +114,58 @@ export default function EmailSettingsPage() {
   }, []);
 
   const handleLogin = async () => {
-    if (!loginEmail || !loginPassword) {
-      setLoginMessage('Vennligst skriv inn e-post og passord');
-      setLoginStatus('error');
-      return;
-    }
-
     setIsLoading(true);
     setLoginStatus('logging_in');
     setLoginMessage('Logger inn til Office 365...');
 
     try {
-      // Test Office 365 connection
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/smtp-test`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          host: 'smtp.office365.com',
-          port: 587,
-          user: loginEmail,
-          pass: loginPassword,
-          secure: false,
-          testEmail: loginEmail
-        })
+      // Check if Client ID is configured
+      if (msalConfig.auth.clientId === 'your-client-id-here' || !msalConfig.auth.clientId) {
+        throw new Error('Microsoft Client ID er ikke konfigurert. Sjekk at NEXT_PUBLIC_MICROSOFT_CLIENT_ID er satt i miljøvariablene.');
+      }
+
+      // Use Microsoft Graph OAuth2 popup like archive page
+      const loginResponse = await msalInstance.loginPopup({
+        scopes: graphScopes,
+        prompt: 'consent', // Force consent prompt to allow user to grant permissions
       });
 
-      const result = await response.json();
-
-      if (result.success) {
+      // Set active account for persistent session
+      if (loginResponse.account) {
+        msalInstance.setActiveAccount(loginResponse.account);
+        
         setIsLoggedIn(true);
         setActiveAccount({
-          email: loginEmail,
-          name: loginEmail.split('@')[0]
+          email: loginResponse.account.username,
+          name: loginResponse.account.name || loginResponse.account.username?.split('@')[0]
         });
         setEmailSettings(prev => ({
           ...prev,
-          smtpUser: loginEmail,
-          smtpPassword: loginPassword,
-          fromEmail: loginEmail
+          smtpUser: loginResponse.account.username || '',
+          fromEmail: loginResponse.account.username || ''
         }));
         setLoginStatus('logged_in');
-        setLoginMessage(`✅ Innlogging vellykket! Logget inn som ${loginEmail}`);
+        setLoginMessage(`✅ Innlogging vellykket! Logget inn som ${loginResponse.account.username}`);
         
-        // Save login state to localStorage
-        localStorage.setItem('office365_email_login_status', 'logged_in');
-        localStorage.setItem('office365_email_credentials', JSON.stringify({ 
-          email: loginEmail, 
-          password: loginPassword,
-          loginTime: new Date().toISOString(),
-          expiresIn: 7 * 24 * 60 * 60 * 1000 // 7 days
-        }));
-        
-        console.log('✅ Office 365 email login successful');
-      } else {
-        setLoginStatus('error');
-        setLoginMessage(result.error || 'Innlogging feilet');
+        console.log('✅ Office 365 email login successful via Microsoft Graph');
       }
     } catch (error) {
       setLoginStatus('error');
-      setLoginMessage('Feil ved innlogging til Office 365');
+      let errorMessage = 'Innlogging feilet. Prøv igjen.';
+      
+      if (error instanceof Error) {
+        if (error.message.includes('Client ID er ikke konfigurert')) {
+          errorMessage = 'Microsoft Client ID er ikke konfigurert. Sjekk at NEXT_PUBLIC_MICROSOFT_CLIENT_ID er satt i miljøvariablene.';
+        } else if (error.message.includes('AADSTS700016')) {
+          errorMessage = 'Azure App Registration ikke funnet. Sjekk at Client ID er riktig i .env.local filen.';
+        } else if (error.message.includes('AADSTS50020')) {
+          errorMessage = 'Ugyldig tenant. Sjekk at du logger inn med riktig konto (driftpro@mavilogistikk.no).';
+        } else {
+          errorMessage = error.message;
+        }
+      }
+      
+      setLoginMessage(`❌ ${errorMessage}`);
       console.error('Login failed:', error);
     } finally {
       setIsLoading(false);
@@ -196,6 +175,12 @@ export default function EmailSettingsPage() {
   const handleLogout = async () => {
     const confirmLogout = window.confirm('Er du sikker på at du vil logge ut av Office 365?');
     if (!confirmLogout) return;
+
+    try {
+      await msalInstance.logoutPopup();
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
 
     setIsLoggedIn(false);
     setActiveAccount(null);
@@ -207,10 +192,6 @@ export default function EmailSettingsPage() {
       smtpPassword: '',
       fromEmail: ''
     }));
-    
-    // Clear localStorage
-    localStorage.removeItem('office365_email_login_status');
-    localStorage.removeItem('office365_email_credentials');
     
     console.log('✅ Office 365 email logout successful');
   };
@@ -232,25 +213,31 @@ export default function EmailSettingsPage() {
     setTestMessage('Tester e-posttilkobling...');
 
     try {
+      // Get access token from MSAL
+      const account = msalInstance.getActiveAccount();
+      if (!account) {
+        throw new Error('No active account found');
+      }
+
+      const response = await msalInstance.acquireTokenSilent({
+        scopes: graphScopes,
+        account: account,
+      });
+
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/send-test-email`, {
+      const testResponse = await fetch(`${baseUrl}/api/send-test-email`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           to: testEmailAddress,
           subject: 'DriftPro E-post Test',
           message: 'Dette er en test-e-post fra DriftPro systemet.',
-          smtpConfig: {
-            host: emailSettings.smtpHost,
-            port: emailSettings.smtpPort,
-            user: emailSettings.smtpUser,
-            pass: emailSettings.smtpPassword,
-            secure: emailSettings.secure
-          }
+          accessToken: response.accessToken,
+          fromEmail: account.username
         })
       });
 
-      const result = await response.json();
+      const result = await testResponse.json();
 
       if (result.success) {
         setTestStatus('success');
@@ -262,6 +249,7 @@ export default function EmailSettingsPage() {
     } catch (error) {
       setTestStatus('error');
       setTestMessage('Feil ved testing av e-posttilkobling');
+      console.error('Email test error:', error);
     }
   };
 
@@ -341,49 +329,36 @@ export default function EmailSettingsPage() {
             </div>
           </div>
 
-          {/* Login Form */}
-          <div className="space-y-4 mb-6">
-            <div>
-              <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
-                Office 365 E-postadresse
-              </label>
-              <input
-                id="email"
-                type="email"
-                value={loginEmail}
-                onChange={(e) => setLoginEmail(e.target.value)}
-                className="w-full px-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                placeholder="din@bedrift.no"
-                disabled={isLoading}
-              />
+          {/* Setup Info */}
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <Info className="w-5 h-5 text-red-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-red-800">
+                <p className="font-medium mb-1">⚠️ Setup påkrevd!</p>
+                <p>Du må først opprette en Azure App Registration for å bruke Office 365-integrasjonen.</p>
+                <p className="mt-1">Se <strong>ONEDRIVE_SETUP_GUIDE.md</strong> for detaljerte instruksjoner.</p>
+              </div>
             </div>
-            
-            <div>
-              <label htmlFor="password" className="block text-sm font-medium text-gray-700 mb-2">
-                Passord
-              </label>
-              <div className="relative">
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={loginPassword}
-                  onChange={(e) => setLoginPassword(e.target.value)}
-                  className="w-full px-4 py-3 pr-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-                  placeholder="Ditt Office 365 passord"
-                  disabled={isLoading}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 pr-3 flex items-center"
-                  disabled={isLoading}
-                >
-                  {showPassword ? (
-                    <EyeOff className="h-5 w-5 text-gray-400" />
-                  ) : (
-                    <Eye className="h-5 w-5 text-gray-400" />
-                  )}
-                </button>
+          </div>
+
+          {/* Quick Setup Steps */}
+          <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
+            <div className="flex items-start space-x-3">
+              <Info className="w-5 h-5 text-blue-600 mt-0.5 flex-shrink-0" />
+              <div className="text-sm text-blue-800">
+                <p className="font-medium mb-2">🚀 Hurtig setup (5 minutter):</p>
+                <ol className="list-decimal list-inside space-y-1 text-xs">
+                  <li>Gå til <a href="https://portal.azure.com" target="_blank" className="underline">Azure Portal</a></li>
+                  <li>Logg inn med <strong>driftpro@mavilogistikk.no</strong></li>
+                  <li>Søk etter "App registrations"</li>
+                  <li>Klikk "New registration"</li>
+                  <li>Navn: "DriftPro Email"</li>
+                  <li>Account types: "Single tenant"</li>
+                  <li>Redirect URI: <strong>"https://admin.driftpro.no"</strong></li>
+                  <li>Kopier "Application (client) ID"</li>
+                  <li>Legg Client ID i .env.local filen</li>
+                  <li>Deploy til admin.driftpro.no</li>
+                </ol>
               </div>
             </div>
           </div>
@@ -412,7 +387,7 @@ export default function EmailSettingsPage() {
           
           <button
             onClick={handleLogin}
-            disabled={isLoading || !loginEmail || !loginPassword}
+            disabled={isLoading}
             className="w-full bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-blue-700 hover:to-indigo-800 disabled:opacity-50 text-white font-medium py-3 px-4 rounded-xl transition-all duration-200 flex items-center justify-center"
           >
             {isLoading ? (
@@ -423,7 +398,7 @@ export default function EmailSettingsPage() {
             ) : (
               <>
                 <Globe className="w-5 h-5 mr-2" />
-                Logg inn til Office 365
+                Logg inn med driftpro@mavilogistikk.no
               </>
             )}
           </button>
