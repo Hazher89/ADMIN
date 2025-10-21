@@ -1226,6 +1226,14 @@ export default function SettingsPage() {
               
               {/* Office 365 Login Status */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <a
+                  href="/dashboard/email-settings"
+                  className="btn btn-primary"
+                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', textDecoration: 'none' }}
+                >
+                  <Settings size={16} style={{ marginRight: '0.5rem' }} />
+                  Åpne E-post Innstillinger
+                </a>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <div style={{
                     width: '12px',
