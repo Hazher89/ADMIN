@@ -28,6 +28,7 @@ import {
 import { auth, db } from '@/lib/firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, doc, getDoc, orderBy, limit } from 'firebase/firestore';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Driver {
   id: string;
@@ -68,7 +69,7 @@ interface AssignedRoute {
 
 export default function DriverDashboardPage() {
   const router = useRouter();
-  const [driver, setDriver] = useState<Driver | null>(null);
+  const { user, userProfile, logout } = useAuth();
   const [assignedRoutes, setAssignedRoutes] = useState<AssignedRoute[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -76,45 +77,29 @@ export default function DriverDashboardPage() {
 
   // Check authentication and load driver data
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      if (!user) {
-        router.push('/driver-login');
-        return;
-      }
+    if (!user || !userProfile) {
+      router.push('/driver-login');
+      return;
+    }
 
-      try {
-        // Get driver data
-        const userDoc = await getDoc(doc(db, 'users', user.uid));
-        if (!userDoc.exists()) {
-          throw new Error('Brukerkonto ikke funnet');
-        }
+    if (userProfile.role !== 'driver') {
+      setError('Denne kontoen er ikke en sjåfør-konto');
+      logout();
+      router.push('/driver-login');
+      return;
+    }
 
-        const userData = userDoc.data() as Driver;
-        if (userData.role !== 'driver') {
-          throw new Error('Denne kontoen er ikke en sjåfør-konto');
-        }
+    if (userProfile.status === 'inactive') {
+      setError('Kontoen er deaktivert');
+      logout();
+      router.push('/driver-login');
+      return;
+    }
 
-        if (userData.status === 'inactive') {
-          throw new Error('Kontoen er deaktivert');
-        }
-
-        setDriver(userData);
-
-        // Load assigned routes
-        await loadAssignedRoutes(userData.id);
-
-      } catch (error: any) {
-        console.error('Error loading driver data:', error);
-        setError(error.message);
-        signOut(auth);
-        router.push('/driver-login');
-      } finally {
-        setIsLoading(false);
-      }
-    });
-
-    return () => unsubscribe();
-  }, [router]);
+    // Load assigned routes
+    loadAssignedRoutes(userProfile.id);
+    setIsLoading(false);
+  }, [user, userProfile, router, logout]);
 
   const loadAssignedRoutes = async (driverId: string) => {
     try {
@@ -136,7 +121,7 @@ export default function DriverDashboardPage() {
           routeNumber: data.routeNumber || data.id || 'N/A',
           name: data.name || `Rute ${doc.id}`,
           driverId: data.driverId || driverId,
-          driverName: data.driverName || driver?.name || 'Ukjent',
+          driverName: data.driverName || userProfile?.displayName || 'Ukjent',
           companyId: data.companyId || '',
           companyName: data.companyName || '',
           vehicleId: data.vehicleId || '',
@@ -164,7 +149,7 @@ export default function DriverDashboardPage() {
 
   const handleLogout = async () => {
     try {
-      await signOut(auth);
+      await logout();
       router.push('/driver-login');
     } catch (error) {
       console.error('Logout error:', error);
@@ -249,7 +234,7 @@ export default function DriverDashboardPage() {
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-gray-900">DriftPro Driver</h1>
-                <p className="text-sm text-gray-500">Velkommen, {driver?.name}</p>
+                <p className="text-sm text-gray-500">Velkommen, {userProfile?.displayName}</p>
               </div>
             </div>
             
@@ -500,7 +485,10 @@ export default function DriverDashboardPage() {
             </button>
 
             <button
-              onClick={() => router.push('/driver-profile')}
+              onClick={() => {
+                // For now, show driver info in a simple alert
+                alert(`Sjåfør: ${userProfile?.displayName}\nE-post: ${userProfile?.email}\nTelefon: ${userProfile?.phone}\nStatus: ${userProfile?.status || 'active'}`);
+              }}
               className="p-4 border border-gray-200 rounded-lg hover:bg-gray-50 transition-colors text-left"
             >
               <div className="flex items-center space-x-3">
@@ -509,7 +497,7 @@ export default function DriverDashboardPage() {
                 </div>
                 <div>
                   <h4 className="font-medium text-gray-900">Min Profil</h4>
-                  <p className="text-sm text-gray-500">Se og rediger profil</p>
+                  <p className="text-sm text-gray-500">Se profilinformasjon</p>
                 </div>
               </div>
             </button>

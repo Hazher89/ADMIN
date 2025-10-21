@@ -69,12 +69,18 @@ export default function ForgotPasswordPage() {
               </p>
             </div>
             
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
               <Link
                 href="/login"
                 className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
-                Tilbake til innlogging
+                Tilbake til admin innlogging
+              </Link>
+              <Link
+                href="/driver-login"
+                className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                Tilbake til sjåfør innlogging
               </Link>
             </div>
           </div>
@@ -151,13 +157,20 @@ export default function ForgotPasswordPage() {
               </div>
             </div>
 
-            <div className="mt-6">
+            <div className="mt-6 space-y-3">
               <Link
                 href="/login"
                 className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Tilbake til innlogging
+                Tilbake til admin innlogging
+              </Link>
+              <Link
+                href="/driver-login"
+                className="w-full flex justify-center items-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+              >
+                <ArrowLeft className="h-4 w-4 mr-2" />
+                Tilbake til sjåfør innlogging
               </Link>
             </div>
           </div>

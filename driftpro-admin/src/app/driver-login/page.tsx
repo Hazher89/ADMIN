@@ -18,6 +18,7 @@ import {
 import { signInWithEmailAndPassword, signInWithPhoneNumber } from 'firebase/auth';
 import { auth, db } from '@/lib/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Driver {
   id: string;
@@ -35,6 +36,7 @@ interface Driver {
 
 export default function DriverLoginPage() {
   const router = useRouter();
+  const { login } = useAuth();
   const [loginMethod, setLoginMethod] = useState<'email' | 'phone'>('email');
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
@@ -74,26 +76,10 @@ export default function DriverLoginPage() {
     setSuccess(null);
 
     try {
-      // Sign in with email and password
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
-      const user = userCredential.user;
-
-      // Check if this is a driver account
-      const userDoc = await getDoc(doc(db, 'users', user.uid));
-      if (!userDoc.exists()) {
-        throw new Error('Brukerkonto ikke funnet');
-      }
-
-      const userData = userDoc.data();
-      if (userData.role !== 'driver') {
-        throw new Error('Denne kontoen er ikke en sjåfør-konto');
-      }
-
-      if (userData.status === 'inactive') {
-        throw new Error('Kontoen er deaktivert. Kontakt administrator.');
-      }
-
-      setSuccess(`Velkommen tilbake, ${userData.name}!`);
+      // Use AuthContext login method
+      await login(email, password);
+      
+      setSuccess('Velkommen tilbake!');
       
       // Redirect to driver dashboard
       setTimeout(() => {
@@ -104,15 +90,7 @@ export default function DriverLoginPage() {
       console.error('Login error:', error);
       let errorMessage = 'Innlogging feilet';
       
-      if (error.code === 'auth/user-not-found') {
-        errorMessage = 'Bruker ikke funnet';
-      } else if (error.code === 'auth/wrong-password') {
-        errorMessage = 'Feil passord';
-      } else if (error.code === 'auth/invalid-email') {
-        errorMessage = 'Ugyldig e-postadresse';
-      } else if (error.code === 'auth/user-disabled') {
-        errorMessage = 'Kontoen er deaktivert';
-      } else if (error.message) {
+      if (error.message) {
         errorMessage = error.message;
       }
       
@@ -384,10 +362,25 @@ export default function DriverLoginPage() {
           )}
 
           {/* Help Text */}
-          <div className="mt-6 text-center">
+          <div className="mt-6 text-center space-y-3">
             <p className="text-sm text-gray-500">
               Trenger du hjelp? Kontakt din administrator
             </p>
+            <div className="flex justify-center space-x-4">
+              <button
+                onClick={() => router.push('/forgot-password')}
+                className="text-sm text-blue-600 hover:text-blue-500 font-medium transition-colors"
+              >
+                Glemt passord?
+              </button>
+              <span className="text-gray-300">|</span>
+              <button
+                onClick={() => router.push('/login')}
+                className="text-sm text-gray-600 hover:text-gray-500 font-medium transition-colors"
+              >
+                Admin innlogging
+              </button>
+            </div>
           </div>
         </div>
 

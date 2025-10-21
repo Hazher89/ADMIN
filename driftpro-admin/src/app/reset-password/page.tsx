@@ -296,12 +296,18 @@ function ResetPasswordContent() {
               </button>
             </form>
 
-            <div className="mt-8 text-center">
+            <div className="mt-8 text-center space-y-3">
               <button
                 onClick={() => router.push('/login')}
-                className="text-sm text-blue-600 hover:text-blue-500 font-medium transition-colors"
+                className="block w-full text-sm text-blue-600 hover:text-blue-500 font-medium transition-colors"
               >
-                ← Tilbake til innlogging
+                ← Tilbake til admin innlogging
+              </button>
+              <button
+                onClick={() => router.push('/driver-login')}
+                className="block w-full text-sm text-gray-600 hover:text-gray-500 font-medium transition-colors"
+              >
+                ← Tilbake til sjåfør innlogging
               </button>
             </div>
           </>

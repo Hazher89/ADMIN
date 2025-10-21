@@ -20,7 +20,7 @@ interface UserProfile {
   phone?: string;
   departmentId?: string;
   position?: string;
-  role: 'admin' | 'department_leader' | 'employee' | 'super_admin';
+  role: 'admin' | 'department_leader' | 'employee' | 'super_admin' | 'driver';
   avatar?: string;
   createdAt: string;
   bio?: string;
@@ -42,6 +42,7 @@ interface AuthContextType {
   register: (email: string, password: string, displayName: string) => Promise<void>;
   updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
+  forgotPassword: (email: string) => Promise<any>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -275,6 +276,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const forgotPassword = async (email: string) => {
+    try {
+      // Use our custom forgot password API instead of Firebase's built-in function
+      const response = await fetch('/api/forgot-password', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ email }),
+      });
+
+      const result = await response.json();
+
+      if (!response.ok) {
+        throw new Error(result.error || 'Kunne ikke sende e-post for tilbakestilling av passord');
+      }
+
+      return result;
+    } catch (error) {
+      console.error('Error sending password reset email:', error);
+      throw error;
+    }
+  };
+
   const register = async (email: string, password: string, displayName: string) => {
     if (!auth || !db) throw new Error('Firebase not initialized');
     
@@ -333,6 +358,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     register,
     updateUserProfile,
     resetPassword,
+    forgotPassword,
   };
 
   return (
@@ -358,6 +384,7 @@ export function useAuth() {
       register: async () => { throw new Error('Auth not initialized'); },
       updateUserProfile: async () => { throw new Error('Auth not initialized'); },
       resetPassword: async () => { throw new Error('Auth not initialized'); },
+      forgotPassword: async () => { throw new Error('Auth not initialized'); },
     };
   }
   return context;
