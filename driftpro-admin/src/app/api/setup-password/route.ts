@@ -201,10 +201,29 @@ export async function POST(request: NextRequest) {
       console.error('❌ Firebase Auth error:', authError);
       
       if (authError instanceof Error && authError.message.includes('email-already-in-use')) {
-        return NextResponse.json(
-          { error: 'User already exists with this email' },
-          { status: 400 }
-        );
+        console.log('⚠️ Firebase Auth user already exists, updating user document instead');
+        
+        // User already exists in Firebase Auth, just update the user document
+        await updateDoc(userDoc.ref, {
+          status: 'active',
+          passwordSet: true,
+          passwordSetAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+
+        // Mark token as used
+        await updateDoc(tokenDoc.ref, {
+          used: true,
+          usedAt: new Date().toISOString()
+        });
+
+        console.log('✅ Password setup completed for existing Firebase Auth user via Microsoft Graph');
+        return NextResponse.json({
+          success: true,
+          message: 'Password setup completed for existing user via Microsoft Graph',
+          userId: 'existing_user',
+          provider: 'microsoft_graph'
+        });
       }
 
       return NextResponse.json(

@@ -48,7 +48,8 @@ import {
   BarChart,
   MapPin,
   ShoppingCart,
-  Navigation
+  Navigation,
+  Trash2
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import { firebaseService } from '@/lib/firebase-services';
@@ -485,6 +486,14 @@ export default function DashboardLayout({
         category: 'admin',
         isAdmin: true,
         id: 'companies'
+      },
+      {
+        name: 'Firebase Cleanup',
+        href: '/dashboard/cleanup-firebase',
+        icon: <Trash2 size={20} />,
+        category: 'admin',
+        isAdmin: true,
+        id: 'cleanup-firebase'
       },
 
     ] : [])

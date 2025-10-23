@@ -630,7 +630,23 @@ class FirebaseService {
     const firestore = ensureDb();
 
     try {
+      // Get employee data before deletion
+      const employeeDoc = await getDoc(doc(firestore, 'users', id));
+      if (!employeeDoc.exists()) {
+        throw new Error('Employee not found');
+      }
+
+      const employeeData = employeeDoc.data();
+      
+      // Delete from Firestore
       await deleteDoc(doc(firestore, 'users', id));
+      
+      console.log(`✅ Employee deleted from Firestore: ${employeeData.displayName} (${employeeData.email})`);
+      
+      // Note: Firebase Auth user deletion requires Admin SDK
+      // For now, we'll log this information
+      console.log(`⚠️ Firebase Auth user for ${employeeData.email} should be deleted manually or via Admin SDK`);
+      
     } catch (error) {
       console.error('Error deleting employee:', error);
       throw error;
