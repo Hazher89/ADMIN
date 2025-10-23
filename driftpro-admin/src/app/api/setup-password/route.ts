@@ -18,6 +18,84 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
 
+// GET /api/setup-password - Validate token
+export async function GET(request: NextRequest) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const token = searchParams.get('token');
+
+    if (!token) {
+      return NextResponse.json(
+        { error: 'Token is required' },
+        { status: 400 }
+      );
+    }
+
+    console.log('🔍 Validating setup token:', {
+      token: token.substring(0, 10) + '...',
+      provider: 'microsoft_graph'
+    });
+
+    // Find the setup token
+    const tokensQuery = query(collection(db, 'setupTokens'), where('token', '==', token));
+    const tokensSnapshot = await getDocs(tokensQuery);
+
+    if (tokensSnapshot.empty) {
+      return NextResponse.json(
+        { valid: false, error: 'Invalid or expired token' },
+        { status: 400 }
+      );
+    }
+
+    const tokenDoc = tokensSnapshot.docs[0];
+    const tokenData = tokenDoc.data();
+
+    // Check if token is expired
+    if (tokenData.expiresAt && new Date(tokenData.expiresAt.toDate()) < new Date()) {
+      // Delete expired token
+      await deleteDoc(tokenDoc.ref);
+      return NextResponse.json(
+        { valid: false, error: 'Token has expired' },
+        { status: 400 }
+      );
+    }
+
+    // Check if token is already used
+    if (tokenData.used) {
+      return NextResponse.json(
+        { valid: false, error: 'Token has already been used' },
+        { status: 400 }
+      );
+    }
+
+    console.log('✅ Setup token is valid:', {
+      email: tokenData.email,
+      type: tokenData.type,
+      provider: 'microsoft_graph'
+    });
+
+    return NextResponse.json({
+      valid: true,
+      email: tokenData.email,
+      adminName: tokenData.adminName || 'Administrator',
+      companyName: tokenData.companyName || 'Bedriften',
+      type: tokenData.type || 'employee_welcome'
+    });
+
+  } catch (error) {
+    console.error('❌ Error validating setup token:', error);
+    return NextResponse.json(
+      { 
+        valid: false,
+        error: 'Internal server error',
+        details: error instanceof Error ? error.message : 'Unknown error',
+        provider: 'microsoft_graph'
+      },
+      { status: 500 }
+    );
+  }
+}
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
@@ -30,9 +108,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('🔐 Processing password setup via Cloudflare Email Routing:', {
+    console.log('🔐 Processing password setup via Microsoft Graph:', {
       token: token.substring(0, 10) + '...',
-      provider: 'cloudflare_email_routing'
+      provider: 'microsoft_graph'
     });
 
     // Find the setup token
@@ -111,13 +189,13 @@ export async function POST(request: NextRequest) {
         usedAt: new Date().toISOString()
       });
 
-      console.log('✅ Password setup completed successfully via Cloudflare Email Routing');
+      console.log('✅ Password setup completed successfully via Microsoft Graph');
 
       return NextResponse.json({
         success: true,
-        message: 'Password set up successfully via Cloudflare Email Routing',
+        message: 'Password set up successfully via Microsoft Graph',
         userId: firebaseUser.uid,
-        provider: 'cloudflare_email_routing'
+        provider: 'microsoft_graph'
       });
 
     } catch (authError) {
@@ -134,7 +212,7 @@ export async function POST(request: NextRequest) {
         { 
           error: 'Failed to create user account',
           details: authError instanceof Error ? authError.message : 'Unknown error',
-          provider: 'cloudflare_email_routing'
+          provider: 'microsoft_graph'
         },
         { status: 500 }
       );
@@ -146,7 +224,7 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'cloudflare_email_routing'
+        provider: 'microsoft_graph'
       },
       { status: 500 }
     );
