@@ -407,6 +407,7 @@ const defaultConfig: MicrosoftGraphConfig = {
   redirectUri: process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI || 'http://localhost:3000/dashboard/mail',
   scopes: [
     'User.Read',
+    'Mail.Send',
     'offline_access',
     'openid',
     'profile',

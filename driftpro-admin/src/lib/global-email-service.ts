@@ -58,7 +58,7 @@ export class GlobalEmailService {
         };
       }
 
-      // Since we don't have Mail.Send permission, use SMTP fallback
+      // Use SMTP for email sending (since we don't have Mail.Send permission)
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
       
       const response = await fetch(`${baseUrl}/api/email/send`, {
@@ -75,7 +75,7 @@ export class GlobalEmailService {
           // Use SMTP credentials for sending
           credentials: {
             email: this.currentAccount.username,
-            password: process.env.SMTP_PASSWORD || 'HazGada1989'
+            password: 'HazGada1989' // Use the correct Office 365 password
           }
         })
       });
