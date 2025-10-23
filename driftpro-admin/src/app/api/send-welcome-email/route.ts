@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { emailService } from '@/lib/email-service';
+import { globalEmailService } from '@/lib/global-email-service';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -36,7 +36,7 @@ export async function POST(request: NextRequest) {
       companyName,
       departmentName,
       position,
-      provider: 'office365_smtp'
+      provider: 'microsoft_graph'
     });
 
     // Generate setup token for password setup
@@ -53,25 +53,21 @@ export async function POST(request: NextRequest) {
       type: 'employee_welcome'
     });
 
-    console.log('📧 Sending welcome email via Office 365 SMTP');
+    console.log('📧 Sending welcome email via Microsoft Graph');
 
-    // Send welcome email using Office 365 SMTP
-    const result = await emailService.sendWelcomeEmail(
+    // Send welcome email using Microsoft Graph
+    const result = await globalEmailService.sendWelcomeEmail(
       email,
       displayName,
-      companyName || 'Bedriften',
-      adminName || 'Administrator',
-      departmentName || 'Avdeling',
-      position || 'Ansatt',
-      setupUrl
+      companyName || 'Bedriften'
     );
 
     if (result.success) {
-      console.log('✅ Welcome email sent successfully via Office 365 SMTP');
+      console.log('✅ Welcome email sent successfully via Microsoft Graph');
       return NextResponse.json({
         success: true,
         message: 'Welcome email sent successfully',
-        provider: 'office365_smtp'
+        provider: 'microsoft_graph'
       });
     } else {
       console.error('❌ Welcome email sending failed:', result.error);
@@ -79,7 +75,7 @@ export async function POST(request: NextRequest) {
         { 
           error: 'Failed to send welcome email',
           details: result.error,
-          provider: 'office365_smtp'
+          provider: 'microsoft_graph'
         },
         { status: 500 }
       );
@@ -90,7 +86,7 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'office365_smtp'
+        provider: 'microsoft_graph'
       },
       { status: 500 }
     );
