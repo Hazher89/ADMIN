@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import ErrorBoundary from '@/components/ErrorBoundary';
 import { 
   Settings, 
   Users, 
@@ -529,13 +530,18 @@ export default function SettingsPage() {
         setShowLoginModal(false);
         
         // Save login state to localStorage for PERMANENT persistence (10,000 years!)
-        localStorage.setItem('office365_login_status', 'logged_in');
-        localStorage.setItem('office365_credentials', JSON.stringify({ 
-          email: loginEmail, 
-          password: loginPassword,
-          loginTime: new Date().toISOString(),
-          expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000 // 10,000 years in milliseconds
-        }));
+        try {
+          localStorage.setItem('office365_login_status', 'logged_in');
+          localStorage.setItem('office365_credentials', JSON.stringify({ 
+            email: loginEmail, 
+            password: loginPassword,
+            loginTime: new Date().toISOString(),
+            expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000 // 10,000 years in milliseconds
+          }));
+        } catch (localStorageError) {
+          console.error('Error saving to localStorage:', localStorageError);
+          // Continue without saving - login will still work for this session
+        }
         
         // Go to next step: sender configuration
         setCurrentStep('sender_config');
@@ -571,9 +577,14 @@ export default function SettingsPage() {
     setSenderEmail('');
     
     // Clear localStorage data (only when user explicitly wants to logout)
-    localStorage.removeItem('office365_login_status');
-    localStorage.removeItem('office365_credentials');
-    localStorage.removeItem('office365_sender_config');
+    try {
+      localStorage.removeItem('office365_login_status');
+      localStorage.removeItem('office365_credentials');
+      localStorage.removeItem('office365_sender_config');
+    } catch (localStorageError) {
+      console.error('Error clearing localStorage:', localStorageError);
+      // Continue - logout will still work
+    }
     
     // Clear credentials from settings
     setSettings(prev => prev.map(setting => {
@@ -596,12 +607,17 @@ export default function SettingsPage() {
     }));
     
     // Save sender configuration to localStorage for PERMANENT persistence (10,000 years!)
-    localStorage.setItem('office365_sender_config', JSON.stringify({
-      name: senderName,
-      email: senderEmail,
-      configTime: new Date().toISOString(),
-      expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000 // 10,000 years in milliseconds
-    }));
+    try {
+      localStorage.setItem('office365_sender_config', JSON.stringify({
+        name: senderName,
+        email: senderEmail,
+        configTime: new Date().toISOString(),
+        expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000 // 10,000 years in milliseconds
+      }));
+    } catch (localStorageError) {
+      console.error('Error saving sender config to localStorage:', localStorageError);
+      // Continue without saving - config will still work for this session
+    }
     
     setShowSenderConfig(false);
     setCurrentStep('login');
@@ -659,6 +675,15 @@ export default function SettingsPage() {
 
   useEffect(() => {
     const loadSettings = async () => {
+      console.log('🔧 Settings page: Loading settings...');
+      
+      // Check if we're on the client side
+      if (typeof window === 'undefined') {
+        console.log('🔧 Settings page: Server-side rendering, skipping localStorage access');
+        setLoading(false);
+        return;
+      }
+
       if (!userProfile?.companyId) {
         setLoading(false);
         return;
@@ -690,52 +715,58 @@ export default function SettingsPage() {
           { id: 'email_document_updates', name: 'Dokumentoppdateringer', enabled: false, recipients: ['employee'] }
         ]);
 
-        // Load persistent Office 365 login state
-        const savedLoginStatus = localStorage.getItem('office365_login_status');
-        const savedCredentials = localStorage.getItem('office365_credentials');
-        const savedSenderConfig = localStorage.getItem('office365_sender_config');
+        // Load persistent Office 365 login state - only on client side
+        try {
+          console.log('🔧 Settings page: Checking localStorage for Office 365 credentials...');
+          const savedLoginStatus = localStorage.getItem('office365_login_status');
+          const savedCredentials = localStorage.getItem('office365_credentials');
+          const savedSenderConfig = localStorage.getItem('office365_sender_config');
 
-        if (savedLoginStatus === 'logged_in' && savedCredentials) {
-          try {
-            const credentials = JSON.parse(savedCredentials);
-            
-            // Check if login is still valid (should be valid for 10,000 years!)
-            const loginTime = new Date(credentials.loginTime || new Date());
-            const expiresIn = credentials.expiresIn || (10000 * 365 * 24 * 60 * 60 * 1000);
-            const now = new Date();
-            
-            // Login is valid for 10,000 years - basically forever!
-            if (now.getTime() - loginTime.getTime() < expiresIn) {
-              setLoginStatus('logged_in');
-              setOffice365Credentials(credentials);
-              setLoginMessage(`✅ PERMANENT INNLOGGING: ${credentials.email} (gjelder i 10.000 år!)`);
+          if (savedLoginStatus === 'logged_in' && savedCredentials) {
+            try {
+              const credentials = JSON.parse(savedCredentials);
               
-              if (savedSenderConfig) {
-                const senderConfig = JSON.parse(savedSenderConfig);
-                setSenderName(senderConfig.name);
-                setSenderEmail(senderConfig.email);
-                setCurrentStep('sender_config');
+              // Check if login is still valid (should be valid for 10,000 years!)
+              const loginTime = new Date(credentials.loginTime || new Date());
+              const expiresIn = credentials.expiresIn || (10000 * 365 * 24 * 60 * 60 * 1000);
+              const now = new Date();
+              
+              // Login is valid for 10,000 years - basically forever!
+              if (now.getTime() - loginTime.getTime() < expiresIn) {
+                setLoginStatus('logged_in');
+                setOffice365Credentials(credentials);
+                setLoginMessage(`✅ PERMANENT INNLOGGING: ${credentials.email} (gjelder i 10.000 år!)`);
+                
+                if (savedSenderConfig) {
+                  const senderConfig = JSON.parse(savedSenderConfig);
+                  setSenderName(senderConfig.name);
+                  setSenderEmail(senderConfig.email);
+                  setCurrentStep('sender_config');
+                }
+              } else {
+                // This should never happen in 10,000 years, but just in case...
+                console.log('🕰️ Login expired after 10,000 years - refreshing...');
+                // Re-save with new timestamp
+                localStorage.setItem('office365_credentials', JSON.stringify({ 
+                  ...credentials,
+                  loginTime: new Date().toISOString(),
+                  expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000
+                }));
+                setLoginStatus('logged_in');
+                setOffice365Credentials(credentials);
+                setLoginMessage(`✅ PERMANENT INNLOGGING FORNYET: ${credentials.email}`);
               }
-            } else {
-              // This should never happen in 10,000 years, but just in case...
-              console.log('🕰️ Login expired after 10,000 years - refreshing...');
-              // Re-save with new timestamp
-              localStorage.setItem('office365_credentials', JSON.stringify({ 
-                ...credentials,
-                loginTime: new Date().toISOString(),
-                expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000
-              }));
-              setLoginStatus('logged_in');
-              setOffice365Credentials(credentials);
-              setLoginMessage(`✅ PERMANENT INNLOGGING FORNYET: ${credentials.email}`);
+            } catch (parseError) {
+              console.error('Error parsing saved Office 365 credentials:', parseError);
+              // Clear corrupted data
+              localStorage.removeItem('office365_login_status');
+              localStorage.removeItem('office365_credentials');
+              localStorage.removeItem('office365_sender_config');
             }
-          } catch (error) {
-            console.error('Error loading saved Office 365 state:', error);
-            // Clear corrupted data
-            localStorage.removeItem('office365_login_status');
-            localStorage.removeItem('office365_credentials');
-            localStorage.removeItem('office365_sender_config');
           }
+        } catch (localStorageError) {
+          console.error('Error accessing localStorage:', localStorageError);
+          // Continue without loading saved state
         }
       } catch (error) {
         console.error('Error loading settings:', error);
@@ -967,7 +998,8 @@ export default function SettingsPage() {
   }
 
   return (
-    <div>
+    <ErrorBoundary>
+      <div>
       {/* Page Header */}
       <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
@@ -1716,6 +1748,7 @@ export default function SettingsPage() {
           </div>
         </div>
       )}
-    </div>
+      </div>
+    </ErrorBoundary>
   );
 } 

@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { host, port, user, pass, secure, testEmail } = await request.json();
+    const body = await request.json();
+    const { host, port, user, pass, secure, testEmail } = body;
 
     if (!host || !port || !user || !pass) {
       return NextResponse.json({
