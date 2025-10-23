@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApps, initializeApp } from 'firebase/app';
 import { getFirestore, doc, getDoc } from 'firebase/firestore';
-import { adminEmailService } from '@/lib/admin-email-service';
+import { globalEmailService } from '@/lib/global-email-service';
 
 function getDb() {
   try {
@@ -81,7 +81,18 @@ export async function POST(request: NextRequest) {
       const admin = adminDoc.data();
       
       // Send password setup email
-      await adminEmailService.sendPasswordSetupEmail(admin.email, company.name);
+      const result = await globalEmailService.sendPasswordResetEmail(
+        admin.email, 
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${adminUserId}`,
+        company.name
+      );
+      
+      if (!result.success) {
+        return NextResponse.json(
+          { error: `Failed to send email: ${result.error}` },
+          { status: 500 }
+        );
+      }
       
       return NextResponse.json(
         { message: 'Password setup email sent successfully' },
@@ -108,7 +119,18 @@ export async function POST(request: NextRequest) {
       const employee = employeeDoc.data();
       
       // Send password setup email for employee
-      await adminEmailService.sendPasswordSetupEmail(employeeEmail, employee.displayName || 'Employee');
+      const result = await globalEmailService.sendPasswordResetEmail(
+        employeeEmail,
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${employeeId}`,
+        employee.displayName || 'Employee'
+      );
+      
+      if (!result.success) {
+        return NextResponse.json(
+          { error: `Failed to send email: ${result.error}` },
+          { status: 500 }
+        );
+      }
       
       return NextResponse.json(
         { message: 'Password setup email sent successfully' },

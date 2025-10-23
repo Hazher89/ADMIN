@@ -4,6 +4,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
 import { microsoftGraphService } from '@/lib/microsoft-graph-service';
+import { globalEmailService } from '@/lib/global-email-service';
 import type { AccountInfo } from '@azure/msal-browser';
 import { 
   Settings, 
@@ -485,9 +486,9 @@ export default function SettingsPage() {
   };
 
   const loadEmailLogs = async () => {
-    // Check if user is logged in - if not, show login modal
-    if (loginStatus !== 'logged_in' || !office365Credentials) {
-      setShowLoginModal(true); // Automatically show login modal
+    // Check if email service is available
+    if (!globalEmailService.isEmailServiceAvailable()) {
+      setMicrosoftAuthError('Du må logge inn til Microsoft Graph først!');
       return;
     }
 
@@ -609,6 +610,10 @@ export default function SettingsPage() {
         setIsMicrosoftAuthenticated(true);
         setMicrosoftAccount(account);
         setMicrosoftAuthError(null);
+        
+        // Update global email service
+        await globalEmailService.checkAuthenticationStatus();
+        
         console.log('✅ Microsoft Graph authentication found:', account.username);
       } else {
         setIsMicrosoftAuthenticated(false);
@@ -634,6 +639,9 @@ export default function SettingsPage() {
         setIsMicrosoftAuthenticated(true);
         setMicrosoftAccount(account);
         
+        // Update global email service
+        await globalEmailService.checkAuthenticationStatus();
+        
         // Save to localStorage for persistence
         localStorage.setItem('microsoft_graph_auth', JSON.stringify({
           account: account,
@@ -657,6 +665,9 @@ export default function SettingsPage() {
       setIsMicrosoftAuthenticated(false);
       setMicrosoftAccount(null);
       setMicrosoftAuthError(null);
+      
+      // Update global email service
+      await globalEmailService.checkAuthenticationStatus();
       
       // Clear localStorage
       localStorage.removeItem('microsoft_graph_auth');
@@ -707,8 +718,8 @@ export default function SettingsPage() {
       return;
     }
 
-    // Check if user is logged in to Microsoft Graph - if not, show login button
-    if (!isMicrosoftAuthenticated || !microsoftAccount) {
+    // Check if email service is available
+    if (!globalEmailService.isEmailServiceAvailable()) {
       setEmailTestMessage('⚠️ Du må logge inn til Microsoft Graph først!');
       setEmailTestStatus('error');
       return;
@@ -718,25 +729,11 @@ export default function SettingsPage() {
     setEmailTestMessage(`Sender ${template} til ${testEmailAddress}...`);
 
     try {
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      
-      // Get access token from Microsoft Graph
-      const accessToken = await microsoftGraphService.getAccessToken();
-      
-      const response = await fetch(`${baseUrl}/api/email/send`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          to: testEmailAddress,
-          subject: `DriftPro Test - ${template}`,
-          html: `<h1>Test ${template}</h1><p>Dette er en test-e-post fra DriftPro.</p>`,
-          text: `Test ${template} - Dette er en test-e-post fra DriftPro.`,
-          accessToken: accessToken,
-          fromEmail: microsoftAccount.username
-        })
+      const result = await globalEmailService.sendEmail({
+        to: testEmailAddress,
+        subject: `DriftPro Test - ${template}`,
+        html: `<h1>Test ${template}</h1><p>Dette er en test-e-post fra DriftPro.</p>`
       });
-
-      const result = await response.json();
 
       if (result.success) {
         setEmailTestStatus('success');
@@ -748,6 +745,7 @@ export default function SettingsPage() {
     } catch (error) {
       setEmailTestStatus('error');
       setEmailTestMessage('Feil ved sending av e-post');
+      console.error('Email test error:', error);
     }
   };
 
