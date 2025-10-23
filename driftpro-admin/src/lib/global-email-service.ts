@@ -58,43 +58,60 @@ export class GlobalEmailService {
         };
       }
 
-      // Use SMTP for email sending (since we don't have Mail.Send permission)
-      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      
-      const response = await fetch(`${baseUrl}/api/email/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          to: emailContent.to,
-          subject: emailContent.subject,
-          html: emailContent.html,
-          text: emailContent.text,
-          fromEmail: emailContent.fromEmail || this.currentAccount.username,
-          // Use SMTP credentials for sending
-          credentials: {
-            email: this.currentAccount.username,
-            password: 'HazGada1989' // Use the correct Office 365 password
-          }
-        })
-      });
+      // Use Microsoft Graph API for email sending
+      try {
+        const accessToken = await microsoftGraphService.getAccessToken();
+        
+        // Prepare recipients
+        const recipients = Array.isArray(emailContent.to) ? emailContent.to : [emailContent.to];
+        
+        // Send via Microsoft Graph API
+        const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            message: {
+              subject: emailContent.subject,
+              body: {
+                contentType: 'HTML',
+                content: emailContent.html
+              },
+              toRecipients: recipients.map(email => ({
+                emailAddress: {
+                  address: email
+                }
+              })),
+              from: {
+                emailAddress: {
+                  address: emailContent.fromEmail || this.currentAccount.username
+                }
+              }
+            },
+            saveToSentItems: true
+          })
+        });
 
-      if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(`Email API error: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
-      }
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}));
+          throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`);
+        }
 
-      const result = await response.json();
-
-      if (result.success) {
-        console.log('✅ Email sent successfully via SMTP:', emailContent.subject);
+        console.log('✅ Email sent successfully via Microsoft Graph:', emailContent.subject);
+        
         return {
           success: true,
-          messageId: result.messageId || `msg_${Date.now()}`
+          messageId: `msg_${Date.now()}`
         };
-      } else {
-        throw new Error(result.error || 'Email sending failed');
+
+      } catch (graphError) {
+        console.error('Microsoft Graph API failed:', graphError);
+        return {
+          success: false,
+          error: `Microsoft Graph feil: ${graphError instanceof Error ? graphError.message : 'Ukjent feil'}`
+        };
       }
 
     } catch (error: any) {
