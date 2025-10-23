@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { emailService } from '@/lib/email-service';
+import { globalEmailService } from '@/lib/global-email-service';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -29,11 +29,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('📧 Sending admin setup email via Cloudflare Email Routing:', {
+    console.log('📧 Sending admin setup email via Microsoft Graph:', {
       adminEmail,
       adminName,
       companyName,
-      provider: 'cloudflare_email_routing'
+      provider: 'microsoft_graph'
     });
 
     // Store setup token in Firestore
@@ -47,16 +47,19 @@ export async function POST(request: NextRequest) {
       used: false
     });
 
-    // Use the email service to send the admin setup email
-    const result = await emailService.sendAdminSetupEmail(adminEmail, adminName, companyName, setupToken);
+    // Generate setup URL
+    const setupUrl = `https://admin.driftpro.no/setup-password?token=${setupToken}&email=${encodeURIComponent(adminEmail)}`;
+
+    // Use Microsoft Graph to send the admin setup email
+    const result = await globalEmailService.sendPasswordResetEmail(adminEmail, setupUrl, adminName);
 
     if (result.success) {
-      console.log('✅ Admin setup email sent successfully via Cloudflare Email Routing');
+      console.log('✅ Admin setup email sent successfully via Microsoft Graph');
       return NextResponse.json({
         success: true,
-        message: 'Admin setup email sent successfully via Cloudflare Email Routing',
+        message: 'Admin setup email sent successfully via Microsoft Graph',
         messageId: result.messageId,
-        provider: 'cloudflare_email_routing'
+        provider: 'microsoft_graph'
       });
     } else {
       console.error('❌ Admin setup email sending failed:', result.error);
@@ -64,7 +67,7 @@ export async function POST(request: NextRequest) {
         { 
           error: 'Failed to send admin setup email',
           details: result.error,
-          provider: 'cloudflare_email_routing'
+          provider: 'microsoft_graph'
         },
         { status: 500 }
       );
@@ -75,7 +78,7 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'cloudflare_email_routing'
+        provider: 'microsoft_graph'
       },
       { status: 500 }
     );

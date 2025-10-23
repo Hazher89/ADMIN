@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { emailService } from '@/lib/email-service';
+import { globalEmailService } from '@/lib/global-email-service';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
 
@@ -29,9 +29,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('📧 Processing forgot password request via Office 365 SMTP:', {
+    console.log('📧 Processing forgot password request via Microsoft Graph:', {
       email,
-      provider: 'office365_smtp'
+      provider: 'microsoft_graph'
     });
 
     // Check if user exists
@@ -62,17 +62,17 @@ export async function POST(request: NextRequest) {
       used: false
     });
 
-    console.log('📧 Sending password reset email via Office 365 SMTP');
+    console.log('📧 Sending password reset email via Microsoft Graph');
 
-    // Send password reset email using Office 365 SMTP
-    const result = await emailService.sendPasswordResetEmail(email, resetToken);
+    // Send password reset email using Microsoft Graph
+    const result = await globalEmailService.sendPasswordResetEmail(email, resetUrl, userData.displayName || 'User');
 
     if (result.success) {
-      console.log('✅ Password reset email sent successfully via Office 365 SMTP');
+      console.log('✅ Password reset email sent successfully via Microsoft Graph');
       return NextResponse.json({
         success: true,
-        message: 'Password reset email sent successfully via Office 365 SMTP',
-        provider: 'office365_smtp'
+        message: 'Password reset email sent successfully via Microsoft Graph',
+        provider: 'microsoft_graph'
       });
     } else {
       console.error('❌ Password reset email sending failed:', result.error);
@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
         { 
           error: 'Failed to send password reset email',
           details: result.error,
-          provider: 'office365_smtp'
+          provider: 'microsoft_graph'
         },
         { status: 500 }
       );
@@ -91,7 +91,7 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'office365_smtp'
+        provider: 'microsoft_graph'
       },
       { status: 500 }
     );

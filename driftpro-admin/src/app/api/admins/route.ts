@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, getFirestore } from 'firebase/firestore';
 import { getApps, initializeApp } from 'firebase/app';
-import { adminEmailService } from '@/lib/admin-email-service';
+import { globalEmailService } from '@/lib/global-email-service';
 
 /**
  * Get Firebase database instance with fallback
@@ -154,12 +154,8 @@ export async function POST(request: NextRequest) {
 
       // Send welcome email to existing user
       try {
-        await adminEmailService.sendPasswordSetupEmail(
-          email,
-          name,
-          companyName || 'DriftPro',
-          await adminEmailService.createSetupToken(email, name, companyName || 'DriftPro', companyId)
-        );
+        const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${userId}&email=${encodeURIComponent(email)}`;
+        await globalEmailService.sendPasswordResetEmail(email, setupUrl, name);
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError);
         // Don't fail the request if email fails
@@ -189,19 +185,8 @@ export async function POST(request: NextRequest) {
 
       // Send password setup email to new admin
       try {
-        const setupToken = await adminEmailService.createSetupToken(
-          email,
-          name,
-          companyName || 'DriftPro',
-          companyId
-        );
-        
-        await adminEmailService.sendPasswordSetupEmail(
-          email,
-          name,
-          companyName || 'DriftPro',
-          setupToken
-        );
+        const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${userId}&email=${encodeURIComponent(email)}`;
+        await globalEmailService.sendPasswordResetEmail(email, setupUrl, name);
       } catch (emailError) {
         console.error('Error sending password setup email:', emailError);
         // Don't fail the request if email fails, but log it

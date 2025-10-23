@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { emailService } from '@/lib/email-service';
+import { globalEmailService } from '@/lib/global-email-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -13,23 +13,28 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log('📧 Sending email via Cloudflare Email Routing:', {
+    console.log('📧 Sending email via Microsoft Graph:', {
       to,
       subject,
       type: type || 'system',
-      provider: 'cloudflare_email_routing'
+      provider: 'microsoft_graph'
     });
 
-    // Use the email service to send the email
-    const result = await emailService.sendEmail(to, subject, html, text);
+    // Use Microsoft Graph to send the email
+    const result = await globalEmailService.sendEmail({
+      to,
+      subject,
+      html,
+      text
+    });
 
     if (result.success) {
-      console.log('✅ Email sent successfully via Cloudflare Email Routing');
+      console.log('✅ Email sent successfully via Microsoft Graph');
       return NextResponse.json({
         success: true,
-        message: 'Email sent successfully via Cloudflare Email Routing',
+        message: 'Email sent successfully via Microsoft Graph',
         messageId: result.messageId,
-        provider: 'cloudflare_email_routing'
+        provider: 'microsoft_graph'
       });
     } else {
       console.error('❌ Email sending failed:', result.error);
@@ -37,7 +42,7 @@ export async function POST(request: NextRequest) {
         { 
           error: 'Failed to send email',
           details: result.error,
-          provider: 'cloudflare_email_routing'
+          provider: 'microsoft_graph'
         },
         { status: 500 }
       );
@@ -48,7 +53,7 @@ export async function POST(request: NextRequest) {
       { 
         error: 'Internal server error',
         details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'cloudflare_email_routing'
+        provider: 'microsoft_graph'
       },
       { status: 500 }
     );
