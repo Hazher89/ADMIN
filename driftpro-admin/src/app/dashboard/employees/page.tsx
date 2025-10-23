@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
+import { microsoftGraphService } from '@/lib/microsoft-graph-service';
 // import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 import { UserPlus, Search, Filter, Edit, Trash2, Plus, MoreHorizontal, User, Building, MapPin, CheckCircle, Eye, Settings, Key, UserX, UserCheck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 
@@ -252,31 +253,57 @@ export default function EmployeesPage() {
           position: newEmployee.position || 'Ansatt'
         });
 
-        // Email functionality moved to API routes
-        const response = await fetch('/api/send-welcome-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: newEmployee.email,
-            displayName: newEmployee.displayName,
-            adminName,
-            companyName,
-            departmentName,
-            position: newEmployee.position || 'Ansatt'
-          })
-        });
-
-        if (response.ok) {
-          const result = await response.json();
-          emailSent = true;
-          console.log('✅ Welcome email sent successfully to:', newEmployee.email);
-        } else {
-          const errorResult = await response.json();
-          emailError = errorResult.error || 'Unknown error';
+        // Get Microsoft Graph access token for email sending
+        let accessToken = null;
+        let fromEmail = null;
+        
+        try {
+          await microsoftGraphService.initializeMSAL();
+          const account = microsoftGraphService.getCurrentAccount();
+          if (account) {
+            accessToken = await microsoftGraphService.getAccessToken();
+            fromEmail = account.username;
+            console.log('✅ Microsoft Graph token obtained for welcome email');
+          } else {
+            console.log('⚠️ No Microsoft Graph account found, skipping welcome email');
+            emailSent = false;
+            emailError = 'Microsoft Graph authentication required for sending emails';
+          }
+        } catch (tokenError) {
+          console.error('❌ Failed to get Microsoft Graph token:', tokenError);
           emailSent = false;
-          console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
+          emailError = 'Failed to get Microsoft Graph authentication token';
+        }
+
+        // Send welcome email if we have authentication
+        if (accessToken && fromEmail) {
+          const response = await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: newEmployee.email,
+              displayName: newEmployee.displayName,
+              adminName,
+              companyName,
+              departmentName,
+              position: newEmployee.position || 'Ansatt',
+              accessToken,
+              fromEmail
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            emailSent = true;
+            console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+          } else {
+            const errorResult = await response.json();
+            emailError = errorResult.error || 'Unknown error';
+            emailSent = false;
+            console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
+          }
         }
       } catch (emailError) {
         console.error('❌ Error sending welcome email:', emailError);

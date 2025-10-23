@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { globalEmailService } from '@/lib/global-email-service';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
@@ -20,11 +19,18 @@ const db = getFirestore(app);
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, displayName, adminName, companyName, departmentName, position } = body;
+    const { email, displayName, adminName, companyName, departmentName, position, accessToken, fromEmail } = body;
 
     if (!email || !displayName) {
       return NextResponse.json(
         { error: 'Email and display name are required' },
+        { status: 400 }
+      );
+    }
+
+    if (!accessToken || !fromEmail) {
+      return NextResponse.json(
+        { error: 'Microsoft Graph authentication required. Please log in first.' },
         { status: 400 }
       );
     }
@@ -55,31 +61,62 @@ export async function POST(request: NextRequest) {
 
     console.log('📧 Sending welcome email via Microsoft Graph');
 
-    // Send welcome email using Microsoft Graph
-    const result = await globalEmailService.sendWelcomeEmail(
-      email,
-      displayName,
-      companyName || 'Bedriften'
-    );
+    // Create welcome email HTML
+    const html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+        <h2 style="color: #2563eb;">Velkommen til ${companyName || 'Bedriften'}!</h2>
+        <p>Hei ${displayName},</p>
+        <p>Velkommen til ${companyName || 'Bedriften'}! Vi er glade for å ha deg med på laget.</p>
+        <p>Du kan nå logge inn på DriftPro-systemet med din e-postadresse.</p>
+        <p>Hvis du har spørsmål, ikke nøl med å ta kontakt.</p>
+        <br>
+        <p>Med vennlig hilsen,<br>${companyName || 'Bedriften'}-teamet</p>
+      </div>
+    `;
 
-    if (result.success) {
-      console.log('✅ Welcome email sent successfully via Microsoft Graph');
-      return NextResponse.json({
-        success: true,
-        message: 'Welcome email sent successfully',
-        provider: 'microsoft_graph'
-      });
-    } else {
-      console.error('❌ Welcome email sending failed:', result.error);
-      return NextResponse.json(
-        { 
-          error: 'Failed to send welcome email',
-          details: result.error,
-          provider: 'microsoft_graph'
+    // Send email via Microsoft Graph API
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: {
+          subject: `Velkommen til ${companyName || 'Bedriften'}!`,
+          body: {
+            contentType: 'HTML',
+            content: html
+          },
+          toRecipients: [
+            {
+              emailAddress: {
+                address: email
+              }
+            }
+          ],
+          from: {
+            emailAddress: {
+              address: fromEmail
+            }
+          }
         },
-        { status: 500 }
-      );
+        saveToSentItems: true
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`);
     }
+
+    console.log('✅ Welcome email sent successfully via Microsoft Graph');
+    return NextResponse.json({
+      success: true,
+      message: 'Welcome email sent successfully',
+      provider: 'microsoft_graph'
+    });
+
   } catch (error) {
     console.error('❌ Error in send-welcome-email API:', error);
     return NextResponse.json(
