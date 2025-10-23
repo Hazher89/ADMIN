@@ -21,6 +21,14 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
 
+// Helper function to check if db is available
+const ensureDb = () => {
+  if (!db) {
+    throw new Error('Firebase Firestore is not initialized. Make sure you are running this on the client side.');
+  }
+  return db;
+};
+
 // Types
 export interface Employee {
   id: string;
@@ -50,6 +58,61 @@ export interface Employee {
   certifications?: string[];
   education?: string;
   workExperience?: string;
+  // Tilgangskontroll og rettigheter
+  permissions?: {
+    dashboard: boolean;
+    employees: boolean;
+    departments: boolean;
+    projects: boolean;
+    tasks: boolean;
+    inventory: boolean;
+    suppliers: boolean;
+    finance: boolean;
+    invoicing: boolean;
+    payments: boolean;
+    hr: boolean;
+    crm: boolean;
+    delivery: boolean;
+    settings: boolean;
+    mail: boolean;
+    reports: boolean;
+    analytics: boolean;
+    notifications: boolean;
+    calendar: boolean;
+    documents: boolean;
+    training: boolean;
+    compliance: boolean;
+    maintenance: boolean;
+    quality: boolean;
+    safety: boolean;
+    procurement: boolean;
+    logistics: boolean;
+    production: boolean;
+    sales: boolean;
+    marketing: boolean;
+    customerService: boolean;
+    it: boolean;
+    legal: boolean;
+    audit: boolean;
+  };
+  // Ferie og fravær-tilgang
+  vacationAccess?: {
+    canRequestVacation: boolean;
+    canApproveVacation: boolean;
+    canViewAllVacations: boolean;
+    vacationDaysPerYear: number;
+    managerApprovalRequired: boolean;
+  };
+  // Lederskap og hierarki
+  leadership?: {
+    isManager: boolean;
+    managesDepartments: string[];
+    managesEmployees: string[];
+    reportsTo: string;
+    canApproveExpenses: boolean;
+    canApprovePurchases: boolean;
+    budgetLimit: number;
+  };
 }
 
 export interface Department {
@@ -430,20 +493,17 @@ export interface PartnerUser {
 class FirebaseService {
   // Employee Management
   async getEmployees(companyId: string): Promise<Employee[]> {
-    if (!db) {
-      console.error('Database not initialized in getEmployees');
-      return [];
-    }
+    const firestore = ensureDb();
 
     console.log('Fetching employees for company:', companyId);
 
     try {
       // First, let's check what's in the users collection without any filters
-      const allUsersSnapshot = await getDocs(collection(db, 'users'));
+      const allUsersSnapshot = await getDocs(collection(firestore, 'users'));
       console.log('All users in collection:', allUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       
       const q = query(
-        collection(db, 'users'),
+        collection(firestore, 'users'),
         where('companyId', '==', companyId)
       );
       const snapshot = await getDocs(q);
@@ -464,10 +524,10 @@ class FirebaseService {
   }
 
   async getEmployee(id: string): Promise<Employee | null> {
-    if (!db) return null;
+    const firestore = ensureDb();
 
     try {
-      const docSnap = await getDoc(doc(db, 'users', id));
+      const docSnap = await getDoc(doc(firestore, 'users', id));
       if (docSnap.exists()) {
         return { id: docSnap.id, ...docSnap.data() } as Employee;
       }
@@ -479,16 +539,13 @@ class FirebaseService {
   }
 
   async getManagersAndAdmins(companyId: string): Promise<Employee[]> {
-    if (!db) {
-      console.error('Database not initialized in getManagersAndAdmins');
-      return [];
-    }
+    const firestore = ensureDb();
 
     console.log('Fetching managers and admins for company:', companyId);
 
     try {
       const q = query(
-        collection(db, 'users'),
+        collection(firestore, 'users'),
         where('companyId', '==', companyId),
         where('role', 'in', ['admin', 'department_leader'])
       );
@@ -514,7 +571,7 @@ class FirebaseService {
   }
 
   async createEmployee(employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     console.log('Creating employee with data:', employeeData);
 
@@ -534,7 +591,7 @@ class FirebaseService {
       
       console.log('Employee document to save:', employeeDoc);
       
-      const docRef = await addDoc(collection(db, 'users'), employeeDoc);
+      const docRef = await addDoc(collection(firestore, 'users'), employeeDoc);
       console.log('Employee created with ID:', docRef.id);
 
       // Create activity log
@@ -556,10 +613,10 @@ class FirebaseService {
   }
 
   async updateEmployee(id: string, data: Partial<Employee>): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'users', id), {
+      await updateDoc(doc(firestore, 'users', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -570,10 +627,10 @@ class FirebaseService {
   }
 
   async deleteEmployee(id: string): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await deleteDoc(doc(db, 'users', id));
+      await deleteDoc(doc(firestore, 'users', id));
     } catch (error) {
       console.error('Error deleting employee:', error);
       throw error;
@@ -582,11 +639,11 @@ class FirebaseService {
 
   // Department Management
   async getDepartments(companyId: string): Promise<Department[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       const q = query(
-        collection(db, 'departments'),
+        collection(firestore, 'departments'),
         where('companyId', '==', companyId)
       );
       const snapshot = await getDocs(q);
@@ -605,11 +662,11 @@ class FirebaseService {
   }
 
   async createDepartment(departmentData: Omit<Department, 'id' | 'createdAt' | 'updatedAt' | 'employeeCount'>): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'departments'), {
+      const docRef = await addDoc(collection(firestore, 'departments'), {
         ...departmentData,
         employeeCount: 0,
         createdAt: now,
@@ -623,10 +680,10 @@ class FirebaseService {
   }
 
   async updateDepartment(id: string, data: Partial<Department>): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'departments', id), {
+      await updateDoc(doc(firestore, 'departments', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -638,11 +695,11 @@ class FirebaseService {
 
   // Shift Management
   async getShifts(companyId: string, filters?: { departmentId?: string; status?: string; date?: string }): Promise<Shift[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       let q = query(
-        collection(db, 'shifts'),
+        collection(firestore, 'shifts'),
         where('companyId', '==', companyId)
       );
 
@@ -669,11 +726,11 @@ class FirebaseService {
   }
 
   async createShift(shiftData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'shifts'), {
+      const docRef = await addDoc(collection(firestore, 'shifts'), {
         ...shiftData,
         createdAt: now,
         updatedAt: now
@@ -696,10 +753,10 @@ class FirebaseService {
   }
 
   async updateShift(id: string, data: Partial<Shift>): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'shifts', id), {
+      await updateDoc(doc(firestore, 'shifts', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -711,11 +768,11 @@ class FirebaseService {
 
   // Deviation Management
   async getDeviations(companyId: string, filters?: { status?: string; type?: string; severity?: string }): Promise<Deviation[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       let q = query(
-        collection(db, 'deviations'),
+        collection(firestore, 'deviations'),
         where('companyId', '==', companyId)
       );
 
@@ -744,11 +801,11 @@ class FirebaseService {
   }
 
   async createDeviation(deviationData: Omit<Deviation, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'deviations'), {
+      const docRef = await addDoc(collection(firestore, 'deviations'), {
         ...deviationData,
         createdAt: now,
         updatedAt: now
@@ -771,10 +828,10 @@ class FirebaseService {
   }
 
   async updateDeviation(id: string, data: Partial<Deviation>): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'deviations', id), {
+      await updateDoc(doc(firestore, 'deviations', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -786,11 +843,11 @@ class FirebaseService {
 
   // Document Management
   async getDocuments(companyId: string, filters?: { category?: string; departmentId?: string }): Promise<Document[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       let q = query(
-        collection(db, 'documents'),
+        collection(firestore, 'documents'),
         where('companyId', '==', companyId)
       );
 
@@ -816,7 +873,8 @@ class FirebaseService {
   }
 
   async uploadDocument(file: File, documentData: Omit<Document, 'id' | 'fileUrl' | 'fileSize' | 'fileType' | 'fileName' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db || !storage) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
+    if (!storage) throw new Error('Firebase Storage not initialized');
 
     try {
       // Upload file to storage
@@ -827,7 +885,7 @@ class FirebaseService {
 
       // Create document record
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'documents'), {
+      const docRef = await addDoc(collection(firestore, 'documents'), {
         ...documentData,
         fileName: file.name,
         fileUrl,
@@ -854,7 +912,8 @@ class FirebaseService {
   }
 
   async deleteDocument(id: string, fileUrl: string): Promise<void> {
-    if (!db || !storage) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
+    if (!storage) throw new Error('Firebase Storage not initialized');
 
     try {
       // Delete from storage
@@ -862,7 +921,7 @@ class FirebaseService {
       await deleteObject(storageRef);
 
       // Delete from database
-      await deleteDoc(doc(db, 'documents', id));
+      await deleteDoc(doc(firestore, 'documents', id));
     } catch (error) {
       console.error('Error deleting document:', error);
       throw error;
@@ -871,11 +930,11 @@ class FirebaseService {
 
   // Time Clock Management
   async getTimeClocks(companyId: string, filters?: { employeeId?: string; date?: string }): Promise<TimeClock[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       let q = query(
-        collection(db, 'timeclocks'),
+        collection(firestore, 'timeclocks'),
         where('companyId', '==', companyId)
       );
 
@@ -898,11 +957,11 @@ class FirebaseService {
   }
 
   async clockIn(employeeId: string, companyId: string, location?: string): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'timeclocks'), {
+      const docRef = await addDoc(collection(firestore, 'timeclocks'), {
         employeeId,
         companyId,
         clockInTime: now,
@@ -928,11 +987,11 @@ class FirebaseService {
   }
 
   async clockOut(timeClockId: string): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
-      await updateDoc(doc(db, 'timeclocks', timeClockId), {
+      await updateDoc(doc(firestore, 'timeclocks', timeClockId), {
         clockOutTime: now,
         updatedAt: now
       });
@@ -944,11 +1003,11 @@ class FirebaseService {
 
   // Absence Management
   async getAbsences(companyId: string, filters?: { employeeId?: string; status?: string }): Promise<Absence[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       let q = query(
-        collection(db, 'absences'),
+        collection(firestore, 'absences'),
         where('companyId', '==', companyId)
       );
 
@@ -974,11 +1033,11 @@ class FirebaseService {
   }
 
   async createAbsence(absenceData: Omit<Absence, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'absences'), {
+      const docRef = await addDoc(collection(firestore, 'absences'), {
         ...absenceData,
         createdAt: now,
         updatedAt: now
@@ -991,10 +1050,10 @@ class FirebaseService {
   }
 
   async updateAbsence(id: string, data: Partial<Absence>): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'absences', id), {
+      await updateDoc(doc(firestore, 'absences', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -1005,10 +1064,10 @@ class FirebaseService {
   }
 
   async deleteAbsence(id: string): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await deleteDoc(doc(db, 'absences', id));
+      await deleteDoc(doc(firestore, 'absences', id));
     } catch (error) {
       console.error('Error deleting absence:', error);
       throw error;
@@ -1017,11 +1076,11 @@ class FirebaseService {
 
   // Vacation Management
   async getVacations(companyId: string, filters?: { employeeId?: string; status?: string }): Promise<Vacation[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       let q = query(
-        collection(db, 'vacations'),
+        collection(firestore, 'vacations'),
         where('companyId', '==', companyId)
       );
 
@@ -1047,11 +1106,11 @@ class FirebaseService {
   }
 
   async createVacation(vacationData: Omit<Vacation, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'vacations'), {
+      const docRef = await addDoc(collection(firestore, 'vacations'), {
         ...vacationData,
         createdAt: now,
         updatedAt: now
@@ -1064,10 +1123,10 @@ class FirebaseService {
   }
 
   async updateVacation(id: string, data: Partial<Vacation>): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'vacations', id), {
+      await updateDoc(doc(firestore, 'vacations', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -1078,10 +1137,10 @@ class FirebaseService {
   }
 
   async deleteVacation(id: string): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
-      await deleteDoc(doc(db, 'vacations', id));
+      await deleteDoc(doc(firestore, 'vacations', id));
     } catch (error) {
       console.error('Error deleting vacation:', error);
       throw error;
@@ -1090,18 +1149,7 @@ class FirebaseService {
 
   // Dashboard Statistics
   async getDashboardStats(companyId: string): Promise<DashboardStats> {
-    if (!db) {
-      return {
-        totalEmployees: 0,
-        activeShifts: 0,
-        pendingRequests: 0,
-        departments: 0,
-        totalDeviations: 0,
-        openDeviations: 0,
-        totalDocuments: 0,
-        activeTimeClocks: 0
-      };
-    }
+    const firestore = ensureDb();
 
     try {
       const [
@@ -1114,14 +1162,14 @@ class FirebaseService {
         documentsSnapshot,
         activeTimeClocksSnapshot
       ] = await Promise.all([
-        getDocs(query(collection(db, 'users'), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'shifts'), where('companyId', '==', companyId), where('status', '==', 'in_progress'))),
-        getDocs(query(collection(db, 'vacations'), where('companyId', '==', companyId), where('status', '==', 'pending'))),
-        getDocs(query(collection(db, 'departments'), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'deviations'), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'deviations'), where('companyId', '==', companyId), where('status', 'in', ['reported', 'investigating']))),
-        getDocs(query(collection(db, 'documents'), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'timeclocks'), where('companyId', '==', companyId), where('clockOutTime', '==', null)))
+        getDocs(query(collection(firestore, 'users'), where('companyId', '==', companyId))),
+        getDocs(query(collection(firestore, 'shifts'), where('companyId', '==', companyId), where('status', '==', 'in_progress'))),
+        getDocs(query(collection(firestore, 'vacations'), where('companyId', '==', companyId), where('status', '==', 'pending'))),
+        getDocs(query(collection(firestore, 'departments'), where('companyId', '==', companyId))),
+        getDocs(query(collection(firestore, 'deviations'), where('companyId', '==', companyId))),
+        getDocs(query(collection(firestore, 'deviations'), where('companyId', '==', companyId), where('status', 'in', ['reported', 'investigating']))),
+        getDocs(query(collection(firestore, 'documents'), where('companyId', '==', companyId))),
+        getDocs(query(collection(firestore, 'timeclocks'), where('companyId', '==', companyId), where('clockOutTime', '==', null)))
       ]);
 
       return {
@@ -1151,11 +1199,11 @@ class FirebaseService {
 
   // Activity Logging
   async getActivities(companyId: string, limitCount: number = 10): Promise<Activity[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       const q = query(
-        collection(db, 'activities'),
+        collection(firestore, 'activities'),
         where('companyId', '==', companyId)
       );
       const snapshot = await getDocs(q);
@@ -1174,10 +1222,10 @@ class FirebaseService {
   }
 
   async createActivity(activityData: Omit<Activity, 'id' | 'createdAt'>): Promise<void> {
-    if (!db) return;
+    const firestore = ensureDb();
 
     try {
-      await addDoc(collection(db, 'activities'), {
+      await addDoc(collection(firestore, 'activities'), {
         ...activityData,
         createdAt: new Date().toISOString()
       });
@@ -1188,11 +1236,11 @@ class FirebaseService {
 
   // Real-time listeners
   subscribeToDashboardStats(companyId: string, callback: (stats: DashboardStats) => void) {
-    if (!db) return () => {};
+    const firestore = ensureDb();
 
     // For real-time stats, we'll use a combination of listeners
     const unsubscribe = onSnapshot(
-      query(collection(db, 'users'), where('companyId', '==', companyId)),
+      query(collection(firestore, 'users'), where('companyId', '==', companyId)),
       async () => {
         const stats = await this.getDashboardStats(companyId);
         callback(stats);
@@ -1203,10 +1251,10 @@ class FirebaseService {
   }
 
   subscribeToActivities(companyId: string, callback: (activities: Activity[]) => void) {
-    if (!db) return () => {};
+    const firestore = ensureDb();
 
     const q = query(
-      collection(db, 'activities'),
+      collection(firestore, 'activities'),
       where('companyId', '==', companyId)
     );
 
@@ -1229,14 +1277,11 @@ class FirebaseService {
       return [];
     }
 
-    if (!db) {
-      console.error('Firebase database not initialized');
-      return [];
-    }
+    const firestore = ensureDb();
 
     try {
       console.log('Fetching companies from Firebase...');
-      const companiesQuery = collection(db, 'companies');
+      const companiesQuery = collection(firestore, 'companies');
       const snapshot = await getDocs(companiesQuery);
       console.log('Companies snapshot size:', snapshot.docs.length);
       
@@ -1270,10 +1315,10 @@ class FirebaseService {
       return null;
     }
 
-    if (!db) return null;
+    const firestore = ensureDb();
 
     try {
-      const docRef = doc(db, 'companies', id);
+      const docRef = doc(firestore, 'companies', id);
       const docSnap = await getDoc(docRef);
       
       if (docSnap.exists()) {
@@ -1290,12 +1335,12 @@ class FirebaseService {
   }
 
   async createCompany(companyData: Omit<Company, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       // Check if company with same name already exists
       const existingCompaniesQuery = query(
-        collection(db, 'companies'),
+        collection(firestore, 'companies'),
         where('name', '==', companyData.name)
       );
       const existingSnapshot = await getDocs(existingCompaniesQuery);
@@ -1304,7 +1349,7 @@ class FirebaseService {
         throw new Error(`En bedrift med navnet "${companyData.name}" eksisterer allerede. Vennligst velg et annet navn.`);
       }
 
-      const docRef = await addDoc(collection(db, 'companies'), {
+      const docRef = await addDoc(collection(firestore, 'companies'), {
         ...companyData,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -1321,12 +1366,12 @@ class FirebaseService {
       throw new Error('Cannot create company on server-side');
     }
 
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       // Check if company with same name already exists
       const existingCompaniesQuery = query(
-        collection(db, 'companies'),
+        collection(firestore, 'companies'),
         where('name', '==', companyData.name)
       );
       const existingSnapshot = await getDocs(existingCompaniesQuery);
@@ -1337,7 +1382,7 @@ class FirebaseService {
 
       // Check if admin email already exists
       const existingUsersQuery = query(
-        collection(db, 'users'),
+        collection(firestore, 'users'),
         where('email', '==', companyData.adminEmail)
       );
       const existingUsersSnapshot = await getDocs(existingUsersQuery);
@@ -1347,7 +1392,7 @@ class FirebaseService {
       }
 
       // Create company
-      const companyRef = await addDoc(collection(db, 'companies'), {
+      const companyRef = await addDoc(collection(firestore, 'companies'), {
         name: companyData.name,
         orgNumber: companyData.orgNumber,
         phone: companyData.phone,
@@ -1366,7 +1411,7 @@ class FirebaseService {
 
       // Create admin user
       const adminUserId = `admin_${companyRef.id}`;
-      await setDoc(doc(db, 'users', adminUserId), {
+      await setDoc(doc(firestore, 'users', adminUserId), {
         displayName: companyData.adminName,
         email: companyData.adminEmail,
         role: 'admin',
@@ -1399,7 +1444,7 @@ class FirebaseService {
       const { uid } = await response.json();
 
       // Update user document with Firebase UID
-      await updateDoc(doc(db, 'users', adminUserId), {
+      await updateDoc(doc(firestore, 'users', adminUserId), {
         uid: uid,
         updatedAt: new Date().toISOString()
       });
@@ -1415,13 +1460,13 @@ class FirebaseService {
   }
 
   async updateCompany(id: string, data: Partial<Company>): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       // If name is being updated, check for duplicates
       if (data.name) {
         const existingCompaniesQuery = query(
-          collection(db, 'companies'),
+          collection(firestore, 'companies'),
           where('name', '==', data.name)
         );
         const existingSnapshot = await getDocs(existingCompaniesQuery);
@@ -1434,7 +1479,7 @@ class FirebaseService {
         }
       }
 
-      const docRef = doc(db, 'companies', id);
+      const docRef = doc(firestore, 'companies', id);
       await updateDoc(docRef, {
         ...data,
         updatedAt: new Date().toISOString()
@@ -1446,128 +1491,128 @@ class FirebaseService {
   }
 
   async deleteCompany(id: string): Promise<void> {
-    if (!db) throw new Error('Database not initialized');
+    const firestore = ensureDb();
 
     try {
       // Delete all users associated with this company
-      const usersQuery = query(collection(db, 'users'), where('companyId', '==', id));
+      const usersQuery = query(collection(firestore, 'users'), where('companyId', '==', id));
       const usersSnapshot = await getDocs(usersQuery);
       const userDeletePromises = usersSnapshot.docs.map(async (userDoc) => {
-        return deleteDoc(doc(db, 'users', userDoc.id));
+        return deleteDoc(doc(firestore, 'users', userDoc.id));
       });
 
       // Delete all documents associated with this company
-      const documentsQuery = query(collection(db, 'documents'), where('companyId', '==', id));
+      const documentsQuery = query(collection(firestore, 'documents'), where('companyId', '==', id));
       const documentsSnapshot = await getDocs(documentsQuery);
       const documentDeletePromises = documentsSnapshot.docs.map(async (docDoc) => {
-        return deleteDoc(doc(db, 'documents', docDoc.id));
+        return deleteDoc(doc(firestore, 'documents', docDoc.id));
       });
 
       // Delete all deviations associated with this company
-      const deviationsQuery = query(collection(db, 'deviations'), where('companyId', '==', id));
+      const deviationsQuery = query(collection(firestore, 'deviations'), where('companyId', '==', id));
       const deviationsSnapshot = await getDocs(deviationsQuery);
       const deviationDeletePromises = deviationsSnapshot.docs.map(async (deviationDoc) => {
-        return deleteDoc(doc(db, 'deviations', deviationDoc.id));
+        return deleteDoc(doc(firestore, 'deviations', deviationDoc.id));
       });
 
       // Delete all shifts associated with this company
-      const shiftsQuery = query(collection(db, 'shifts'), where('companyId', '==', id));
+      const shiftsQuery = query(collection(firestore, 'shifts'), where('companyId', '==', id));
       const shiftsSnapshot = await getDocs(shiftsQuery);
       const shiftDeletePromises = shiftsSnapshot.docs.map(async (shiftDoc) => {
-        return deleteDoc(doc(db, 'shifts', shiftDoc.id));
+        return deleteDoc(doc(firestore, 'shifts', shiftDoc.id));
       });
 
       // Delete all timeclock records associated with this company
-      const timeclockQuery = query(collection(db, 'timeclock'), where('companyId', '==', id));
+      const timeclockQuery = query(collection(firestore, 'timeclock'), where('companyId', '==', id));
       const timeclockSnapshot = await getDocs(timeclockQuery);
       const timeclockDeletePromises = timeclockSnapshot.docs.map(async (timeclockDoc) => {
-        return deleteDoc(doc(db, 'timeclock', timeclockDoc.id));
+        return deleteDoc(doc(firestore, 'timeclock', timeclockDoc.id));
       });
 
       // Delete all vacations associated with this company
-      const vacationsQuery = query(collection(db, 'vacations'), where('companyId', '==', id));
+      const vacationsQuery = query(collection(firestore, 'vacations'), where('companyId', '==', id));
       const vacationsSnapshot = await getDocs(vacationsQuery);
       const vacationDeletePromises = vacationsSnapshot.docs.map(async (vacationDoc) => {
-        return deleteDoc(doc(db, 'vacations', vacationDoc.id));
+        return deleteDoc(doc(firestore, 'vacations', vacationDoc.id));
       });
 
       // Delete all departments associated with this company
-      const departmentsQuery = query(collection(db, 'departments'), where('companyId', '==', id));
+      const departmentsQuery = query(collection(firestore, 'departments'), where('companyId', '==', id));
       const departmentsSnapshot = await getDocs(departmentsQuery);
       const departmentDeletePromises = departmentsSnapshot.docs.map(async (departmentDoc) => {
-        return deleteDoc(doc(db, 'departments', departmentDoc.id));
+        return deleteDoc(doc(firestore, 'departments', departmentDoc.id));
       });
 
       // Delete all surveys associated with this company
-      const surveysQuery = query(collection(db, 'surveys'), where('companyId', '==', id));
+      const surveysQuery = query(collection(firestore, 'surveys'), where('companyId', '==', id));
       const surveysSnapshot = await getDocs(surveysQuery);
       const surveyDeletePromises = surveysSnapshot.docs.map(async (surveyDoc) => {
-        return deleteDoc(doc(db, 'surveys', surveyDoc.id));
+        return deleteDoc(doc(firestore, 'surveys', surveyDoc.id));
       });
 
       // Delete all partners associated with this company
-      const partnersQuery = query(collection(db, 'partners'), where('companyId', '==', id));
+      const partnersQuery = query(collection(firestore, 'partners'), where('companyId', '==', id));
       const partnersSnapshot = await getDocs(partnersQuery);
       const partnerDeletePromises = partnersSnapshot.docs.map(async (partnerDoc) => {
-        return deleteDoc(doc(db, 'partners', partnerDoc.id));
+        return deleteDoc(doc(firestore, 'partners', partnerDoc.id));
       });
 
       // Delete all settings associated with this company
-      const settingsQuery = query(collection(db, 'settings'), where('companyId', '==', id));
+      const settingsQuery = query(collection(firestore, 'settings'), where('companyId', '==', id));
       const settingsSnapshot = await getDocs(settingsQuery);
       const settingDeletePromises = settingsSnapshot.docs.map(async (settingDoc) => {
-        return deleteDoc(doc(db, 'settings', settingDoc.id));
+        return deleteDoc(doc(firestore, 'settings', settingDoc.id));
       });
 
       // Delete all activities associated with this company
-      const activitiesQuery = query(collection(db, 'activities'), where('companyId', '==', id));
+      const activitiesQuery = query(collection(firestore, 'activities'), where('companyId', '==', id));
       const activitiesSnapshot = await getDocs(activitiesQuery);
       const activityDeletePromises = activitiesSnapshot.docs.map(async (activityDoc) => {
-        return deleteDoc(doc(db, 'activities', activityDoc.id));
+        return deleteDoc(doc(firestore, 'activities', activityDoc.id));
       });
 
       // Delete all chats associated with this company
-      const chatsQuery = query(collection(db, 'chats'), where('companyId', '==', id));
+      const chatsQuery = query(collection(firestore, 'chats'), where('companyId', '==', id));
       const chatsSnapshot = await getDocs(chatsQuery);
       const chatDeletePromises = chatsSnapshot.docs.map(async (chatDoc) => {
         // Delete all messages in this chat first
-        const messagesQuery = query(collection(db, `chats/${chatDoc.id}/messages`));
+        const messagesQuery = query(collection(firestore, `chats/${chatDoc.id}/messages`));
         const messagesSnapshot = await getDocs(messagesQuery);
         const messageDeletePromises = messagesSnapshot.docs.map(async (messageDoc) => {
-          return deleteDoc(doc(db, `chats/${chatDoc.id}/messages`, messageDoc.id));
+          return deleteDoc(doc(firestore, `chats/${chatDoc.id}/messages`, messageDoc.id));
         });
         await Promise.all(messageDeletePromises);
         
         // Then delete the chat itself
-        return deleteDoc(doc(db, 'chats', chatDoc.id));
+        return deleteDoc(doc(firestore, 'chats', chatDoc.id));
       });
 
       // Delete all survey responses associated with this company
-      const surveyResponsesQuery = query(collection(db, 'surveyResponses'), where('companyId', '==', id));
+      const surveyResponsesQuery = query(collection(firestore, 'surveyResponses'), where('companyId', '==', id));
       const surveyResponsesSnapshot = await getDocs(surveyResponsesQuery);
       const surveyResponseDeletePromises = surveyResponsesSnapshot.docs.map(async (responseDoc) => {
-        return deleteDoc(doc(db, 'surveyResponses', responseDoc.id));
+        return deleteDoc(doc(firestore, 'surveyResponses', responseDoc.id));
       });
 
       // Delete all admin setup tokens associated with this company
-      const adminSetupTokensQuery = query(collection(db, 'adminSetupTokens'), where('companyId', '==', id));
+      const adminSetupTokensQuery = query(collection(firestore, 'adminSetupTokens'), where('companyId', '==', id));
       const adminSetupTokensSnapshot = await getDocs(adminSetupTokensQuery);
       const adminSetupTokenDeletePromises = adminSetupTokensSnapshot.docs.map(async (tokenDoc) => {
-        return deleteDoc(doc(db, 'adminSetupTokens', tokenDoc.id));
+        return deleteDoc(doc(firestore, 'adminSetupTokens', tokenDoc.id));
       });
 
       // Delete all absences associated with this company
-      const absencesQuery = query(collection(db, 'absences'), where('companyId', '==', id));
+      const absencesQuery = query(collection(firestore, 'absences'), where('companyId', '==', id));
       const absencesSnapshot = await getDocs(absencesQuery);
       const absenceDeletePromises = absencesSnapshot.docs.map(async (absenceDoc) => {
-        return deleteDoc(doc(db, 'absences', absenceDoc.id));
+        return deleteDoc(doc(firestore, 'absences', absenceDoc.id));
       });
 
       // Delete all notifications associated with this company
-      const notificationsQuery = query(collection(db, 'notifications'), where('companyId', '==', id));
+      const notificationsQuery = query(collection(firestore, 'notifications'), where('companyId', '==', id));
       const notificationsSnapshot = await getDocs(notificationsQuery);
       const notificationDeletePromises = notificationsSnapshot.docs.map(async (notificationDoc) => {
-        return deleteDoc(doc(db, 'notifications', notificationDoc.id));
+        return deleteDoc(doc(firestore, 'notifications', notificationDoc.id));
       });
 
       // Execute all delete operations
@@ -1591,7 +1636,7 @@ class FirebaseService {
       ]);
 
       // Finally, delete the company itself
-      const docRef = doc(db, 'companies', id);
+      const docRef = doc(firestore, 'companies', id);
       await deleteDoc(docRef);
     } catch (error) {
       console.error('Error deleting company:', error);
@@ -1606,21 +1651,15 @@ class FirebaseService {
     totalDeviations: number;
     activeShifts: number;
   }> {
-    if (!db) return {
-      totalEmployees: 0,
-      totalDepartments: 0,
-      totalDocuments: 0,
-      totalDeviations: 0,
-      activeShifts: 0
-    };
+    const firestore = ensureDb();
 
     try {
       const [employeesSnapshot, departmentsSnapshot, documentsSnapshot, deviationsSnapshot, shiftsSnapshot] = await Promise.all([
-        getDocs(query(collection(db, 'users'), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'departments'), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'documents'), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'deviations'), where('companyId', '==', companyId))),
-        getDocs(query(collection(db, 'shifts'), where('companyId', '==', companyId), where('status', '==', 'in_progress')))
+        getDocs(query(collection(firestore, 'users'), where('companyId', '==', companyId))),
+        getDocs(query(collection(firestore, 'departments'), where('companyId', '==', companyId))),
+        getDocs(query(collection(firestore, 'documents'), where('companyId', '==', companyId))),
+        getDocs(query(collection(firestore, 'deviations'), where('companyId', '==', companyId))),
+        getDocs(query(collection(firestore, 'shifts'), where('companyId', '==', companyId), where('status', '==', 'in_progress')))
       ]);
 
       return {
@@ -1644,11 +1683,11 @@ class FirebaseService {
 
   // Survey methods
   async getSurveys(companyId: string): Promise<Survey[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       const surveysQuery = query(
-        collection(db, 'surveys'),
+        collection(firestore, 'surveys'),
         where('companyId', '==', companyId)
       );
       
@@ -1667,10 +1706,10 @@ class FirebaseService {
   }
 
   async createSurvey(surveyData: Omit<Survey, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      const docRef = await addDoc(collection(db, 'surveys'), {
+      const docRef = await addDoc(collection(firestore, 'surveys'), {
         ...surveyData,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -1684,10 +1723,10 @@ class FirebaseService {
   }
 
   async updateSurvey(id: string, data: Partial<Survey>): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'surveys', id), {
+      await updateDoc(doc(firestore, 'surveys', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -1698,10 +1737,10 @@ class FirebaseService {
   }
 
   async deleteSurvey(id: string): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await deleteDoc(doc(db, 'surveys', id));
+      await deleteDoc(doc(firestore, 'surveys', id));
     } catch (error) {
       console.error('Error deleting survey:', error);
       throw error;
@@ -1709,11 +1748,11 @@ class FirebaseService {
   }
 
   async getSurveyResponses(surveyId: string): Promise<SurveyResponse[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       const responsesQuery = query(
-        collection(db, 'surveyResponses'),
+        collection(firestore, 'surveyResponses'),
         where('surveyId', '==', surveyId)
       );
       
@@ -1729,10 +1768,10 @@ class FirebaseService {
   }
 
   async submitSurveyResponse(responseData: Omit<SurveyResponse, 'id' | 'submittedAt'>): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      const docRef = await addDoc(collection(db, 'surveyResponses'), {
+      const docRef = await addDoc(collection(firestore, 'surveyResponses'), {
         ...responseData,
         submittedAt: new Date().toISOString()
       });
@@ -1746,11 +1785,11 @@ class FirebaseService {
 
   // Partner methods
   async getPartners(companyId: string): Promise<Partner[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       const partnersQuery = query(
-        collection(db, 'partners'),
+        collection(firestore, 'partners'),
         where('companyId', '==', companyId)
       );
       
@@ -1769,10 +1808,10 @@ class FirebaseService {
   }
 
   async createPartner(partnerData: Omit<Partner, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      const docRef = await addDoc(collection(db, 'partners'), {
+      const docRef = await addDoc(collection(firestore, 'partners'), {
         ...partnerData,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -1797,10 +1836,10 @@ class FirebaseService {
     companyId: string;
     routeData?: any; // Added for permanent storage
   }): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      const docRef = await addDoc(collection(db, 'routeAssignments'), {
+      const docRef = await addDoc(collection(firestore, 'routeAssignments'), {
         ...assignmentData,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
@@ -1816,14 +1855,14 @@ class FirebaseService {
   }
 
   async getRouteAssignments(companyId: string, startDate?: string, endDate?: string): Promise<any[]> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      let q = query(collection(db, 'routeAssignments'), where('companyId', '==', companyId));
+      let q = query(collection(firestore, 'routeAssignments'), where('companyId', '==', companyId));
       
       if (startDate && endDate) {
         q = query(
-          collection(db, 'routeAssignments'), 
+          collection(firestore, 'routeAssignments'), 
           where('companyId', '==', companyId),
           where('date', '>=', startDate),
           where('date', '<=', endDate)
@@ -1842,10 +1881,10 @@ class FirebaseService {
   }
 
   async updateRouteAssignment(assignmentId: string, updateData: Partial<any>): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'routeAssignments', assignmentId), {
+      await updateDoc(doc(firestore, 'routeAssignments', assignmentId), {
         ...updateData,
         updatedAt: new Date().toISOString()
       });
@@ -1857,10 +1896,10 @@ class FirebaseService {
 
   // Delete route assignment
   async deleteRouteAssignment(assignmentId: string): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await deleteDoc(doc(db, 'routeAssignments', assignmentId));
+      await deleteDoc(doc(firestore, 'routeAssignments', assignmentId));
     } catch (error) {
       console.error('Error deleting route assignment:', error);
       throw error;
@@ -1871,10 +1910,7 @@ class FirebaseService {
   async savePlannedRoutes(companyId: string, routes: any[]): Promise<void> {
     console.log('🚀 Saving planned routes:', { companyId, routesCount: routes.length });
     
-    if (!db) {
-      console.error('❌ Firebase not initialized');
-      throw new Error('Firebase not initialized');
-    }
+    const firestore = ensureDb();
 
     if (!companyId) {
       console.error('❌ Company ID is missing');
@@ -1893,9 +1929,9 @@ class FirebaseService {
       console.log('📋 Found existing routes:', existingRoutes.length);
       
       if (existingRoutes.length > 0) {
-        const batch = writeBatch(db);
+        const batch = writeBatch(firestore);
         existingRoutes.forEach(route => {
-          const routeRef = doc(db, 'plannedRoutes', route.id);
+          const routeRef = doc(firestore, 'plannedRoutes', route.id);
           batch.delete(routeRef);
         });
         await batch.commit();
@@ -1904,14 +1940,14 @@ class FirebaseService {
 
       console.log('💾 Saving new routes...');
       // Save new routes
-      const batch = writeBatch(db);
+      const batch = writeBatch(firestore);
       routes.forEach((route, index) => {
         if (!route.id) {
           console.error(`❌ Route ${index} missing ID:`, route);
           throw new Error(`Route ${index} is missing ID`);
         }
         
-        const routeRef = doc(db, 'plannedRoutes', route.id);
+        const routeRef = doc(firestore, 'plannedRoutes', route.id);
         
         // Deep clean route data to remove all undefined values recursively
         const cleanRoute = (obj: any): any => {
@@ -1993,10 +2029,7 @@ class FirebaseService {
   async getPlannedRoutes(companyId: string): Promise<any[]> {
     console.log('📋 Loading planned routes for company:', companyId);
     
-    if (!db) {
-      console.error('❌ Firebase not initialized');
-      throw new Error('Firebase not initialized');
-    }
+    const firestore = ensureDb();
 
     if (!companyId) {
       console.error('❌ Company ID is missing');
@@ -2005,7 +2038,7 @@ class FirebaseService {
 
     try {
       const q = query(
-        collection(db, 'plannedRoutes'),
+        collection(firestore, 'plannedRoutes'),
         where('companyId', '==', companyId)
       );
       
@@ -2029,10 +2062,10 @@ class FirebaseService {
   }
 
   async updatePartner(id: string, data: Partial<Partner>): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'partners', id), {
+      await updateDoc(doc(firestore, 'partners', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -2043,10 +2076,10 @@ class FirebaseService {
   }
 
   async deletePartner(id: string): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await deleteDoc(doc(db, 'partners', id));
+      await deleteDoc(doc(firestore, 'partners', id));
     } catch (error) {
       console.error('Error deleting partner:', error);
       throw error;
@@ -2055,11 +2088,11 @@ class FirebaseService {
 
   // Settings methods
   async getSettings(companyId: string): Promise<Setting[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       const settingsQuery = query(
-        collection(db, 'settings'),
+        collection(firestore, 'settings'),
         where('companyId', '==', companyId)
       );
       
@@ -2083,10 +2116,10 @@ class FirebaseService {
   }
 
   async createSetting(settingData: Omit<Setting, 'id' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      const docRef = await addDoc(collection(db, 'settings'), {
+      const docRef = await addDoc(collection(firestore, 'settings'), {
         ...settingData,
         updatedAt: new Date().toISOString()
       });
@@ -2099,10 +2132,10 @@ class FirebaseService {
   }
 
   async updateSetting(id: string, data: Partial<Setting>): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'settings', id), {
+      await updateDoc(doc(firestore, 'settings', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -2113,10 +2146,10 @@ class FirebaseService {
   }
 
   async deleteSetting(id: string): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await deleteDoc(doc(db, 'settings', id));
+      await deleteDoc(doc(firestore, 'settings', id));
     } catch (error) {
       console.error('Error deleting setting:', error);
       throw error;
@@ -2125,11 +2158,11 @@ class FirebaseService {
 
   // Partner Assignment Management
   async createPartnerAssignment(assignmentData: Omit<PartnerAssignment, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
-      const docRef = await addDoc(collection(db, 'partnerAssignments'), {
+      const docRef = await addDoc(collection(firestore, 'partnerAssignments'), {
         ...assignmentData,
         createdAt: now,
         updatedAt: now
@@ -2146,19 +2179,19 @@ class FirebaseService {
   }
 
   async getPartnerAssignments(companyId: string, partnerId?: string): Promise<PartnerAssignment[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       let q;
       if (partnerId) {
         q = query(
-          collection(db, 'partnerAssignments'),
+          collection(firestore, 'partnerAssignments'),
           where('companyId', '==', companyId),
           where('partnerId', '==', partnerId)
         );
       } else {
         q = query(
-          collection(db, 'partnerAssignments'),
+          collection(firestore, 'partnerAssignments'),
           where('companyId', '==', companyId)
         );
       }
@@ -2177,11 +2210,11 @@ class FirebaseService {
   }
 
   async getPartnerAssignmentsForUser(partnerId: string): Promise<PartnerAssignment[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       const q = query(
-        collection(db, 'partnerAssignments'),
+        collection(firestore, 'partnerAssignments'),
         where('partnerId', '==', partnerId)
       );
 
@@ -2199,10 +2232,10 @@ class FirebaseService {
   }
 
   async updatePartnerAssignment(id: string, data: Partial<PartnerAssignment>): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'partnerAssignments', id), {
+      await updateDoc(doc(firestore, 'partnerAssignments', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
@@ -2213,10 +2246,10 @@ class FirebaseService {
   }
 
   async updatePartnerAssignmentResponse(assignmentId: string, response: PartnerAssignment['partnerResponse']): Promise<void> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      await updateDoc(doc(db, 'partnerAssignments', assignmentId), {
+      await updateDoc(doc(firestore, 'partnerAssignments', assignmentId), {
         partnerResponse: response,
         updatedAt: new Date().toISOString()
       });
@@ -2231,19 +2264,19 @@ class FirebaseService {
 
   // Partner User Management
   async getPartnerUsers(companyId: string, partnerId?: string): Promise<PartnerUser[]> {
-    if (!db) return [];
+    const firestore = ensureDb();
 
     try {
       let q;
       if (partnerId) {
         q = query(
-          collection(db, 'partnerUsers'),
+          collection(firestore, 'partnerUsers'),
           where('companyId', '==', companyId),
           where('partnerId', '==', partnerId)
         );
       } else {
         q = query(
-          collection(db, 'partnerUsers'),
+          collection(firestore, 'partnerUsers'),
           where('companyId', '==', companyId)
         );
       }
@@ -2262,10 +2295,10 @@ class FirebaseService {
   }
 
   async createPartnerUser(userData: Omit<PartnerUser, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
 
     try {
-      const docRef = await addDoc(collection(db, 'partnerUsers'), {
+      const docRef = await addDoc(collection(firestore, 'partnerUsers'), {
         ...userData,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -2314,13 +2347,17 @@ class FirebaseService {
 
   private async notifyAdminAboutPartnerResponse(assignmentId: string, response: PartnerAssignment['partnerResponse']): Promise<void> {
     try {
-      if (!db) return;
+      const firestore = ensureDb();
       
       // Get assignment details
-      const assignmentDoc = await getDoc(doc(db, 'partnerAssignments', assignmentId));
+      const assignmentDoc = await getDoc(doc(firestore, 'partnerAssignments', assignmentId));
       if (!assignmentDoc.exists()) return;
 
       const assignment = assignmentDoc.data() as PartnerAssignment;
+      
+      // Get partner details
+      const partnerDoc = await getDoc(doc(firestore, 'partners', assignment.partnerId));
+      const partner = partnerDoc.exists() ? partnerDoc.data() as Partner : null;
       
       // Get admin users for the company
       const adminUsers = await this.getEmployees(assignment.companyId);
@@ -2331,9 +2368,9 @@ class FirebaseService {
       // Send SMS to admins
       for (const admin of adminsWithPhone) {
         try {
-          const message = `Partner ${assignment.partnerName} har svart på oppdrag "${assignment.title}": ${response?.status}. Logg inn på DriftPro.`;
+          const message = `Partner ${partner?.name || 'Ukjent'} har svart på oppdrag "${assignment.title}": ${response?.status}. Logg inn på DriftPro.`;
           
-          const response = await fetch('/api/sms/send', {
+          const smsResponse = await fetch('/api/sms/send', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2343,7 +2380,7 @@ class FirebaseService {
             })
           });
 
-          if (response.ok) {
+          if (smsResponse.ok) {
             console.log(`✅ Admin notification SMS sent to ${admin.displayName}`);
           }
         } catch (error) {
@@ -2357,7 +2394,8 @@ class FirebaseService {
 
   // Partner Assignment File Upload
   async uploadPartnerAssignmentFile(file: File, partnerId: string, assignmentId: string, companyId: string): Promise<{ fileUrl: string; fileName: string; fileSize: number }> {
-    if (!db || !storage) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
+    if (!storage) throw new Error('Firebase Storage not initialized');
 
     try {
       // Create organized file path in Firebase Storage
@@ -2385,7 +2423,7 @@ class FirebaseService {
       };
 
       // Add to partner assignment files collection
-      await addDoc(collection(db, `partners/${partnerId}/assignments/${assignmentId}/files`), fileRecord);
+      await addDoc(collection(firestore, `partners/${partnerId}/assignments/${assignmentId}/files`), fileRecord);
 
       return {
         fileUrl,
@@ -2409,7 +2447,8 @@ class FirebaseService {
     createdBy: string;
     notes?: string;
   }): Promise<string> {
-    const docRef = await addDoc(collection(db, 'audits'), {
+    const firestore = ensureDb();
+    const docRef = await addDoc(collection(firestore, 'audits'), {
       ...auditData,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
@@ -2418,10 +2457,10 @@ class FirebaseService {
   }
 
   async getAudits(companyId: string): Promise<any[]> {
-    if (!db) throw new Error('Firebase not initialized');
+    const firestore = ensureDb();
     
     const q = query(
-      collection(db, 'audits'),
+      collection(firestore, 'audits'),
       where('companyId', '==', companyId)
     );
     const snapshot = await getDocs(q);
@@ -2436,14 +2475,16 @@ class FirebaseService {
   }
 
   async updateAudit(auditId: string, updateData: Partial<any>): Promise<void> {
-    await updateDoc(doc(db, 'audits', auditId), {
+    const firestore = ensureDb();
+    await updateDoc(doc(firestore, 'audits', auditId), {
       ...updateData,
       updatedAt: new Date().toISOString()
     });
   }
 
   async deleteAudit(auditId: string): Promise<void> {
-    await deleteDoc(doc(db, 'audits', auditId));
+    const firestore = ensureDb();
+    await deleteDoc(doc(firestore, 'audits', auditId));
   }
 
   // Check for overdue audits and send notifications
@@ -2465,7 +2506,8 @@ class FirebaseService {
 
   // Schedule next audit (3 months from completion)
   async scheduleNextAudit(completedAuditId: string): Promise<string> {
-    const auditDoc = await getDoc(doc(db, 'audits', completedAuditId));
+    const firestore = ensureDb();
+    const auditDoc = await getDoc(doc(firestore, 'audits', completedAuditId));
     if (!auditDoc.exists()) {
       throw new Error('Audit not found');
     }
