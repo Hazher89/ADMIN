@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export async function POST(request: NextRequest) {
   try {
-    const { to, subject, html, text, credentials } = await request.json();
+    const { to, subject, html, text, credentials, accessToken, fromEmail } = await request.json();
 
     if (!to || !subject) {
       return NextResponse.json({
@@ -11,66 +11,20 @@ export async function POST(request: NextRequest) {
       }, { status: 400 });
     }
 
-    // Try to use nodemailer with proper error handling
-    try {
-      // Dynamic import to avoid Turbopack issues
-      const nodemailerModule = await import('nodemailer');
-      const nodemailer = nodemailerModule.default || nodemailerModule;
-      
-      // Use Outlook SMTP settings from credentials
-      const transporter = nodemailer.createTransport({
-        host: 'smtp-mail.outlook.com',
-        port: 587,
-        secure: false,
-        auth: {
-          user: credentials?.email || 'driftpro@mavilogistikk.no',
-          pass: credentials?.password || 'YourOffice365Password'
-        },
-        tls: {
-          rejectUnauthorized: false
-        },
-        connectionTimeout: 10000,
-        greetingTimeout: 5000,
-        socketTimeout: 10000
-      });
+    // Check if using Microsoft Graph authentication
+    if (accessToken && fromEmail) {
+      return await sendViaMicrosoftGraph(to, subject, html, text, accessToken, fromEmail);
+    }
 
-      const mailOptions = {
-        from: `DriftPro System <${credentials?.email || 'driftpro@mavilogistikk.no'}>`,
-        to: to,
-        subject: subject,
-        html: html,
-        text: text
-      };
-
-      const info = await transporter.sendMail(mailOptions);
-
-      return NextResponse.json({
-        success: true,
-        message: 'E-post sendt',
-        messageId: info.messageId
-      });
-
-    } catch (nodemailerError: any) {
-      console.error('Nodemailer error:', nodemailerError);
-      
-      // Return actual error instead of simulation
-      let errorMessage = 'Ukjent feil ved e-postsending';
-      
-      if (nodemailerError.code === 'EAUTH') {
-        errorMessage = 'Autentisering feilet. Sjekk e-postadresse og passord.';
-      } else if (nodemailerError.code === 'ECONNECTION') {
-        errorMessage = 'Tilkobling feilet. Sjekk SMTP-server og port.';
-      } else if (nodemailerError.code === 'ETIMEDOUT') {
-        errorMessage = 'Tilkobling timeout. Sjekk nettverk og firewall.';
-      } else if (nodemailerError.message) {
-        errorMessage = nodemailerError.message;
-      }
-      
+    // Fallback to SMTP if no Microsoft Graph token
+    if (!credentials) {
       return NextResponse.json({
         success: false,
-        error: errorMessage
-      }, { status: 500 });
+        error: 'Mangler autentiseringsdata (Microsoft Graph token eller SMTP-legitimasjoner)'
+      }, { status: 400 });
     }
+
+    return await sendViaSMTP(to, subject, html, text, credentials);
 
   } catch (error: any) {
     console.error('Email send error:', error);
@@ -78,6 +32,122 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: false,
       error: error.message || 'Ukjent feil ved e-postsending'
+    }, { status: 500 });
+  }
+}
+
+async function sendViaMicrosoftGraph(to: string, subject: string, html: string, text: string, accessToken: string, fromEmail: string) {
+  try {
+    const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        message: {
+          subject: subject,
+          body: {
+            contentType: 'HTML',
+            content: html
+          },
+          toRecipients: [
+            {
+              emailAddress: {
+                address: to
+              }
+            }
+          ],
+          from: {
+            emailAddress: {
+              address: fromEmail
+            }
+          }
+        },
+        saveToSentItems: true
+      })
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`);
+    }
+
+    return NextResponse.json({
+      success: true,
+      message: 'E-post sendt via Microsoft Graph',
+      method: 'microsoft_graph'
+    });
+
+  } catch (error: any) {
+    console.error('Microsoft Graph send error:', error);
+    
+    return NextResponse.json({
+      success: false,
+      error: `Microsoft Graph feil: ${error.message}`
+    }, { status: 500 });
+  }
+}
+
+async function sendViaSMTP(to: string, subject: string, html: string, text: string, credentials: any) {
+  try {
+    // Dynamic import to avoid Turbopack issues
+    const nodemailerModule = await import('nodemailer');
+    const nodemailer = nodemailerModule.default || nodemailerModule;
+    
+    // Use Outlook SMTP settings from credentials
+    const transporter = nodemailer.createTransport({
+      host: 'smtp-mail.outlook.com',
+      port: 587,
+      secure: false,
+      auth: {
+        user: credentials?.email || 'driftpro@mavilogistikk.no',
+        pass: credentials?.password || 'YourOffice365Password'
+      },
+      tls: {
+        rejectUnauthorized: false
+      },
+      connectionTimeout: 10000,
+      greetingTimeout: 5000,
+      socketTimeout: 10000
+    });
+
+    const mailOptions = {
+      from: `DriftPro System <${credentials?.email || 'driftpro@mavilogistikk.no'}>`,
+      to: to,
+      subject: subject,
+      html: html,
+      text: text
+    };
+
+    const info = await transporter.sendMail(mailOptions);
+
+    return NextResponse.json({
+      success: true,
+      message: 'E-post sendt via SMTP',
+      messageId: info.messageId,
+      method: 'smtp'
+    });
+
+  } catch (nodemailerError: any) {
+    console.error('Nodemailer error:', nodemailerError);
+    
+    // Return actual error instead of simulation
+    let errorMessage = 'Ukjent feil ved e-postsending';
+    
+    if (nodemailerError.code === 'EAUTH') {
+      errorMessage = 'Autentisering feilet. Sjekk e-postadresse og passord.';
+    } else if (nodemailerError.code === 'ECONNECTION') {
+      errorMessage = 'Tilkobling feilet. Sjekk SMTP-server og port.';
+    } else if (nodemailerError.code === 'ETIMEDOUT') {
+      errorMessage = 'Tilkobling timeout. Sjekk nettverk og firewall.';
+    } else if (nodemailerError.message) {
+      errorMessage = nodemailerError.message;
+    }
+    
+    return NextResponse.json({
+      success: false,
+      error: errorMessage
     }, { status: 500 });
   }
 }

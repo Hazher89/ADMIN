@@ -209,6 +209,10 @@ class MicrosoftGraphService {
     return this.getCurrentAccount() !== null;
   }
 
+  async getAccessToken(): Promise<string> {
+    return await this.acquireTokenSilent();
+  }
+
   private async acquireTokenSilent(): Promise<string> {
     if (!this.msalInstance) {
       throw new Error('MSAL not initialized');

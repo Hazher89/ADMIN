@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
+import { microsoftGraphService } from '@/lib/microsoft-graph-service';
+import type { AccountInfo } from '@azure/msal-browser';
 import { 
   Settings, 
   Users, 
@@ -97,6 +99,12 @@ export default function SettingsPage() {
   const [loginStatus, setLoginStatus] = useState<'not_logged_in' | 'logging_in' | 'logged_in' | 'error'>('not_logged_in');
   const [loginMessage, setLoginMessage] = useState('');
   const [office365Credentials, setOffice365Credentials] = useState<{email: string, password: string} | null>(null);
+  
+  // Microsoft Graph Authentication states
+  const [isMicrosoftAuthenticated, setIsMicrosoftAuthenticated] = useState(false);
+  const [microsoftAccount, setMicrosoftAccount] = useState<AccountInfo | null>(null);
+  const [isMicrosoftAuthenticating, setIsMicrosoftAuthenticating] = useState(false);
+  const [microsoftAuthError, setMicrosoftAuthError] = useState<string | null>(null);
   
   // Two-step process states
   const [currentStep, setCurrentStep] = useState<'login' | 'sender_config'>('login');
@@ -593,6 +601,72 @@ export default function SettingsPage() {
     }));
   };
 
+  // Microsoft Graph Authentication functions
+  const checkMicrosoftGraphAuth = async () => {
+    try {
+      const account = microsoftGraphService.getCurrentAccount();
+      if (account) {
+        setIsMicrosoftAuthenticated(true);
+        setMicrosoftAccount(account);
+        setMicrosoftAuthError(null);
+        console.log('✅ Microsoft Graph authentication found:', account.username);
+      } else {
+        setIsMicrosoftAuthenticated(false);
+        setMicrosoftAccount(null);
+        console.log('ℹ️ No Microsoft Graph authentication found');
+      }
+    } catch (error) {
+      console.error('Error checking Microsoft Graph auth:', error);
+      setIsMicrosoftAuthenticated(false);
+      setMicrosoftAccount(null);
+    }
+  };
+
+  const handleMicrosoftLogin = async () => {
+    try {
+      setIsMicrosoftAuthenticating(true);
+      setMicrosoftAuthError(null);
+      
+      await microsoftGraphService.signIn();
+      const account = microsoftGraphService.getCurrentAccount();
+      
+      if (account) {
+        setIsMicrosoftAuthenticated(true);
+        setMicrosoftAccount(account);
+        
+        // Save to localStorage for persistence
+        localStorage.setItem('microsoft_graph_auth', JSON.stringify({
+          account: account,
+          loginTime: new Date().toISOString(),
+          expiresIn: 10000 * 365 * 24 * 60 * 60 * 1000 // 10,000 years
+        }));
+        
+        console.log('✅ Microsoft Graph login successful:', account.username);
+      }
+    } catch (error) {
+      console.error('Microsoft Graph login failed:', error);
+      setMicrosoftAuthError('Innlogging til Microsoft Graph mislyktes. Prøv igjen.');
+    } finally {
+      setIsMicrosoftAuthenticating(false);
+    }
+  };
+
+  const handleMicrosoftLogout = async () => {
+    try {
+      await microsoftGraphService.signOut();
+      setIsMicrosoftAuthenticated(false);
+      setMicrosoftAccount(null);
+      setMicrosoftAuthError(null);
+      
+      // Clear localStorage
+      localStorage.removeItem('microsoft_graph_auth');
+      
+      console.log('✅ Microsoft Graph logout successful');
+    } catch (error) {
+      console.error('Microsoft Graph logout failed:', error);
+    }
+  };
+
   const saveSenderConfiguration = () => {
     if (!senderName || !senderEmail) {
       alert('Vennligst fyll ut både avsender navn og e-post');
@@ -633,11 +707,10 @@ export default function SettingsPage() {
       return;
     }
 
-    // Check if user is logged in - if not, show login modal
-    if (loginStatus !== 'logged_in' || !office365Credentials) {
-      setEmailTestMessage('⚠️ Du må logge inn til Office 365 først!');
+    // Check if user is logged in to Microsoft Graph - if not, show login button
+    if (!isMicrosoftAuthenticated || !microsoftAccount) {
+      setEmailTestMessage('⚠️ Du må logge inn til Microsoft Graph først!');
       setEmailTestStatus('error');
-      setShowLoginModal(true); // Automatically show login modal
       return;
     }
 
@@ -646,6 +719,10 @@ export default function SettingsPage() {
 
     try {
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      
+      // Get access token from Microsoft Graph
+      const accessToken = await microsoftGraphService.getAccessToken();
+      
       const response = await fetch(`${baseUrl}/api/email/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -654,7 +731,8 @@ export default function SettingsPage() {
           subject: `DriftPro Test - ${template}`,
           html: `<h1>Test ${template}</h1><p>Dette er en test-e-post fra DriftPro.</p>`,
           text: `Test ${template} - Dette er en test-e-post fra DriftPro.`,
-          credentials: office365Credentials // Send credentials
+          accessToken: accessToken,
+          fromEmail: microsoftAccount.username
         })
       });
 
@@ -721,6 +799,9 @@ export default function SettingsPage() {
           const savedLoginStatus = localStorage.getItem('office365_login_status');
           const savedCredentials = localStorage.getItem('office365_credentials');
           const savedSenderConfig = localStorage.getItem('office365_sender_config');
+          
+          // Check Microsoft Graph authentication status
+          await checkMicrosoftGraphAuth();
 
           if (savedLoginStatus === 'logged_in' && savedCredentials) {
             try {
@@ -1256,54 +1337,47 @@ export default function SettingsPage() {
                 E-postadministrasjon
               </h2>
               
-              {/* Office 365 Login Status */}
+              {/* Microsoft Graph Authentication Status */}
               <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
-                <a
-                  href="/dashboard/email-settings"
-                  className="btn btn-primary"
-                  style={{ padding: '0.5rem 1rem', fontSize: '0.875rem', textDecoration: 'none' }}
-                >
-                  <Settings size={16} style={{ marginRight: '0.5rem' }} />
-                  Åpne E-post Innstillinger
-                </a>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <div style={{
                     width: '12px',
                     height: '12px',
                     borderRadius: '50%',
-                    background: loginStatus === 'logged_in' ? '#10b981' : 
-                               loginStatus === 'logging_in' ? '#f59e0b' : 
-                               loginStatus === 'error' ? '#ef4444' : '#6b7280'
+                    background: isMicrosoftAuthenticated ? '#10b981' : '#ef4444'
                   }}></div>
                   <span style={{ 
                     fontSize: '0.875rem', 
                     fontWeight: '500',
-                    color: loginStatus === 'logged_in' ? '#10b981' : 
-                           loginStatus === 'logging_in' ? '#f59e0b' : 
-                           loginStatus === 'error' ? '#ef4444' : '#6b7280'
+                    color: isMicrosoftAuthenticated ? '#10b981' : '#ef4444'
                   }}>
-                    {loginStatus === 'logged_in' ? 'Logget inn' : 
-                     loginStatus === 'logging_in' ? 'Logger inn...' : 
-                     loginStatus === 'error' ? 'Feil' : 'Ikke logget inn'}
+                    {isMicrosoftAuthenticated ? `Microsoft Graph: ${microsoftAccount?.username}` : 'Microsoft Graph: Ikke logget inn'}
                   </span>
                 </div>
                 
-                {loginStatus === 'logged_in' ? (
+                {isMicrosoftAuthenticated ? (
                   <button
                     className="btn btn-secondary"
-                    onClick={logoutFromOffice365}
+                    onClick={handleMicrosoftLogout}
                     style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
                   >
-                    Logg ut
+                    Logg ut Microsoft
                   </button>
                 ) : (
                   <button
                     className="btn btn-primary"
-                    onClick={() => setShowLoginModal(true)}
+                    onClick={handleMicrosoftLogin}
+                    disabled={isMicrosoftAuthenticating}
                     style={{ padding: '0.5rem 1rem', fontSize: '0.875rem' }}
                   >
-                    Logg inn Office 365
+                    {isMicrosoftAuthenticating ? 'Logger inn...' : 'Logg inn Microsoft'}
                   </button>
+                )}
+                
+                {microsoftAuthError && (
+                  <div style={{ color: '#ef4444', fontSize: '0.75rem', marginLeft: '0.5rem' }}>
+                    {microsoftAuthError}
+                  </div>
                 )}
               </div>
             </div>
