@@ -62,49 +62,40 @@ export class GlobalEmailService {
       try {
         const accessToken = await microsoftGraphService.getAccessToken();
         
-        // Prepare recipients
-        const recipients = Array.isArray(emailContent.to) ? emailContent.to : [emailContent.to];
+        // Use the API endpoint with Microsoft Graph token
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
         
-        // Send via Microsoft Graph API
-        const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+        const response = await fetch(`${baseUrl}/api/email/send`, {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify({
-            message: {
-              subject: emailContent.subject,
-              body: {
-                contentType: 'HTML',
-                content: emailContent.html
-              },
-              toRecipients: recipients.map(email => ({
-                emailAddress: {
-                  address: email
-                }
-              })),
-              from: {
-                emailAddress: {
-                  address: emailContent.fromEmail || this.currentAccount.username
-                }
-              }
-            },
-            saveToSentItems: true
+            to: emailContent.to,
+            subject: emailContent.subject,
+            html: emailContent.html,
+            text: emailContent.text,
+            fromEmail: emailContent.fromEmail || this.currentAccount.username,
+            accessToken: accessToken // Send access token for Microsoft Graph API
           })
         });
 
         if (!response.ok) {
           const errorData = await response.json().catch(() => ({}));
-          throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`);
+          throw new Error(`Email API error: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
         }
 
-        console.log('✅ Email sent successfully via Microsoft Graph:', emailContent.subject);
-        
-        return {
-          success: true,
-          messageId: `msg_${Date.now()}`
-        };
+        const result = await response.json();
+
+        if (result.success) {
+          console.log('✅ Email sent successfully via Microsoft Graph API:', emailContent.subject);
+          return {
+            success: true,
+            messageId: result.messageId || `msg_${Date.now()}`
+          };
+        } else {
+          throw new Error(result.error || 'Email sending failed');
+        }
 
       } catch (graphError) {
         console.error('Microsoft Graph API failed:', graphError);
