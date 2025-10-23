@@ -605,6 +605,9 @@ export default function SettingsPage() {
   // Microsoft Graph Authentication functions
   const checkMicrosoftGraphAuth = async () => {
     try {
+      // Initialize MSAL first to restore any existing session
+      await microsoftGraphService.initializeMSAL();
+      
       const account = microsoftGraphService.getCurrentAccount();
       if (account) {
         setIsMicrosoftAuthenticated(true);
@@ -857,6 +860,16 @@ export default function SettingsPage() {
 
     loadSettings();
   }, [userProfile?.companyId]);
+
+  // Separate useEffect for Microsoft Graph authentication check on page load
+  useEffect(() => {
+    const checkAuthOnLoad = async () => {
+      console.log('🔧 Settings page: Checking Microsoft Graph authentication on page load...');
+      await checkMicrosoftGraphAuth();
+    };
+    
+    checkAuthOnLoad();
+  }, []); // Run only once on component mount
 
   const categories = [
     { id: 'general', name: 'Generelt', icon: Settings },

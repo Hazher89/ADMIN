@@ -26,6 +26,9 @@ export class GlobalEmailService {
 
   public async checkAuthenticationStatus() {
     try {
+      // Initialize MSAL first to restore any existing session
+      await microsoftGraphService.initializeMSAL();
+      
       const account = microsoftGraphService.getCurrentAccount();
       if (account) {
         this.isAuthenticated = true;
