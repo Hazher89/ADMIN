@@ -61,17 +61,106 @@ export async function POST(request: NextRequest) {
 
     console.log('📧 Sending welcome email via Microsoft Graph');
 
-    // Create welcome email HTML
+    // Create welcome email HTML with password setup link
     const html = `
-      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-        <h2 style="color: #2563eb;">Velkommen til ${companyName || 'Bedriften'}!</h2>
-        <p>Hei ${displayName},</p>
-        <p>Velkommen til ${companyName || 'Bedriften'}! Vi er glade for å ha deg med på laget.</p>
-        <p>Du kan nå logge inn på DriftPro-systemet med din e-postadresse.</p>
-        <p>Hvis du har spørsmål, ikke nøl med å ta kontakt.</p>
-        <br>
-        <p>Med vennlig hilsen,<br>${companyName || 'Bedriften'}-teamet</p>
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+          <h1 style="color: white; margin: 0; font-size: 28px; text-align: center;">🎉 Velkommen til ${companyName || 'Bedriften'}!</h1>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 25px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="color: #2d3748; margin-top: 0;">Hei ${displayName}! 👋</h2>
+          <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
+            Vi er glade for å ha deg med på laget! Din konto er nå opprettet i DriftPro-systemet.
+          </p>
+          <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
+            <strong>Din e-postadresse:</strong> ${email}<br>
+            <strong>Din stilling:</strong> ${position || 'Ansatt'}<br>
+            <strong>Avdeling:</strong> ${departmentName || 'Ikke tildelt'}
+          </p>
+        </div>
+
+        <div style="background: #e6fffa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #38b2ac;">
+          <h3 style="color: #234e52; margin-top: 0;">🔐 Sett opp ditt passord</h3>
+          <p style="color: #2c7a7b; font-size: 16px; line-height: 1.6;">
+            For å komme i gang må du først sette opp et passord for din konto. Klikk på knappen under for å fortsette:
+          </p>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${setupUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+              🚀 Sett opp passord
+            </a>
+          </div>
+          <p style="color: #2c7a7b; font-size: 14px; margin-bottom: 0;">
+            <strong>Viktig:</strong> Denne lenken er gyldig i 7 dager. Hvis lenken ikke fungerer, kontakt din administrator.
+          </p>
+        </div>
+
+        <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h3 style="color: #2d3748; margin-top: 0;">📱 Hva kan du gjøre i DriftPro?</h3>
+          <ul style="color: #4a5568; font-size: 15px; line-height: 1.6;">
+            <li>Se din personlige profil og arbeidsinformasjon</li>
+            <li>Be om ferie og fravær</li>
+            <li>Se bedriftsnyheter og varsler</li>
+            <li>Kommunisere med kollegaer</li>
+            <li>Se arbeidsplaner og oppgaver</li>
+          </ul>
+        </div>
+
+        <div style="background: #fff5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #fc8181;">
+          <h3 style="color: #742a2a; margin-top: 0;">❓ Trenger du hjelp?</h3>
+          <p style="color: #9b2c2c; font-size: 15px; line-height: 1.6; margin-bottom: 0;">
+            Hvis du har spørsmål eller trenger hjelp med å komme i gang, ikke nøl med å ta kontakt med din ${adminName || 'administrator'} eller IT-avdelingen.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+          <p style="color: #718096; font-size: 14px; margin: 0;">
+            Med vennlig hilsen,<br>
+            <strong>${companyName || 'Bedriften'}-teamet</strong>
+          </p>
+          <p style="color: #a0aec0; font-size: 12px; margin: 10px 0 0 0;">
+            Denne e-posten ble sendt automatisk fra DriftPro-systemet
+          </p>
+        </div>
       </div>
+    `;
+
+    // Create text version of the email
+    const text = `
+🎉 Velkommen til ${companyName || 'Bedriften'}!
+
+Hei ${displayName}!
+
+Vi er glade for å ha deg med på laget! Din konto er nå opprettet i DriftPro-systemet.
+
+Din informasjon:
+- E-postadresse: ${email}
+- Stilling: ${position || 'Ansatt'}
+- Avdeling: ${departmentName || 'Ikke tildelt'}
+
+🔐 Sett opp ditt passord:
+For å komme i gang må du først sette opp et passord for din konto.
+
+Klikk på denne lenken for å sette opp passordet:
+${setupUrl}
+
+Viktig: Denne lenken er gyldig i 7 dager. Hvis lenken ikke fungerer, kontakt din administrator.
+
+📱 Hva kan du gjøre i DriftPro?
+- Se din personlige profil og arbeidsinformasjon
+- Be om ferie og fravær
+- Se bedriftsnyheter og varsler
+- Kommunisere med kollegaer
+- Se arbeidsplaner og oppgaver
+
+❓ Trenger du hjelp?
+Hvis du har spørsmål eller trenger hjelp med å komme i gang, ikke nøl med å ta kontakt med din ${adminName || 'administrator'} eller IT-avdelingen.
+
+Med vennlig hilsen,
+${companyName || 'Bedriften'}-teamet
+
+---
+Denne e-posten ble sendt automatisk fra DriftPro-systemet
     `;
 
     // Send email via Microsoft Graph API
@@ -83,7 +172,7 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         message: {
-          subject: `Velkommen til ${companyName || 'Bedriften'}!`,
+          subject: `🎉 Velkommen til ${companyName || 'Bedriften'}! Sett opp ditt passord`,
           body: {
             contentType: 'HTML',
             content: html
