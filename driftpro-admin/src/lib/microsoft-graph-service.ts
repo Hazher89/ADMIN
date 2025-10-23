@@ -406,14 +406,11 @@ const defaultConfig: MicrosoftGraphConfig = {
   tenantId: process.env.NEXT_PUBLIC_MICROSOFT_TENANT_ID || '',
   redirectUri: process.env.NEXT_PUBLIC_MICROSOFT_REDIRECT_URI || 'http://localhost:3000/dashboard/mail',
   scopes: [
-    'Mail.Read',
-    'Mail.ReadWrite',
-    'Mail.Send',
-    'Mail.ReadBasic',
     'User.Read',
-    'User.ReadBasic.All',
-    'Calendars.Read',
     'offline_access',
+    'openid',
+    'profile',
+    'email'
   ],
 };
 
