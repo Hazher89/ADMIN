@@ -102,31 +102,57 @@ export default function DashboardLayout({
   // GDPR Compliance: Ensure user has a valid companyId
   useEffect(() => {
     if (user && userProfile) {
-      if (!userProfile.companyId) {
-        console.error('🚨 Security breach: User missing companyId:', userProfile);
-        alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
-        logout();
-        router.push('/companies');
-        return;
-      }
-      
-      // Additional check: ensure userProfile is properly loaded
-      if (!userProfile.id || !userProfile.email) {
-        console.error('🚨 Security breach: Incomplete user profile:', userProfile);
-        alert('Ufullstendig brukerprofil oppdaget. Du blir logget ut.');
-        logout();
-        router.push('/companies');
-        return;
-      }
-      
-      // Auto-set company for admin users if not already set
-      if (userProfile.role === 'admin' && userProfile.companyId) {
-        const selectedCompany = localStorage.getItem('selectedCompany');
-        if (!selectedCompany) {
-          console.log('🔧 Auto-setting company for admin user:', userProfile.companyId);
-          localStorage.setItem('selectedCompany', userProfile.companyId);
+      // Give some time for userProfile to load completely
+      const checkProfile = () => {
+        if (!userProfile.companyId) {
+          console.error('🚨 Security breach: User missing companyId:', userProfile);
+          console.log('User profile data:', JSON.stringify(userProfile, null, 2));
+          console.log('User auth data:', user);
+          
+          // Check if this is a new employee who hasn't set up their password yet
+          // But only if they're not already authenticated
+          if (userProfile.email && !userProfile.passwordSet && userProfile.role === 'employee') {
+            console.log('🔍 New employee detected, but they need to complete password setup first');
+            // Don't redirect here, let them complete the setup process
+            return;
+          }
+          
+          alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
+          logout();
+          router.push('/companies');
+          return;
         }
-      }
+        
+        // Additional check: ensure userProfile is properly loaded
+        if (!userProfile.id || !userProfile.email) {
+          console.error('🚨 Security breach: Incomplete user profile:', userProfile);
+          alert('Ufullstendig brukerprofil oppdaget. Du blir logget ut.');
+          logout();
+          router.push('/companies');
+          return;
+        }
+        
+        // Auto-set company for admin users if not already set
+        if (userProfile.role === 'admin' && userProfile.companyId) {
+          const selectedCompany = localStorage.getItem('selectedCompany');
+          if (!selectedCompany) {
+            console.log('🔧 Auto-setting company for admin user:', userProfile.companyId);
+            localStorage.setItem('selectedCompany', userProfile.companyId);
+          }
+        }
+      };
+
+      // Delay the check to allow profile to load
+      const timeoutId = setTimeout(checkProfile, 1000);
+      
+      return () => clearTimeout(timeoutId);
+    } else if (user && !userProfile) {
+      // User is authenticated but no profile found - this is a problem
+      console.error('🚨 User authenticated but no profile found:', user.uid);
+      console.log('This usually means the employee was not properly created in the system');
+      alert('Brukerprofil ikke funnet. Kontakt administrator.');
+      logout();
+      router.push('/companies');
     }
   }, [user, userProfile, logout, router]);
 

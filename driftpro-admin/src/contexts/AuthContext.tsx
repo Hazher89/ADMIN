@@ -28,6 +28,7 @@ interface UserProfile {
   emergencyContact?: string;
   companyName?: string; // Add company information
   companyId?: string; // Add company ID for isolation
+  passwordSet?: boolean; // Track if password has been set
 }
 
 interface AuthContextType {
@@ -84,32 +85,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               address: data.address || undefined,
               emergencyContact: data.emergencyContact || undefined,
               companyName: data.companyName || undefined, // Add company information
-              companyId: data.companyId || undefined
+              companyId: data.companyId || undefined,
+              passwordSet: data.passwordSet || false
             };
             setUserProfile(userProfile);
           } else {
-            // Create default profile if it doesn't exist
-            const defaultProfile: UserProfile = {
-              id: user.uid,
-              displayName: user.displayName || 'Ny bruker',
-              email: user.email || '',
-              role: 'employee',
-              createdAt: new Date().toISOString(),
-            };
-            await setDoc(doc(db, 'users', user.uid), defaultProfile);
-            setUserProfile(defaultProfile);
+            // Don't create a default profile without companyId
+            // This should not happen for properly created employees
+            console.error('🚨 User profile not found in Firestore:', user.uid);
+            console.log('This usually means the employee was not properly created in the system');
+            setUserProfile(null);
           }
         } catch (error) {
           console.error('Error fetching user profile:', error);
-          // Set a minimal profile to prevent errors
-          const fallbackProfile: UserProfile = {
-            id: user.uid,
-            displayName: user.displayName || 'Ny bruker',
-            email: user.email || '',
-            role: 'employee',
-            createdAt: new Date().toISOString(),
-          };
-          setUserProfile(fallbackProfile);
+          // Don't create a fallback profile without companyId
+          console.error('🚨 Failed to load user profile, setting to null');
+          setUserProfile(null);
         }
       } else {
         setUserProfile(null);

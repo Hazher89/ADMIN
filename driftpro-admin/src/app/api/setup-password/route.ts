@@ -171,12 +171,11 @@ export async function POST(request: NextRequest) {
 
       // Update user profile
       await updateProfile(firebaseUser, {
-        displayName: userData.name || userData.firstName + ' ' + userData.lastName
+        displayName: userData.displayName || userData.name || 'Ny bruker'
       });
 
-      // Update user document with Firebase UID
+      // Update user document with password setup status
       await updateDoc(userDoc.ref, {
-        uid: firebaseUser.uid,
         status: 'active',
         passwordSet: true,
         passwordSetAt: new Date().toISOString(),
