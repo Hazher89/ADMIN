@@ -362,6 +362,109 @@ export default function LogistikkSystemPage() {
     }
   };
 
+  const loadDeliveries = async () => {
+    if (!db || !userProfile?.companyId) return;
+    
+    try {
+      const deliveriesQuery = query(
+        collection(db, 'deliveries'),
+        where('companyId', '==', userProfile.companyId),
+        orderBy('createdAt', 'desc')
+      );
+      const deliveriesSnapshot = await getDocs(deliveriesQuery);
+      const deliveriesData = deliveriesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setDeliveries(deliveriesData);
+    } catch (error) {
+      console.error('Error loading deliveries:', error);
+    }
+  };
+
+  const loadSuppliers = async () => {
+    if (!db || !userProfile?.companyId) return;
+    
+    try {
+      const suppliersQuery = query(
+        collection(db, 'suppliers'),
+        where('companyId', '==', userProfile.companyId)
+      );
+      const suppliersSnapshot = await getDocs(suppliersQuery);
+      const suppliersData = suppliersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setSuppliers(suppliersData);
+    } catch (error) {
+      console.error('Error loading suppliers:', error);
+    }
+  };
+
+  const loadProducts = async () => {
+    if (!db || !userProfile?.companyId) return;
+    
+    try {
+      const productsQuery = query(
+        collection(db, 'products'),
+        where('companyId', '==', userProfile.companyId)
+      );
+      const productsSnapshot = await getDocs(productsQuery);
+      const productsData = productsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setProducts(productsData);
+    } catch (error) {
+      console.error('Error loading products:', error);
+    }
+  };
+
+  const loadInvoices = async () => {
+    if (!db || !userProfile?.companyId) return;
+    
+    try {
+      const invoicesQuery = query(
+        collection(db, 'invoices'),
+        where('companyId', '==', userProfile.companyId),
+        orderBy('createdAt', 'desc')
+      );
+      const invoicesSnapshot = await getDocs(invoicesQuery);
+      const invoicesData = invoicesSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setInvoices(invoicesData);
+    } catch (error) {
+      console.error('Error loading invoices:', error);
+    }
+  };
+
+  const loadPayments = async () => {
+    if (!db || !userProfile?.companyId) return;
+    
+    try {
+      const paymentsQuery = query(
+        collection(db, 'payments'),
+        where('companyId', '==', userProfile.companyId),
+        orderBy('createdAt', 'desc')
+      );
+      const paymentsSnapshot = await getDocs(paymentsQuery);
+      const paymentsData = paymentsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      
+      setPayments(paymentsData);
+    } catch (error) {
+      console.error('Error loading payments:', error);
+    }
+  };
+
   const loadAllData = async () => {
     if (!userProfile?.companyId) return;
     
@@ -369,7 +472,12 @@ export default function LogistikkSystemPage() {
       setIsLoading(true);
       await Promise.all([
         loadOrders(),
-        loadCustomers()
+        loadCustomers(),
+        loadDeliveries(),
+        loadSuppliers(),
+        loadProducts(),
+        loadInvoices(),
+        loadPayments()
       ]);
     } catch (error) {
       console.error('Error loading data:', error);
@@ -1165,11 +1273,128 @@ export default function LogistikkSystemPage() {
           {activeTab === 'delivery' && (
             <div>
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
-                Levering
+                Leveringssystem
               </h2>
-              <p style={{ color: 'var(--gray-600)' }}>
-                Administrer leveringer og transport. Her kan du spore leveringer, planlegge ruter og håndtere transportlogistikk.
+              <p style={{ color: 'var(--gray-600)', marginBottom: '2rem' }}>
+                Administrer leveringer og transport. Spor leveringer, scan QR-koder og håndtere transportlogistikk.
               </p>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                  Leveringer ({deliveries.length})
+                </h3>
+                <div style={{ display: 'flex', gap: '1rem' }}>
+                  <button
+                    onClick={() => setShowMap(!showMap)}
+                    className="btn btn-secondary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <Map size={16} />
+                    {showMap ? 'Skjul kart' : 'Vis kart'}
+                  </button>
+                  <button
+                    onClick={() => setShowScanner(true)}
+                    className="btn btn-primary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <QrCode size={16} />
+                    Scan QR-kode
+                  </button>
+                </div>
+              </div>
+
+              <div className="card" style={{ padding: 0 }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Leverings-ID</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Kunde</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Adresse</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Dato</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Sjåfør</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Status</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Handlinger</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {deliveries.map((delivery) => (
+                        <tr key={delivery.id} style={{ borderBottom: '1px solid var(--gray-200)' }}>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
+                            {delivery.id}
+                          </td>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
+                            <div>
+                              <div style={{ fontWeight: '500' }}>{delivery.customer}</div>
+                              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                                {delivery.customerPhone}
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                            {delivery.deliveryAddress}
+                          </td>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                            {new Date(delivery.deliveryDate).toLocaleDateString('nb-NO')}
+                          </td>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                            {delivery.driver}
+                          </td>
+                          <td style={{ padding: 'var(--space-4)' }}>
+                            <span style={{
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: 'var(--font-size-sm)',
+                              fontWeight: '500',
+                              background: delivery.status === 'completed' ? 'var(--green-100)' : 
+                                         delivery.status === 'in_transit' ? 'var(--blue-100)' : 
+                                         delivery.status === 'cancelled' ? 'var(--red-100)' : 'var(--gray-100)',
+                              color: delivery.status === 'completed' ? 'var(--green-700)' : 
+                                     delivery.status === 'in_transit' ? 'var(--blue-700)' : 
+                                     delivery.status === 'cancelled' ? 'var(--red-700)' : 'var(--gray-700)'
+                            }}>
+                              {delivery.status === 'assigned' ? 'Tildelt' :
+                               delivery.status === 'in_transit' ? 'Under levering' :
+                               delivery.status === 'completed' ? 'Levert' : 'Avbrutt'}
+                            </span>
+                          </td>
+                          <td style={{ padding: 'var(--space-4)' }}>
+                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                              <button
+                                onClick={() => {
+                                  setCurrentDelivery(delivery);
+                                  setShowScanner(true);
+                                }}
+                                className="btn btn-secondary"
+                                style={{ padding: '0.5rem' }}
+                              >
+                                <QrCode size={16} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setCurrentDelivery(delivery);
+                                  setShowSignature(true);
+                                }}
+                                className="btn btn-secondary"
+                                style={{ padding: '0.5rem' }}
+                              >
+                                <Edit size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {deliveries.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-500)' }}>
+                  <Truck size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <p>Ingen leveringer funnet</p>
+                </div>
+              )}
             </div>
           )}
 
@@ -1380,11 +1605,124 @@ export default function LogistikkSystemPage() {
           {activeTab === 'customers' && (
             <div>
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
-                Kunder
+                Kundeadministrasjon
               </h2>
-              <p style={{ color: 'var(--gray-600)' }}>
+              <p style={{ color: 'var(--gray-600)', marginBottom: '2rem' }}>
                 Administrer kundedatabase, kontaktinformasjon og kundeforhold. Spor kundehistorikk og preferanser.
               </p>
+
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                  Kunder ({customers.length})
+                </h3>
+                <button
+                  onClick={() => setShowCustomerModal(true)}
+                  className="btn btn-primary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <Plus size={16} />
+                  Ny kunde
+                </button>
+              </div>
+
+              <div className="card" style={{ padding: 0 }}>
+                <div style={{ overflowX: 'auto' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                    <thead>
+                      <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Navn</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Kontaktperson</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>E-post</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Telefon</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Type</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Status</th>
+                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Handlinger</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {customers.map((customer) => (
+                        <tr key={customer.id} style={{ borderBottom: '1px solid var(--gray-200)' }}>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
+                            <div>
+                              <div style={{ fontWeight: '500' }}>{customer.name}</div>
+                              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                                {customer.address}
+                              </div>
+                            </div>
+                          </td>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                            {customer.contactPerson}
+                          </td>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                            {customer.email}
+                          </td>
+                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                            {customer.phone}
+                          </td>
+                          <td style={{ padding: 'var(--space-4)' }}>
+                            <span style={{
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: 'var(--font-size-sm)',
+                              fontWeight: '500',
+                              background: customer.type === 'bedrift' ? 'var(--blue-100)' : 'var(--green-100)',
+                              color: customer.type === 'bedrift' ? 'var(--blue-700)' : 'var(--green-700)'
+                            }}>
+                              {customer.type === 'bedrift' ? 'Bedrift' : 'Privat'}
+                            </span>
+                          </td>
+                          <td style={{ padding: 'var(--space-4)' }}>
+                            <span style={{
+                              padding: '0.25rem 0.75rem',
+                              borderRadius: 'var(--radius-full)',
+                              fontSize: 'var(--font-size-sm)',
+                              fontWeight: '500',
+                              background: customer.status === 'active' ? 'var(--green-100)' : 
+                                         customer.status === 'inactive' ? 'var(--red-100)' : 'var(--yellow-100)',
+                              color: customer.status === 'active' ? 'var(--green-700)' : 
+                                     customer.status === 'inactive' ? 'var(--red-700)' : 'var(--yellow-700)'
+                            }}>
+                              {customer.status === 'active' ? 'Aktiv' :
+                               customer.status === 'inactive' ? 'Inaktiv' : 'Potensiell'}
+                            </span>
+                          </td>
+                          <td style={{ padding: 'var(--space-4)' }}>
+                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                              <button
+                                onClick={() => {
+                                  setSelectedCustomer(customer);
+                                  setShowCustomerModal(true);
+                                }}
+                                className="btn btn-secondary"
+                                style={{ padding: '0.5rem' }}
+                              >
+                                <Eye size={16} />
+                              </button>
+                              <button
+                                onClick={() => {
+                                  setSelectedCustomer(customer);
+                                  setShowCustomerModal(true);
+                                }}
+                                className="btn btn-secondary"
+                                style={{ padding: '0.5rem' }}
+                              >
+                                <Edit size={16} />
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              {customers.length === 0 && (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-500)' }}>
+                  <Users size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <p>Ingen kunder funnet</p>
+                </div>
+              )}
             </div>
           )}
 
