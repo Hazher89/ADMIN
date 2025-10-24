@@ -38,7 +38,7 @@ interface AuthContextType {
   isAdmin: boolean;
   isDepartmentLeader: boolean;
   loading: boolean;
-  login: (email: string, password: string, companyId?: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
   register: (email: string, password: string, displayName: string) => Promise<void>;
   updateUserProfile: (data: Partial<UserProfile>) => Promise<void>;
@@ -112,13 +112,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return unsubscribe;
   }, []);
 
-  const login = async (email: string, password: string, companyId?: string) => {
+  const login = async (email: string, password: string) => {
     if (!auth) throw new Error('Firebase not initialized');
-    if (!companyId) throw new Error('Ingen bedrift valgt. Vennligst velg en bedrift først.');
     if (!db) throw new Error('Database ikke tilgjengelig.');
     
     try {
-      // FIRST: Check if user exists and validate company access BEFORE authentication
+      // FIRST: Check if user exists and get their companyId
       const usersQuery = query(collection(db, 'users'), where('email', '==', email));
       const userSnapshot = await getDocs(usersQuery);
       
@@ -127,7 +126,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       if (userSnapshot.empty) {
         // Special handling for superadmin - try to authenticate first and then create profile
-        if (email === 'baxigsti@hotmail.de' && companyId === 'driftpro_main') {
+        if (email === 'baxigsti@hotmail.de') {
           console.log('Attempting superadmin login...');
           const userCredential = await signInWithEmailAndPassword(auth, email, password);
           const user = userCredential.user;
@@ -218,11 +217,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Check if user has a companyId
       if (!userData.companyId) {
         throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
-      }
-      
-      // Check if user belongs to the selected company
-      if (userData.companyId !== companyId) {
-        throw new Error(`Sikkerhetsbrudd: Du har ikke tilgang til ${companyId}. Du blir logget ut umiddelbart.`);
       }
       
       // Check if user has been set up with Firebase Authentication
@@ -370,7 +364,7 @@ export function useAuth() {
       isAdmin: false,
       isDepartmentLeader: false,
       loading: true,
-      login: async (email: string, password: string, companyId?: string) => { throw new Error('Auth not initialized'); },
+      login: async (email: string, password: string) => { throw new Error('Auth not initialized'); },
       logout: async () => { throw new Error('Auth not initialized'); },
       register: async () => { throw new Error('Auth not initialized'); },
       updateUserProfile: async () => { throw new Error('Auth not initialized'); },

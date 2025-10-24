@@ -24,19 +24,6 @@ export default function LoginPage() {
   const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [selectedCompany, setSelectedCompany] = useState<{id: string; name: string; orgNumber?: string} | null>(null);
-
-  // Load selected company from localStorage
-  useEffect(() => {
-    const storedCompany = localStorage.getItem('selectedCompany');
-    if (storedCompany) {
-      try {
-        setSelectedCompany(JSON.parse(storedCompany));
-      } catch (error) {
-        console.error('Error parsing stored company:', error);
-      }
-    }
-  }, []);
 
   // Redirect if already authenticated
   useEffect(() => {
@@ -55,15 +42,8 @@ export default function LoginPage() {
     setError('');
 
     try {
-      // Check if company is selected
-      if (!selectedCompany) {
-        setError('Du må velge en bedrift først. Gå tilbake og velg bedrift.');
-        setLoading(false);
-        return;
-      }
-
-      // Login with email, password and company validation
-      await login(email, password, selectedCompany.id);
+      // Login without company validation - let the auth context handle it
+      await login(email, password);
       
       // If login successful, proceed to dashboard
       router.push('/dashboard');
@@ -136,61 +116,6 @@ export default function LoginPage() {
             Logg inn på din DriftPro konto
           </p>
         </div>
-
-        {/* Selected Company Display */}
-        {selectedCompany && (
-          <div style={{
-            background: 'rgba(102, 126, 234, 0.1)',
-            border: '2px solid rgba(102, 126, 234, 0.2)',
-            borderRadius: '12px',
-            padding: '1rem',
-            marginBottom: '2rem',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.75rem'
-          }}>
-            <Building style={{ 
-              width: '24px', 
-              height: '24px', 
-              color: '#667eea' 
-            }} />
-            <div style={{ flex: '1' }}>
-              <h3 style={{
-                fontSize: '1rem',
-                fontWeight: '600',
-                color: '#333',
-                marginBottom: '0.25rem'
-              }}>
-                {selectedCompany.name}
-              </h3>
-              <p style={{
-                fontSize: '0.875rem',
-                color: '#666'
-              }}>
-                Org.nr: {selectedCompany.orgNumber}
-              </p>
-            </div>
-            <button
-              onClick={() => {
-                localStorage.removeItem('selectedCompany');
-                setSelectedCompany(null);
-                router.push('/companies');
-              }}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#667eea',
-                cursor: 'pointer',
-                padding: '0.5rem',
-                borderRadius: '8px',
-                transition: 'all 0.3s ease'
-              }}
-              title="Velg annen bedrift"
-            >
-              Endre
-            </button>
-          </div>
-        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} style={{ marginBottom: '2rem' }}>

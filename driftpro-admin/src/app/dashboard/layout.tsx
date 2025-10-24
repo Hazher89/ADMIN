@@ -120,7 +120,7 @@ export default function DashboardLayout({
           
           alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
           logout();
-          router.push('/companies');
+          router.push('/login');
           return;
         }
         
@@ -129,17 +129,8 @@ export default function DashboardLayout({
           console.error('🚨 Security breach: Incomplete user profile:', userProfile);
           alert('Ufullstendig brukerprofil oppdaget. Du blir logget ut.');
           logout();
-          router.push('/companies');
+          router.push('/login');
           return;
-        }
-        
-        // Auto-set company for admin users if not already set
-        if (userProfile.role === 'admin' && userProfile.companyId) {
-          const selectedCompany = localStorage.getItem('selectedCompany');
-          if (!selectedCompany) {
-            console.log('🔧 Auto-setting company for admin user:', userProfile.companyId);
-            localStorage.setItem('selectedCompany', userProfile.companyId);
-          }
         }
       };
 
@@ -153,27 +144,7 @@ export default function DashboardLayout({
       console.log('This usually means the employee was not properly created in the system');
       alert('Brukerprofil ikke funnet. Kontakt administrator.');
       logout();
-      router.push('/companies');
-    }
-  }, [user, userProfile, logout, router]);
-
-  // Immediate GDPR validation on mount
-  useEffect(() => {
-    if (user && userProfile) {
-      const selectedCompany = localStorage.getItem('selectedCompany');
-      if (!selectedCompany) {
-        // For admin users, automatically set their company
-        if (userProfile.role === 'admin' && userProfile.companyId) {
-          console.log('🔧 Auto-setting company for admin user:', userProfile.companyId);
-          localStorage.setItem('selectedCompany', userProfile.companyId);
-          return;
-        }
-        
-        alert('Ingen bedrift valgt. Du blir logget ut.');
-        logout();
-        router.push('/companies');
-        return;
-      }
+      router.push('/login');
     }
   }, [user, userProfile, logout, router]);
 
@@ -390,14 +361,6 @@ export default function DashboardLayout({
     
     // Admin-only pages (only visible for DriftPro AS)
     ...(isDriftProAdmin ? [
-      {
-        name: 'Bedrifter',
-        href: '/dashboard/companies',
-        icon: <Globe size={20} />,
-        category: 'admin',
-        isAdmin: true,
-        id: 'companies'
-      },
 
     ] : [])
   ];
