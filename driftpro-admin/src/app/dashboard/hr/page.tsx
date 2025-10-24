@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService, Employee, Department, Shift, TimeClock } from '@/lib/firebase-services';
+import { firebaseService, Employee, Department, Shift } from '@/lib/firebase-services';
 import { 
   Users, User, Clock, Calendar, DollarSign, 
   Plus, Search, Filter, Download, Eye, Edit, Trash2,
@@ -59,7 +59,6 @@ export default function HRPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [shifts, setShifts] = useState<Shift[]>([]);
-  const [timeEntries, setTimeEntries] = useState<TimeClock[]>([]);
   const [absences, setAbsences] = useState<Absence[]>([]);
   const [vacations, setVacations] = useState<Vacation[]>([]);
   
@@ -212,14 +211,12 @@ export default function HRPage() {
         employeesData,
         departmentsData,
         shiftsData,
-        timeEntriesData,
         absencesData,
         vacationsData
       ] = await Promise.all([
         firebaseService.getEmployees(userProfile.companyId),
         firebaseService.getDepartments(userProfile.companyId),
         firebaseService.getShifts(userProfile.companyId),
-        firebaseService.getTimeClocks(userProfile.companyId),
         firebaseService.getAbsences(userProfile.companyId),
         firebaseService.getVacations(userProfile.companyId)
       ]);
@@ -227,7 +224,6 @@ export default function HRPage() {
       setEmployees(employeesData);
       setDepartments(departmentsData);
       setShifts(shiftsData);
-      setTimeEntries(timeEntriesData);
       setAbsences(absencesData);
       setVacations(vacationsData);
     } catch (error) {
@@ -257,19 +253,6 @@ export default function HRPage() {
     });
   };
 
-  const getFilteredTimeEntries = () => {
-    return timeEntries.filter(entry => {
-      const employee = employees.find(emp => emp.id === entry.employeeId);
-      const department = departments.find(dept => dept.id === employee?.departmentId);
-      
-      const matchesSearch = employee?.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           employee?.employeeNumber?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                           department?.name?.toLowerCase().includes(searchTerm.toLowerCase());
-      const matchesStatus = selectedStatus === 'all' || getEntryStatus(entry) === selectedStatus;
-      const matchesDepartment = selectedDepartment === 'all' || employee?.departmentId === selectedDepartment;
-      return matchesSearch && matchesStatus && matchesDepartment;
-    });
-  };
 
   const getFilteredDepartments = () => {
     return departments.filter(department => {
@@ -296,15 +279,6 @@ export default function HRPage() {
   };
 
   // Helper functions
-  const getEntryStatus = (entry: TimeClock): 'active' | 'completed' | 'overtime' | 'late' => {
-    if (!entry.clockOutTime) return 'active';
-    if (entry.totalHours && entry.totalHours > 8) return 'overtime';
-    const clockInTime = new Date(entry.clockInTime);
-    const expectedStart = new Date(clockInTime);
-    expectedStart.setHours(8, 0, 0, 0);
-    if (clockInTime > expectedStart) return 'late';
-    return 'completed';
-  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -381,7 +355,6 @@ export default function HRPage() {
   const getStats = () => {
     const activeEmployees = employees.filter(emp => emp.status === 'active').length;
     const activeShifts = shifts.filter(s => s.status === 'in_progress').length;
-    const activeTimeEntries = timeEntries.filter(entry => !entry.clockOutTime).length;
     const pendingAbsences = absences.filter(a => a.status === 'pending').length;
     const pendingVacations = vacations.filter(v => v.status === 'pending').length;
     const totalDepartments = departments.length;
@@ -390,7 +363,6 @@ export default function HRPage() {
       totalEmployees: employees.length,
       activeEmployees,
       activeShifts,
-      activeTimeEntries,
       pendingAbsences,
       pendingVacations,
       totalDepartments
@@ -497,7 +469,6 @@ export default function HRPage() {
             { id: 'employees', name: 'Ansatte', icon: Users },
             { id: 'shifts', name: 'Vakter', icon: Calendar },
             { id: 'absence-vacation', name: 'Fravær & Ferie', icon: Heart },
-            { id: 'timeclock', name: 'Timeregistrering', icon: Clock },
             { id: 'departments', name: 'Avdelinger', icon: Building },
           ].map(tab => (
             <button
@@ -572,14 +543,6 @@ export default function HRPage() {
                   <option value="completed">Fullført</option>
                 </>
               )}
-              {activeTab === 'timeclock' && (
-                <>
-                  <option value="active">Aktiv</option>
-                  <option value="completed">Fullført</option>
-                  <option value="overtime">Overtid</option>
-                  <option value="late">Forsinket</option>
-                </>
-              )}
               {(activeTab === 'absence-vacation') && (
                 <>
                   <option value="pending">Venter</option>
@@ -588,7 +551,7 @@ export default function HRPage() {
                 </>
               )}
             </select>
-            {(activeTab === 'employees' || activeTab === 'timeclock') && (
+            {(activeTab === 'employees') && (
               <select
                 value={selectedDepartment}
                 onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -615,7 +578,6 @@ export default function HRPage() {
               Legg til {activeTab === 'employees' ? 'ansatt' : 
                        activeTab === 'shifts' ? 'vakt' : 
                        activeTab === 'absence-vacation' ? 'registrering' : 
-                       activeTab === 'timeclock' ? 'oppføring' : 
                        'avdeling'}
             </button>
           </div>

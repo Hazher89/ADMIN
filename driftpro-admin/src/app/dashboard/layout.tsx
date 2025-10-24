@@ -196,13 +196,13 @@ export default function DashboardLayout({
       category: 'main',
       id: 'bud-priser'
     },
-    {
-      name: 'HMS',
-      href: '/dashboard/deviations',
-      icon: <Shield size={20} />,
-      category: 'main',
-      id: 'deviations'
-    },
+      {
+        name: 'Logistikk System',
+        href: '/dashboard/logistikk-system',
+        icon: <Truck size={20} />,
+        category: 'main',
+        id: 'logistikk-system'
+      },
     {
       name: 'Internrevisjon',
       href: '/dashboard/audit',
@@ -265,93 +265,6 @@ export default function DashboardLayout({
     }] : []),
     
     // Finance & Accounting
-    {
-      name: 'Finans',
-      href: '/dashboard/finance',
-      icon: <DollarSign size={20} />,
-      category: 'finance',
-      id: 'finance'
-    },
-    {
-      name: 'Fakturering',
-      href: '/dashboard/invoicing',
-      icon: <FileText size={20} />,
-      category: 'finance',
-      id: 'invoicing'
-    },
-    
-    // HR & Personnel
-    {
-      name: 'Timeregistrering',
-      href: '/dashboard/timesheet',
-      icon: <Clock size={20} />,
-      category: 'hr',
-      id: 'timesheet'
-    },
-    
-    // Inventory & Stock
-    {
-      name: 'Lager',
-      href: '/dashboard/inventory',
-      icon: <Package size={20} />,
-      category: 'inventory',
-      id: 'inventory'
-    },
-    {
-      name: 'Produkter',
-      href: '/dashboard/products',
-      icon: <Box size={20} />,
-      category: 'inventory',
-      id: 'products'
-    },
-    {
-      name: 'Leverandører',
-      href: '/dashboard/suppliers',
-      icon: <Truck size={20} />,
-      category: 'inventory',
-      id: 'suppliers'
-    },
-    
-    // CRM & Customers
-    {
-      name: 'Kunder',
-      href: '/dashboard/customers',
-      icon: <UserCheck size={20} />,
-      category: 'crm',
-      id: 'customers'
-    },
-    
-    // Advanced Planning & Logistics
-    {
-      name: 'Planlegging',
-      href: '/dashboard/advanced-planning',
-      icon: <Navigation size={20} />,
-      category: 'logistics',
-      id: 'advanced-planning'
-    },
-    {
-      name: 'Levering',
-      href: '/dashboard/delivery',
-      icon: <Truck size={20} />,
-      category: 'logistics',
-      id: 'delivery'
-    },
-    {
-      name: 'Ordre',
-      href: '/dashboard/orders',
-      icon: <ShoppingCart size={20} />,
-      category: 'logistics',
-      id: 'orders'
-    },
-    {
-      name: 'Arkiv',
-      href: '/dashboard/archive',
-      icon: <FolderOpen size={20} />,
-      category: 'logistics',
-      id: 'archive'
-    },
-    
-    // Settings (available for all companies)
     {
       name: 'Innstillinger',
       href: '/dashboard/settings',
