@@ -3,6 +3,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { PostcodeData, searchPostcodes, getServicesByCategory, getCategories } from '../../../lib/bud-priser-data';
+import { firebaseService } from '@/lib/firebase-services';
+import { collection, getDocs, query, orderBy, where, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 import { 
   Truck, Package, Users, FileText, DollarSign, 
   Plus, Search, Filter, Download, Eye, Edit, Trash2,
@@ -15,8 +18,125 @@ import {
   Save, Loader2, X, Link, SortAsc, SortDesc, Grid, List,
   ExternalLink, Star, Upload, FileText as FileTextIcon,
   CheckCircle2, ShoppingCart, Navigation, Archive,
-  MapPin as MapPinIcon, Calculator, History, FileText as FileTextIcon2
+  MapPin as MapPinIcon, Calculator, History, FileText as FileTextIcon2,
+  // Advanced Planning imports
+  Map, Zap, Route, Calendar, GanttChart, TrendingUp as TrendingUpIcon,
+  Building2, RotateCcw, Maximize, Minimize, Layers, Satellite,
+  ArrowRight, RotateCcw as RotateCcwIcon, Weight,
+  // Delivery imports
+  QrCode, Camera, Activity, ArrowLeft, Square,
+  // Customer imports
+  UserCheck as UserCheckIcon, Star as StarIcon,
+  // Supplier imports
+  Truck as TruckIcon,
+  // Product imports
+  Box, TrendingDown, DollarSign as DollarSignIcon,
+  // Inventory imports
+  Package as PackageIcon, AlertCircle, Minus,
+  // Invoicing imports
+  Clock as ClockIcon2, AlertCircle as AlertCircleIcon,
+  // Finance imports
+  CreditCard, PieChart, ArrowUpRight, ArrowDownRight
 } from 'lucide-react';
+
+// Interfaces
+interface Order {
+  id?: string;
+  orderNumber: string;
+  documentNumber?: string;
+  customerName: string;
+  customerPhone: string;
+  customerAddress: string;
+  customerEmail: string;
+  deliveryDate: string;
+  deliveryTimeTo: string;
+  deliveryTimeFrom?: string;
+  products: {
+    serviceId: string;
+    serviceName: string;
+    serviceDescription: string;
+    serviceCategory: string;
+    price: number;
+    quantity: number;
+    weight?: number;
+    dimensions?: string;
+    specialInstructions?: string;
+  }[];
+  priority: 'low' | 'medium' | 'high';
+  noteToPlanner?: string;
+  returnType?: 'none' | 'old_item' | 'disposal';
+  returnDescription?: string;
+  returnOrderId?: string;
+  totalProducts: number;
+  totalWeight?: number;
+  totalVolume?: number;
+  status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
+  createdAt: any;
+  companyId: string;
+  assignedDriver?: string;
+  assignedVehicle?: string;
+  routeId?: string;
+}
+
+interface Customer {
+  id?: string;
+  name: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  type: 'privat' | 'bedrift';
+  status: 'active' | 'inactive' | 'prospect';
+  totalOrders: number;
+  totalValue: number;
+  lastOrder: string;
+  customerSince: string;
+  rating: number;
+  companyId: string;
+  orders: string[];
+  createdAt?: any;
+  updatedAt?: any;
+}
+
+interface Supplier {
+  id: number;
+  name: string;
+  contactPerson: string;
+  email: string;
+  phone: string;
+  address: string;
+  category: string;
+  rating: number;
+  status: string;
+  lastOrder: string;
+  totalOrders: number;
+}
+
+interface Product {
+  id: string;
+  name: string;
+  sku: string;
+  category: string;
+  price: number;
+  cost: number;
+  stock: number;
+  minStock: number;
+  status: string;
+  supplier: string;
+  description: string;
+  lastRestock: string;
+}
+
+interface Invoice {
+  id: string;
+  customer: string;
+  amount: number;
+  status: string;
+  dueDate: string;
+  createdDate: string;
+  description: string;
+  paidDate: string | null;
+}
 
 export default function LogistikkSystemPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -28,6 +148,58 @@ export default function LogistikkSystemPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
+
+  // Advanced Planning states
+  const [orders, setOrders] = useState<Order[]>([]);
+  const [drivers, setDrivers] = useState([]);
+  const [vehicles, setVehicles] = useState([]);
+  const [routes, setRoutes] = useState([]);
+  const [planningTab, setPlanningTab] = useState('orders');
+  const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [showRouteModal, setShowRouteModal] = useState(false);
+  const [isOptimizing, setIsOptimizing] = useState(false);
+
+  // Delivery states
+  const [deliveries, setDeliveries] = useState([]);
+  const [currentDelivery, setCurrentDelivery] = useState(null);
+  const [showScanner, setShowScanner] = useState(false);
+  const [showSignature, setShowSignature] = useState(false);
+  const [showCamera, setShowCamera] = useState(false);
+  const [scanResult, setScanResult] = useState('');
+  const [showMap, setShowMap] = useState(true);
+
+  // Customer states
+  const [customers, setCustomers] = useState<Customer[]>([]);
+  const [showCustomerModal, setShowCustomerModal] = useState(false);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [filterType, setFilterType] = useState('all');
+  const [filterStatus, setFilterStatus] = useState('all');
+
+  // Supplier states
+  const [suppliers, setSuppliers] = useState<Supplier[]>([]);
+  const [showSupplierModal, setShowSupplierModal] = useState(false);
+  const [filterCategory, setFilterCategory] = useState('all');
+
+  // Product states
+  const [products, setProducts] = useState<Product[]>([]);
+  const [showProductModal, setShowProductModal] = useState(false);
+  const [filterProductCategory, setFilterProductCategory] = useState('all');
+  const [filterProductStatus, setFilterProductStatus] = useState('all');
+
+  // Inventory states
+  const [inventory, setInventory] = useState([]);
+  const [inventoryTab, setInventoryTab] = useState('inventory');
+
+  // Invoicing states
+  const [invoices, setInvoices] = useState<Invoice[]>([]);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [filterInvoiceStatus, setFilterInvoiceStatus] = useState('all');
+
+  // Finance states
+  const [payments, setPayments] = useState([]);
+  const [budgets, setBudgets] = useState([]);
+  const [financeTab, setFinanceTab] = useState('overview');
 
   // BUD Priser states
   const [postcode, setPostcode] = useState('');
