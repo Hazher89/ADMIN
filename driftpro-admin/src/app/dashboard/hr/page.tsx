@@ -3,6 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService, Employee, Department, Shift } from '@/lib/firebase-services';
+import { notificationService } from '@/lib/notification-service';
 import { 
   Users, User, Clock, Calendar, DollarSign, 
   Plus, Search, Filter, Download, Eye, Edit, Trash2,
@@ -230,6 +231,104 @@ export default function HRPage() {
       console.error('Error loading HR data:', error);
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Notification functions
+  const sendAbsenceNotification = async (absence: Absence) => {
+    if (!userProfile?.companyId) return;
+    
+    try {
+      // Send notification to HR managers and admins
+      const hrUsers = employees.filter(emp => 
+        emp.role === 'admin' || emp.role === 'department_leader'
+      );
+      
+      for (const hrUser of hrUsers) {
+        await notificationService.createNotification({
+          userId: hrUser.id,
+          title: 'Ny fraværsmelding',
+          message: `${absence.employeeName} har meldt fravær: ${absence.type} fra ${new Date(absence.startDate).toLocaleDateString('nb-NO')} til ${new Date(absence.endDate).toLocaleDateString('nb-NO')}`,
+          type: 'absence',
+          priority: absence.type === 'sick' ? 'high' : 'medium',
+          actionUrl: '/dashboard/hr?tab=absences',
+          actionText: 'Se fraværsmelding',
+          metadata: {
+            absenceId: absence.id,
+            employeeId: absence.employeeId,
+            employeeName: absence.employeeName,
+            type: absence.type,
+            startDate: absence.startDate,
+            endDate: absence.endDate
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending absence notification:', error);
+    }
+  };
+
+  const sendVacationNotification = async (vacation: Vacation) => {
+    if (!userProfile?.companyId) return;
+    
+    try {
+      // Send notification to HR managers and admins
+      const hrUsers = employees.filter(emp => 
+        emp.role === 'admin' || emp.role === 'department_leader'
+      );
+      
+      for (const hrUser of hrUsers) {
+        await notificationService.createNotification({
+          userId: hrUser.id,
+          title: 'Ny ferieansøkning',
+          message: `${vacation.employeeName} har søkt om ferie: ${vacation.days} dager fra ${new Date(vacation.startDate).toLocaleDateString('nb-NO')} til ${new Date(vacation.endDate).toLocaleDateString('nb-NO')}`,
+          type: 'vacation',
+          priority: 'medium',
+          actionUrl: '/dashboard/hr?tab=vacations',
+          actionText: 'Se ferieansøkning',
+          metadata: {
+            vacationId: vacation.id,
+            employeeId: vacation.employeeId,
+            employeeName: vacation.employeeName,
+            days: vacation.days,
+            startDate: vacation.startDate,
+            endDate: vacation.endDate
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending vacation notification:', error);
+    }
+  };
+
+  const sendDeviationNotification = async (deviation: any) => {
+    if (!userProfile?.companyId) return;
+    
+    try {
+      // Send notification to HR managers and admins
+      const hrUsers = employees.filter(emp => 
+        emp.role === 'admin' || emp.role === 'department_leader'
+      );
+      
+      for (const hrUser of hrUsers) {
+        await notificationService.createNotification({
+          userId: hrUser.id,
+          title: 'Ny avviksmelding',
+          message: `Avvik registrert: ${deviation.type} - ${deviation.description}`,
+          type: 'deviation',
+          priority: deviation.severity === 'high' ? 'urgent' : 'medium',
+          actionUrl: '/dashboard/hr?tab=deviations',
+          actionText: 'Se avvik',
+          metadata: {
+            deviationId: deviation.id,
+            type: deviation.type,
+            severity: deviation.severity,
+            description: deviation.description
+          }
+        });
+      }
+    } catch (error) {
+      console.error('Error sending deviation notification:', error);
     }
   };
 
