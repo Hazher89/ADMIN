@@ -320,6 +320,71 @@ export default function LogistikkSystemPage() {
     }
   }, [authLoading]);
 
+  // Data loading functions
+  const loadOrders = async () => {
+    if (!db || !userProfile?.companyId) return;
+    
+    try {
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        where('companyId', '==', userProfile.companyId),
+        orderBy('createdAt', 'desc')
+      );
+      const ordersSnapshot = await getDocs(ordersQuery);
+      const ordersData = ordersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Order[];
+      
+      setOrders(ordersData);
+    } catch (error) {
+      console.error('Error loading orders:', error);
+    }
+  };
+
+  const loadCustomers = async () => {
+    if (!db || !userProfile?.companyId) return;
+    
+    try {
+      const customersQuery = query(
+        collection(db, 'customers'),
+        where('companyId', '==', userProfile.companyId)
+      );
+      const customersSnapshot = await getDocs(customersQuery);
+      const customersData = customersSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Customer[];
+      
+      setCustomers(customersData);
+    } catch (error) {
+      console.error('Error loading customers:', error);
+    }
+  };
+
+  const loadAllData = async () => {
+    if (!userProfile?.companyId) return;
+    
+    try {
+      setIsLoading(true);
+      await Promise.all([
+        loadOrders(),
+        loadCustomers()
+      ]);
+    } catch (error) {
+      console.error('Error loading data:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load data on component mount
+  useEffect(() => {
+    if (!authLoading && userProfile) {
+      loadAllData();
+    }
+  }, [authLoading, userProfile]);
+
   // BUD Priser functions
   const handlePostcodeSearch = useCallback(async (postcodeValue: string) => {
     if (!postcodeValue || postcodeValue.length < 4) return;
@@ -489,14 +554,14 @@ export default function LogistikkSystemPage() {
   const getStats = () => {
     return {
       totalBudPriser: searchHistory.length,
-      totalDeliveries: 0,
-      activeDeliveries: 0,
-      totalCustomers: 0,
-      totalSuppliers: 0,
-      totalProducts: 0,
-      inventoryValue: 0,
-      pendingInvoices: 0,
-      monthlyRevenue: 0,
+      totalDeliveries: deliveries.length,
+      activeDeliveries: deliveries.filter(d => d.status === 'in_transit' || d.status === 'assigned').length,
+      totalCustomers: customers.length,
+      totalSuppliers: suppliers.length,
+      totalProducts: products.length,
+      inventoryValue: products.reduce((sum, p) => sum + (p.price * p.stock), 0),
+      pendingInvoices: invoices.filter(i => i.status === 'sent' || i.status === 'overdue').length,
+      monthlyRevenue: invoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.amount, 0),
     };
   };
 
@@ -1113,18 +1178,202 @@ export default function LogistikkSystemPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
                 Avansert Planlegging
               </h2>
-              <p style={{ color: 'var(--gray-600)' }}>
+              <p style={{ color: 'var(--gray-600)', marginBottom: '2rem' }}>
                 Avansert planlegging og optimalisering av logistikkoperasjoner. Planlegg ruter, tidsplaner og ressurser med AI-drevet optimalisering.
               </p>
-              <div style={{ marginTop: '2rem', padding: '2rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
-                <Navigation size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
-                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
-                  Avansert Planleggingssystem
-                </h3>
-                <p style={{ color: 'var(--gray-600)' }}>
-                  Denne funksjonaliteten vil bli flyttet fra det eksisterende avanserte planleggingssystemet.
-                </p>
+
+              {/* Planning Tabs */}
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--gray-200)', marginBottom: '2rem' }}>
+                {[
+                  { id: 'orders', name: 'Ordre', icon: Package },
+                  { id: 'routes', name: 'Ruter', icon: Route },
+                  { id: 'optimization', name: 'Optimalisering', icon: Zap },
+                  { id: 'analytics', name: 'Analyse', icon: BarChart3 }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setPlanningTab(tab.id)}
+                    className={`btn ${planningTab === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ 
+                      borderRadius: 0,
+                      borderBottom: planningTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
+                      whiteSpace: 'nowrap',
+                      minWidth: '120px'
+                    }}
+                  >
+                    <tab.icon size={16} style={{ marginRight: '0.5rem' }} />
+                    {tab.name}
+                  </button>
+                ))}
               </div>
+
+              {/* Orders Tab */}
+              {planningTab === 'orders' && (
+                <div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                      Ordre ({orders.length})
+                    </h3>
+                    <button
+                      onClick={() => setShowOrderModal(true)}
+                      className="btn btn-primary"
+                      style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                    >
+                      <Plus size={16} />
+                      Ny ordre
+                    </button>
+                  </div>
+
+                  <div className="card" style={{ padding: 0 }}>
+                    <div style={{ overflowX: 'auto' }}>
+                      <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                        <thead>
+                          <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
+                            <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Ordrenummer</th>
+                            <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Kunde</th>
+                            <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Leveringsdato</th>
+                            <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Prioritet</th>
+                            <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Status</th>
+                            <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Handlinger</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {orders.map((order) => (
+                            <tr key={order.id} style={{ borderBottom: '1px solid var(--gray-200)' }}>
+                              <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
+                                {order.orderNumber}
+                              </td>
+                              <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
+                                <div>
+                                  <div style={{ fontWeight: '500' }}>{order.customerName}</div>
+                                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                                    {order.customerPhone}
+                                  </div>
+                                </div>
+                              </td>
+                              <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                                {new Date(order.deliveryDate).toLocaleDateString('nb-NO')}
+                              </td>
+                              <td style={{ padding: 'var(--space-4)' }}>
+                                <span style={{
+                                  padding: '0.25rem 0.75rem',
+                                  borderRadius: 'var(--radius-full)',
+                                  fontSize: 'var(--font-size-sm)',
+                                  fontWeight: '500',
+                                  background: order.priority === 'high' ? 'var(--red-100)' : 
+                                             order.priority === 'medium' ? 'var(--yellow-100)' : 'var(--green-100)',
+                                  color: order.priority === 'high' ? 'var(--red-700)' : 
+                                         order.priority === 'medium' ? 'var(--yellow-700)' : 'var(--green-700)'
+                                }}>
+                                  {order.priority === 'high' ? 'Høy' : 
+                                   order.priority === 'medium' ? 'Medium' : 'Lav'}
+                                </span>
+                              </td>
+                              <td style={{ padding: 'var(--space-4)' }}>
+                                <span style={{
+                                  padding: '0.25rem 0.75rem',
+                                  borderRadius: 'var(--radius-full)',
+                                  fontSize: 'var(--font-size-sm)',
+                                  fontWeight: '500',
+                                  background: order.status === 'completed' ? 'var(--green-100)' : 
+                                             order.status === 'in_progress' ? 'var(--blue-100)' : 
+                                             order.status === 'cancelled' ? 'var(--red-100)' : 'var(--gray-100)',
+                                  color: order.status === 'completed' ? 'var(--green-700)' : 
+                                         order.status === 'in_progress' ? 'var(--blue-700)' : 
+                                         order.status === 'cancelled' ? 'var(--red-700)' : 'var(--gray-700)'
+                                }}>
+                                  {order.status === 'pending' ? 'Venter' :
+                                   order.status === 'assigned' ? 'Tildelt' :
+                                   order.status === 'in_progress' ? 'Pågår' :
+                                   order.status === 'completed' ? 'Fullført' : 'Avbrutt'}
+                                </span>
+                              </td>
+                              <td style={{ padding: 'var(--space-4)' }}>
+                                <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedOrder(order);
+                                      setShowOrderModal(true);
+                                    }}
+                                    className="btn btn-secondary"
+                                    style={{ padding: '0.5rem' }}
+                                  >
+                                    <Eye size={16} />
+                                  </button>
+                                  <button
+                                    onClick={() => {
+                                      setSelectedOrder(order);
+                                      setShowOrderModal(true);
+                                    }}
+                                    className="btn btn-secondary"
+                                    style={{ padding: '0.5rem' }}
+                                  >
+                                    <Edit size={16} />
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Routes Tab */}
+              {planningTab === 'routes' && (
+                <div>
+                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                    Ruteplanlegging
+                  </h3>
+                  <div style={{ padding: '2rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
+                    <Route size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
+                    <h4 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                      Ruteplanlegging
+                    </h4>
+                    <p style={{ color: 'var(--gray-600)' }}>
+                      Avansert ruteplanlegging og optimalisering kommer snart.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Optimization Tab */}
+              {planningTab === 'optimization' && (
+                <div>
+                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                    AI Optimalisering
+                  </h3>
+                  <div style={{ padding: '2rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
+                    <Zap size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
+                    <h4 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                      AI-drevet optimalisering
+                    </h4>
+                    <p style={{ color: 'var(--gray-600)' }}>
+                      Avansert AI-optimalisering for ruter og ressurser kommer snart.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Analytics Tab */}
+              {planningTab === 'analytics' && (
+                <div>
+                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                    Planleggingsanalyse
+                  </h3>
+                  <div style={{ padding: '2rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
+                    <BarChart3 size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
+                    <h4 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                      Analyse og rapporter
+                    </h4>
+                    <p style={{ color: 'var(--gray-600)' }}>
+                      Detaljerte analyser og rapporter kommer snart.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
