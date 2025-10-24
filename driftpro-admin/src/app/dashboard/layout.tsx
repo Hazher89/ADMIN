@@ -211,25 +211,11 @@ export default function DashboardLayout({
       id: 'dashboard'
     },
     {
-      name: 'Ansatte',
-      href: '/dashboard/employees',
+      name: 'HR & Personal',
+      href: '/dashboard/hr',
       icon: <Users size={20} />,
       category: 'main',
-      id: 'employees'
-    },
-    {
-      name: 'Vakter',
-      href: '/dashboard/shifts',
-      icon: <Calendar size={20} />,
-      category: 'main',
-      id: 'shifts'
-    },
-    {
-      name: 'Fravær og ferie',
-      href: '/dashboard/absence-vacation',
-      icon: <Heart size={20} />,
-      category: 'main',
-      id: 'absence-vacation'
+      id: 'hr'
     },
     {
       name: 'BUD priser',
@@ -290,13 +276,6 @@ export default function DashboardLayout({
     
     // Management
     {
-      name: 'Avdelinger',
-      href: '/dashboard/departments',
-      icon: <Building size={20} />,
-      category: 'management',
-      id: 'departments'
-    },
-    {
       name: 'Samarbeidspartnere',
       href: '/dashboard/partners',
       icon: <Handshake size={20} />,
@@ -330,13 +309,6 @@ export default function DashboardLayout({
     },
     
     // HR & Personnel
-    {
-      name: 'HR',
-      href: '/dashboard/hr',
-      icon: <Users size={20} />,
-      category: 'hr',
-      id: 'hr'
-    },
     {
       name: 'Timeregistrering',
       href: '/dashboard/timesheet',
