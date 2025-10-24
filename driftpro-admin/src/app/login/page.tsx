@@ -113,7 +113,7 @@ export default function LoginPage() {
             fontSize: '1rem',
             lineHeight: '1.5'
           }}>
-            Logg inn på din DriftPro konto
+            Skapt for MAVI Logistikk AS
           </p>
         </div>
 
