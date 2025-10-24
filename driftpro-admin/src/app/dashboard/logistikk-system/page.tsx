@@ -61,6 +61,7 @@ export default function LogistikkSystemPage() {
   }
 
   const tabs = [
+    { id: 'bud-priser', name: 'BUD Priser', icon: Target },
     { id: 'delivery', name: 'Levering', icon: Truck },
     { id: 'planning', name: 'Planlegging', icon: Navigation },
     { id: 'customers', name: 'Kunder', icon: Users },
@@ -73,6 +74,7 @@ export default function LogistikkSystemPage() {
 
   const getStats = () => {
     return {
+      totalBudPriser: 0,
       totalDeliveries: 0,
       activeDeliveries: 0,
       totalCustomers: 0,
@@ -119,6 +121,7 @@ export default function LogistikkSystemPage() {
         marginBottom: '2rem'
       }}>
         {[
+          { label: 'BUD Priser', value: stats.totalBudPriser, icon: Target, color: '#ef4444' },
           { label: 'Totale leveringer', value: stats.totalDeliveries, icon: Truck, color: '#3b82f6' },
           { label: 'Aktive leveringer', value: stats.activeDeliveries, icon: Play, color: '#10b981' },
           { label: 'Kunder', value: stats.totalCustomers, icon: Users, color: '#8b5cf6' },
@@ -252,6 +255,26 @@ export default function LogistikkSystemPage() {
 
         {/* Tab Content */}
         <div style={{ padding: '1.5rem' }}>
+          {activeTab === 'bud-priser' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                BUD Priser
+              </h2>
+              <p style={{ color: 'var(--gray-600)' }}>
+                Beregn leveringspriser basert på postnummer og tjenester. Søk etter adresser og få øyeblikkelige prisestimater.
+              </p>
+              <div style={{ marginTop: '2rem', padding: '2rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
+                <Target size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
+                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                  BUD Priser System
+                </h3>
+                <p style={{ color: 'var(--gray-600)' }}>
+                  Denne funksjonaliteten vil bli flyttet fra den eksisterende BUD priser-siden.
+                </p>
+              </div>
+            </div>
+          )}
+
           {activeTab === 'delivery' && (
             <div>
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
@@ -266,11 +289,20 @@ export default function LogistikkSystemPage() {
           {activeTab === 'planning' && (
             <div>
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
-                Planlegging
+                Avansert Planlegging
               </h2>
               <p style={{ color: 'var(--gray-600)' }}>
-                Avansert planlegging og optimalisering av logistikkoperasjoner. Planlegg ruter, tidsplaner og ressurser.
+                Avansert planlegging og optimalisering av logistikkoperasjoner. Planlegg ruter, tidsplaner og ressurser med AI-drevet optimalisering.
               </p>
+              <div style={{ marginTop: '2rem', padding: '2rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
+                <Navigation size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
+                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                  Avansert Planleggingssystem
+                </h3>
+                <p style={{ color: 'var(--gray-600)' }}>
+                  Denne funksjonaliteten vil bli flyttet fra det eksisterende avanserte planleggingssystemet.
+                </p>
+              </div>
             </div>
           )}
 

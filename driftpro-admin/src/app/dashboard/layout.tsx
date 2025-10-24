@@ -189,13 +189,6 @@ export default function DashboardLayout({
       category: 'main',
       id: 'hr'
     },
-    {
-      name: 'BUD priser',
-      href: '/dashboard/bud-priser',
-      icon: <Target size={20} />,
-      category: 'main',
-      id: 'bud-priser'
-    },
       {
         name: 'Logistikk System',
         href: '/dashboard/logistikk-system',
