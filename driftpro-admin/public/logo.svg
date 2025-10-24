@@ -1,26 +1,71 @@
-<svg width="180" height="50" viewBox="0 0 180 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+<svg width="200" height="60" viewBox="0 0 200 60" fill="none" xmlns="http://www.w3.org/2000/svg">
   <defs>
+    <!-- Modern gradient for text -->
     <linearGradient id="textGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-      <stop offset="0%" style="stop-color:#1F2937;stop-opacity:1" />
-      <stop offset="100%" style="stop-color:#374151;stop-opacity:1" />
+      <stop offset="0%" style="stop-color:#2563eb;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#1d4ed8;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
     </linearGradient>
+    
+    <!-- Icon gradient -->
+    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#3b82f6;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#1e40af;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Shadow filter -->
+    <filter id="shadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feDropShadow dx="0" dy="2" stdDeviation="4" flood-color="#1e40af" flood-opacity="0.2"/>
+    </filter>
   </defs>
 
-  <!-- Icon -->
-  <g transform="translate(15, 13)">
-    <rect x="0" y="0" width="24" height="24" rx="8" fill="#1F2937" />
-    <circle cx="12" cy="12" r="8" fill="white" opacity="0.9"/>
-    <circle cx="12" cy="12" r="4" fill="#1F2937" opacity="0.8"/>
-    <rect x="11" y="2" width="2" height="3" fill="white" opacity="0.9"/>
-    <rect x="11" y="19" width="2" height="3" fill="white" opacity="0.9"/>
-    <rect x="2" y="11" width="3" height="2" fill="white" opacity="0.9"/>
-    <rect x="19" y="11" width="3" height="2" fill="white" opacity="0.9"/>
-    <path d="M 6 12 L 18 12" stroke="#1F2937" stroke-width="1.5" stroke-linecap="round"/>
+  <!-- Modern logistics icon -->
+  <g transform="translate(20, 18)">
+    <!-- Main container -->
+    <rect x="0" y="0" width="24" height="24" rx="6" fill="url(#iconGradient)" filter="url(#shadow)"/>
+    
+    <!-- Truck/vehicle icon -->
+    <g transform="translate(4, 6)">
+      <!-- Truck body -->
+      <rect x="2" y="4" width="10" height="6" rx="1" fill="white" opacity="0.95"/>
+      <!-- Truck cab -->
+      <rect x="0" y="6" width="4" height="4" rx="0.5" fill="white" opacity="0.95"/>
+      <!-- Wheels -->
+      <circle cx="3" cy="12" r="1.5" fill="#1e40af" opacity="0.8"/>
+      <circle cx="13" cy="12" r="1.5" fill="#1e40af" opacity="0.8"/>
+      <!-- Cargo lines -->
+      <path d="M 3 5 L 11 5" stroke="#2563eb" stroke-width="0.5" opacity="0.7"/>
+      <path d="M 3 7 L 11 7" stroke="#2563eb" stroke-width="0.5" opacity="0.7"/>
+      <path d="M 3 9 L 11 9" stroke="#2563eb" stroke-width="0.5" opacity="0.7"/>
+    </g>
+    
+    <!-- Speed lines -->
+    <g transform="translate(16, 12)">
+      <path d="M 0 0 L 3 0" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.8"/>
+      <path d="M 0 2 L 2 2" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.6"/>
+      <path d="M 0 4 L 1.5 4" stroke="white" stroke-width="1.5" stroke-linecap="round" opacity="0.4"/>
+    </g>
   </g>
 
-  <!-- Text -->
-  <g transform="translate(50, 0)">
-    <text x="0" y="20" font-family="'Poppins', 'Montserrat', 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif" font-size="18" font-weight="800" fill="url(#textGradient)" letter-spacing="-0.02em">Drift</text>
-    <text x="0" y="38" font-family="'Poppins', 'Montserrat', 'Raleway', -apple-system, BlinkMacSystemFont, sans-serif" font-size="12" font-weight="600" fill="#1F2937" letter-spacing="0.1em">PRO</text>
+  <!-- Company text -->
+  <g transform="translate(60, 0)">
+    <!-- Main company name -->
+    <text x="0" y="28" font-family="'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif" 
+          font-size="24" font-weight="700" fill="url(#textGradient)" letter-spacing="-0.02em">
+      MAVI
+    </text>
+    
+    <!-- Subtitle -->
+    <text x="0" y="48" font-family="'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, sans-serif" 
+          font-size="14" font-weight="500" fill="#64748b" letter-spacing="0.1em">
+      LOGISTIKK AS
+    </text>
+  </g>
+
+  <!-- Decorative element -->
+  <g transform="translate(180, 20)">
+    <circle cx="0" cy="0" r="2" fill="#3b82f6" opacity="0.3"/>
+    <circle cx="4" cy="2" r="1.5" fill="#3b82f6" opacity="0.2"/>
+    <circle cx="8" cy="1" r="1" fill="#3b82f6" opacity="0.1"/>
   </g>
 </svg>

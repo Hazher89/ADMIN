@@ -91,7 +91,7 @@ export default function LoginPage() {
             overflow: 'hidden'
           }}>
             <img 
-              src="/logo.svg?v=2" 
+              src="/logo.svg?v=3" 
               alt="DriftPro" 
               style={{
                 width: '50px',

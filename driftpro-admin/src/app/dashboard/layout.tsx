@@ -501,7 +501,7 @@ export default function DashboardLayout({
           padding: isMobile ? '0.5rem' : '0'
         }}>
           <img 
-            src="/logo.svg?v=2" 
+            src="/logo.svg?v=3" 
             alt="DriftPro" 
             style={{
               width: isMobile ? '36px' : '32px',
@@ -740,7 +740,7 @@ export default function DashboardLayout({
               gap: '0.75rem'
             }}>
               <img 
-                src="/logo.svg?v=2" 
+                src="/logo.svg?v=3" 
                 alt="DriftPro" 
                 style={{
                   width: '32px',
