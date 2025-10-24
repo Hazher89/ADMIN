@@ -225,13 +225,6 @@ export default function DashboardLayout({
       id: 'reports'
     },
     {
-      name: 'Tidsregistrering',
-      href: '/dashboard/timeclock',
-      icon: <Clock size={20} />,
-      category: 'main',
-      id: 'timeclock'
-    },
-    {
       name: 'SMS Logg & Telefonbok',
       href: '/dashboard/sms-logs',
       icon: <Phone size={20} />,

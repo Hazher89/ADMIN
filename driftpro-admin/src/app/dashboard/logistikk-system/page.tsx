@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { PostcodeData, searchPostcodes, getServicesByCategory, getCategories } from '../../../lib/bud-priser-data';
 import { 
   Truck, Package, Users, FileText, DollarSign, 
   Plus, Search, Filter, Download, Eye, Edit, Trash2,
@@ -13,12 +14,13 @@ import {
   CalendarDays, Hash, Target, Info, Database, RefreshCw,
   Save, Loader2, X, Link, SortAsc, SortDesc, Grid, List,
   ExternalLink, Star, Upload, FileText as FileTextIcon,
-  CheckCircle2, ShoppingCart, Navigation, Archive
+  CheckCircle2, ShoppingCart, Navigation, Archive,
+  MapPin as MapPinIcon, Calculator, History, FileText as FileTextIcon2
 } from 'lucide-react';
 
 export default function LogistikkSystemPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
-  const [activeTab, setActiveTab] = useState('delivery');
+  const [activeTab, setActiveTab] = useState('bud-priser');
   const [isMobile, setIsMobile] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   
@@ -26,6 +28,106 @@ export default function LogistikkSystemPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
+
+  // BUD Priser states
+  const [postcode, setPostcode] = useState('');
+  const [address, setAddress] = useState('');
+  const [selectedZone, setSelectedZone] = useState<PostcodeData | null>(null);
+  const [totalPrice, setTotalPrice] = useState(0);
+  const [addressSuggestions, setAddressSuggestions] = useState<Array<{
+    display: string;
+    postcode: string;
+    fullAddress: string;
+  }>>([]);
+  const [showAddressSuggestions, setShowAddressSuggestions] = useState(false);
+  const [isLoadingBudPriser, setIsLoadingBudPriser] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<Array<{
+    timestamp: Date;
+    address: string;
+    postcode: string;
+    price: number;
+    place: string;
+  }>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('budPriserSearchHistory');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return parsed.map((entry: any) => ({
+            ...entry,
+            timestamp: new Date(entry.timestamp)
+          }));
+        } catch (error) {
+          console.error('Error parsing saved search history:', error);
+        }
+      }
+    }
+    return [];
+  });
+  
+  // Extra services search states
+  const [extraServiceSearch, setExtraServiceSearch] = useState('');
+  const [serviceSuggestions, setServiceSuggestions] = useState<Array<{
+    id: string;
+    name: string;
+    category: string;
+    price: number;
+    description: string;
+  }>>([]);
+  const [showServiceSuggestions, setShowServiceSuggestions] = useState(false);
+  const [selectedServices, setSelectedServices] = useState<Array<{
+    id: string;
+    name: string;
+    price: number;
+    description: string;
+  }>>([]);
+  
+  // Advanced pricing states
+  const [weatherImpact, setWeatherImpact] = useState(0);
+  const [trafficImpact, setTrafficImpact] = useState(0);
+  const [distanceImpact, setDistanceImpact] = useState(0);
+  const [isCalculating, setIsCalculating] = useState(false);
+  const [budPriserTab, setBudPriserTab] = useState('search'); // 'search', 'history', or 'registered'
+  
+  // Registration states
+  const [registeredEntries, setRegisteredEntries] = useState<Array<{
+    id: string;
+    timestamp: Date;
+    bilnummer: string;
+    kjoredato: string;
+    freightOrder: string;
+    freightUnit: string;
+    soNummer: string;
+    kommentarer: string;
+    adHoc1: string;
+    adHoc2: string;
+    totalpris: number;
+    address: string;
+    postcode: string;
+    place: string;
+    selectedServices: Array<{
+      id: string;
+      name: string;
+      price: number;
+      description: string;
+    }>;
+  }>>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('budPriserRegisteredEntries');
+      if (saved) {
+        try {
+          const parsed = JSON.parse(saved);
+          return parsed.map((entry: any) => ({
+            ...entry,
+            timestamp: new Date(entry.timestamp)
+          }));
+        } catch (error) {
+          console.error('Error parsing saved registered entries:', error);
+        }
+      }
+    }
+    return [];
+  });
 
   // Check for mobile
   useEffect(() => {
