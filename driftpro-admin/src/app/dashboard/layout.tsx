@@ -486,23 +486,36 @@ export default function DashboardLayout({
         }}
       >
         {/* Logo */}
-        <div style={{
-          width: isMobile ? 'auto' : '48px',
-          height: isMobile ? '48px' : '48px',
-          background: 'var(--gradient-primary)',
-          borderRadius: '12px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          marginBottom: '2rem',
-          boxShadow: 'var(--shadow-md)',
-          flexShrink: 0,
-          overflow: 'hidden',
-          padding: isMobile ? '0.5rem' : '0'
-        }}>
+        <div 
+          onClick={() => router.push('/dashboard')}
+          style={{
+            width: isMobile ? 'auto' : '48px',
+            height: isMobile ? '48px' : '48px',
+            background: 'var(--gradient-primary)',
+            borderRadius: '12px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            marginBottom: '2rem',
+            boxShadow: 'var(--shadow-md)',
+            flexShrink: 0,
+            overflow: 'hidden',
+            padding: isMobile ? '0.5rem' : '0',
+            cursor: 'pointer',
+            transition: 'all 0.2s ease'
+          }}
+          onMouseEnter={(e) => {
+            e.currentTarget.style.transform = 'scale(1.05)';
+            e.currentTarget.style.boxShadow = 'var(--shadow-lg)';
+          }}
+          onMouseLeave={(e) => {
+            e.currentTarget.style.transform = 'scale(1)';
+            e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+          }}
+        >
           <img 
-            src="/logo.svg?v=3" 
-            alt="DriftPro" 
+            src="/logo.svg?v=4" 
+            alt="MAVI Logistikk AS" 
             style={{
               width: isMobile ? '36px' : '32px',
               height: isMobile ? '36px' : '32px',
@@ -734,14 +747,25 @@ export default function DashboardLayout({
             </button>
 
             {/* Mobile Logo */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.75rem'
-            }}>
+            <div 
+              onClick={() => router.push('/dashboard')}
+              style={{
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem',
+                cursor: 'pointer',
+                transition: 'all 0.2s ease'
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.opacity = '0.8';
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.opacity = '1';
+              }}
+            >
               <img 
-                src="/logo.svg?v=3" 
-                alt="DriftPro" 
+                src="/logo.svg?v=4" 
+                alt="MAVI Logistikk AS" 
                 style={{
                   width: '32px',
                   height: '32px',
@@ -753,7 +777,7 @@ export default function DashboardLayout({
                 fontWeight: '600',
                 color: 'var(--gray-900)'
               }}>
-                DriftPro
+                MAVI Logistikk AS
               </span>
             </div>
 
