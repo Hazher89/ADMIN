@@ -328,13 +328,6 @@ export default function DashboardLayout({
       category: 'finance',
       id: 'invoicing'
     },
-    {
-      name: 'Betalinger',
-      href: '/dashboard/payments',
-      icon: <CreditCard size={20} />,
-      category: 'finance',
-      id: 'payments'
-    },
     
     // HR & Personnel
     {
@@ -350,13 +343,6 @@ export default function DashboardLayout({
       icon: <Clock size={20} />,
       category: 'hr',
       id: 'timesheet'
-    },
-    {
-      name: 'Ferie',
-      href: '/dashboard/vacation',
-      icon: <Calendar size={20} />,
-      category: 'hr',
-      id: 'vacation'
     },
     
     // Inventory & Stock
@@ -384,48 +370,11 @@ export default function DashboardLayout({
     
     // CRM & Customers
     {
-      name: 'CRM',
-      href: '/dashboard/crm',
-      icon: <Heart size={20} />,
-      category: 'crm',
-      id: 'crm'
-    },
-    {
       name: 'Kunder',
       href: '/dashboard/customers',
       icon: <UserCheck size={20} />,
       category: 'crm',
       id: 'customers'
-    },
-    {
-      name: 'Leads',
-      href: '/dashboard/leads',
-      icon: <Target size={20} />,
-      category: 'crm',
-      id: 'leads'
-    },
-    
-    // Project Management
-    {
-      name: 'Prosjekter',
-      href: '/dashboard/projects',
-      icon: <FolderOpen size={20} />,
-      category: 'projects',
-      id: 'projects'
-    },
-    {
-      name: 'Oppgaver',
-      href: '/dashboard/tasks',
-      icon: <CheckSquare size={20} />,
-      category: 'projects',
-      id: 'tasks'
-    },
-    {
-      name: 'Gantt',
-      href: '/dashboard/gantt',
-      icon: <BarChart size={20} />,
-      category: 'projects',
-      id: 'gantt'
     },
     
     // Advanced Planning & Logistics
@@ -470,30 +419,12 @@ export default function DashboardLayout({
     // Admin-only pages (only visible for DriftPro AS)
     ...(isDriftProAdmin ? [
       {
-        name: 'Development',
-        href: '/dashboard/development',
-        icon: <Terminal size={20} />,
-        badge: 'DEV',
-        badgeColor: 'badge-primary',
-        category: 'admin',
-        isAdmin: true,
-        id: 'development'
-      },
-      {
         name: 'Bedrifter',
         href: '/dashboard/companies',
         icon: <Globe size={20} />,
         category: 'admin',
         isAdmin: true,
         id: 'companies'
-      },
-      {
-        name: 'Firebase Cleanup',
-        href: '/dashboard/cleanup-firebase',
-        icon: <Trash2 size={20} />,
-        category: 'admin',
-        isAdmin: true,
-        id: 'cleanup-firebase'
       },
 
     ] : [])
