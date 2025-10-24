@@ -514,7 +514,7 @@ export default function DashboardLayout({
           }}
         >
           <img 
-            src="/logo.svg?v=4" 
+            src="/logo.svg?v=5" 
             alt="MAVI Logistikk AS" 
             style={{
               width: isMobile ? '36px' : '32px',
@@ -764,7 +764,7 @@ export default function DashboardLayout({
               }}
             >
               <img 
-                src="/logo.svg?v=4" 
+                src="/logo.svg?v=5" 
                 alt="MAVI Logistikk AS" 
                 style={{
                   width: '32px',
