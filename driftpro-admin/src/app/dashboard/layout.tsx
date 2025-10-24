@@ -138,8 +138,9 @@ export default function DashboardLayout({
       const timeoutId = setTimeout(checkProfile, 1000);
       
       return () => clearTimeout(timeoutId);
-    } else if (user && !userProfile) {
+    } else if (user && !userProfile && !loading) {
       // User is authenticated but no profile found - this is a problem
+      // Only show error if we're not still loading
       console.error('🚨 User authenticated but no profile found:', user.uid);
       console.log('This usually means the employee was not properly created in the system');
       alert('Brukerprofil ikke funnet. Kontakt administrator.');
@@ -500,7 +501,7 @@ export default function DashboardLayout({
           padding: isMobile ? '0.5rem' : '0'
         }}>
           <img 
-            src="/logo.svg" 
+            src="/logo.svg?v=2" 
             alt="DriftPro" 
             style={{
               width: isMobile ? '36px' : '32px',
@@ -739,7 +740,7 @@ export default function DashboardLayout({
               gap: '0.75rem'
             }}>
               <img 
-                src="/logo.svg" 
+                src="/logo.svg?v=2" 
                 alt="DriftPro" 
                 style={{
                   width: '32px',
