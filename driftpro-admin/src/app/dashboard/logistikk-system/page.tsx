@@ -148,6 +148,146 @@ export default function LogistikkSystemPage() {
     }
   }, [authLoading]);
 
+  // BUD Priser functions
+  const handlePostcodeSearch = useCallback(async (postcodeValue: string) => {
+    if (!postcodeValue || postcodeValue.length < 4) return;
+    
+    setIsLoadingBudPriser(true);
+    try {
+      const results = await searchPostcodes(postcodeValue);
+      setAddressSuggestions(results);
+      setShowAddressSuggestions(true);
+    } catch (error) {
+      console.error('Error searching postcodes:', error);
+    } finally {
+      setIsLoadingBudPriser(false);
+    }
+  }, []);
+
+  const handleAddressSelect = (suggestion: any) => {
+    setAddress(suggestion.fullAddress);
+    setPostcode(suggestion.postcode);
+    setSelectedZone(suggestion);
+    setShowAddressSuggestions(false);
+    calculatePrice();
+  };
+
+  const calculatePrice = () => {
+    if (!selectedZone) return;
+    
+    let basePrice = selectedZone.price || 0;
+    let servicePrice = selectedServices.reduce((sum, service) => sum + service.price, 0);
+    let total = basePrice + servicePrice;
+    
+    // Apply weather impact
+    if (weatherImpact > 0) {
+      total += (total * weatherImpact) / 100;
+    }
+    
+    // Apply traffic impact
+    if (trafficImpact > 0) {
+      total += (total * trafficImpact) / 100;
+    }
+    
+    // Apply distance impact
+    if (distanceImpact > 0) {
+      total += (total * distanceImpact) / 100;
+    }
+    
+    setTotalPrice(Math.round(total));
+  };
+
+  const handleServiceSearch = useCallback(async (searchValue: string) => {
+    if (!searchValue || searchValue.length < 2) return;
+    
+    try {
+      const categories = await getCategories();
+      const allServices = [];
+      
+      for (const category of categories) {
+        const services = await getServicesByCategory(category.id);
+        allServices.push(...services);
+      }
+      
+      const filtered = allServices.filter(service =>
+        service.name.toLowerCase().includes(searchValue.toLowerCase()) ||
+        service.description.toLowerCase().includes(searchValue.toLowerCase())
+      );
+      
+      setServiceSuggestions(filtered.slice(0, 10));
+      setShowServiceSuggestions(true);
+    } catch (error) {
+      console.error('Error searching services:', error);
+    }
+  }, []);
+
+  const addService = (service: any) => {
+    if (!selectedServices.find(s => s.id === service.id)) {
+      setSelectedServices([...selectedServices, {
+        id: service.id,
+        name: service.name,
+        price: service.price,
+        description: service.description
+      }]);
+      calculatePrice();
+    }
+    setExtraServiceSearch('');
+    setShowServiceSuggestions(false);
+  };
+
+  const removeService = (serviceId: string) => {
+    setSelectedServices(selectedServices.filter(s => s.id !== serviceId));
+    calculatePrice();
+  };
+
+  const saveToHistory = () => {
+    if (!selectedZone || !address) return;
+    
+    const newEntry = {
+      timestamp: new Date(),
+      address,
+      postcode,
+      price: totalPrice,
+      place: selectedZone.place || ''
+    };
+    
+    const updatedHistory = [newEntry, ...searchHistory.slice(0, 49)];
+    setSearchHistory(updatedHistory);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('budPriserSearchHistory', JSON.stringify(updatedHistory));
+    }
+  };
+
+  const registerEntry = () => {
+    if (!selectedZone || !address) return;
+    
+    const newEntry = {
+      id: Date.now().toString(),
+      timestamp: new Date(),
+      bilnummer: '',
+      kjoredato: '',
+      freightOrder: '',
+      freightUnit: '',
+      soNummer: '',
+      kommentarer: '',
+      adHoc1: '',
+      adHoc2: '',
+      totalpris: totalPrice,
+      address,
+      postcode,
+      place: selectedZone.place || '',
+      selectedServices
+    };
+    
+    const updatedEntries = [newEntry, ...registeredEntries];
+    setRegisteredEntries(updatedEntries);
+    
+    if (typeof window !== 'undefined') {
+      localStorage.setItem('budPriserRegisteredEntries', JSON.stringify(updatedEntries));
+    }
+  };
+
   if (isLoading) {
     return (
       <div style={{
@@ -176,7 +316,7 @@ export default function LogistikkSystemPage() {
 
   const getStats = () => {
     return {
-      totalBudPriser: 0,
+      totalBudPriser: searchHistory.length,
       totalDeliveries: 0,
       activeDeliveries: 0,
       totalCustomers: 0,
@@ -292,69 +432,6 @@ export default function LogistikkSystemPage() {
           ))}
         </div>
 
-        {/* Search and Filter Controls */}
-        <div style={{
-          padding: '1.5rem',
-          borderBottom: '1px solid var(--gray-200)',
-          display: 'flex',
-          gap: '1rem',
-          flexWrap: 'wrap',
-          alignItems: 'center'
-        }}>
-          <div style={{ position: 'relative', flex: '1', minWidth: '200px' }}>
-            <Search style={{
-              position: 'absolute',
-              left: '0.75rem',
-              top: '50%',
-              transform: 'translateY(-50%)',
-              width: '16px',
-              height: '16px',
-              color: 'var(--gray-400)'
-            }} />
-            <input
-              type="text"
-              placeholder="Søk..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              style={{
-                width: '100%',
-                padding: '0.75rem 0.75rem 0.75rem 2.5rem',
-                border: '1px solid var(--gray-300)',
-                borderRadius: 'var(--radius-md)',
-                fontSize: 'var(--font-size-base)',
-                outline: 'none'
-              }}
-            />
-          </div>
-          
-          <select
-            value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value)}
-            style={{ 
-              padding: '0.75rem', 
-              border: '1px solid var(--gray-300)', 
-              borderRadius: 'var(--radius-md)',
-              fontSize: 'var(--font-size-base)',
-              outline: 'none'
-            }}
-          >
-            <option value="all">Alle statuser</option>
-            <option value="active">Aktiv</option>
-            <option value="pending">Venter</option>
-            <option value="completed">Fullført</option>
-            <option value="cancelled">Avbrutt</option>
-          </select>
-
-          <button
-            onClick={() => {/* Add new item logic */}}
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <Plus size={16} />
-            Legg til {tabs.find(t => t.id === activeTab)?.name.toLowerCase()}
-          </button>
-        </div>
-
         {/* Tab Content */}
         <div style={{ padding: '1.5rem' }}>
           {activeTab === 'bud-priser' && (
@@ -362,18 +439,489 @@ export default function LogistikkSystemPage() {
               <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
                 BUD Priser
               </h2>
-              <p style={{ color: 'var(--gray-600)' }}>
+              <p style={{ color: 'var(--gray-600)', marginBottom: '2rem' }}>
                 Beregn leveringspriser basert på postnummer og tjenester. Søk etter adresser og få øyeblikkelige prisestimater.
               </p>
-              <div style={{ marginTop: '2rem', padding: '2rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)', textAlign: 'center' }}>
-                <Target size={48} style={{ color: 'var(--gray-400)', marginBottom: '1rem' }} />
-                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
-                  BUD Priser System
-                </h3>
-                <p style={{ color: 'var(--gray-600)' }}>
-                  Denne funksjonaliteten vil bli flyttet fra den eksisterende BUD priser-siden.
-                </p>
+
+              {/* BUD Priser Tabs */}
+              <div style={{ display: 'flex', borderBottom: '1px solid var(--gray-200)', marginBottom: '2rem' }}>
+                {[
+                  { id: 'search', name: 'Søk Priser', icon: Search },
+                  { id: 'history', name: 'Søkehistorikk', icon: History },
+                  { id: 'registered', name: 'Registrerte', icon: FileTextIcon2 }
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setBudPriserTab(tab.id)}
+                    className={`btn ${budPriserTab === tab.id ? 'btn-primary' : 'btn-secondary'}`}
+                    style={{ 
+                      borderRadius: 0,
+                      borderBottom: budPriserTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
+                      whiteSpace: 'nowrap',
+                      minWidth: '120px'
+                    }}
+                  >
+                    <tab.icon size={16} style={{ marginRight: '0.5rem' }} />
+                    {tab.name}
+                  </button>
+                ))}
               </div>
+
+              {/* Search Tab */}
+              {budPriserTab === 'search' && (
+                <div>
+                  {/* Address Search */}
+                  <div className="card" style={{ marginBottom: '2rem' }}>
+                    <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                      Adressesøk
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div style={{ position: 'relative' }}>
+                        <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                          Postnummer
+                        </label>
+                        <input
+                          type="text"
+                          value={postcode}
+                          onChange={(e) => {
+                            setPostcode(e.target.value);
+                            handlePostcodeSearch(e.target.value);
+                          }}
+                          placeholder="Søk postnummer..."
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--font-size-base)',
+                            outline: 'none'
+                          }}
+                        />
+                        {isLoadingBudPriser && (
+                          <div style={{ position: 'absolute', right: '0.75rem', top: '2.5rem' }}>
+                            <Loader2 size={16} className="animate-spin" />
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ position: 'relative' }}>
+                        <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                          Adresse
+                        </label>
+                        <input
+                          type="text"
+                          value={address}
+                          onChange={(e) => setAddress(e.target.value)}
+                          placeholder="Velg adresse..."
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--font-size-base)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Address Suggestions */}
+                    {showAddressSuggestions && addressSuggestions.length > 0 && (
+                      <div style={{
+                        position: 'absolute',
+                        top: '100%',
+                        left: 0,
+                        right: 0,
+                        background: 'white',
+                        border: '1px solid var(--gray-300)',
+                        borderRadius: 'var(--radius-md)',
+                        boxShadow: 'var(--shadow-lg)',
+                        zIndex: 1000,
+                        maxHeight: '200px',
+                        overflowY: 'auto'
+                      }}>
+                        {addressSuggestions.map((suggestion, index) => (
+                          <button
+                            key={index}
+                            onClick={() => handleAddressSelect(suggestion)}
+                            style={{
+                              width: '100%',
+                              padding: '0.75rem',
+                              textAlign: 'left',
+                              border: 'none',
+                              background: 'transparent',
+                              cursor: 'pointer',
+                              borderBottom: index < addressSuggestions.length - 1 ? '1px solid var(--gray-200)' : 'none'
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.background = 'var(--gray-50)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.background = 'transparent';
+                            }}
+                          >
+                            <div style={{ fontWeight: '500', color: 'var(--gray-900)' }}>
+                              {suggestion.display}
+                            </div>
+                            <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                              {suggestion.postcode} {suggestion.fullAddress}
+                            </div>
+                          </button>
+                        ))}
+                      </div>
+                    )}
+
+                    {/* Selected Zone Info */}
+                    {selectedZone && (
+                      <div style={{
+                        padding: '1rem',
+                        background: 'var(--blue-50)',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--blue-200)',
+                        marginTop: '1rem'
+                      }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                          <MapPinIcon size={16} style={{ color: 'var(--blue-600)' }} />
+                          <span style={{ fontWeight: '600', color: 'var(--blue-900)' }}>
+                            {selectedZone.place}
+                          </span>
+                        </div>
+                        <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--blue-700)' }}>
+                          Sone: {selectedZone.zone || 'N/A'} | Grunnpris: kr {selectedZone.price || 0}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Extra Services */}
+                  <div className="card" style={{ marginBottom: '2rem' }}>
+                    <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                      Ekstratjenester
+                    </h3>
+                    <div style={{ position: 'relative', marginBottom: '1rem' }}>
+                      <input
+                        type="text"
+                        value={extraServiceSearch}
+                        onChange={(e) => {
+                          setExtraServiceSearch(e.target.value);
+                          handleServiceSearch(e.target.value);
+                        }}
+                        placeholder="Søk etter tjenester..."
+                        style={{
+                          width: '100%',
+                          padding: '0.75rem',
+                          border: '1px solid var(--gray-300)',
+                          borderRadius: 'var(--radius-md)',
+                          fontSize: 'var(--font-size-base)',
+                          outline: 'none'
+                        }}
+                      />
+                      {showServiceSuggestions && serviceSuggestions.length > 0 && (
+                        <div style={{
+                          position: 'absolute',
+                          top: '100%',
+                          left: 0,
+                          right: 0,
+                          background: 'white',
+                          border: '1px solid var(--gray-300)',
+                          borderRadius: 'var(--radius-md)',
+                          boxShadow: 'var(--shadow-lg)',
+                          zIndex: 1000,
+                          maxHeight: '200px',
+                          overflowY: 'auto'
+                        }}>
+                          {serviceSuggestions.map((service, index) => (
+                            <button
+                              key={index}
+                              onClick={() => addService(service)}
+                              style={{
+                                width: '100%',
+                                padding: '0.75rem',
+                                textAlign: 'left',
+                                border: 'none',
+                                background: 'transparent',
+                                cursor: 'pointer',
+                                borderBottom: index < serviceSuggestions.length - 1 ? '1px solid var(--gray-200)' : 'none'
+                              }}
+                              onMouseEnter={(e) => {
+                                e.currentTarget.style.background = 'var(--gray-50)';
+                              }}
+                              onMouseLeave={(e) => {
+                                e.currentTarget.style.background = 'transparent';
+                              }}
+                            >
+                              <div style={{ fontWeight: '500', color: 'var(--gray-900)' }}>
+                                {service.name}
+                              </div>
+                              <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                                {service.description} - kr {service.price}
+                              </div>
+                            </button>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Selected Services */}
+                    {selectedServices.length > 0 && (
+                      <div>
+                        <h4 style={{ fontSize: 'var(--font-size-base)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
+                          Valgte tjenester:
+                        </h4>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                          {selectedServices.map((service) => (
+                            <div key={service.id} style={{
+                              display: 'flex',
+                              justifyContent: 'space-between',
+                              alignItems: 'center',
+                              padding: '0.75rem',
+                              background: 'var(--gray-50)',
+                              borderRadius: 'var(--radius-md)',
+                              border: '1px solid var(--gray-200)'
+                            }}>
+                              <div>
+                                <div style={{ fontWeight: '500', color: 'var(--gray-900)' }}>
+                                  {service.name}
+                                </div>
+                                <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>
+                                  {service.description}
+                                </div>
+                              </div>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                <span style={{ fontWeight: '600', color: 'var(--gray-900)' }}>
+                                  kr {service.price}
+                                </span>
+                                <button
+                                  onClick={() => removeService(service.id)}
+                                  style={{
+                                    padding: '0.25rem',
+                                    background: 'var(--red-100)',
+                                    border: 'none',
+                                    borderRadius: 'var(--radius-sm)',
+                                    cursor: 'pointer',
+                                    color: 'var(--red-600)'
+                                  }}
+                                >
+                                  <X size={14} />
+                                </button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Price Calculation */}
+                  <div className="card" style={{ marginBottom: '2rem' }}>
+                    <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                      Prisberegning
+                    </h3>
+                    <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '1fr 1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                          Værpåvirkning (%)
+                        </label>
+                        <input
+                          type="number"
+                          value={weatherImpact}
+                          onChange={(e) => setWeatherImpact(Number(e.target.value))}
+                          placeholder="0"
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--font-size-base)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                          Trafikkpåvirkning (%)
+                        </label>
+                        <input
+                          type="number"
+                          value={trafficImpact}
+                          onChange={(e) => setTrafficImpact(Number(e.target.value))}
+                          placeholder="0"
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--font-size-base)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                      <div>
+                        <label style={{ display: 'block', fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-700)', marginBottom: '0.5rem' }}>
+                          Avstandspåvirkning (%)
+                        </label>
+                        <input
+                          type="number"
+                          value={distanceImpact}
+                          onChange={(e) => setDistanceImpact(Number(e.target.value))}
+                          placeholder="0"
+                          style={{
+                            width: '100%',
+                            padding: '0.75rem',
+                            border: '1px solid var(--gray-300)',
+                            borderRadius: 'var(--radius-md)',
+                            fontSize: 'var(--font-size-base)',
+                            outline: 'none'
+                          }}
+                        />
+                      </div>
+                    </div>
+
+                    {/* Total Price */}
+                    <div style={{
+                      padding: '1.5rem',
+                      background: 'var(--green-50)',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--green-200)',
+                      textAlign: 'center'
+                    }}>
+                      <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--green-700)', marginBottom: '0.5rem' }}>
+                        Total pris
+                      </div>
+                      <div style={{ fontSize: 'var(--font-size-3xl)', fontWeight: '700', color: 'var(--green-900)' }}>
+                        kr {totalPrice}
+                      </div>
+                    </div>
+
+                    {/* Action Buttons */}
+                    <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                      <button
+                        onClick={saveToHistory}
+                        className="btn btn-primary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                      >
+                        <Save size={16} />
+                        Lagre til historikk
+                      </button>
+                      <button
+                        onClick={registerEntry}
+                        className="btn btn-secondary"
+                        style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                      >
+                        <FileTextIcon2 size={16} />
+                        Registrer
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* History Tab */}
+              {budPriserTab === 'history' && (
+                <div>
+                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                    Søkehistorikk
+                  </h3>
+                  {searchHistory.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-500)' }}>
+                      <History size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                      <p>Ingen søkehistorikk funnet</p>
+                    </div>
+                  ) : (
+                    <div className="card" style={{ padding: 0 }}>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Tid</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Adresse</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Postnummer</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Sted</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Pris</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {searchHistory.map((entry, index) => (
+                              <tr key={index} style={{ borderBottom: '1px solid var(--gray-200)' }}>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                                  {entry.timestamp.toLocaleString()}
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
+                                  {entry.address}
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                                  {entry.postcode}
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                                  {entry.place}
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', fontWeight: '600', color: 'var(--green-600)' }}>
+                                  kr {entry.price}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* Registered Tab */}
+              {budPriserTab === 'registered' && (
+                <div>
+                  <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                    Registrerte oppføringer
+                  </h3>
+                  {registeredEntries.length === 0 ? (
+                    <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-500)' }}>
+                      <FileTextIcon2 size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                      <p>Ingen registrerte oppføringer funnet</p>
+                    </div>
+                  ) : (
+                    <div className="card" style={{ padding: 0 }}>
+                      <div style={{ overflowX: 'auto' }}>
+                        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                          <thead>
+                            <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Tid</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Adresse</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Postnummer</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Sted</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Tjenester</th>
+                              <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Totalpris</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {registeredEntries.map((entry) => (
+                              <tr key={entry.id} style={{ borderBottom: '1px solid var(--gray-200)' }}>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                                  {entry.timestamp.toLocaleString()}
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
+                                  {entry.address}
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                                  {entry.postcode}
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                                  {entry.place}
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>
+                                  {entry.selectedServices.length} tjenester
+                                </td>
+                                <td style={{ padding: 'var(--space-4)', fontWeight: '600', color: 'var(--green-600)' }}>
+                                  kr {entry.totalpris}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 
