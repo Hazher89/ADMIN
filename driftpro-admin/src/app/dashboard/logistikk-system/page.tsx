@@ -725,27 +725,51 @@ export default function LogistikkSystemPage() {
   return (
     <div style={{
       minHeight: '100vh',
-      background: 'var(--gray-50)',
-      padding: isMobile ? '1rem' : '2rem'
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : '2rem'
     }}>
-      {/* Page Header */}
-      <div style={{ marginBottom: '2rem' }}>
-        <h1 style={{
-          fontSize: isMobile ? 'var(--font-size-2xl)' : 'var(--font-size-3xl)',
-          fontWeight: '700',
-          color: 'var(--gray-900)',
-          marginBottom: '0.5rem'
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
         }}>
-          Logistikk System
-        </h1>
-        <p style={{
-          fontSize: 'var(--font-size-lg)',
-          color: 'var(--gray-600)',
-          maxWidth: '600px'
-        }}>
-          Administrer levering, planlegging, kunder, leverandører, produkter, lager, fakturering og finans
-        </p>
-      </div>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Logistikk System
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Page Header */}
+      {!isMobile && (
+        <div style={{ marginBottom: '2rem' }}>
+          <h1 style={{
+            fontSize: 'var(--font-size-3xl)',
+            fontWeight: '700',
+            color: 'var(--gray-900)',
+            marginBottom: '0.5rem'
+          }}>
+            Logistikk System
+          </h1>
+          <p style={{
+            fontSize: 'var(--font-size-lg)',
+            color: 'var(--gray-600)',
+            maxWidth: '600px'
+          }}>
+            Administrer levering, planlegging, kunder, leverandører, produkter, lager, fakturering og finans
+          </p>
+        </div>
+      )}
 
       {/* Statistics Cards */}
       <div style={{
