@@ -194,74 +194,192 @@ export default function CustomersPage() {
       )}
 
       {/* Stats Section */}
-      <div className="stats-section">
-        <div className="stat-item">
-          <div className="stat-number">{stats.total}</div>
-          <div className="stat-label">Totalt</div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '0.625rem' : '1rem',
+        marginBottom: isMobile ? '0.75rem' : '2rem',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+            {stats.total}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Totalt
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.active}</div>
-          <div className="stat-label">Aktive</div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: '#22c55e', marginBottom: '0.25rem' }}>
+            {stats.active}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Aktive
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.inactive}</div>
-          <div className="stat-label">Inaktive</div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--gray-500)', marginBottom: '0.25rem' }}>
+            {stats.inactive}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Inaktive
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.prospect}</div>
-          <div className="stat-label">Potensielle</div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.25rem' }}>
+            {stats.prospect}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Potensielle
+          </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="search-filters-section">
-        <div className="search-container">
-          <Search className="search-icon" />
-          <input
-            type="text"
-            placeholder="Søk etter navn, e-post eller kontaktperson..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
-        <div className="filter-container">
-          <Filter className="filter-icon" />
+      <div style={{
+        padding: isMobile ? '0 0.75rem' : undefined,
+        marginBottom: isMobile ? '0.75rem' : '2rem'
+      }}>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.75rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? '0.5rem' : '1rem',
+          alignItems: isMobile ? 'stretch' : 'center'
+        }}>
+          <div style={{ position: 'relative', flex: isMobile ? 'none' : 1, width: isMobile ? '100%' : undefined }}>
+            <Search style={{
+              position: 'absolute',
+              left: isMobile ? '0.875rem' : '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--gray-400)',
+              width: isMobile ? '18px' : '16px',
+              height: isMobile ? '18px' : '16px'
+            }} />
+            <input
+              type="text"
+              placeholder="Søk etter navn, e-post eller kontaktperson..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+                outline: 'none',
+                fontSize: isMobile ? '16px' : undefined,
+                background: 'var(--card-background)'
+              }}
+            />
+          </div>
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
-            className="filter-select"
+            style={{
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? '0.875rem' : '0.75rem 1rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              fontSize: isMobile ? '16px' : undefined,
+              background: 'var(--card-background)',
+              minHeight: isMobile ? '44px' : undefined
+            }}
           >
             <option value="all">Alle typer</option>
             <option value="bedrift">Bedrift</option>
             <option value="privat">Privat</option>
           </select>
-        </div>
-        <div className="filter-container">
-          <Filter className="filter-icon" />
           <select
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="filter-select"
+            style={{
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? '0.875rem' : '0.75rem 1rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              fontSize: isMobile ? '16px' : undefined,
+              background: 'var(--card-background)',
+              minHeight: isMobile ? '44px' : undefined
+            }}
           >
             <option value="all">Alle statuser</option>
             <option value="active">Aktiv</option>
             <option value="inactive">Inaktiv</option>
             <option value="prospect">Potensiell</option>
           </select>
+          {!isMobile && (
+            <button
+              onClick={loadCustomers}
+              disabled={loading}
+              className="btn btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
+            >
+              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+              <span>Oppdater</span>
+            </button>
+          )}
         </div>
-        <button
-          onClick={loadCustomers}
-          disabled={loading}
-          className="btn btn-secondary flex items-center space-x-2"
-        >
-          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-          <span>Oppdater</span>
-        </button>
+        {isMobile && (
+          <button
+            onClick={loadCustomers}
+            disabled={loading}
+            className="btn btn-secondary"
+            style={{
+              width: '100%',
+              marginTop: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              minHeight: '44px'
+            }}
+          >
+            <RefreshCw size={18} className={loading ? 'animate-spin' : ''} />
+            Oppdater
+          </button>
+        )}
       </div>
 
       {/* Customers Grid */}
-      <div className="grid grid-cols-3">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+        gap: isMobile ? '0.625rem' : '1rem',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
         {filteredCustomers.map((customer) => {
           const statusBadge = getStatusBadge(customer.status);
           return (

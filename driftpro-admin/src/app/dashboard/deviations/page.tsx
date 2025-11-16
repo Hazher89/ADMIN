@@ -433,16 +433,21 @@ export default function HMSPage() {
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
       {/* Mobile Header */}
       {isMobile && (
-        <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)' }}>HMS</h1>
-            <button
-              onClick={() => setShowRiskAssessmentModal(true)}
-              style={{ background: 'var(--primary)', color: 'var(--white)', padding: '0.5rem', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer' }}
-            >
-              <Shield style={{ width: '20px', height: '20px' }} />
-            </button>
-          </div>
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            HMS
+          </h1>
         </div>
       )}
 
@@ -471,25 +476,88 @@ export default function HMSPage() {
         </div>
       )}
 
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+      {/* Mobile Action Buttons */}
+      {isMobile && (
+        <div style={{
+          padding: '0 0.75rem 0.75rem',
+          display: 'flex',
+          gap: '0.5rem'
+        }}>
+          <button
+            onClick={() => setShowRiskAssessmentModal(true)}
+            className="btn btn-secondary"
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              minHeight: '44px'
+            }}
+          >
+            <Shield size={18} />
+            Risikovurdering
+          </button>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary"
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              minHeight: '44px'
+            }}
+          >
+            <Plus size={18} />
+            Rapporter avvik
+          </button>
+        </div>
+      )}
+
+      <div style={{ 
+        maxWidth: '1280px', 
+        margin: '0 auto', 
+        padding: isMobile ? '0.5rem 0.75rem' : '2rem 1rem',
+        width: '100%',
+        overflowX: 'hidden'
+      }}>
         {/* Tab Navigation */}
-        <div style={{ marginBottom: '2rem' }}>
-          <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0', flexWrap: 'wrap' }}>
+        <div style={{ 
+          marginBottom: isMobile ? '0.75rem' : '2rem',
+          borderBottom: isMobile ? '0.5px solid var(--border-color)' : '2px solid var(--gray-200)',
+          padding: isMobile ? '0' : undefined,
+          overflowX: isMobile ? 'auto' : undefined,
+          WebkitOverflowScrolling: isMobile ? 'touch' : undefined
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            borderBottom: isMobile ? '0.5px solid var(--border-color)' : '2px solid var(--gray-200)', 
+            gap: '0', 
+            flexWrap: isMobile ? 'nowrap' : 'wrap',
+            minWidth: isMobile ? 'max-content' : undefined
+          }}>
             <button
               onClick={() => setActiveTab('deviations')}
               style={{
-                padding: '1rem 2rem',
+                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'deviations' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'deviations' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'deviations' ? '600' : '500',
-                fontSize: 'var(--font-size-base)',
-                whiteSpace: 'nowrap'
+                fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                minHeight: isMobile ? '44px' : undefined,
+                display: 'flex',
+                alignItems: 'center',
+                gap: isMobile ? '0.375rem' : '0.5rem'
               }}
             >
-              <AlertTriangle style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              <AlertTriangle size={isMobile ? 16 : 16} />
               ⚠️ Avviksbehandling
             </button>
             <button
