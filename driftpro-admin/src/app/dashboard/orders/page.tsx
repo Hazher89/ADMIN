@@ -145,6 +145,13 @@ export default function OrdersPage() {
   };
 
   useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
     loadOrders();
     // Simulate loading data
     setTimeout(() => {

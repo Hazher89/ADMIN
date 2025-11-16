@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 
 export default function DeliverySystemPage() {
+  const [isMobile, setIsMobile] = useState(false);
   const [deliveries, setDeliveries] = useState([
     {
       id: 'DEL-2024-001',
@@ -93,6 +94,13 @@ export default function DeliverySystemPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
   const [showMap, setShowMap] = useState(true);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   const filteredDeliveries = deliveries.filter(delivery => {
     const matchesSearch = delivery.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -155,38 +163,67 @@ export default function DeliverySystemPage() {
   const deliveredToday = deliveries.filter(d => d.status === 'delivered' && new Date(d.deliveryDate).toDateString() === new Date().toDateString()).length;
 
   return (
-    <div className="page-header">
-      <div className="flex items-center space-x-3">
-        <div className="card-icon">
-          <Truck className="w-6 h-6" />
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Leveringssystem
+          </h1>
         </div>
-        <div>
-          <h1 className="page-title">Leveringssystem for Samarbeidspartnere</h1>
-          <p className="page-subtitle">Live tracking, scanning og leveringsbekreftelse</p>
-        </div>
-      </div>
+      )}
 
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <Search className="w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Søk leveringer..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
-        </div>
-        <div className="flex items-center space-x-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <select 
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">Alle status</option>
-            <option value="assigned">Tildelt</option>
-            <option value="in_transit">Under transport</option>
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div className="flex items-center space-x-3">
+            <div className="card-icon">
+              <Truck className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="page-title">Leveringssystem for Samarbeidspartnere</h1>
+              <p className="page-subtitle">Live tracking, scanning og leveringsbekreftelse</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Search className="w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Søk leveringer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <select 
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Alle status</option>
+                <option value="assigned">Tildelt</option>
+                <option value="in_transit">Under transport</option>
             <option value="delivered">Levert</option>
             <option value="failed">Feilet</option>
           </select>
