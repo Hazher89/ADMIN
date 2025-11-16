@@ -1391,94 +1391,154 @@ export default function HRPage() {
         )}
 
         {/* Tab Content */}
-        <div style={{ padding: 'var(--space-6)' }}>
+        <div style={{ padding: isMobile ? '0.75rem' : 'var(--space-6)' }}>
           {/* Employees Tab */}
           {activeTab === 'employees' && (
             <div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
-                <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
-                  Ansatte ({getFilteredEmployees().length})
-                </h2>
-              </div>
-              <div className="card" style={{ padding: 0 }}>
-                <div style={{ overflowX: 'auto' }}>
-                  <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-                    <thead>
-                      <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
-                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Navn</th>
-                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Stilling</th>
-                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Avdeling</th>
-                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>E-post</th>
-                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Status</th>
-                        <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Handlinger</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {getFilteredEmployees().map((employee) => (
-                        <tr key={employee.id} style={{ borderBottom: '1px solid var(--gray-200)' }}>
-                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
-                              <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--blue-100)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                                <User className="w-4 h-4 text-blue-600" />
-                              </div>
-                              {employee.displayName}
-                            </div>
-                          </td>
-                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>{employee.position}</td>
-                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>{getDepartmentName(employee.departmentId || '')}</td>
-                          <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>{employee.email}</td>
-                          <td style={{ padding: 'var(--space-4)' }}>
-                            <span style={{
-                              padding: '0.25rem 0.75rem',
-                              borderRadius: 'var(--border-radius)',
-                              fontSize: 'var(--font-size-sm)',
-                              fontWeight: '500',
-                              background: employee.status === 'active' ? 'var(--green-100)' : 
-                                         employee.status === 'inactive' ? 'var(--red-100)' : 'var(--orange-100)',
-                              color: employee.status === 'active' ? 'var(--green-700)' : 
-                                     employee.status === 'inactive' ? 'var(--red-700)' : 'var(--orange-700)'
-                            }}>
-                              {employee.status === 'active' ? 'Aktiv' : 
-                               employee.status === 'inactive' ? 'Inaktiv' : 'På permisjon'}
-                            </span>
-                          </td>
-                          <td style={{ padding: 'var(--space-4)' }}>
-                            <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
-                              <button 
-                                className="btn btn-sm btn-secondary"
-                                onClick={() => handleViewEmployee(employee)}
-                                title="Se ansatt"
-                              >
-                                <Eye size={14} />
-                              </button>
-                              <button 
-                                className="btn btn-sm btn-primary"
-                                onClick={() => handleEditEmployee(employee)}
-                                title="Rediger ansatt"
-                              >
-                                <Edit size={14} />
-                              </button>
-                              <button 
-                                className="btn btn-sm btn-danger"
-                                onClick={() => handleDeleteEmployee(employee.id)}
-                                disabled={deletingEmployeeId === employee.id}
-                                title="Slett ansatt"
-                                style={{ opacity: deletingEmployeeId === employee.id ? 0.5 : 1 }}
-                              >
-                                {deletingEmployeeId === employee.id ? (
-                                  <Loader2 size={14} className="animate-spin" />
-                                ) : (
-                                <Trash2 size={14} />
-                                )}
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+              {!isMobile && (
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 'var(--space-6)' }}>
+                  <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>
+                    Ansatte ({getFilteredEmployees().length})
+                  </h2>
                 </div>
-              </div>
+              )}
+              {isMobile ? (
+                /* Mobile List View */
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+                  {getFilteredEmployees().map((employee) => (
+                    <div
+                      key={employee.id}
+                      style={{
+                        borderRadius: '0.875rem',
+                        padding: '1rem',
+                        background: 'var(--card-background)',
+                        border: '1px solid var(--border-color)',
+                        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                      }}
+                      onClick={() => handleViewEmployee(employee)}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
+                        <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'rgba(59, 130, 246, 0.1)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                          <User size={20} style={{ color: '#3b82f6' }} />
+                        </div>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <h3 style={{ fontSize: '0.9375rem', fontWeight: 600, color: 'var(--text-color)', margin: '0 0 0.25rem 0', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {employee.displayName}
+                          </h3>
+                          <p style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', margin: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                            {employee.position}
+                          </p>
+                        </div>
+                        <span style={{
+                          padding: '0.25rem 0.625rem',
+                          borderRadius: '0.5rem',
+                          fontSize: '0.75rem',
+                          fontWeight: 500,
+                          background: employee.status === 'active' ? 'rgba(34, 197, 94, 0.1)' : 
+                                     employee.status === 'inactive' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                          color: employee.status === 'active' ? '#22c55e' : 
+                                 employee.status === 'inactive' ? '#ef4444' : '#f59e0b',
+                          flexShrink: 0
+                        }}>
+                          {employee.status === 'active' ? 'Aktiv' : 
+                           employee.status === 'inactive' ? 'Inaktiv' : 'På permisjon'}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border-color)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--gray-600)' }}>
+                          <Building size={14} />
+                          <span>{getDepartmentName(employee.departmentId || '')}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--gray-600)' }}>
+                          <Mail size={14} />
+                          <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{employee.email}</span>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                /* Desktop Table View */
+                <div className="card" style={{ padding: 0 }}>
+                  <div style={{ overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--gray-200)' }}>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Navn</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Stilling</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Avdeling</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>E-post</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Status</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--gray-900)' }}>Handlinger</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {getFilteredEmployees().map((employee) => (
+                          <tr key={employee.id} style={{ borderBottom: '1px solid var(--gray-200)' }}>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                                <div style={{ width: '32px', height: '32px', borderRadius: '50%', background: 'var(--blue-100)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                  <User className="w-4 h-4 text-blue-600" />
+                                </div>
+                                {employee.displayName}
+                              </div>
+                            </td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-900)' }}>{employee.position}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>{getDepartmentName(employee.departmentId || '')}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-600)' }}>{employee.email}</td>
+                            <td style={{ padding: 'var(--space-4)' }}>
+                              <span style={{
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: 'var(--border-radius)',
+                                fontSize: 'var(--font-size-sm)',
+                                fontWeight: '500',
+                                background: employee.status === 'active' ? 'var(--green-100)' : 
+                                           employee.status === 'inactive' ? 'var(--red-100)' : 'var(--orange-100)',
+                                color: employee.status === 'active' ? 'var(--green-700)' : 
+                                       employee.status === 'inactive' ? 'var(--red-700)' : 'var(--orange-700)'
+                              }}>
+                                {employee.status === 'active' ? 'Aktiv' : 
+                                 employee.status === 'inactive' ? 'Inaktiv' : 'På permisjon'}
+                              </span>
+                            </td>
+                            <td style={{ padding: 'var(--space-4)' }}>
+                              <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
+                                <button 
+                                  className="btn btn-sm btn-secondary"
+                                  onClick={() => handleViewEmployee(employee)}
+                                  title="Se ansatt"
+                                >
+                                  <Eye size={14} />
+                                </button>
+                                <button 
+                                  className="btn btn-sm btn-primary"
+                                  onClick={() => handleEditEmployee(employee)}
+                                  title="Rediger ansatt"
+                                >
+                                  <Edit size={14} />
+                                </button>
+                                <button 
+                                  className="btn btn-sm btn-danger"
+                                  onClick={() => handleDeleteEmployee(employee.id)}
+                                  disabled={deletingEmployeeId === employee.id}
+                                  title="Slett ansatt"
+                                  style={{ opacity: deletingEmployeeId === employee.id ? 0.5 : 1 }}
+                                >
+                                  {deletingEmployeeId === employee.id ? (
+                                    <Loader2 size={14} className="animate-spin" />
+                                  ) : (
+                                  <Trash2 size={14} />
+                                  )}
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
             </div>
           )}
 
