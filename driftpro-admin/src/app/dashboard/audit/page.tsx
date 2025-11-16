@@ -1794,21 +1794,23 @@ export default function AuditPage() {
           <button
             onClick={() => setActiveTab('checkpoints')}
             style={{
-              padding: '1rem 1.5rem',
+              padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
               border: 'none',
               background: 'transparent',
               cursor: 'pointer',
               borderBottom: activeTab === 'checkpoints' ? '2px solid var(--primary)' : '2px solid transparent',
               color: activeTab === 'checkpoints' ? 'var(--primary)' : 'var(--gray-600)',
               fontWeight: activeTab === 'checkpoints' ? '600' : '500',
-              fontSize: 'var(--font-size-base)',
+              fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
               whiteSpace: 'nowrap',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: isMobile ? '0.375rem' : '0.5rem',
+              flexShrink: 0,
+              minHeight: isMobile ? '44px' : undefined
             }}
           >
-            <CheckCircle size={18} />
+            <CheckCircle size={isMobile ? 16 : 18} />
             Kontrollpunkter
           </button>
           )}
@@ -1816,21 +1818,23 @@ export default function AuditPage() {
           <button
             onClick={() => setActiveTab('reports')}
             style={{
-              padding: '1rem 1.5rem',
+              padding: isMobile ? '0.75rem 1rem' : '1rem 1.5rem',
               border: 'none',
               background: 'transparent',
               cursor: 'pointer',
               borderBottom: activeTab === 'reports' ? '2px solid var(--primary)' : '2px solid transparent',
               color: activeTab === 'reports' ? 'var(--primary)' : 'var(--gray-600)',
               fontWeight: activeTab === 'reports' ? '600' : '500',
-              fontSize: 'var(--font-size-base)',
+              fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
               whiteSpace: 'nowrap',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.5rem'
+              gap: isMobile ? '0.375rem' : '0.5rem',
+              flexShrink: 0,
+              minHeight: isMobile ? '44px' : undefined
             }}
           >
-            <BarChart3 size={18} />
+            <BarChart3 size={isMobile ? 16 : 18} />
             Rapportering
           </button>
           )}
@@ -1842,24 +1846,37 @@ export default function AuditPage() {
         <div style={{ 
           display: 'grid', 
           gridTemplateColumns: isMobile ? '1fr' : 'repeat(4, 1fr)', 
-          gap: '1rem', 
-          marginBottom: '2rem' 
+          gap: isMobile ? '0.625rem' : '1rem', 
+          marginBottom: isMobile ? '0.75rem' : '2rem',
+          padding: isMobile ? '0 0.75rem' : undefined
         }}>
           <div style={{
             background: 'var(--card-background)',
-            padding: '1.5rem',
-            borderRadius: '12px',
+            padding: isMobile ? '1rem' : '1.5rem',
+            borderRadius: isMobile ? '0.875rem' : '12px',
             border: '1px solid var(--border-color)',
-            boxShadow: 'var(--shadow-md)'
+            boxShadow: isMobile ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'var(--shadow-md)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-              <div>
-                <p style={{ color: 'var(--gray-500)', fontSize: '0.875rem', margin: 0 }}>Totalt revisjoner</p>
-                <p style={{ fontSize: '2rem', fontWeight: '700', color: 'var(--text-color)', margin: 0 }}>
+              <div style={{ flex: 1 }}>
+                <p style={{ 
+                  color: 'var(--gray-500)', 
+                  fontSize: isMobile ? '0.75rem' : '0.875rem', 
+                  margin: 0,
+                  marginBottom: isMobile ? '0.375rem' : '0.5rem',
+                  fontWeight: 500
+                }}>Totalt revisjoner</p>
+                <p style={{ 
+                  fontSize: isMobile ? '1.625rem' : '2rem', 
+                  fontWeight: '700', 
+                  color: 'var(--text-color)', 
+                  margin: 0,
+                  lineHeight: '1.2'
+                }}>
                   {audits.length}
                 </p>
               </div>
-              <Shield size={32} color="#3b82f6" />
+              <Shield size={isMobile ? 24 : 32} color="#3b82f6" style={{ flexShrink: 0 }} />
             </div>
           </div>
 
