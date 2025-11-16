@@ -1361,7 +1361,7 @@ export default function AdvancedPlanningPage() {
                     {selectedRoute && (() => {
                       const selectedRouteData = plannedRoutes.find(r => r.id === selectedRoute);
                       return selectedRouteData && selectedRouteData.orders && Array.isArray(selectedRouteData.orders) && (
-                        <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: 5 }}>
+                      <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: 5 }}>
                           {selectedRouteData.orders.map((order, index, array) => {
                           if (index < array.length - 1) {
                             const nextOrder = array[index + 1];

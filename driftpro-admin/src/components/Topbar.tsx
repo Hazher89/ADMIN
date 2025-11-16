@@ -236,12 +236,12 @@ export default function Topbar() {
 							animation: 'text-glow 3s ease-in-out infinite',
 							position: 'relative'
 						}}>DriftPro</span>
-					</a>
+				</a>
 				</div>
 
 				{/* Center - Search */}
 				<div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '600px', margin: '0 auto' }}>
-					<GlobalSearch />
+				<GlobalSearch />
 				</div>
 
 				{/* Right Section - Notifications and User */}
@@ -250,64 +250,64 @@ export default function Topbar() {
 					<div style={{ position: 'relative' }} ref={menuRef}>
 						<div 
 							style={{
-								display: 'flex',
-								alignItems: 'center',
-								gap: '0.5rem',
-								padding: '0.375rem 0.75rem',
+						display: 'flex',
+						alignItems: 'center',
+						gap: '0.5rem',
+						padding: '0.375rem 0.75rem',
 								background: showUserMenu ? 'var(--gray-100)' : 'var(--card-background)',
-								border: '1px solid var(--border-color)',
-								borderRadius: 'var(--radius-full)',
-								cursor: 'pointer',
-								transition: 'all var(--transition-normal)'
-							}}
+						border: '1px solid var(--border-color)',
+						borderRadius: 'var(--radius-full)',
+						cursor: 'pointer',
+						transition: 'all var(--transition-normal)'
+					}}
 							onClick={() => setShowUserMenu(!showUserMenu)}
-							onMouseEnter={(e) => {
+					onMouseEnter={(e) => {
 								if (!showUserMenu) {
-									e.currentTarget.style.background = 'var(--gray-100)';
+						e.currentTarget.style.background = 'var(--gray-100)';
 								}
-							}}
-							onMouseLeave={(e) => {
+					}}
+					onMouseLeave={(e) => {
 								if (!showUserMenu) {
-									e.currentTarget.style.background = 'var(--card-background)';
+						e.currentTarget.style.background = 'var(--card-background)';
 								}
 							}}
 						>
+						<div style={{
+							width: '28px',
+							height: '28px',
+							borderRadius: '50%',
+							background: 'var(--gradient-primary)',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							color: 'white',
+							fontSize: '0.75rem',
+							fontWeight: '600',
+							flexShrink: 0
+						}}>
+							{userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+						</div>
+						<div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 							<div style={{
-								width: '28px',
-								height: '28px',
-								borderRadius: '50%',
-								background: 'var(--gradient-primary)',
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								color: 'white',
-								fontSize: '0.75rem',
-								fontWeight: '600',
-								flexShrink: 0
+								fontSize: '0.8125rem',
+								fontWeight: '500',
+								color: 'var(--text-color)',
+								whiteSpace: 'nowrap',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
 							}}>
-								{userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+								{userProfile?.displayName || 'Bruker'}
 							</div>
-							<div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-								<div style={{
-									fontSize: '0.8125rem',
-									fontWeight: '500',
-									color: 'var(--text-color)',
-									whiteSpace: 'nowrap',
-									overflow: 'hidden',
-									textOverflow: 'ellipsis'
-								}}>
-									{userProfile?.displayName || 'Bruker'}
-								</div>
-								<div style={{
-									fontSize: '0.6875rem',
-									color: 'var(--gray-500)',
-									whiteSpace: 'nowrap',
-									overflow: 'hidden',
-									textOverflow: 'ellipsis'
-								}}>
-									{userProfile?.role || 'Bruker'}
-								</div>
+							<div style={{
+								fontSize: '0.6875rem',
+								color: 'var(--gray-500)',
+								whiteSpace: 'nowrap',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}>
+								{userProfile?.role || 'Bruker'}
 							</div>
+						</div>
 							<ChevronDown 
 								size={16} 
 								style={{ 

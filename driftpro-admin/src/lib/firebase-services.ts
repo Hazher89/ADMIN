@@ -814,9 +814,9 @@ class FirebaseService {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all employees
           q = query(
-            collection(firestore, 'users'),
-            where('companyId', '==', companyId)
-          );
+        collection(firestore, 'users'),
+        where('companyId', '==', companyId)
+      );
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders only see employees in their department
           q = query(
@@ -901,7 +901,7 @@ class FirebaseService {
             return employee;
           }
           console.warn('Department leader does not have access to this employee');
-          return null;
+      return null;
         }
         
         // Employees can only access themselves
@@ -1068,15 +1068,15 @@ class FirebaseService {
 
       // Create activity log (don't fail if this fails)
       try {
-        await this.createActivity({
-          type: 'employee_added',
-          title: 'Ny ansatt registrert',
-          description: `${employeeData.displayName} ble lagt til i systemet`,
-          userId: docRef.id,
-          userName: employeeData.displayName,
-          companyId: employeeData.companyId
-        });
-        console.log('Activity log created for employee:', docRef.id);
+      await this.createActivity({
+        type: 'employee_added',
+        title: 'Ny ansatt registrert',
+        description: `${employeeData.displayName} ble lagt til i systemet`,
+        userId: docRef.id,
+        userName: employeeData.displayName,
+        companyId: employeeData.companyId
+      });
+      console.log('Activity log created for employee:', docRef.id);
       } catch (activityError) {
         console.warn('Failed to create activity log (non-critical):', activityError);
       }
@@ -1457,9 +1457,9 @@ class FirebaseService {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all deviations
           q = query(
-            collection(firestore, 'deviations'),
-            where('companyId', '==', companyId)
-          );
+        collection(firestore, 'deviations'),
+        where('companyId', '==', companyId)
+      );
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders only see deviations from their department
           q = query(
@@ -1573,9 +1573,9 @@ class FirebaseService {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all documents
           q = query(
-            collection(firestore, 'documents'),
-            where('companyId', '==', companyId)
-          );
+        collection(firestore, 'documents'),
+        where('companyId', '==', companyId)
+      );
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders only see documents from their department
           q = query(
@@ -1662,9 +1662,9 @@ class FirebaseService {
       // Fall back to Firebase Storage if OneDrive failed or not available
       if (storageType === 'firebase' || !fileUrl) {
         if (!storage) throw new Error('Firebase Storage not initialized');
-        const fileName = `${Date.now()}_${file.name}`;
-        const storageRef = ref(storage, `documents/${documentData.companyId}/${fileName}`);
-        await uploadBytes(storageRef, file);
+      const fileName = `${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, `documents/${documentData.companyId}/${fileName}`);
+      await uploadBytes(storageRef, file);
         fileUrl = await getDownloadURL(storageRef);
         console.log('✅ File uploaded to Firebase Storage');
       }
@@ -1725,8 +1725,8 @@ class FirebaseService {
         } else {
           // Delete from Firebase Storage
           if (!storage) throw new Error('Firebase Storage not initialized');
-          const storageRef = ref(storage, fileUrl);
-          await deleteObject(storageRef);
+      const storageRef = ref(storage, fileUrl);
+      await deleteObject(storageRef);
           console.log('✅ File deleted from Firebase Storage');
         }
       }
@@ -1824,9 +1824,9 @@ class FirebaseService {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all absences
           q = query(
-            collection(firestore, 'absences'),
-            where('companyId', '==', companyId)
-          );
+        collection(firestore, 'absences'),
+        where('companyId', '==', companyId)
+      );
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders see absences from their department employees
           // First, get all employees in the department
@@ -2024,9 +2024,9 @@ class FirebaseService {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all vacations
           q = query(
-            collection(firestore, 'vacations'),
-            where('companyId', '==', companyId)
-          );
+        collection(firestore, 'vacations'),
+        where('companyId', '==', companyId)
+      );
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders see vacations from their department employees
           // First, get all employees in the department
@@ -3791,9 +3791,9 @@ class FirebaseService {
       // Fall back to Firebase Storage if OneDrive failed or not available
       if (storageType === 'firebase' || !fileUrl) {
         if (!storage) throw new Error('Firebase Storage not initialized');
-        const fileName = `${Date.now()}_${file.name}`;
-        const storageRef = ref(storage, `audits/${companyId}/${auditId}/${fileName}`);
-        await uploadBytes(storageRef, file);
+      const fileName = `${Date.now()}_${file.name}`;
+      const storageRef = ref(storage, `audits/${companyId}/${auditId}/${fileName}`);
+      await uploadBytes(storageRef, file);
         fileUrl = await getDownloadURL(storageRef);
         console.log('✅ File uploaded to Firebase Storage');
       }
@@ -3852,8 +3852,8 @@ class FirebaseService {
       } else {
         // Delete from Firebase Storage
         if (!storage) throw new Error('Firebase Storage not initialized');
-        const storageRef = ref(storage, document.fileUrl);
-        await deleteObject(storageRef);
+      const storageRef = ref(storage, document.fileUrl);
+      await deleteObject(storageRef);
         console.log('✅ File deleted from Firebase Storage');
       }
     } catch (error) {

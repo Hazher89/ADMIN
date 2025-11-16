@@ -314,16 +314,28 @@ export default function MailPage() {
     try {
       // Check if user is authenticated via SMTP
       if (userProfile?.environment === 'smtp') {
-        // For SMTP users, use the dynamic email service with their credentials
-        const { DynamicEmailService } = await import('@/lib/dynamic-email-service');
-        const emailService = new DynamicEmailService(userProfile.username || '', userSmtpPassword);
-        
-        await emailService.sendEmail(
-          composeEmail.to.split(',').map(email => email.trim()),
-          composeEmail.subject,
-          composeEmail.body.content,
-          composeEmail.body.content
-        );
+        // For SMTP users, use the API route
+        const response = await fetch('/api/smtp-send-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: userProfile.username || '',
+            password: userSmtpPassword,
+            to: composeEmail.to.split(',').map(email => email.trim()),
+            cc: composeEmail.cc ? composeEmail.cc.split(',').map(email => email.trim()) : undefined,
+            bcc: composeEmail.bcc ? composeEmail.bcc.split(',').map(email => email.trim()) : undefined,
+            subject: composeEmail.subject,
+            html: composeEmail.body.content,
+            text: composeEmail.body.contentType === 'text' ? composeEmail.body.content : undefined
+          }),
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+          throw new Error(result.error || 'Failed to send email');
+        }
       } else {
         // For Microsoft Graph users, use the existing method
         await microsoftGraphService.sendEmail({

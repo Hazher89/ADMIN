@@ -652,7 +652,7 @@ export default function EmployeesPage() {
       
       // Reload employees after a short delay to ensure Firebase has updated
       setTimeout(() => {
-        loadEmployees();
+      loadEmployees();
         setDeletingEmployeeId(null);
       }, 500);
       
@@ -1168,28 +1168,28 @@ export default function EmployeesPage() {
                 {newEmployee.role === 'employee' && (
                   <div className="form-group">
                     <label className="form-label">Avdeling *</label>
-                    <select
-                      value={newEmployee.departmentId}
-                      onChange={(e) => setNewEmployee({...newEmployee, departmentId: e.target.value})}
-                      className="form-input"
+                  <select
+                    value={newEmployee.departmentId}
+                    onChange={(e) => setNewEmployee({...newEmployee, departmentId: e.target.value})}
+                    className="form-input"
                       required
-                    >
-                      <option value="">Velg avdeling</option>
-                      {departments.map(dept => (
-                        <option key={dept.id} value={dept.id}>
-                          {dept.name}
-                        </option>
-                      ))}
-                    </select>
+                  >
+                    <option value="">Velg avdeling</option>
+                    {departments.map(dept => (
+                      <option key={dept.id} value={dept.id}>
+                        {dept.name}
+                      </option>
+                    ))}
+                  </select>
                     <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
                       Velg hvilken avdeling denne ansatte tilhører
                     </small>
-                  </div>
+                </div>
                 )}
                 {newEmployee.role === 'department_leader' && (
-                  <div className="form-group">
+                <div className="form-group">
                     <label className="form-label">Leder for avdeling *</label>
-                    <select
+                  <select
                       value={newEmployee.leadership.managesDepartments[0] || ''}
                       onChange={(e) => {
                         const selectedDeptId = e.target.value;
@@ -1204,20 +1204,20 @@ export default function EmployeesPage() {
                           departmentId: selectedDeptId
                         });
                       }}
-                      className="form-input"
+                    className="form-input"
                       required
-                    >
+                  >
                       <option value="">Velg avdeling</option>
                       {departments.map(dept => (
                         <option key={dept.id} value={dept.id}>
                           {dept.name}
                         </option>
                       ))}
-                    </select>
+                  </select>
                     <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
                       Velg hvilken avdeling denne personen skal være leder for
                     </small>
-                  </div>
+                </div>
                 )}
                 <div className="form-group">
                   <label className="form-label">Ansattnummer</label>
@@ -1820,26 +1820,26 @@ export default function EmployeesPage() {
                           const isChecked = currentPermissions[key as keyof typeof currentPermissions] || false;
                           return (
                             <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '0.375rem', transition: 'background 0.2s', background: isChecked ? 'rgba(56, 189, 248, 0.15)' : 'transparent' }}>
-                              <input
-                                type="checkbox"
+                        <input
+                          type="checkbox"
                                 checked={isChecked}
                                 onChange={(e) => setSelectedEmployee({
                                   ...selectedEmployee,
-                                  permissions: {
+                            permissions: {
                                     ...currentPermissions,
-                                    [key]: e.target.checked
-                                  }
+                              [key]: e.target.checked
+                            }
                                 } as any)}
                                 style={{ margin: 0, width: '16px', height: '16px', cursor: 'pointer' }}
-                              />
+                        />
                               <span style={{ color: isChecked ? 'var(--primary)' : 'var(--text-color)' }}>
                                 {icon} {label}
                               </span>
-                            </label>
+                      </label>
                           );
                         })}
-                      </div>
-                    </div>
+                  </div>
+                </div>
                   );
                 })}
 
@@ -1967,9 +1967,9 @@ export default function EmployeesPage() {
                           onChange={(e) => {
                             setSelectedEmployee({
                               ...selectedEmployee,
-                              leadership: {
+                            leadership: {
                                 ...((selectedEmployee as any).leadership || newEmployee.leadership),
-                                reportsTo: e.target.value
+                              reportsTo: e.target.value
                               },
                               managerId: e.target.value
                             } as any);

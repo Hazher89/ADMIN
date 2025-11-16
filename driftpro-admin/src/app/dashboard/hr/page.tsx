@@ -2820,9 +2820,9 @@ export default function HRPage() {
                       <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
                         Velg hvilken avdeling denne personen skal være leder for
                       </small>
-                    </div>
-                  )}
-                </div>
+            </div>
+          )}
+        </div>
                 </>
               ) : activeTab === 'departments' ? (
                 // Add Department Form

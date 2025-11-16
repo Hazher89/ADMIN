@@ -560,7 +560,7 @@ export default function DashboardLayout({
             </div>
           ))}
         </div>
-      </div>
+        </div>
       )}
 
       {/* Main Content */}

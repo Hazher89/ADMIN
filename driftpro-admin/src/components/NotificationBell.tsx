@@ -358,8 +358,8 @@ export default function NotificationBell() {
                 }}>
                   Varsler
                 </h3>
-                <button
-                  onClick={() => setShowDropdown(false)}
+              <button
+                onClick={() => setShowDropdown(false)}
                   style={{
                     background: 'none',
                     border: 'none',
@@ -380,20 +380,20 @@ export default function NotificationBell() {
                     e.currentTarget.style.background = 'none';
                     e.currentTarget.style.color = 'var(--gray-400)';
                   }}
-                >
+              >
                   <X size={18} />
-                </button>
-              </div>
-              {unreadCount > 0 && (
+              </button>
+            </div>
+            {unreadCount > 0 && (
                 <p style={{
                   fontSize: 'var(--font-size-sm)',
                   color: 'var(--gray-500)',
                   margin: 0
                 }}>
                   {unreadCount} {unreadCount === 1 ? 'ulest varsel' : 'uleste varsler'}
-                </p>
-              )}
-            </div>
+              </p>
+            )}
+          </div>
 
             {/* Notifications List */}
             <div style={{
@@ -401,7 +401,7 @@ export default function NotificationBell() {
               overflowY: 'auto',
               overflowX: 'hidden'
             }}>
-              {loading ? (
+            {loading ? (
                 <div style={{
                   padding: '2rem',
                   textAlign: 'center'
@@ -415,8 +415,8 @@ export default function NotificationBell() {
                     animation: 'spin 1s linear infinite',
                     margin: '0 auto'
                   }}></div>
-                </div>
-              ) : notifications.length === 0 ? (
+              </div>
+            ) : notifications.length === 0 ? (
                 <div style={{
                   padding: '2rem',
                   textAlign: 'center',
@@ -426,8 +426,8 @@ export default function NotificationBell() {
                   <p style={{ margin: 0, fontSize: 'var(--font-size-sm)' }}>
                     Ingen varsler
                   </p>
-                </div>
-              ) : (
+              </div>
+            ) : (
                 <div>
                   {notifications.map((notification) => {
                     const priorityColors = getPriorityColorDark(notification.priority);
@@ -435,8 +435,8 @@ export default function NotificationBell() {
                     const isUnread = notification.status === 'unread';
                     
                     return (
-                      <div
-                        key={notification.id}
+                  <div
+                    key={notification.id}
                         style={{
                           padding: '1rem 1.25rem',
                           borderBottom: '1px solid var(--border-color)',
@@ -451,7 +451,7 @@ export default function NotificationBell() {
                         onMouseLeave={(e) => {
                           e.currentTarget.style.background = isUnread ? priorityColors.bg : 'transparent';
                         }}
-                      >
+                  >
                         <div style={{
                           display: 'flex',
                           alignItems: 'flex-start',
@@ -461,7 +461,7 @@ export default function NotificationBell() {
                             flexShrink: 0,
                             marginTop: '0.125rem'
                           }}>
-                            {getNotificationIcon(notification.type)}
+                      {getNotificationIcon(notification.type)}
                           </div>
                           <div style={{
                             flex: 1,
@@ -484,8 +484,8 @@ export default function NotificationBell() {
                                 whiteSpace: 'nowrap',
                                 flex: 1
                               }}>
-                                {notification.title}
-                              </h4>
+                            {notification.title}
+                          </h4>
                               <span style={{
                                 padding: '0.25rem 0.5rem',
                                 fontSize: '0.625rem',
@@ -499,8 +499,8 @@ export default function NotificationBell() {
                                 {notification.priority === 'urgent' ? 'Høy' :
                                  notification.priority === 'high' ? 'Høy' :
                                  notification.priority === 'medium' ? 'Middels' : 'Lav'}
-                              </span>
-                            </div>
+                          </span>
+                        </div>
                             <p style={{
                               fontSize: 'var(--font-size-sm)',
                               color: 'var(--gray-500)',
@@ -511,8 +511,8 @@ export default function NotificationBell() {
                               WebkitBoxOrient: 'vertical',
                               overflow: 'hidden'
                             }}>
-                              {notification.message}
-                            </p>
+                          {notification.message}
+                        </p>
                             <div style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -529,14 +529,14 @@ export default function NotificationBell() {
                                   hour: '2-digit',
                                   minute: '2-digit'
                                 })}
-                              </span>
+                          </span>
                               <div style={{
                                 display: 'flex',
                                 alignItems: 'center',
                                 gap: '0.25rem'
                               }}>
                                 {notification.status === 'unread' && (
-                                  <button
+                            <button
                                     onClick={(e) => {
                                       e.stopPropagation();
                                       markAsRead(notification.id);
@@ -561,12 +561,12 @@ export default function NotificationBell() {
                                       e.currentTarget.style.background = 'none';
                                       e.currentTarget.style.color = 'var(--gray-400)';
                                     }}
-                                    title="Merk som lest"
-                                  >
+                              title="Merk som lest"
+                            >
                                     <Check size={14} />
-                                  </button>
+                            </button>
                                 )}
-                                <button
+                            <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     archiveNotification(notification.id);
@@ -591,11 +591,11 @@ export default function NotificationBell() {
                                     e.currentTarget.style.background = 'none';
                                     e.currentTarget.style.color = 'var(--gray-400)';
                                   }}
-                                  title="Arkiver"
-                                >
+                              title="Arkiver"
+                            >
                                   <Archive size={14} />
-                                </button>
-                                <button
+                            </button>
+                            <button
                                   onClick={(e) => {
                                     e.stopPropagation();
                                     deleteNotification(notification.id);
@@ -620,31 +620,31 @@ export default function NotificationBell() {
                                     e.currentTarget.style.background = 'none';
                                     e.currentTarget.style.color = 'var(--gray-400)';
                                   }}
-                                  title="Slett"
-                                >
+                              title="Slett"
+                            >
                                   <Trash2 size={14} />
-                                </button>
-                              </div>
-                            </div>
+                            </button>
                           </div>
                         </div>
                       </div>
+                    </div>
+                  </div>
                     );
                   })}
-                </div>
-              )}
-            </div>
+              </div>
+            )}
+          </div>
 
             {/* Footer */}
-            {notifications.length > 0 && (
+          {notifications.length > 0 && (
               <div style={{
                 padding: '1rem 1.25rem',
                 borderTop: '1px solid var(--border-color)',
                 background: 'var(--gray-50)'
               }}>
-                <Link
-                  href="/dashboard/notifications"
-                  onClick={() => setShowDropdown(false)}
+              <Link
+                href="/dashboard/notifications"
+                onClick={() => setShowDropdown(false)}
                   style={{
                     display: 'block',
                     width: '100%',
@@ -668,12 +668,12 @@ export default function NotificationBell() {
                     e.currentTarget.style.transform = 'translateY(0)';
                     e.currentTarget.style.boxShadow = 'none';
                   }}
-                >
-                  Se alle varsler
-                </Link>
-              </div>
-            )}
-          </div>
+              >
+                Se alle varsler
+              </Link>
+            </div>
+          )}
+        </div>
         </>
       )}
 

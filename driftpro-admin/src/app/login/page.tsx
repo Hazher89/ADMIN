@@ -500,7 +500,7 @@ export default function LoginPage() {
                   animationDelay: '1.5s'
                 }}
               ></div>
-            </div>
+          </div>
             
             {/* Brand name */}
             <h1 
@@ -517,7 +517,7 @@ export default function LoginPage() {
               }}
             >
               DriftPro
-            </h1>
+          </h1>
             
             {/* Divider */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', margin: '1rem 0' }}>
@@ -586,10 +586,10 @@ export default function LoginPage() {
                 MAVI LOGISTIKK AS
               </p>
             </div>
-          </div>
+        </div>
 
-          {/* Error message */}
-          {error && (
+        {/* Error message */}
+        {error && (
             <div 
               style={{
                 marginBottom: '1rem',
@@ -610,15 +610,15 @@ export default function LoginPage() {
                 <p style={{ fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.25rem', color: 'var(--danger)' }}>Innlogging feilet</p>
                 <p style={{ fontSize: '0.8125rem', lineHeight: '1.5', color: 'var(--danger)' }}>{error}</p>
               </div>
-            </div>
-          )}
+          </div>
+        )}
 
-          {/* Login Form */}
+        {/* Login Form */}
           <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative', zIndex: 10 }}>
             {/* Email Field - STOR */}
-            <div>
-              <label 
-                htmlFor="email" 
+          <div>
+            <label 
+              htmlFor="email" 
                 style={{ 
                   display: 'block',
                   marginBottom: '0.5rem',
@@ -628,7 +628,7 @@ export default function LoginPage() {
                 }}
               >
                 E-postadresse
-              </label>
+            </label>
               <div style={{ position: 'relative' }}>
                 <div 
                   style={{ 
@@ -642,15 +642,15 @@ export default function LoginPage() {
                   }}
                 >
                   <Mail size={20} />
-                </div>
-                <input
-                  id="email"
-                  type="email"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
+              </div>
+              <input
+                id="email"
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
                   onFocus={() => setFocusedField('email')}
                   onBlur={() => setFocusedField(null)}
-                  required
+                required
                   style={{
                     width: '100%',
                     paddingLeft: '3rem',
@@ -677,12 +677,12 @@ export default function LoginPage() {
                   </div>
                 )}
               </div>
-            </div>
+          </div>
 
             {/* Password Field - STOR */}
-            <div>
-              <label 
-                htmlFor="password" 
+          <div>
+            <label 
+              htmlFor="password" 
                 style={{ 
                   display: 'block',
                   marginBottom: '0.5rem',
@@ -690,9 +690,9 @@ export default function LoginPage() {
                   fontWeight: 600,
                   color: 'var(--text-color)'
                 }}
-              >
-                Passord
-              </label>
+            >
+              Passord
+            </label>
               <div style={{ position: 'relative' }}>
                 <div 
                   style={{ 
@@ -706,15 +706,15 @@ export default function LoginPage() {
                   }}
                 >
                   <Lock size={20} />
-                </div>
-                <input
-                  id="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
+              </div>
+              <input
+                id="password"
+                type={showPassword ? 'text' : 'password'}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
                   onFocus={() => setFocusedField('password')}
                   onBlur={() => setFocusedField(null)}
-                  required
+                required
                   style={{
                     width: '100%',
                     paddingLeft: '3rem',
@@ -733,11 +733,11 @@ export default function LoginPage() {
                       : '0 2px 4px rgba(0, 0, 0, 0.05)',
                     transform: focusedField === 'password' ? 'translateY(-2px)' : 'translateY(0)'
                   }}
-                  placeholder="••••••••"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
+                placeholder="••••••••"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
                     right: '0.75rem',
@@ -761,14 +761,14 @@ export default function LoginPage() {
                   }}
                 >
                   {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
-                </button>
-              </div>
+              </button>
             </div>
+          </div>
 
             {/* Forgot Password */}
             <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.125rem' }}>
-              <a 
-                href="/forgot-password" 
+            <a 
+              href="/forgot-password" 
                 style={{
                   fontSize: '0.875rem',
                   fontWeight: 500,
@@ -782,16 +782,16 @@ export default function LoginPage() {
                 onMouseLeave={(e) => {
                   e.currentTarget.style.color = 'var(--primary)';
                 }}
-              >
-                Glemt passord?
-              </a>
-            </div>
+            >
+              Glemt passord?
+            </a>
+          </div>
 
             {/* Submit Button - AVANSERT */}
-            <button
-              type="submit"
-              disabled={loading}
-              style={{
+          <button
+            type="submit"
+            disabled={loading}
+            style={{
                 width: '100%',
                 paddingTop: '1.25rem',
                 paddingBottom: '1.25rem',
@@ -872,7 +872,7 @@ export default function LoginPage() {
                   <ArrowRight size={20} style={{ position: 'relative', zIndex: 10, transition: 'transform 0.3s' }} className="arrow-icon" />
                 </>
               )}
-            </button>
+          </button>
           </form>
         </div>
       </div>
@@ -942,7 +942,7 @@ export default function LoginPage() {
           }
         }
 
-        @keyframes spin {
+          @keyframes spin {
           from {
             transform: rotate(0deg);
           }
@@ -1043,8 +1043,8 @@ export default function LoginPage() {
 
         button:hover .arrow-icon {
           transform: translateX(4px) !important;
-        }
-      `}</style>
+          }
+        `}</style>
     </div>
   );
 }

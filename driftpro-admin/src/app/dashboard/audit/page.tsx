@@ -376,7 +376,7 @@ export default function AuditPage() {
       setRiskAssessments(data);
     } catch (error) {
       console.error('Error loading risk assessments:', error);
-      setRiskAssessments([]);
+    setRiskAssessments([]);
     }
   };
 
@@ -387,7 +387,7 @@ export default function AuditPage() {
       setFollowUpActions(data);
     } catch (error) {
       console.error('Error loading follow-up actions:', error);
-      setFollowUpActions([]);
+    setFollowUpActions([]);
     }
   };
 
@@ -398,7 +398,7 @@ export default function AuditPage() {
       setCheckpoints(data);
     } catch (error) {
       console.error('Error loading checkpoints:', error);
-      setCheckpoints([]);
+    setCheckpoints([]);
     }
   };
 
@@ -790,27 +790,27 @@ export default function AuditPage() {
 
   const handleEditDeviation = (deviation: FirestoreDeviation) => {
     setSelectedDeviation(deviation);
-    setNewDeviation({
-      title: deviation.title || '',
-      description: deviation.description || '',
-      type: deviation.type || 'safety',
-      severity: deviation.severity || 'medium',
-      status: deviation.status || 'reported',
-      departmentId: deviation.departmentId || '',
-      location: deviation.location || '',
-      equipment: deviation.equipment || '',
-      cost: deviation.cost || 0,
-      riskAssessment: deviation.riskAssessment || '',
-      immediateActions: deviation.immediateActions || '',
-      rootCause: deviation.rootCause || '',
-      correctiveActions: deviation.correctiveActions || '',
-      preventiveActions: deviation.preventiveActions || '',
-      attachments: deviation.attachments || [],
-      witnesses: deviation.witnesses || [],
-      investigationRequired: deviation.investigationRequired || false,
+      setNewDeviation({
+        title: deviation.title || '',
+        description: deviation.description || '',
+        type: deviation.type || 'safety',
+        severity: deviation.severity || 'medium',
+        status: deviation.status || 'reported',
+        departmentId: deviation.departmentId || '',
+        location: deviation.location || '',
+        equipment: deviation.equipment || '',
+        cost: deviation.cost || 0,
+        riskAssessment: deviation.riskAssessment || '',
+        immediateActions: deviation.immediateActions || '',
+        rootCause: deviation.rootCause || '',
+        correctiveActions: deviation.correctiveActions || '',
+        preventiveActions: deviation.preventiveActions || '',
+        attachments: deviation.attachments || [],
+        witnesses: deviation.witnesses || [],
+        investigationRequired: deviation.investigationRequired || false,
       regulatoryReport: deviation.regulatoryReport || false,
       assignedToIds: (deviation as any).assignedToIds || (deviation.assignedTo ? [deviation.assignedTo] : [])
-    });
+      });
     setShowEditDeviationModal(true);
   };
 
@@ -1393,7 +1393,7 @@ export default function AuditPage() {
           <h1 style={{ 
             fontSize: '2rem', 
             fontWeight: '700', 
-            color: 'var(--text-color)',
+              color: 'var(--text-color)',
             margin: 0,
             marginBottom: '0.5rem'
           }}>
@@ -1538,136 +1538,136 @@ export default function AuditPage() {
         }}>
           {/* Check permissions for each tab - only show tabs user has access to */}
           {(userProfile?.permissions?.internrevisjon || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setActiveTab('audits')}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'audits' ? '2px solid var(--primary)' : '2px solid transparent',
-                color: activeTab === 'audits' ? 'var(--primary)' : 'var(--gray-600)',
-                fontWeight: activeTab === 'audits' ? '600' : '500',
-                fontSize: 'var(--font-size-base)',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <Activity size={18} />
-              Internrevisjon
-            </button>
+          <button
+            onClick={() => setActiveTab('audits')}
+            style={{
+              padding: '1rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              borderBottom: activeTab === 'audits' ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activeTab === 'audits' ? 'var(--primary)' : 'var(--gray-600)',
+              fontWeight: activeTab === 'audits' ? '600' : '500',
+              fontSize: 'var(--font-size-base)',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Activity size={18} />
+            Internrevisjon
+          </button>
           )}
           {(userProfile?.permissions?.avvik || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setActiveTab('deviations')}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'deviations' ? '2px solid var(--primary)' : '2px solid transparent',
-                color: activeTab === 'deviations' ? 'var(--primary)' : 'var(--gray-600)',
-                fontWeight: activeTab === 'deviations' ? '600' : '500',
-                fontSize: 'var(--font-size-base)',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <AlertTriangle size={18} />
-              Avvik
-            </button>
+          <button
+            onClick={() => setActiveTab('deviations')}
+            style={{
+              padding: '1rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              borderBottom: activeTab === 'deviations' ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activeTab === 'deviations' ? 'var(--primary)' : 'var(--gray-600)',
+              fontWeight: activeTab === 'deviations' ? '600' : '500',
+              fontSize: 'var(--font-size-base)',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <AlertTriangle size={18} />
+            Avvik
+          </button>
           )}
           {(userProfile?.permissions?.risikovurdering || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setActiveTab('risk-assessment')}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'risk-assessment' ? '2px solid var(--primary)' : '2px solid transparent',
-                color: activeTab === 'risk-assessment' ? 'var(--primary)' : 'var(--gray-600)',
-                fontWeight: activeTab === 'risk-assessment' ? '600' : '500',
-                fontSize: 'var(--font-size-base)',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <Shield size={18} />
-              Risikovurdering
-            </button>
+          <button
+            onClick={() => setActiveTab('risk-assessment')}
+            style={{
+              padding: '1rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              borderBottom: activeTab === 'risk-assessment' ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activeTab === 'risk-assessment' ? 'var(--primary)' : 'var(--gray-600)',
+              fontWeight: activeTab === 'risk-assessment' ? '600' : '500',
+              fontSize: 'var(--font-size-base)',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Shield size={18} />
+            Risikovurdering
+          </button>
           )}
           {(userProfile?.permissions?.oppfølgingstiltak || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setActiveTab('follow-up')}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'follow-up' ? '2px solid var(--primary)' : '2px solid transparent',
-                color: activeTab === 'follow-up' ? 'var(--primary)' : 'var(--gray-600)',
-                fontWeight: activeTab === 'follow-up' ? '600' : '500',
-                fontSize: 'var(--font-size-base)',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <CheckSquare size={18} />
-              Oppfølgingstiltak
-            </button>
+          <button
+            onClick={() => setActiveTab('follow-up')}
+            style={{
+              padding: '1rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              borderBottom: activeTab === 'follow-up' ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activeTab === 'follow-up' ? 'var(--primary)' : 'var(--gray-600)',
+              fontWeight: activeTab === 'follow-up' ? '600' : '500',
+              fontSize: 'var(--font-size-base)',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <CheckSquare size={18} />
+            Oppfølgingstiltak
+          </button>
           )}
           {(userProfile?.permissions?.kontrollpunkter || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setActiveTab('checkpoints')}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'checkpoints' ? '2px solid var(--primary)' : '2px solid transparent',
-                color: activeTab === 'checkpoints' ? 'var(--primary)' : 'var(--gray-600)',
-                fontWeight: activeTab === 'checkpoints' ? '600' : '500',
-                fontSize: 'var(--font-size-base)',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <CheckCircle size={18} />
-              Kontrollpunkter
-            </button>
+          <button
+            onClick={() => setActiveTab('checkpoints')}
+            style={{
+              padding: '1rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              borderBottom: activeTab === 'checkpoints' ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activeTab === 'checkpoints' ? 'var(--primary)' : 'var(--gray-600)',
+              fontWeight: activeTab === 'checkpoints' ? '600' : '500',
+              fontSize: 'var(--font-size-base)',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <CheckCircle size={18} />
+            Kontrollpunkter
+          </button>
           )}
           {(userProfile?.permissions?.internkontrollRapporter || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setActiveTab('reports')}
-              style={{
-                padding: '1rem 1.5rem',
-                border: 'none',
-                background: 'transparent',
-                cursor: 'pointer',
-                borderBottom: activeTab === 'reports' ? '2px solid var(--primary)' : '2px solid transparent',
-                color: activeTab === 'reports' ? 'var(--primary)' : 'var(--gray-600)',
-                fontWeight: activeTab === 'reports' ? '600' : '500',
-                fontSize: 'var(--font-size-base)',
-                whiteSpace: 'nowrap',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}
-            >
-              <BarChart3 size={18} />
-              Rapportering
-            </button>
+          <button
+            onClick={() => setActiveTab('reports')}
+            style={{
+              padding: '1rem 1.5rem',
+              border: 'none',
+              background: 'transparent',
+              cursor: 'pointer',
+              borderBottom: activeTab === 'reports' ? '2px solid var(--primary)' : '2px solid transparent',
+              color: activeTab === 'reports' ? 'var(--primary)' : 'var(--gray-600)',
+              fontWeight: activeTab === 'reports' ? '600' : '500',
+              fontSize: 'var(--font-size-base)',
+              whiteSpace: 'nowrap',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <BarChart3 size={18} />
+            Rapportering
+          </button>
           )}
         </div>
       </div>
@@ -2307,7 +2307,7 @@ export default function AuditPage() {
             }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-color)', margin: 0 }}>
                 Alle Risikovurderinger ({riskAssessments.length})
-              </h3>
+            </h3>
             </div>
 
             <div>
@@ -2366,9 +2366,9 @@ export default function AuditPage() {
                       {risk.description && (
                         <p style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginTop: '0.5rem', margin: 0 }}>
                           {risk.description.substring(0, 100)}{risk.description.length > 100 ? '...' : ''}
-                        </p>
+            </p>
                       )}
-                    </div>
+          </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => handleEditRiskAssessment(risk)}
@@ -2418,7 +2418,7 @@ export default function AuditPage() {
             }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-color)', margin: 0 }}>
                 Alle Oppfølgingstiltak ({followUpActions.length})
-              </h3>
+            </h3>
             </div>
 
             <div>
@@ -2477,7 +2477,7 @@ export default function AuditPage() {
                           {action.description.substring(0, 100)}{action.description.length > 100 ? '...' : ''}
                         </p>
                       )}
-                    </div>
+          </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => handleEditFollowUpAction(action)}
@@ -2527,7 +2527,7 @@ export default function AuditPage() {
             }}>
               <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--text-color)', margin: 0 }}>
                 Alle Kontrollpunkter ({checkpoints.length})
-              </h3>
+            </h3>
             </div>
 
             <div>
@@ -2587,7 +2587,7 @@ export default function AuditPage() {
                           {checkpoint.description.substring(0, 100)}{checkpoint.description.length > 100 ? '...' : ''}
                         </p>
                       )}
-                    </div>
+          </div>
                     <div style={{ display: 'flex', gap: '0.5rem' }}>
                       <button
                         onClick={() => handleEditCheckpoint(checkpoint)}
@@ -2838,36 +2838,36 @@ export default function AuditPage() {
                   employees={employees}
                 />
 
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-color)', marginBottom: '0.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-color)', marginBottom: '0.5rem' }}>
                     Avdeling
-                  </label>
+                    </label>
                   <select
                     value={newAudit.departmentId}
                     onChange={(e) => setNewAudit({ ...newAudit, departmentId: e.target.value })}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid var(--border-color)',
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid var(--border-color)',
                       background: 'var(--card-background)',
                       color: 'var(--text-color)',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem'
-                    }}
+                        borderRadius: '8px',
+                        fontSize: '0.875rem'
+                      }}
                   >
                     <option value="">Velg avdeling</option>
                     {departments.map(dept => (
                       <option key={dept.id} value={dept.id}>{dept.name}</option>
                     ))}
                   </select>
-                </div>
+                  </div>
 
                 {/* File Upload Section */}
-                <div>
-                  <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-color)', marginBottom: '0.5rem' }}>
+                  <div>
+                    <label style={{ display: 'block', fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-color)', marginBottom: '0.5rem' }}>
                     Vedlegg (Bilder, Video, Dokumenter)
-                  </label>
-                  <input
+                    </label>
+                    <input
                     type="file"
                     multiple
                     accept="image/*,video/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.csv"
@@ -2878,13 +2878,13 @@ export default function AuditPage() {
                         'audit-add': files
                       }));
                     }}
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid var(--border-color)',
+                      style={{
+                        width: '100%',
+                        padding: '0.75rem',
+                        border: '1px solid var(--border-color)',
                       background: 'var(--card-background)',
                       color: 'var(--text-color)',
-                      borderRadius: '8px',
+                        borderRadius: '8px',
                       fontSize: '0.875rem',
                       cursor: 'pointer'
                     }}
@@ -2924,7 +2924,7 @@ export default function AuditPage() {
                           >
                             <X size={14} />
                           </button>
-                        </div>
+                  </div>
                       ))}
                     </div>
                   )}
@@ -3160,11 +3160,11 @@ export default function AuditPage() {
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div style={{ fontSize: '0.875rem', fontWeight: '500', color: 'var(--text-color)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                                 {doc.fileName}
-                              </div>
+              </div>
                               {doc.description && (
                                 <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
                                   {doc.description}
-                                </div>
+            </div>
                               )}
                               <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
                                 {(doc.fileSize / 1024 / 1024).toFixed(2)} MB • {new Date(doc.uploadedAt).toLocaleDateString('no-NO')}

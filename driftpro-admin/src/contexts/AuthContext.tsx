@@ -193,83 +193,83 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       // Special handling for superadmin - check FIRST before anything else
       if (email === 'baxigshti@hotmail.de') {
-        console.log('Attempting superadmin login...');
-        const userCredential = await signInWithEmailAndPassword(auth, email, password);
-        const user = userCredential.user;
-        
-        // Create or update superadmin profile
-        const userRef = doc(db, 'users', user.uid);
-        const userDocSnap = await getDoc(userRef);
-        
-        if (!userDocSnap.exists()) {
-          // Create DriftPro main company if it doesn't exist
-          const companyRef = doc(db, 'companies', 'driftpro_main');
-          const companyDoc = await getDoc(companyRef);
+          console.log('Attempting superadmin login...');
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const user = userCredential.user;
           
-          if (!companyDoc.exists()) {
-            await setDoc(companyRef, {
-              id: 'driftpro_main',
-              name: 'DriftPro Administrasjon',
-              industry: 'Software',
-              employees: 1,
-              location: 'Norge',
-              phone: '+47 12345678',
-              email: 'admin@driftpro.no',
-              website: 'https://admin.driftpro.no',
+        // Create or update superadmin profile
+          const userRef = doc(db, 'users', user.uid);
+          const userDocSnap = await getDoc(userRef);
+          
+          if (!userDocSnap.exists()) {
+            // Create DriftPro main company if it doesn't exist
+            const companyRef = doc(db, 'companies', 'driftpro_main');
+            const companyDoc = await getDoc(companyRef);
+            
+            if (!companyDoc.exists()) {
+              await setDoc(companyRef, {
+                id: 'driftpro_main',
+                name: 'DriftPro Administrasjon',
+                industry: 'Software',
+                employees: 1,
+                location: 'Norge',
+                phone: '+47 12345678',
+                email: 'admin@driftpro.no',
+                website: 'https://admin.driftpro.no',
+                status: 'active',
+                joinedDate: new Date().toISOString(),
+                revenue: 'N/A',
+                description: 'Hovedadministrasjon for DriftPro systemet',
+                adminUserId: user.uid,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+                orgNumber: '123456789',
+                address: {
+                  street: 'DriftPro Gate 1',
+                  city: 'Oslo',
+                  postalCode: '0001',
+                  country: 'Norge'
+                },
+                contactPerson: {
+                  name: 'Super Administrator',
+                  email: email,
+                  phone: '+47 12345678',
+                  position: 'Super Administrator'
+                }
+              });
+            }
+            
+            // Create superadmin user profile
+            await setDoc(userRef, {
+              id: user.uid,
+            uid: user.uid, // Make sure uid is set
+              displayName: 'Super Administrator',
+              email: email,
+              role: 'super_admin',
+              companyId: 'driftpro_main',
               status: 'active',
-              joinedDate: new Date().toISOString(),
-              revenue: 'N/A',
-              description: 'Hovedadministrasjon for DriftPro systemet',
-              adminUserId: user.uid,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
-              orgNumber: '123456789',
-              address: {
-                street: 'DriftPro Gate 1',
-                city: 'Oslo',
-                postalCode: '0001',
-                country: 'Norge'
-              },
-              contactPerson: {
-                name: 'Super Administrator',
-                email: email,
-                phone: '+47 12345678',
-                position: 'Super Administrator'
-              }
+              hireDate: new Date().toISOString(),
+              position: 'Super Administrator',
+              departmentId: 'admin',
+              bio: 'Super Administrator for DriftPro systemet',
+              avatar: '',
+              phone: '',
+              address: '',
+              emergencyContact: '',
+              birthDate: '',
+              salary: 0,
+              managerId: '',
+              employeeNumber: 'SA001',
+              taxId: '',
+              bankAccount: '',
+              insuranceNumber: '',
+              skills: ['Administration', 'System Management', 'User Management'],
+              certifications: ['Super Admin Certification'],
+              education: 'System Administration',
+              workExperience: 'DriftPro Super Administrator'
             });
-          }
-          
-          // Create superadmin user profile
-          await setDoc(userRef, {
-            id: user.uid,
-            uid: user.uid, // Make sure uid is set
-            displayName: 'Super Administrator',
-            email: email,
-            role: 'super_admin',
-            companyId: 'driftpro_main',
-            status: 'active',
-            createdAt: new Date().toISOString(),
-            updatedAt: new Date().toISOString(),
-            hireDate: new Date().toISOString(),
-            position: 'Super Administrator',
-            departmentId: 'admin',
-            bio: 'Super Administrator for DriftPro systemet',
-            avatar: '',
-            phone: '',
-            address: '',
-            emergencyContact: '',
-            birthDate: '',
-            salary: 0,
-            managerId: '',
-            employeeNumber: 'SA001',
-            taxId: '',
-            bankAccount: '',
-            insuranceNumber: '',
-            skills: ['Administration', 'System Management', 'User Management'],
-            certifications: ['Super Admin Certification'],
-            education: 'System Administration',
-            workExperience: 'DriftPro Super Administrator'
-          });
         } else {
           // Update existing profile to ensure uid is set
           const existingData = userDocSnap.data();
@@ -280,9 +280,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               updatedAt: new Date().toISOString()
             });
           }
-        }
-        
-        return; // Superadmin login successful
+          }
+          
+          return; // Superadmin login successful
       }
       
       // For all other users, check if user exists and get their companyId
@@ -290,7 +290,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userSnapshot = await getDocs(usersQuery);
       
       if (userSnapshot.empty) {
-        throw new Error('Bruker ikke funnet. Kontakt administrator.');
+          throw new Error('Bruker ikke funnet. Kontakt administrator.');
       }
       
       const userDoc = userSnapshot.docs[0];
