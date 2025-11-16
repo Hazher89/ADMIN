@@ -255,3 +255,4 @@ await deleteObject(storageRef);
 **Oppdatert:** 2024  
 **Versjon:** 2.0
 
+
