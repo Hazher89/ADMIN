@@ -77,11 +77,13 @@ export default function SettingsPage() {
   const { userProfile, logout } = useAuth();
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [activeCategory, setActiveCategory] = useState('general');
   const [editingSetting, setEditingSetting] = useState<string | null>(null);
   const [tempValues, setTempValues] = useState<{[key: string]: string | number | boolean | null}>({});
   const [showAdvanced, setShowAdvanced] = useState(false);
+  const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   
   // Email-specific states
   const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
@@ -765,6 +767,13 @@ export default function SettingsPage() {
   };
 
   useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
     const loadSettings = async () => {
       console.log('🔧 Settings page: Loading settings...');
       
@@ -1103,129 +1112,303 @@ export default function SettingsPage() {
 
   return (
     <ErrorBoundary>
-      <div>
-      {/* Page Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card-icon">
-            <Settings />
-          </div>
-          <div>
-            <h1 className="page-title">⚙️ Systeminnstillinger</h1>
-            <p className="page-subtitle">
-              Kontroller alle aspekter av DriftPro-systemet
-            </p>
-          </div>
+      <div style={{ 
+        width: '100%',
+        overflowX: 'hidden',
+        padding: isMobile ? '0' : undefined
+      }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            ⚙️ Systeminnstillinger
+          </h1>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <span className="badge badge-primary">
-            {settings.length} innstillinger
-          </span>
-          <span className="badge badge-secondary">
-            {categories.length} kategorier
-          </span>
-          <button 
-            className="btn btn-secondary"
-            onClick={() => setShowAdvanced(!showAdvanced)}
-          >
-            {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
-            {showAdvanced ? 'Skjul avanserte' : 'Vis avanserte'}
-          </button>
-          <button 
-            className="btn btn-error"
-            onClick={async () => {
-              if (confirm('Er du sikker på at du vil logge ut?')) {
-                try {
-                  await logout();
-                  // Redirect to login page after successful logout
-                  window.location.href = '/login';
-                } catch (error) {
-                  console.error('Error during logout:', error);
-                  alert('Feil ved utlogging. Prøv igjen.');
-                }
-              }
-            }}
-            style={{ marginLeft: 'auto' }}
-          >
-            <LogOut size={16} />
-            Logg ut
-          </button>
-        </div>
-      </div>
+      )}
 
-      {/* Stats Grid */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-number">{settings.length}</div>
-          <div className="stat-label">Totalt innstillinger</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{settings.filter(s => s.value !== s.defaultValue).length}</div>
-          <div className="stat-label">Endret</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{categories.length}</div>
-          <div className="stat-label">Kategorier</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{new Date().toLocaleDateString('no-NO')}</div>
-          <div className="stat-label">Sist oppdatert</div>
-        </div>
-      </div>
-
-      <div style={{ display: 'flex', gap: '2rem', marginTop: '2rem' }}>
-        {/* Categories Sidebar */}
-        <div style={{ width: '250px', flexShrink: 0 }}>
-          <div className="card">
-            <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', fontWeight: '600' }}>
-              Kategorier
-            </h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <button
-                className={`btn ${activeCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
-                onClick={() => setActiveCategory('all')}
-                style={{ justifyContent: 'flex-start', textAlign: 'left' }}
-              >
-                <Settings size={16} />
-                Alle innstillinger
-              </button>
-              {categories.map(category => {
-                const IconComponent = category.icon;
-                const isAdvanced = category.id === 'advanced';
-                if (isAdvanced && !showAdvanced) return null;
-                
-                return (
-                  <button
-                    key={category.id}
-                    className={`btn ${activeCategory === category.id ? 'btn-primary' : 'btn-secondary'}`}
-                    onClick={() => setActiveCategory(category.id)}
-                    style={{ justifyContent: 'flex-start', textAlign: 'left' }}
-                  >
-                    <IconComponent size={16} />
-                    {category.name}
-                  </button>
-                );
-              })}
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="card-icon">
+              <Settings />
+            </div>
+            <div>
+              <h1 className="page-title">⚙️ Systeminnstillinger</h1>
+              <p className="page-subtitle">
+                Kontroller alle aspekter av DriftPro-systemet
+              </p>
             </div>
           </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <span className="badge badge-primary">
+              {settings.length} innstillinger
+            </span>
+            <span className="badge badge-secondary">
+              {categories.length} kategorier
+            </span>
+            <button 
+              className="btn btn-secondary"
+              onClick={() => setShowAdvanced(!showAdvanced)}
+            >
+              {showAdvanced ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+              {showAdvanced ? 'Skjul avanserte' : 'Vis avanserte'}
+            </button>
+            <button 
+              className="btn btn-error"
+              onClick={async () => {
+                if (confirm('Er du sikker på at du vil logge ut?')) {
+                  try {
+                    await logout();
+                    // Redirect to login page after successful logout
+                    window.location.href = '/login';
+                  } catch (error) {
+                    console.error('Error during logout:', error);
+                    alert('Feil ved utlogging. Prøv igjen.');
+                  }
+                }
+              }}
+              style={{ marginLeft: 'auto' }}
+            >
+              <LogOut size={16} />
+              Logg ut
+            </button>
+          </div>
         </div>
+      )}
+
+      {/* Stats Grid */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '0.625rem' : '1rem',
+        marginBottom: isMobile ? '0.75rem' : '2rem',
+        padding: isMobile ? '0 0.75rem' : undefined,
+        marginTop: isMobile ? '0' : '2rem'
+      }}>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+            {settings.length}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Totalt innstillinger
+          </div>
+        </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: '#f59e0b', marginBottom: '0.25rem' }}>
+            {settings.filter(s => s.value !== s.defaultValue).length}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Endret
+          </div>
+        </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+            {categories.length}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Kategorier
+          </div>
+        </div>
+        {!isMobile && (
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            textAlign: 'center'
+          }}>
+            <div style={{ fontSize: '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+              {new Date().toLocaleDateString('no-NO')}
+            </div>
+            <div style={{ fontSize: '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+              Sist oppdatert
+            </div>
+          </div>
+        )}
+      </div>
+
+      <div style={{ 
+        display: 'flex', 
+        gap: isMobile ? '0' : '2rem', 
+        marginTop: isMobile ? '0' : '2rem',
+        flexDirection: isMobile ? 'column' : 'row',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
+        {/* Categories Sidebar */}
+        {isMobile ? (
+          <div style={{ marginBottom: '0.75rem' }}>
+            <button
+              onClick={() => setShowCategoryMenu(!showCategoryMenu)}
+              className="btn btn-secondary"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                padding: '0.75rem 1rem',
+                minHeight: '44px'
+              }}
+            >
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Settings size={18} />
+                {categories.find(c => c.id === activeCategory)?.name || 'Alle innstillinger'}
+              </div>
+              {showCategoryMenu ? <ChevronUp size={18} /> : <ChevronDown size={18} />}
+            </button>
+            {showCategoryMenu && (
+              <div style={{
+                marginTop: '0.5rem',
+                borderRadius: '0.875rem',
+                padding: '0.75rem',
+                background: 'var(--card-background)',
+                border: '1px solid var(--border-color)',
+                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '0.5rem'
+              }}>
+                <button
+                  className={`btn ${activeCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => {
+                    setActiveCategory('all');
+                    setShowCategoryMenu(false);
+                  }}
+                  style={{ justifyContent: 'flex-start', textAlign: 'left', minHeight: '44px' }}
+                >
+                  <Settings size={16} />
+                  Alle innstillinger
+                </button>
+                {categories.map(category => {
+                  const IconComponent = category.icon;
+                  const isAdvanced = category.id === 'advanced';
+                  if (isAdvanced && !showAdvanced) return null;
+                  
+                  return (
+                    <button
+                      key={category.id}
+                      className={`btn ${activeCategory === category.id ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => {
+                        setActiveCategory(category.id);
+                        setShowCategoryMenu(false);
+                      }}
+                      style={{ justifyContent: 'flex-start', textAlign: 'left', minHeight: '44px' }}
+                    >
+                      <IconComponent size={16} />
+                      {category.name}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </div>
+        ) : (
+          <div style={{ width: '250px', flexShrink: 0 }}>
+            <div className="card">
+              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem', fontWeight: '600' }}>
+                Kategorier
+              </h3>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <button
+                  className={`btn ${activeCategory === 'all' ? 'btn-primary' : 'btn-secondary'}`}
+                  onClick={() => setActiveCategory('all')}
+                  style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+                >
+                  <Settings size={16} />
+                  Alle innstillinger
+                </button>
+                {categories.map(category => {
+                  const IconComponent = category.icon;
+                  const isAdvanced = category.id === 'advanced';
+                  if (isAdvanced && !showAdvanced) return null;
+                  
+                  return (
+                    <button
+                      key={category.id}
+                      className={`btn ${activeCategory === category.id ? 'btn-primary' : 'btn-secondary'}`}
+                      onClick={() => setActiveCategory(category.id)}
+                      style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+                    >
+                      <IconComponent size={16} />
+                      {category.name}
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Settings Content */}
-        <div style={{ flex: '1' }}>
+        <div style={{ flex: '1', width: isMobile ? '100%' : undefined }}>
           {/* Search */}
-          <div className="card" style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-              <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
-                <Search className="search-icon" />
-                <input
-                  type="text"
-                  placeholder="Søk i innstillinger..."
-                  className="search-input"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.75rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            marginBottom: isMobile ? '0.75rem' : '2rem'
+          }}>
+            <div style={{ position: 'relative' }}>
+              <Search style={{
+                position: 'absolute',
+                left: isMobile ? '0.875rem' : '12px',
+                top: '50%',
+                transform: 'translateY(-50%)',
+                color: 'var(--gray-400)',
+                width: isMobile ? '18px' : '16px',
+                height: isMobile ? '18px' : '16px'
+              }} />
+              <input
+                type="text"
+                placeholder="Søk i innstillinger..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+                  outline: 'none',
+                  fontSize: isMobile ? '16px' : undefined,
+                  background: 'var(--card-background)'
+                }}
+              />
             </div>
           </div>
 
