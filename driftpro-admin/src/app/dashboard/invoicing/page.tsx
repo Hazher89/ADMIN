@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   FileText, 
   Plus, 
@@ -19,6 +19,7 @@ import {
 } from 'lucide-react';
 
 export default function InvoicingPage() {
+  const [isMobile, setIsMobile] = useState(false);
   const [invoices, setInvoices] = useState([
     {
       id: 'INV-2024-001',
@@ -66,6 +67,13 @@ export default function InvoicingPage() {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterStatus, setFilterStatus] = useState('all');
 
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const filteredInvoices = invoices.filter(invoice => {
     const matchesSearch = invoice.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          invoice.customer.toLowerCase().includes(searchTerm.toLowerCase());
@@ -107,34 +115,155 @@ export default function InvoicingPage() {
   const outstandingAmount = totalAmount - paidAmount;
 
   return (
-    <div className="page-header">
-      <div className="flex items-center space-x-3">
-        <div className="card-icon">
-          <FileText className="w-6 h-6" />
+    <div style={{ 
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                margin: '0 0 0.125rem 0',
+                lineHeight: '1.3'
+              }}>
+                Fakturering
+              </h1>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--gray-500)',
+                margin: 0
+              }}>
+                {invoices.length} fakturaer
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              style={{
+                padding: '0.625rem',
+                borderRadius: '0.625rem',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
+            >
+              <Plus size={20} />
+            </button>
+          </div>
         </div>
-        <div>
-          <h1 className="page-title">Fakturering</h1>
-          <p className="page-subtitle">Administrer fakturaer og betalinger</p>
-        </div>
-      </div>
+      )}
 
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <Search className="w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Søk fakturaer..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div className="flex items-center space-x-3">
+            <div className="card-icon">
+              <FileText className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="page-title">Fakturering</h1>
+              <p className="page-subtitle">Administrer fakturaer og betalinger</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Search className="w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Søk fakturaer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <select 
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Alle status</option>
+                <option value="draft">Kladd</option>
+                <option value="sent">Sendt</option>
+                <option value="paid">Betalt</option>
+                <option value="overdue">Forfalt</option>
+              </select>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              Ny faktura
+            </button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Filter className="w-4 h-4 text-gray-500" />
+      )}
+
+      {/* Mobile Search and Filters */}
+      {isMobile && (
+        <div style={{
+          padding: '0 0.75rem 0.75rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem'
+        }}>
+          <div style={{ position: 'relative' }}>
+            <Search style={{
+              position: 'absolute',
+              left: '0.875rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--gray-400)',
+              width: '18px',
+              height: '18px'
+            }} />
+            <input
+              type="text"
+              placeholder="Søk fakturaer..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.875rem 0.875rem 0.875rem 2.75rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.5rem',
+                outline: 'none',
+                fontSize: '16px',
+                background: 'var(--card-background)'
+              }}
+            />
+          </div>
           <select 
             value={filterStatus}
             onChange={(e) => setFilterStatus(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+            style={{
+              width: '100%',
+              padding: '0.875rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: '0.5rem',
+              fontSize: '16px',
+              background: 'var(--card-background)',
+              minHeight: '44px'
+            }}
           >
             <option value="all">Alle status</option>
             <option value="draft">Kladd</option>
@@ -143,17 +272,17 @@ export default function InvoicingPage() {
             <option value="overdue">Forfalt</option>
           </select>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          Ny faktura
-        </button>
-      </div>
+      )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '0.625rem' : '1.5rem',
+        marginTop: isMobile ? '0' : '1.5rem',
+        marginBottom: isMobile ? '0.75rem' : '1.5rem',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
         <div className="card">
           <div className="flex items-center justify-between">
             <div>

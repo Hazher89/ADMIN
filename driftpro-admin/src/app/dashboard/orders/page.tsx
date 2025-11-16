@@ -46,6 +46,7 @@ export default function OrdersPage() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [showAddModal, setShowAddModal] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showLabelModal, setShowLabelModal] = useState(false);
   const [activeTab, setActiveTab] = useState('orders');
@@ -377,22 +378,85 @@ export default function OrdersPage() {
   ) || [];
 
   return (
-    <div style={{ background: 'var(--background-color)', minHeight: '100vh', padding: 'var(--space-6)' }}>
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card-icon">
-            <ShoppingCart />
-          </div>
-          <div>
-            <h1 className="page-title">Ordre</h1>
-            <p className="page-subtitle">Administrer ordre som skal planlegges for levering</p>
+    <div style={{ 
+      background: 'var(--background-color)', 
+      minHeight: '100vh', 
+      padding: isMobile ? '0' : 'var(--space-6)',
+      width: '100%',
+      overflowX: 'hidden'
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                margin: '0 0 0.125rem 0',
+                lineHeight: '1.3'
+              }}>
+                Ordre
+              </h1>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--gray-500)',
+                margin: 0
+              }}>
+                {orders?.length || 0} ordre
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              style={{
+                padding: '0.625rem',
+                borderRadius: '0.625rem',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
+            >
+              <Plus size={20} />
+            </button>
           </div>
         </div>
-      </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="card-icon">
+              <ShoppingCart />
+            </div>
+            <div>
+              <h1 className="page-title">Ordre</h1>
+              <p className="page-subtitle">Administrer ordre som skal planlegges for levering</p>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(250px, 1fr))', 
+        gap: isMobile ? '0.625rem' : 'var(--space-4)', 
+        marginBottom: isMobile ? '0.75rem' : 'var(--space-6)',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>

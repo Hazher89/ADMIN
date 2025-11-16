@@ -17,6 +17,14 @@ export default function InventoryPage() {
   const [suppliers, setSuppliers] = useState([]);
   const [orders, setOrders] = useState([]);
   const [isLoading, setIsLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     // Simulate loading data
@@ -35,22 +43,56 @@ export default function InventoryPage() {
   }
 
   return (
-    <div style={{ background: 'var(--background-color)', minHeight: '100vh', padding: 'var(--space-6)' }}>
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card-icon">
-            <Package />
-          </div>
-          <div>
-            <h1 className="page-title">Lager & Inventar</h1>
-            <p className="page-subtitle">Administrer produkter, lager og leverandører</p>
+    <div style={{ 
+      background: 'var(--background-color)', 
+      minHeight: '100vh', 
+      padding: isMobile ? '0' : 'var(--space-6)',
+      width: '100%',
+      overflowX: 'hidden'
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Lager & Inventar
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="card-icon">
+              <Package />
+            </div>
+            <div>
+              <h1 className="page-title">Lager & Inventar</h1>
+              <p className="page-subtitle">Administrer produkter, lager og leverandører</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(250px, 1fr))', 
+        gap: isMobile ? '0.625rem' : 'var(--space-4)', 
+        marginBottom: isMobile ? '0.75rem' : 'var(--space-6)',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
         <div className="card">
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>

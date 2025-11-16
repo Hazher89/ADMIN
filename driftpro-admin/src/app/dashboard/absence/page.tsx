@@ -624,24 +624,92 @@ export default function AbsencePage() {
   };
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 2rem' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--text-color)' }}>Fraværsmeldinger</h1>
-            <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>Administrer fraværsmeldinger i bedriften</p>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Fraværsmeldinger
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 2rem' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--text-color)' }}>Fraværsmeldinger</h1>
+              <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>Administrer fraværsmeldinger i bedriften</p>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              Ny fraværsmelding
+            </button>
           </div>
+        </div>
+      )}
+
+      {/* Mobile Action Buttons */}
+      {isMobile && (
+        <div style={{
+          padding: '0 0.75rem 0.75rem',
+          display: 'flex',
+          gap: '0.5rem'
+        }}>
+          <button
+            onClick={() => setShowRulesModal(true)}
+            className="btn btn-secondary"
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              minHeight: '44px'
+            }}
+          >
+            <Info size={18} />
+            Regler
+          </button>
           <button
             onClick={() => setShowAddModal(true)}
             className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              minHeight: '44px'
+            }}
           >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Ny fraværsmelding
+            <Plus size={18} />
+            Nytt fravær
           </button>
         </div>
-      </div>
+      )}
       
       {/* Lovdata-regelmodal */}
       {showRulesModal && (
