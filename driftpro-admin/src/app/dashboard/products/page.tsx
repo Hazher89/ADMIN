@@ -643,6 +643,7 @@ export default function ProductsPage() {
           </table>
         </div>
       </div>
+      )}
 
       {/* Add Product Modal */}
       {showAddModal && (
