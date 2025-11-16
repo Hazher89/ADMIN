@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Box, 
   Plus, 
@@ -20,6 +20,7 @@ import {
 } from 'lucide-react';
 
 export default function ProductsPage() {
+  const [isMobile, setIsMobile] = useState(false);
   const [products, setProducts] = useState([
     {
       id: 'PROD-001',
@@ -84,6 +85,13 @@ export default function ProductsPage() {
   const [filterCategory, setFilterCategory] = useState('all');
   const [filterStatus, setFilterStatus] = useState('all');
 
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
   const filteredProducts = products.filter(product => {
     const matchesSearch = product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          product.sku.toLowerCase().includes(searchTerm.toLowerCase());
@@ -127,124 +135,448 @@ export default function ProductsPage() {
   const totalValue = products.reduce((sum, product) => sum + (product.stock * product.cost), 0);
 
   return (
-    <div className="page-header">
-      <div className="flex items-center space-x-3">
-        <div className="card-icon">
-          <Box className="w-6 h-6" />
+    <div style={{ 
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                margin: '0 0 0.125rem 0',
+                lineHeight: '1.3'
+              }}>
+                Produkter
+              </h1>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--gray-500)',
+                margin: 0
+              }}>
+                {products.length} produkter
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              style={{
+                padding: '0.625rem',
+                borderRadius: '0.625rem',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
+            >
+              <Plus size={20} />
+            </button>
+          </div>
         </div>
-        <div>
-          <h1 className="page-title">Produkter</h1>
-          <p className="page-subtitle">Administrer produktkatalog og lagerbeholdning</p>
-        </div>
-      </div>
+      )}
 
-      <div className="flex items-center space-x-4">
-        <div className="flex items-center space-x-2">
-          <Search className="w-4 h-4 text-gray-500" />
-          <input
-            type="text"
-            placeholder="Søk produkter..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          />
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div className="flex items-center space-x-3">
+            <div className="card-icon">
+              <Box className="w-6 h-6" />
+            </div>
+            <div>
+              <h1 className="page-title">Produkter</h1>
+              <p className="page-subtitle">Administrer produktkatalog og lagerbeholdning</p>
+            </div>
+          </div>
+
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Search className="w-4 h-4 text-gray-500" />
+              <input
+                type="text"
+                placeholder="Søk produkter..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              />
+            </div>
+            <div className="flex items-center space-x-2">
+              <Filter className="w-4 h-4 text-gray-500" />
+              <select 
+                value={filterCategory}
+                onChange={(e) => setFilterCategory(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Alle kategorier</option>
+                <option value="Elektronikk">Elektronikk</option>
+                <option value="Møbler">Møbler</option>
+                <option value="Kontorartikler">Kontorartikler</option>
+                <option value="Annet">Annet</option>
+              </select>
+              <select 
+                value={filterStatus}
+                onChange={(e) => setFilterStatus(e.target.value)}
+                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+              >
+                <option value="all">Alle status</option>
+                <option value="active">Aktiv</option>
+                <option value="low_stock">Lavt lager</option>
+                <option value="out_of_stock">Utsolgt</option>
+                <option value="inactive">Inaktiv</option>
+              </select>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary"
+            >
+              <Plus className="w-4 h-4" />
+              Nytt produkt
+            </button>
+          </div>
         </div>
-        <div className="flex items-center space-x-2">
-          <Filter className="w-4 h-4 text-gray-500" />
-          <select 
-            value={filterCategory}
-            onChange={(e) => setFilterCategory(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">Alle kategorier</option>
-            <option value="Elektronikk">Elektronikk</option>
-            <option value="Møbler">Møbler</option>
-            <option value="Kontorartikler">Kontorartikler</option>
-            <option value="Annet">Annet</option>
-          </select>
-          <select 
-            value={filterStatus}
-            onChange={(e) => setFilterStatus(e.target.value)}
-            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-          >
-            <option value="all">Alle status</option>
-            <option value="active">Aktiv</option>
-            <option value="low_stock">Lavt lager</option>
-            <option value="out_of_stock">Utsolgt</option>
-            <option value="inactive">Inaktiv</option>
-          </select>
+      )}
+
+      {/* Mobile Search and Filters */}
+      {isMobile && (
+        <div style={{
+          padding: '0 0.75rem 0.75rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem'
+        }}>
+          <div style={{ position: 'relative' }}>
+            <Search style={{
+              position: 'absolute',
+              left: '0.875rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--gray-400)',
+              width: '18px',
+              height: '18px'
+            }} />
+            <input
+              type="text"
+              placeholder="Søk produkter..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: '0.875rem 0.875rem 0.875rem 2.75rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.5rem',
+                outline: 'none',
+                fontSize: '16px',
+                background: 'var(--card-background)'
+              }}
+            />
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <select 
+              value={filterCategory}
+              onChange={(e) => setFilterCategory(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '0.875rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.5rem',
+                fontSize: '16px',
+                background: 'var(--card-background)',
+                minHeight: '44px'
+              }}
+            >
+              <option value="all">Alle kategorier</option>
+              <option value="Elektronikk">Elektronikk</option>
+              <option value="Møbler">Møbler</option>
+              <option value="Kontorartikler">Kontorartikler</option>
+              <option value="Annet">Annet</option>
+            </select>
+            <select 
+              value={filterStatus}
+              onChange={(e) => setFilterStatus(e.target.value)}
+              style={{
+                flex: 1,
+                padding: '0.875rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: '0.5rem',
+                fontSize: '16px',
+                background: 'var(--card-background)',
+                minHeight: '44px'
+              }}
+            >
+              <option value="all">Alle status</option>
+              <option value="active">Aktiv</option>
+              <option value="low_stock">Lavt lager</option>
+              <option value="out_of_stock">Utsolgt</option>
+              <option value="inactive">Inaktiv</option>
+            </select>
+          </div>
         </div>
-        <button 
-          onClick={() => setShowAddModal(true)}
-          className="btn btn-primary"
-        >
-          <Plus className="w-4 h-4" />
-          Nytt produkt
-        </button>
-      </div>
+      )}
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mt-6">
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Totalt produkter</p>
-              <p className="text-2xl font-bold text-gray-900">{totalProducts}</p>
-            </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <Package className="w-6 h-6 text-blue-600" />
-            </div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(5, 1fr)',
+        gap: isMobile ? '0.625rem' : '1.5rem',
+        marginTop: isMobile ? '0' : '1.5rem',
+        marginBottom: isMobile ? '0.75rem' : '1.5rem',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: isMobile ? '0.75rem' : '1rem'
+        }}>
+          <div style={{ 
+            padding: isMobile ? '0.625rem' : '0.75rem', 
+            background: 'rgba(59, 130, 246, 0.1)', 
+            borderRadius: '0.625rem',
+            flexShrink: 0
+          }}>
+            <Package size={isMobile ? 20 : 24} style={{ color: '#3b82f6' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ 
+              fontSize: isMobile ? '0.75rem' : '0.875rem', 
+              fontWeight: 500, 
+              color: 'var(--gray-500)',
+              margin: 0,
+              marginBottom: '0.25rem'
+            }}>Totalt produkter</p>
+            <p style={{ 
+              fontSize: isMobile ? '1.5rem' : '1.5rem', 
+              fontWeight: 700, 
+              color: 'var(--text-color)',
+              margin: 0
+            }}>{totalProducts}</p>
           </div>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Aktive</p>
-              <p className="text-2xl font-bold text-green-600">{activeProducts}</p>
-            </div>
-            <div className="p-3 bg-green-100 rounded-lg">
-              <Check className="w-6 h-6 text-green-600" />
-            </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: isMobile ? '0.75rem' : '1rem'
+        }}>
+          <div style={{ 
+            padding: isMobile ? '0.625rem' : '0.75rem', 
+            background: 'rgba(34, 197, 94, 0.1)', 
+            borderRadius: '0.625rem',
+            flexShrink: 0
+          }}>
+            <Check size={isMobile ? 20 : 24} style={{ color: '#22c55e' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ 
+              fontSize: isMobile ? '0.75rem' : '0.875rem', 
+              fontWeight: 500, 
+              color: 'var(--gray-500)',
+              margin: 0,
+              marginBottom: '0.25rem'
+            }}>Aktive</p>
+            <p style={{ 
+              fontSize: isMobile ? '1.5rem' : '1.5rem', 
+              fontWeight: 700, 
+              color: '#22c55e',
+              margin: 0
+            }}>{activeProducts}</p>
           </div>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Lavt lager</p>
-              <p className="text-2xl font-bold text-yellow-600">{lowStockProducts}</p>
-            </div>
-            <div className="p-3 bg-yellow-100 rounded-lg">
-              <AlertTriangle className="w-6 h-6 text-yellow-600" />
-            </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: isMobile ? '0.75rem' : '1rem'
+        }}>
+          <div style={{ 
+            padding: isMobile ? '0.625rem' : '0.75rem', 
+            background: 'rgba(245, 158, 11, 0.1)', 
+            borderRadius: '0.625rem',
+            flexShrink: 0
+          }}>
+            <AlertTriangle size={isMobile ? 20 : 24} style={{ color: '#f59e0b' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ 
+              fontSize: isMobile ? '0.75rem' : '0.875rem', 
+              fontWeight: 500, 
+              color: 'var(--gray-500)',
+              margin: 0,
+              marginBottom: '0.25rem'
+            }}>Lavt lager</p>
+            <p style={{ 
+              fontSize: isMobile ? '1.5rem' : '1.5rem', 
+              fontWeight: 700, 
+              color: '#f59e0b',
+              margin: 0
+            }}>{lowStockProducts}</p>
           </div>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Utsolgt</p>
-              <p className="text-2xl font-bold text-red-600">{outOfStockProducts}</p>
-            </div>
-            <div className="p-3 bg-red-100 rounded-lg">
-              <AlertTriangle className="w-6 h-6 text-red-600" />
-            </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          alignItems: 'center',
+          gap: isMobile ? '0.75rem' : '1rem'
+        }}>
+          <div style={{ 
+            padding: isMobile ? '0.625rem' : '0.75rem', 
+            background: 'rgba(239, 68, 68, 0.1)', 
+            borderRadius: '0.625rem',
+            flexShrink: 0
+          }}>
+            <AlertTriangle size={isMobile ? 20 : 24} style={{ color: '#ef4444' }} />
+          </div>
+          <div style={{ flex: 1, minWidth: 0 }}>
+            <p style={{ 
+              fontSize: isMobile ? '0.75rem' : '0.875rem', 
+              fontWeight: 500, 
+              color: 'var(--gray-500)',
+              margin: 0,
+              marginBottom: '0.25rem'
+            }}>Utsolgt</p>
+            <p style={{ 
+              fontSize: isMobile ? '1.5rem' : '1.5rem', 
+              fontWeight: 700, 
+              color: '#ef4444',
+              margin: 0
+            }}>{outOfStockProducts}</p>
           </div>
         </div>
-        <div className="card">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm font-medium text-gray-600">Lagerverdi</p>
-              <p className="text-2xl font-bold text-blue-600">{formatCurrency(totalValue)}</p>
+        {!isMobile && (
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '1rem'
+          }}>
+            <div style={{ 
+              padding: '0.75rem', 
+              background: 'rgba(59, 130, 246, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <DollarSign size={24} style={{ color: '#3b82f6' }} />
             </div>
-            <div className="p-3 bg-blue-100 rounded-lg">
-              <DollarSign className="w-6 h-6 text-blue-600" />
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                fontSize: '0.875rem', 
+                fontWeight: 500, 
+                color: 'var(--gray-500)',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Lagerverdi</p>
+              <p style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: 700, 
+                color: '#3b82f6',
+                margin: 0
+              }}>{formatCurrency(totalValue)}</p>
             </div>
           </div>
-        </div>
+        )}
       </div>
 
-      <div className="card mt-6">
-        <div className="overflow-x-auto">
-          <table className="w-full">
+      {isMobile ? (
+        <div style={{ padding: '0 0.75rem', display: 'flex', flexDirection: 'column', gap: '0.625rem' }}>
+          {filteredProducts.map((product) => (
+            <div key={product.id} style={{
+              borderRadius: '0.875rem',
+              padding: '1rem',
+              background: 'var(--card-background)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                <div style={{ flex: 1 }}>
+                  <h3 style={{ 
+                    fontSize: '0.9375rem', 
+                    fontWeight: 600, 
+                    color: 'var(--text-color)',
+                    margin: '0 0 0.25rem 0'
+                  }}>
+                    {product.name}
+                  </h3>
+                  <p style={{ 
+                    fontSize: '0.8125rem', 
+                    color: 'var(--gray-500)',
+                    margin: 0
+                  }}>
+                    {product.sku}
+                  </p>
+                </div>
+                <span style={{
+                  padding: '0.25rem 0.625rem',
+                  borderRadius: '0.375rem',
+                  fontSize: '0.75rem',
+                  fontWeight: 500,
+                  ...(getStatusColor(product.status).includes('green') ? { background: 'rgba(34, 197, 94, 0.1)', color: '#22c55e' } :
+                      getStatusColor(product.status).includes('yellow') ? { background: 'rgba(245, 158, 11, 0.1)', color: '#f59e0b' } :
+                      getStatusColor(product.status).includes('red') ? { background: 'rgba(239, 68, 68, 0.1)', color: '#ef4444' } :
+                      { background: 'rgba(107, 114, 128, 0.1)', color: '#6b7280' })
+                }}>
+                  {getStatusText(product.status)}
+                </span>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '0.5rem', fontSize: '0.8125rem', color: 'var(--gray-600)' }}>
+                <div>
+                  <span style={{ color: 'var(--gray-500)' }}>Kategori: </span>
+                  {product.category}
+                </div>
+                <div>
+                  <span style={{ color: 'var(--gray-500)' }}>Lager: </span>
+                  {product.stock}
+                </div>
+                <div>
+                  <span style={{ color: 'var(--gray-500)' }}>Pris: </span>
+                  {formatCurrency(product.price)}
+                </div>
+                <div>
+                  <span style={{ color: 'var(--gray-500)' }}>Leverandør: </span>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', display: 'block' }}>
+                    {product.supplier}
+                  </span>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="card mt-6">
+          <div className="overflow-x-auto">
+            <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Produkt</th>

@@ -14,9 +14,17 @@ export default function TimeclockPage() {
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [selectedDepartment, setSelectedDepartment] = useState('all');
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (userProfile?.companyId) {
@@ -181,33 +189,166 @@ export default function TimeclockPage() {
   }
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header">
-        <h1 className="page-title">⏰ Stempleklokke</h1>
-        <p className="page-subtitle">
-          Oversikt over inn- og utstemplinger for alle ansatte
-        </p>
+    <div style={{ 
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            ⏰ Stempleklokke
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <h1 className="page-title">⏰ Stempleklokke</h1>
+          <p className="page-subtitle">
+            Oversikt over inn- og utstemplinger for alle ansatte
+          </p>
+        </div>
+      )}
+
+      {/* Statistics Section */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '0.625rem' : '1rem',
+        marginBottom: isMobile ? '0.75rem' : '2rem',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+            {stats.total}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            TOTALT
+          </div>
+        </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: '#10b981', marginBottom: '0.25rem' }}>
+            {stats.active}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            AKTIVE
+          </div>
+        </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+            {stats.today}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            I DAG
+          </div>
+        </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.25rem' }}>
+            {stats.totalHours.toFixed(1)}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            TIMER
+          </div>
+        </div>
       </div>
 
       {/* Filters and Search */}
-      <div className="filters-section">
-        <div className="search-filter">
-          <Search style={{ width: '20px', height: '20px', color: '#6b7280' }} />
-          <input
-            type="text"
-            placeholder="Søk i stempleoppføringer..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
-          />
-        </div>
+      <div style={{
+        padding: isMobile ? '0 0.75rem' : undefined,
+        marginBottom: isMobile ? '0.75rem' : '2rem'
+      }}>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.75rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          gap: isMobile ? '0.5rem' : '1rem',
+          alignItems: isMobile ? 'stretch' : 'center'
+        }}>
+          <div style={{ position: 'relative', flex: isMobile ? 'none' : 1, width: isMobile ? '100%' : undefined }}>
+            <Search style={{
+              position: 'absolute',
+              left: isMobile ? '0.875rem' : '12px',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--gray-400)',
+              width: isMobile ? '18px' : '20px',
+              height: isMobile ? '18px' : '20px'
+            }} />
+            <input
+              type="text"
+              placeholder="Søk i stempleoppføringer..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              style={{
+                width: '100%',
+                padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
+                border: '1px solid var(--border-color)',
+                borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+                outline: 'none',
+                fontSize: isMobile ? '16px' : undefined,
+                background: 'var(--card-background)'
+              }}
+            />
+          </div>
 
-        <div className="filter-controls">
           <select
             value={selectedStatus}
             onChange={(e) => setSelectedStatus(e.target.value)}
-            className="filter-select"
+            style={{
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? '0.875rem' : '0.75rem 1rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              fontSize: isMobile ? '16px' : undefined,
+              background: 'var(--card-background)',
+              minHeight: isMobile ? '44px' : undefined
+            }}
           >
             {statuses.map(status => (
               <option key={status} value={status}>
@@ -219,7 +360,15 @@ export default function TimeclockPage() {
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="filter-select"
+            style={{
+              width: isMobile ? '100%' : 'auto',
+              padding: isMobile ? '0.875rem' : '0.75rem 1rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              fontSize: isMobile ? '16px' : undefined,
+              background: 'var(--card-background)',
+              minHeight: isMobile ? '44px' : undefined
+            }}
           >
             {departmentIds.map(deptId => (
               <option key={deptId} value={deptId}>
@@ -229,31 +378,31 @@ export default function TimeclockPage() {
             ))}
           </select>
 
-          <button className="btn btn-primary">
-            <Plus style={{ width: '16px', height: '16px' }} />
+          {!isMobile && (
+            <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
+              <Plus style={{ width: '16px', height: '16px' }} />
+              Ny stempleoppføring
+            </button>
+          )}
+        </div>
+
+        {isMobile && (
+          <button 
+            className="btn btn-primary"
+            style={{
+              width: '100%',
+              marginTop: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              minHeight: '44px'
+            }}
+          >
+            <Plus size={18} />
             Ny stempleoppføring
           </button>
-        </div>
-      </div>
-
-      {/* Statistics Section */}
-      <div className="stats-section">
-        <div className="stat-item">
-          <div className="stat-number">{stats.total}</div>
-          <div className="stat-label">TOTALT</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.active}</div>
-          <div className="stat-label">AKTIVE</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.today}</div>
-          <div className="stat-label">I DAG</div>
-        </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.totalHours.toFixed(1)}</div>
-          <div className="stat-label">TIMER</div>
-        </div>
+        )}
       </div>
 
       {/* Time Entries Grid */}
