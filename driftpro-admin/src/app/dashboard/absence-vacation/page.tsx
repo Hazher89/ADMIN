@@ -427,7 +427,8 @@ export default function AbsenceVacationPage() {
             Registrer {activeTab === 'absence' ? 'fravær' : 'ferie'}
           </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Success/Error Messages */}
       {success && (

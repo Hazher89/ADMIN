@@ -53,6 +53,7 @@ interface Assignment {
 
 export default function PartnerAssignmentsPage() {
   const { userProfile } = useAuth();
+  const [isMobile, setIsMobile] = useState(false);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [partnerUsers, setPartnerUsers] = useState<PartnerUser[]>([]);
   const [assignments, setAssignments] = useState<Assignment[]>([]);
@@ -70,6 +71,13 @@ export default function PartnerAssignmentsPage() {
     endTime: '',
     assignedBy: userProfile?.displayName || 'Admin'
   });
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (userProfile?.companyId) {
@@ -162,20 +170,75 @@ export default function PartnerAssignmentsPage() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold text-gray-900">Partner Oppdrag</h1>
-          <p className="text-gray-600 mt-2">Administrer og tildel oppdrag til partnere</p>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Partner Oppdrag
+          </h1>
         </div>
-        <button
-          onClick={() => setShowCreateModal(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
-        >
-          <Plus className="w-5 h-5" />
-          Nytt Oppdrag
-        </button>
-      </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex justify-between items-center mb-8">
+            <div>
+              <h1 className="text-3xl font-bold text-gray-900">Partner Oppdrag</h1>
+              <p className="text-gray-600 mt-2">Administrer og tildel oppdrag til partnere</p>
+            </div>
+            <button
+              onClick={() => setShowCreateModal(true)}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+            >
+              <Plus className="w-5 h-5" />
+              Nytt Oppdrag
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Action Button */}
+      {isMobile && (
+        <div style={{ padding: '0 0.75rem 0.75rem' }}>
+          <button
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-primary"
+            style={{
+              width: '100%',
+              minHeight: '44px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Plus size={18} />
+            Nytt Oppdrag
+          </button>
+        </div>
+      )}
+
+      {!isMobile && (
+        <div className="container mx-auto px-4">
 
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
