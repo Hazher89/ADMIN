@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService } from '@/lib/firebase-services';
+import { firebaseService, createUserAccessContext } from '@/lib/firebase-services';
 import { 
   Calendar, 
   Plus, 
@@ -129,9 +129,10 @@ export default function AbsenceVacationPage() {
     try {
       setError(null);
       
-      // Load absences and vacations from Firebase
-      const absencesData = await firebaseService.getAbsences(userProfile.companyId);
-      const vacationsData = await firebaseService.getVacations(userProfile.companyId);
+      // Load absences and vacations from Firebase with GDPR filtering
+      const userContext = createUserAccessContext(userProfile);
+      const absencesData = await firebaseService.getAbsences(userProfile.companyId, userContext);
+      const vacationsData = await firebaseService.getVacations(userProfile.companyId, userContext);
       
       setAbsences(absencesData);
       setVacations(vacationsData);

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService, Deviation as FirestoreDeviation, Employee, Department } from '@/lib/firebase-services';
+import { firebaseService, Deviation as FirestoreDeviation, Employee, Department, createUserAccessContext } from '@/lib/firebase-services';
 import { 
   AlertTriangle, 
   Plus, 
@@ -152,8 +152,9 @@ export default function HMSPage() {
     }
 
     try {
-      // Load real data from Firebase
-      const deviationsData = await firebaseService.getDeviations(userProfile.companyId);
+      // Load real data from Firebase with GDPR filtering
+      const userContext = createUserAccessContext(userProfile);
+      const deviationsData = await firebaseService.getDeviations(userProfile.companyId, userContext || undefined);
       setDeviations(deviationsData);
     } catch (error) {
       console.error('Error loading deviations:', error);
@@ -167,7 +168,8 @@ export default function HMSPage() {
     if (!userProfile?.companyId) return;
 
     try {
-      const data = await firebaseService.getEmployees(userProfile.companyId);
+      const userContext = createUserAccessContext(userProfile);
+      const data = await firebaseService.getEmployees(userProfile.companyId, userContext || undefined);
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -431,9 +433,9 @@ export default function HMSPage() {
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
       {/* Mobile Header */}
       {isMobile && (
-        <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1rem' }}>
+        <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1rem' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <h1 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)' }}>HMS</h1>
+            <h1 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)' }}>HMS</h1>
             <button
               onClick={() => setShowRiskAssessmentModal(true)}
               style={{ background: 'var(--primary)', color: 'var(--white)', padding: '0.5rem', borderRadius: 'var(--radius-lg)', border: 'none', cursor: 'pointer' }}

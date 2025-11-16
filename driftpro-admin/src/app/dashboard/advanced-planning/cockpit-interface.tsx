@@ -206,32 +206,32 @@ export default function CockpitInterface({
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {
-      case 'urgent': return { bg: '#fee2e2', text: '#991b1b', border: '#fca5a5' };
-      case 'high': return { bg: '#fed7aa', text: '#9a3412', border: '#fdba74' };
-      case 'medium': return { bg: '#dbeafe', text: '#1e40af', border: '#93c5fd' };
-      case 'low': return { bg: '#f3f4f6', text: '#4b5563', border: '#d1d5db' };
-      default: return { bg: '#f3f4f6', text: '#4b5563', border: '#d1d5db' };
+      case 'urgent': return { bg: 'rgba(239, 68, 68, 0.2)', text: 'var(--danger)', border: 'var(--danger)' };
+      case 'high': return { bg: 'rgba(245, 158, 11, 0.2)', text: 'var(--warning)', border: 'var(--warning)' };
+      case 'medium': return { bg: 'rgba(6, 182, 212, 0.2)', text: 'var(--primary)', border: 'var(--primary)' };
+      case 'low': return { bg: 'var(--gray-100)', text: 'var(--gray-600)', border: 'var(--border-color)' };
+      default: return { bg: 'var(--gray-100)', text: 'var(--gray-600)', border: 'var(--border-color)' };
     }
   };
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'planned': return { bg: '#dbeafe', text: '#1e40af' };
-      case 'released': return { bg: '#d1fae5', text: '#065f46' };
-      case 'in_progress': return { bg: '#fef3c7', text: '#92400e' };
-      case 'completed': return { bg: '#d1fae5', text: '#065f46' };
-      default: return { bg: '#f3f4f6', text: '#4b5563' };
+      case 'planned': return { bg: 'rgba(6, 182, 212, 0.2)', text: 'var(--primary)' };
+      case 'released': return { bg: 'rgba(16, 185, 129, 0.2)', text: 'var(--success)' };
+      case 'in_progress': return { bg: 'rgba(245, 158, 11, 0.2)', text: 'var(--warning)' };
+      case 'completed': return { bg: 'rgba(16, 185, 129, 0.2)', text: 'var(--success)' };
+      default: return { bg: 'var(--gray-100)', text: 'var(--gray-600)' };
     }
   };
 
   return (
     <div style={{
       position: 'fixed',
-      top: 0,
-      left: '80px',
+      top: 0, // Full screen when Topbar is hidden
+      left: 0, // Full screen when Sidebar is hidden
       right: 0,
       bottom: 0,
-      backgroundColor: '#f1f5f9',
+      backgroundColor: 'var(--background-color)',
       fontFamily: '"Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif',
       fontSize: '13px',
       zIndex: 50,
@@ -242,8 +242,8 @@ export default function CockpitInterface({
       
       {/* ========== PREMIUM HEADER ========== */}
       <div style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '2px solid #e2e8f0',
+        backgroundColor: 'var(--card-background)',
+        borderBottom: '2px solid var(--border-color)',
         padding: '12px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -253,8 +253,8 @@ export default function CockpitInterface({
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '20px' }}>
           <div style={{
-            background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-            color: 'white',
+            background: 'var(--gradient-primary)',
+            color: 'var(--text-color)',
             padding: '8px 16px',
             borderRadius: '8px',
             fontWeight: '700',
@@ -268,10 +268,10 @@ export default function CockpitInterface({
             TRANSPORTATION COCKPIT
           </div>
           <div>
-            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: '#0f172a', letterSpacing: '-0.02em' }}>
+            <h1 style={{ margin: 0, fontSize: '20px', fontWeight: '700', color: 'var(--text-color)', letterSpacing: '-0.02em' }}>
               DriftPro Logistics Control Center
             </h1>
-            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: '#64748b', fontWeight: '500' }}>
+            <p style={{ margin: '2px 0 0 0', fontSize: '12px', color: 'var(--gray-500)', fontWeight: '500' }}>
               Real-time planning & optimization • {new Date().toLocaleDateString('no-NO', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
             </p>
           </div>
@@ -284,8 +284,8 @@ export default function CockpitInterface({
             alignItems: 'center', 
             gap: '8px', 
             fontSize: '12px', 
-            color: '#059669',
-            backgroundColor: '#d1fae5',
+            color: 'var(--success)',
+            backgroundColor: 'rgba(16, 185, 129, 0.2)',
             padding: '6px 12px',
             borderRadius: '6px',
             fontWeight: '600'
@@ -293,7 +293,7 @@ export default function CockpitInterface({
             <div style={{ 
               width: '8px', 
               height: '8px', 
-              backgroundColor: '#10b981', 
+              backgroundColor: 'var(--success)', 
               borderRadius: '50%',
               animation: 'pulse 2s infinite'
             }}></div>
@@ -307,8 +307,8 @@ export default function CockpitInterface({
                 onClick={onSaveLayout}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#10b981',
-                  color: 'white',
+                  backgroundColor: 'var(--success)',
+                  color: 'var(--text-color)',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '13px',
@@ -321,12 +321,12 @@ export default function CockpitInterface({
                   transition: 'all 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#059669';
+                  e.currentTarget.style.backgroundColor = 'var(--success)';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.backgroundColor = '#10b981';
+                  e.currentTarget.style.backgroundColor = 'var(--success)';
                   e.currentTarget.style.transform = 'translateY(0)';
                   e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
                 }}
@@ -338,8 +338,8 @@ export default function CockpitInterface({
                 onClick={onCancelEdit}
                 style={{
                   padding: '8px 16px',
-                  backgroundColor: '#ef4444',
-                  color: 'white',
+                  backgroundColor: 'var(--danger)',
+                  color: 'var(--text-color)',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '13px',
@@ -352,7 +352,7 @@ export default function CockpitInterface({
                   transition: 'all 0.2s ease'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.backgroundColor = '#dc2626';
+                  e.currentTarget.style.backgroundColor = '#f87171';
                   e.currentTarget.style.transform = 'translateY(-1px)';
                   e.currentTarget.style.boxShadow = '0 4px 12px rgba(239, 68, 68, 0.4)';
                 }}
@@ -372,9 +372,9 @@ export default function CockpitInterface({
             onClick={onOpenSettings}
             style={{
               padding: '8px 14px',
-              backgroundColor: '#f8fafc',
-              color: '#64748b',
-              border: '1px solid #e2e8f0',
+              backgroundColor: 'var(--gray-50)',
+              color: 'var(--gray-500)',
+              border: '1px solid var(--border-color)',
               borderRadius: '8px',
               fontSize: '13px',
               fontWeight: '500',
@@ -392,7 +392,7 @@ export default function CockpitInterface({
             style={{
               padding: '8px 14px',
               backgroundColor: '#ef4444',
-              color: 'white',
+              color: 'var(--text-color)',
               border: 'none',
               borderRadius: '8px',
               fontSize: '13px',
@@ -411,31 +411,31 @@ export default function CockpitInterface({
 
       {/* ========== KPI DASHBOARD ========== */}
       <div style={{
-        backgroundColor: 'linear-gradient(135deg, #1e293b 0%, #334155 100%)',
+        backgroundColor: 'var(--gray-200)',
         padding: '16px 24px',
-        borderBottom: '1px solid #e2e8f0',
+        borderBottom: '1px solid var(--border-color)',
         display: 'grid',
         gridTemplateColumns: 'repeat(6, 1fr)',
         gap: '12px',
         boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
       }}>
         {[
-          { label: 'Totalt FU', value: freightUnits.length, icon: Package, color: '#3b82f6', bg: '#dbeafe' },
-          { label: 'Ikke tildelt', value: freightUnits.filter(fu => fu.status === 'unassigned').length, icon: AlertTriangle, color: '#ef4444', bg: '#fee2e2' },
-          { label: 'Aktive FO', value: freightOrders.length, icon: Route, color: '#10b981', bg: '#d1fae5' },
-          { label: 'Total vekt', value: `${freightUnits.reduce((s, fu) => s + fu.weight, 0)}kg`, icon: Weight, color: '#8b5cf6', bg: '#f3e8ff' },
-          { label: 'Inntekt', value: `${freightUnits.reduce((s, fu) => s + fu.price, 0)},-`, icon: TrendingUp, color: '#059669', bg: '#d1fae5' },
-          { label: 'Kostnad', value: `${freightOrders.reduce((s, fo) => s + fo.cost, 0).toFixed(0)},-`, icon: BarChart3, color: '#dc2626', bg: '#fee2e2' }
+          { label: 'Totalt FU', value: freightUnits.length, icon: Package, color: 'var(--primary)', bg: 'rgba(6, 182, 212, 0.2)' },
+          { label: 'Ikke tildelt', value: freightUnits.filter(fu => fu.status === 'unassigned').length, icon: AlertTriangle, color: 'var(--danger)', bg: 'rgba(239, 68, 68, 0.2)' },
+          { label: 'Aktive FO', value: freightOrders.length, icon: Route, color: 'var(--success)', bg: 'rgba(16, 185, 129, 0.2)' },
+          { label: 'Total vekt', value: `${freightUnits.reduce((s, fu) => s + fu.weight, 0)}kg`, icon: Weight, color: 'var(--primary)', bg: 'rgba(139, 92, 246, 0.2)' },
+          { label: 'Inntekt', value: `${freightUnits.reduce((s, fu) => s + fu.price, 0)},-`, icon: TrendingUp, color: 'var(--success)', bg: 'rgba(16, 185, 129, 0.2)' },
+          { label: 'Kostnad', value: `${(freightOrders.reduce((s, fo) => s + (fo.cost || 0), 0) || 0).toFixed(0)},-`, icon: BarChart3, color: 'var(--danger)', bg: 'rgba(239, 68, 68, 0.2)' }
         ].map((kpi, idx) => (
           <div key={idx} style={{
-            backgroundColor: '#ffffff',
+            backgroundColor: 'var(--card-background)',
             borderRadius: '10px',
             padding: '12px',
             display: 'flex',
             flexDirection: 'column',
             gap: '6px',
             boxShadow: '0 1px 3px rgba(0,0,0,0.08)',
-            border: '1px solid #f1f5f9',
+            border: '1px solid var(--border-color)',
             transition: 'all 0.2s ease'
           }}
           onMouseEnter={(e) => {
@@ -447,7 +447,7 @@ export default function CockpitInterface({
             e.currentTarget.style.boxShadow = '0 1px 3px rgba(0,0,0,0.08)';
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-              <span style={{ fontSize: '10px', fontWeight: '600', color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+              <span style={{ fontSize: '10px', fontWeight: '600', color: 'var(--gray-500)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
                 {kpi.label}
               </span>
               <div style={{
@@ -462,7 +462,7 @@ export default function CockpitInterface({
                 {React.createElement(kpi.icon, { size: 14, style: { color: kpi.color } })}
               </div>
             </div>
-            <div style={{ fontSize: '20px', fontWeight: '800', color: '#0f172a', letterSpacing: '-0.02em' }}>
+            <div style={{ fontSize: '20px', fontWeight: '800', color: 'var(--text-color)', letterSpacing: '-0.02em' }}>
               {kpi.value}
             </div>
           </div>
@@ -471,8 +471,8 @@ export default function CockpitInterface({
 
       {/* ========== ACTION TOOLBAR ========== */}
       <div style={{
-        backgroundColor: '#ffffff',
-        borderBottom: '1px solid #e2e8f0',
+        backgroundColor: 'var(--card-background)',
+        borderBottom: '1px solid var(--border-color)',
         padding: '10px 24px',
         display: 'flex',
         alignItems: 'center',
@@ -486,13 +486,13 @@ export default function CockpitInterface({
             onChange={(e) => onSetSelectedProfile(e.target.value)}
             style={{
               padding: '8px 12px',
-              backgroundColor: '#f8fafc',
-              border: '1px solid #cbd5e1',
+              backgroundColor: 'var(--gray-50)',
+              border: '1px solid var(--border-color)',
               borderRadius: '6px',
               fontSize: '12px',
               fontWeight: '500',
               cursor: 'pointer',
-              color: '#0f172a',
+              color: 'var(--text-color)',
               minWidth: '180px'
             }}
           >
@@ -512,10 +512,10 @@ export default function CockpitInterface({
               style={{
                 width: '100%',
                 padding: '8px 12px 8px 36px',
-                border: '1px solid #cbd5e1',
+                border: '1px solid var(--border-color)',
                 borderRadius: '6px',
                 fontSize: '12px',
-                backgroundColor: '#f8fafc'
+                backgroundColor: 'var(--gray-50)'
               }}
             />
             <Filter size={14} style={{ 
@@ -523,7 +523,7 @@ export default function CockpitInterface({
               left: '12px', 
               top: '50%', 
               transform: 'translateY(-50%)',
-              color: '#64748b'
+              color: 'var(--gray-500)'
             }} />
           </div>
 
@@ -531,8 +531,8 @@ export default function CockpitInterface({
             onClick={onRefresh}
             style={{
               padding: '8px 12px',
-              backgroundColor: '#f8fafc',
-              border: '1px solid #e2e8f0',
+              backgroundColor: 'var(--gray-50)',
+              border: '1px solid var(--border-color)',
               borderRadius: '6px',
               fontSize: '12px',
               fontWeight: '500',
@@ -540,15 +540,15 @@ export default function CockpitInterface({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              color: '#475569',
+              color: 'var(--gray-600)',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#e2e8f0';
+              e.currentTarget.style.backgroundColor = 'var(--gray-200)';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#f8fafc';
+              e.currentTarget.style.backgroundColor = 'var(--gray-50)';
               e.currentTarget.style.transform = 'translateY(0)';
             }}>
             <RefreshCw size={14} />
@@ -559,8 +559,8 @@ export default function CockpitInterface({
             onClick={onExport}
             style={{
               padding: '8px 12px',
-              backgroundColor: '#f8fafc',
-              border: '1px solid #e2e8f0',
+              backgroundColor: 'var(--gray-50)',
+              border: '1px solid var(--border-color)',
               borderRadius: '6px',
               fontSize: '12px',
               fontWeight: '500',
@@ -568,15 +568,15 @@ export default function CockpitInterface({
               display: 'flex',
               alignItems: 'center',
               gap: '6px',
-              color: '#475569',
+              color: 'var(--gray-600)',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#e2e8f0';
+              e.currentTarget.style.backgroundColor = 'var(--gray-200)';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#f8fafc';
+              e.currentTarget.style.backgroundColor = 'var(--gray-50)';
               e.currentTarget.style.transform = 'translateY(0)';
             }}>
             <Download size={14} />
@@ -587,8 +587,8 @@ export default function CockpitInterface({
             onClick={onSaveRoutes}
             style={{
               padding: '8px 12px',
-              backgroundColor: '#10b981',
-              color: 'white',
+              backgroundColor: 'var(--success)',
+              color: 'var(--text-color)',
               border: 'none',
               borderRadius: '6px',
               fontSize: '12px',
@@ -600,10 +600,10 @@ export default function CockpitInterface({
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#059669';
+              e.currentTarget.style.backgroundColor = 'var(--success)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#10b981';
+              e.currentTarget.style.backgroundColor = 'var(--success)';
             }}>
             <Save size={14} />
             Lagre ruter
@@ -613,8 +613,8 @@ export default function CockpitInterface({
             onClick={onAutoAssign}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#3b82f6',
-              color: 'white',
+              backgroundColor: 'var(--primary)',
+              color: 'var(--text-color)',
               border: 'none',
               borderRadius: '6px',
               fontSize: '12px',
@@ -644,8 +644,8 @@ export default function CockpitInterface({
             onClick={onCreateNewFO}
             style={{
               padding: '8px 16px',
-              backgroundColor: '#10b981',
-              color: 'white',
+              backgroundColor: 'var(--success)',
+              color: 'var(--text-color)',
               border: 'none',
               borderRadius: '6px',
               fontSize: '12px',
@@ -658,12 +658,12 @@ export default function CockpitInterface({
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#059669';
+              e.currentTarget.style.backgroundColor = 'var(--success)';
               e.currentTarget.style.transform = 'translateY(-1px)';
               e.currentTarget.style.boxShadow = '0 4px 12px rgba(16, 185, 129, 0.4)';
             }}
             onMouseLeave={(e) => {
-              e.currentTarget.style.backgroundColor = '#10b981';
+              e.currentTarget.style.backgroundColor = 'var(--success)';
               e.currentTarget.style.transform = 'translateY(0)';
               e.currentTarget.style.boxShadow = '0 2px 8px rgba(16, 185, 129, 0.3)';
             }}>
@@ -672,18 +672,18 @@ export default function CockpitInterface({
           </button>
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: '#64748b', fontWeight: '600' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '16px', fontSize: '11px', color: 'var(--gray-500)', fontWeight: '600' }}>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Package size={14} />
-            FU: <strong style={{ color: '#0f172a' }}>{freightUnits.length}</strong>
+            FU: <strong style={{ color: 'var(--text-color)' }}>{freightUnits.length}</strong>
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Route size={14} />
-            FO: <strong style={{ color: '#0f172a' }}>{freightOrders.length}</strong>
+            FO: <strong style={{ color: 'var(--text-color)' }}>{freightOrders.length}</strong>
           </span>
           <span style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
             <Truck size={14} />
-            Biler: <strong style={{ color: '#0f172a' }}>{resources.filter(r => r.type === 'vehicle').length}</strong>
+            Biler: <strong style={{ color: 'var(--text-color)' }}>{resources.filter(r => r.type === 'vehicle').length}</strong>
           </span>
           
           {/* Debug info */}
@@ -692,10 +692,10 @@ export default function CockpitInterface({
             alignItems: 'center',
             gap: '6px',
             padding: '6px 12px',
-            backgroundColor: resources.length > 0 ? '#d1fae5' : '#fee2e2',
-            border: `1px solid ${resources.length > 0 ? '#a7f3d0' : '#fecaca'}`,
+            backgroundColor: resources.length > 0 ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
+            border: `1px solid ${resources.length > 0 ? 'var(--success)' : 'var(--danger)'}`,
             borderRadius: '6px',
-            color: resources.length > 0 ? '#065f46' : '#991b1b',
+            color: resources.length > 0 ? 'var(--success)' : 'var(--danger)',
             fontSize: '11px',
             fontWeight: '600'
           }}>
@@ -710,17 +710,17 @@ export default function CockpitInterface({
               alignItems: 'center',
               gap: '6px',
               padding: '6px 12px',
-              backgroundColor: '#fef3c7',
-              border: '1px solid #fde68a',
+              backgroundColor: 'rgba(245, 158, 11, 0.2)',
+              border: '1px solid var(--warning)',
               borderRadius: '6px',
-              color: '#92400e',
+              color: 'var(--warning)',
               textDecoration: 'none',
               fontSize: '11px',
               fontWeight: '600',
               transition: 'all 0.2s ease'
             }}
             onMouseEnter={(e) => {
-              e.currentTarget.style.backgroundColor = '#fde68a';
+              e.currentTarget.style.backgroundColor = 'rgba(245, 158, 11, 0.3)';
               e.currentTarget.style.transform = 'translateY(-1px)';
             }}
             onMouseLeave={(e) => {
@@ -739,21 +739,21 @@ export default function CockpitInterface({
         flex: 1, 
         overflow: 'hidden',
         gap: '1px',
-        backgroundColor: '#cbd5e1'
+          backgroundColor: 'var(--border-color)'
       }}>
         
         {/* LEFT PANEL - FREIGHT UNITS (Leveranser) */}
         <div style={{ 
           width: '350px', 
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--card-background)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
         }}>
           <div style={{
             padding: '16px',
-            borderBottom: '2px solid #e2e8f0',
-            backgroundColor: selectedFUs.length > 0 ? '#eff6ff' : '#f8fafc',
+            borderBottom: '2px solid var(--border-color)',
+            backgroundColor: selectedFUs.length > 0 ? 'rgba(6, 182, 212, 0.2)' : 'var(--gray-50)',
             transition: 'background-color 0.3s ease'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
@@ -761,17 +761,17 @@ export default function CockpitInterface({
                 margin: 0, 
                 fontSize: '15px', 
                 fontWeight: '700', 
-                color: '#0f172a',
+                color: 'var(--text-color)',
                 display: 'flex',
                 alignItems: 'center',
                 gap: '8px'
               }}>
-                <Package size={18} style={{ color: '#3b82f6' }} />
+                <Package size={18} style={{ color: 'var(--primary)' }} />
                 Freight Units
                 {selectedFUs.length > 0 && (
                   <span style={{
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
+                    backgroundColor: 'var(--primary)',
+                    color: 'var(--text-color)',
                     padding: '2px 8px',
                     borderRadius: '12px',
                     fontSize: '11px',
@@ -782,8 +782,8 @@ export default function CockpitInterface({
                 )}
               </h3>
               <span style={{
-                backgroundColor: freightUnits.filter(fu => fu.status === 'unassigned').length > 0 ? '#fee2e2' : '#d1fae5',
-                color: freightUnits.filter(fu => fu.status === 'unassigned').length > 0 ? '#991b1b' : '#065f46',
+                backgroundColor: freightUnits.filter(fu => fu.status === 'unassigned').length > 0 ? 'rgba(239, 68, 68, 0.2)' : 'rgba(16, 185, 129, 0.2)',
+                color: freightUnits.filter(fu => fu.status === 'unassigned').length > 0 ? 'var(--danger)' : 'var(--success)',
                 padding: '4px 10px',
                 borderRadius: '12px',
                 fontSize: '11px',
@@ -799,19 +799,19 @@ export default function CockpitInterface({
                 gap: '8px', 
                 alignItems: 'center',
                 padding: '8px',
-                backgroundColor: '#dbeafe',
+                backgroundColor: 'rgba(6, 182, 212, 0.2)',
                 borderRadius: '6px',
-                border: '1px solid #93c5fd'
+                border: '1px solid var(--primary)'
               }}>
-                <span style={{ fontSize: '11px', color: '#1e40af', fontWeight: '600', flex: 1 }}>
+                <span style={{ fontSize: '11px', color: 'var(--primary)', fontWeight: '600', flex: 1 }}>
                   ✓ {selectedFUs.length} leveranser valgt
                 </span>
                 <button
                   onClick={() => setShowPlanSelectedModal(true)}
                   style={{
                     padding: '6px 14px',
-                    backgroundColor: '#10b981',
-                    color: 'white',
+                    backgroundColor: 'var(--success)',
+                    color: 'var(--text-color)',
                     border: 'none',
                     borderRadius: '6px',
                     fontSize: '12px',
@@ -824,11 +824,11 @@ export default function CockpitInterface({
                     transition: 'all 0.2s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#059669';
+                    e.currentTarget.style.backgroundColor = 'var(--success)';
                     e.currentTarget.style.transform = 'translateY(-1px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#10b981';
+                    e.currentTarget.style.backgroundColor = 'var(--success)';
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}>
                   <Truck size={14} />
@@ -841,9 +841,9 @@ export default function CockpitInterface({
                   }}
                   style={{
                     padding: '6px 10px',
-                    backgroundColor: '#ffffff',
-                    color: '#64748b',
-                    border: '1px solid #cbd5e1',
+                    backgroundColor: 'var(--card-background)',
+                    color: 'var(--gray-500)',
+                    border: '1px solid var(--border-color)',
                     borderRadius: '6px',
                     fontSize: '11px',
                     fontWeight: '600',
@@ -851,10 +851,10 @@ export default function CockpitInterface({
                     transition: 'all 0.2s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                    e.currentTarget.style.backgroundColor = 'var(--gray-50)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
+                    e.currentTarget.style.backgroundColor = 'var(--card-background)';
                   }}>
                   ✕ Fjern valg
                 </button>
@@ -904,7 +904,7 @@ export default function CockpitInterface({
                       }
                     }}
                     style={{
-                      backgroundColor: draggedFU?.id === fu.id ? '#eff6ff' : '#ffffff',
+                      backgroundColor: draggedFU?.id === fu.id ? 'rgba(6, 182, 212, 0.2)' : 'var(--card-background)',
                       border: `2px solid ${colors.border}`,
                       borderLeft: `4px solid ${colors.border}`,
                       borderRadius: '8px',
@@ -948,13 +948,13 @@ export default function CockpitInterface({
                         width: '18px',
                         height: '18px',
                         cursor: 'pointer',
-                        accentColor: '#3b82f6'
+                        accentColor: 'var(--primary)'
                       }}
                     />
                   )}
                   
                   <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '8px', paddingLeft: fu.status === 'unassigned' ? '28px' : '0' }}>
-                    <div style={{ fontWeight: '700', fontSize: '13px', color: '#0f172a' }}>
+                    <div style={{ fontWeight: '700', fontSize: '13px', color: 'var(--text-color)' }}>
                       {fu.orderNumber}
                     </div>
                     <div style={{
@@ -971,11 +971,11 @@ export default function CockpitInterface({
                     </div>
                   </div>
                   
-                  <div style={{ fontSize: '12px', fontWeight: '600', color: '#1e293b', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: '600', color: 'var(--text-color)', marginBottom: '6px' }}>
                     {fu.customer}
                   </div>
                   
-                  <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '8px', display: 'flex', alignItems: 'start', gap: '4px' }}>
+                  <div style={{ fontSize: '11px', color: 'var(--gray-500)', marginBottom: '8px', display: 'flex', alignItems: 'start', gap: '4px' }}>
                     <MapPin size={12} style={{ flexShrink: 0, marginTop: '2px' }} />
                     <span>{fu.address}</span>
                   </div>
@@ -1013,7 +1013,7 @@ export default function CockpitInterface({
                       textAlign: 'center'
                     }}>
                       <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px' }}>Pris</div>
-                      <div style={{ fontSize: '12px', fontWeight: '700', color: '#059669' }}>{fu.price},-</div>
+                      <div style={{ fontSize: '12px', fontWeight: '700', color: 'var(--success)' }}>{fu.price},-</div>
                     </div>
                   </div>
 
@@ -1043,7 +1043,7 @@ export default function CockpitInterface({
                   {fu.status === 'assigned' && (
                     <div style={{
                       marginTop: '8px',
-                      backgroundColor: '#d1fae5',
+                      backgroundColor: 'rgba(16, 185, 129, 0.2)',
                       border: '1px solid #a7f3d0',
                       borderRadius: '6px',
                       padding: '6px 8px',
@@ -1096,12 +1096,12 @@ export default function CockpitInterface({
                           justifyContent: 'space-between', 
                           alignItems: 'center',
                           padding: '2px 0',
-                          borderBottom: idx < fu.products!.length - 1 ? '1px solid #e0f2fe' : 'none'
+                          borderBottom: idx < fu.products!.length - 1 ? '1px solid var(--border-color)' : 'none'
                         }}>
-                          <span style={{ color: '#0c4a6e', fontWeight: '500' }}>
+                          <span style={{ color: 'var(--text-color)', fontWeight: '500' }}>
                             {product.serviceName} × {product.quantity}
                           </span>
-                          <span style={{ color: '#059669', fontWeight: '600' }}>
+                          <span style={{ color: 'var(--success)', fontWeight: '600' }}>
                             {product.price * product.quantity},-
                           </span>
                         </div>
@@ -1136,8 +1136,8 @@ export default function CockpitInterface({
                   {(fu.customerPhone || fu.customerEmail) && (
                     <div style={{
                       marginTop: '8px',
-                      backgroundColor: '#f8fafc',
-                      border: '1px solid #e2e8f0',
+                      backgroundColor: 'var(--gray-50)',
+                      border: '1px solid var(--border-color)',
                       borderRadius: '6px',
                       padding: '6px 8px',
                       fontSize: '10px',
@@ -1177,35 +1177,35 @@ export default function CockpitInterface({
         {/* CENTER PANEL - FREIGHT ORDERS (Kjørelister) */}
         <div style={{ 
           flex: 1,
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--card-background)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
         }}>
           <div style={{
             padding: '16px',
-            borderBottom: '2px solid #e2e8f0',
-            backgroundColor: '#f8fafc'
+            borderBottom: '2px solid var(--border-color)',
+            backgroundColor: 'var(--gray-50)'
           }}>
             <h3 style={{ 
               margin: 0, 
               fontSize: '15px', 
               fontWeight: '700', 
-              color: '#0f172a',
+              color: 'var(--text-color)',
               display: 'flex',
               alignItems: 'center',
               gap: '8px',
               marginBottom: '4px'
             }}>
-              <Route size={18} style={{ color: '#10b981' }} />
+              <Route size={18} style={{ color: 'var(--success)' }} />
               Kjøreoppdrag
             </h3>
-            <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '500' }}>
+            <div style={{ fontSize: '11px', color: 'var(--gray-500)', fontWeight: '500' }}>
               Slipp leveranser her for å planlegge ruter
             </div>
           </div>
 
-          <div style={{ flex: 1, overflow: 'auto', padding: '16px', backgroundColor: '#f8fafc' }}>
+          <div style={{ flex: 1, overflow: 'auto', padding: '16px', backgroundColor: 'var(--gray-50)' }}>
             {freightOrders.map(fo => {
               const statusColors = getStatusColor(fo.status);
               const weightPercentage = (fo.totalWeight / fo.maxWeight) * 100;
@@ -1218,16 +1218,16 @@ export default function CockpitInterface({
                   onDragOver={(e) => {
                     e.preventDefault();
                     if (draggedResource) {
-                      e.currentTarget.style.backgroundColor = '#faf5ff';
+                      e.currentTarget.style.backgroundColor = 'rgba(139, 92, 246, 0.2)';
                       e.currentTarget.style.borderColor = '#8b5cf6';
                     } else {
-                      e.currentTarget.style.backgroundColor = '#eff6ff';
+                      e.currentTarget.style.backgroundColor = 'rgba(6, 182, 212, 0.2)';
                       e.currentTarget.style.borderColor = '#3b82f6';
                     }
                   }}
                   onDragLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.borderColor = isOvercapacity ? '#ef4444' : '#e2e8f0';
+                    e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                    e.currentTarget.style.borderColor = isOvercapacity ? 'var(--danger)' : 'var(--border-color)';
                   }}
                   onDrop={(e) => {
                     if (draggedResource && onAssignResourceToFO) {
@@ -1236,12 +1236,12 @@ export default function CockpitInterface({
                     } else {
                       onDropFUOnFO(fo.id);
                     }
-                    e.currentTarget.style.backgroundColor = '#ffffff';
-                    e.currentTarget.style.borderColor = isOvercapacity ? '#ef4444' : '#e2e8f0';
+                    e.currentTarget.style.backgroundColor = 'var(--card-background)';
+                    e.currentTarget.style.borderColor = isOvercapacity ? 'var(--danger)' : 'var(--border-color)';
                   }}
                   style={{
-                    backgroundColor: '#ffffff',
-                    border: isOvercapacity ? '3px solid #ef4444' : '2px solid #e2e8f0',
+                    backgroundColor: 'var(--card-background)',
+                    border: isOvercapacity ? '3px solid var(--danger)' : '2px solid var(--border-color)',
                     borderRadius: '12px',
                     padding: '16px',
                     marginBottom: '16px',
@@ -1264,7 +1264,7 @@ export default function CockpitInterface({
                             </span>
                           )}
                           {fo.routeNumber && (
-                            <span style={{ fontSize: '12px', color: '#10b981', fontWeight: '600' }}>
+                            <span style={{ fontSize: '12px', color: 'var(--success)', fontWeight: '600' }}>
                               • Felt: {fo.routeNumber}
                             </span>
                           )}
@@ -1294,7 +1294,7 @@ export default function CockpitInterface({
                         style={{
                           padding: '6px 10px',
                           backgroundColor: fo.freightUnits.length > 0 ? '#f59e0b' : '#f3f4f6',
-                          color: fo.freightUnits.length > 0 ? 'white' : '#9ca3af',
+                          color: fo.freightUnits.length > 0 ? 'var(--text-color)' : 'var(--gray-400)',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '11px',
@@ -1325,7 +1325,7 @@ export default function CockpitInterface({
                         style={{
                           padding: '6px 10px',
                           backgroundColor: '#8b5cf6',
-                          color: 'white',
+                          color: 'var(--text-color)',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '11px',
@@ -1353,7 +1353,7 @@ export default function CockpitInterface({
                         style={{
                           padding: '6px 10px',
                           backgroundColor: '#06b6d4',
-                          color: 'white',
+                          color: 'var(--text-color)',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '11px',
@@ -1381,7 +1381,7 @@ export default function CockpitInterface({
                         style={{
                           padding: '6px 10px',
                           backgroundColor: '#64748b',
-                          color: 'white',
+                          color: 'var(--text-color)',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '11px',
@@ -1408,8 +1408,8 @@ export default function CockpitInterface({
                           title="Sett felt"
                           style={{
                             padding: '6px 10px',
-                            backgroundColor: '#3b82f6',
-                            color: 'white',
+                            backgroundColor: 'var(--primary)',
+                            color: 'var(--text-color)',
                             border: 'none',
                             borderRadius: '6px',
                             fontSize: '11px',
@@ -1437,8 +1437,8 @@ export default function CockpitInterface({
                           title="Fjern rute fra kjøretøy"
                           style={{
                             padding: '6px 10px',
-                            backgroundColor: '#ef4444',
-                            color: 'white',
+                            backgroundColor: 'var(--danger)',
+                            color: 'var(--text-color)',
                             border: 'none',
                             borderRadius: '6px',
                             fontSize: '11px',
@@ -1450,7 +1450,7 @@ export default function CockpitInterface({
                             transition: 'all 0.2s ease'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#dc2626';
+                            e.currentTarget.style.backgroundColor = '#f87171';
                             e.currentTarget.style.transform = 'translateY(-1px)';
                           }}
                           onMouseLeave={(e) => {
@@ -1467,8 +1467,8 @@ export default function CockpitInterface({
                         title={fo.status === 'released' ? 'Allerede frigitt' : 'Frigjør til sjåfør'}
                         style={{
                           padding: '6px 12px',
-                          backgroundColor: fo.freightUnits.length > 0 && fo.status !== 'released' ? '#10b981' : '#f3f4f6',
-                          color: fo.freightUnits.length > 0 && fo.status !== 'released' ? 'white' : '#9ca3af',
+                          backgroundColor: fo.freightUnits.length > 0 && fo.status !== 'released' ? 'var(--success)' : 'var(--gray-100)',
+                          color: fo.freightUnits.length > 0 && fo.status !== 'released' ? 'var(--text-color)' : 'var(--gray-400)',
                           border: 'none',
                           borderRadius: '6px',
                           fontSize: '11px',
@@ -1481,7 +1481,7 @@ export default function CockpitInterface({
                         }}
                         onMouseEnter={(e) => {
                           if (fo.freightUnits.length > 0 && fo.status !== 'released') {
-                            e.currentTarget.style.backgroundColor = '#059669';
+                            e.currentTarget.style.backgroundColor = 'var(--success)';
                             e.currentTarget.style.transform = 'translateY(-1px)';
                           }
                         }}
@@ -1502,7 +1502,7 @@ export default function CockpitInterface({
                         Vekt: {fo.totalWeight}/{fo.maxWeight}kg
                       </span>
                       <span style={{ fontWeight: '700', color: weightPercentage > 100 ? '#dc2626' : '#059669' }}>
-                        {weightPercentage.toFixed(0)}%
+                        {(weightPercentage || 0).toFixed(0)}%
                       </span>
                     </div>
                     <div style={{
@@ -1528,10 +1528,10 @@ export default function CockpitInterface({
 
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '11px', marginTop: '8px', marginBottom: '4px' }}>
                       <span style={{ fontWeight: '600', color: '#475569' }}>
-                        Volum: {fo.totalVolume.toFixed(1)}/{fo.maxVolume}m³
+                        Volum: {(fo.totalVolume || 0).toFixed(1)}/{fo.maxVolume || 0}m³
                       </span>
                       <span style={{ fontWeight: '700', color: volumePercentage > 100 ? '#dc2626' : '#059669' }}>
-                        {volumePercentage.toFixed(0)}%
+                        {(volumePercentage || 0).toFixed(0)}%
                       </span>
                     </div>
                     <div style={{
@@ -1559,7 +1559,7 @@ export default function CockpitInterface({
                   {/* Warnings */}
                   {fo.warnings.length > 0 && (
                     <div style={{
-                      backgroundColor: '#fee2e2',
+                      backgroundColor: 'rgba(239, 68, 68, 0.2)',
                       border: '1px solid #fca5a5',
                       borderRadius: '6px',
                       padding: '8px',
@@ -1581,7 +1581,7 @@ export default function CockpitInterface({
                   {/* FU Items in FO */}
                   {fo.freightUnits.length > 0 ? (
                     <div style={{ 
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--gray-50)',
                       borderRadius: '8px',
                       padding: '10px',
                       marginTop: '12px'
@@ -1591,7 +1591,7 @@ export default function CockpitInterface({
                         style={{ 
                           fontSize: '11px', 
                           fontWeight: '700', 
-                          color: '#475569', 
+                          color: 'var(--gray-600)', 
                           marginBottom: '8px', 
                           textTransform: 'uppercase', 
                           letterSpacing: '0.05em',
@@ -1617,8 +1617,8 @@ export default function CockpitInterface({
                         <div
                           key={fu.id}
                           style={{
-                            backgroundColor: '#ffffff',
-                            border: '1px solid #e2e8f0',
+                            backgroundColor: 'var(--card-background)',
+                            border: '1px solid var(--border-color)',
                             borderRadius: '6px',
                             padding: '8px 10px',
                             marginBottom: '6px',
@@ -1629,11 +1629,11 @@ export default function CockpitInterface({
                             animation: 'slideIn 0.2s ease'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f8fafc';
+                            e.currentTarget.style.backgroundColor = 'var(--gray-50)';
                             e.currentTarget.style.transform = 'translateX(4px)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = '#ffffff';
+                            e.currentTarget.style.backgroundColor = 'var(--card-background)';
                             e.currentTarget.style.transform = 'translateX(0)';
                           }}
                         >
@@ -1642,8 +1642,8 @@ export default function CockpitInterface({
                               <span style={{
                                 width: '20px',
                                 height: '20px',
-                                backgroundColor: '#3b82f6',
-                                color: 'white',
+                                backgroundColor: 'var(--primary)',
+                                color: 'var(--text-color)',
                                 borderRadius: '50%',
                                 display: 'flex',
                                 alignItems: 'center',
@@ -1663,7 +1663,7 @@ export default function CockpitInterface({
                             onClick={() => onRemoveFUFromFO(fo.id, fu.id)}
                             style={{
                               padding: '4px 8px',
-                              backgroundColor: '#fee2e2',
+                              backgroundColor: 'rgba(239, 68, 68, 0.2)',
                               color: '#991b1b',
                               border: 'none',
                               borderRadius: '4px',
@@ -1687,7 +1687,7 @@ export default function CockpitInterface({
                         <div style={{
                           textAlign: 'center',
                           fontSize: '11px',
-                          color: '#64748b',
+                          color: 'var(--gray-500)',
                           fontWeight: '600',
                           marginTop: '8px',
                           cursor: 'pointer',
@@ -1710,7 +1710,7 @@ export default function CockpitInterface({
                     </div>
                   ) : (
                     <div style={{
-                      backgroundColor: '#eff6ff',
+                      backgroundColor: 'rgba(6, 182, 212, 0.2)',
                       border: '2px dashed #93c5fd',
                       borderRadius: '8px',
                       padding: '24px',
@@ -1742,7 +1742,7 @@ export default function CockpitInterface({
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px' }}>Kostnad</div>
-                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#dc2626' }}>{fo.cost.toFixed(0)},-</div>
+                      <div style={{ fontSize: '14px', fontWeight: '700', color: '#dc2626' }}>{(fo.cost || 0).toFixed(0)},-</div>
                     </div>
                     <div style={{ textAlign: 'center' }}>
                       <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '2px' }}>Tid</div>
@@ -1758,7 +1758,7 @@ export default function CockpitInterface({
         {/* RIGHT PANEL - BILER & KJØRETØY INFO */}
         <div style={{ 
           width: '420px',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--card-background)',
           display: 'flex',
           flexDirection: 'column',
           overflow: 'hidden'
@@ -1766,15 +1766,15 @@ export default function CockpitInterface({
           {/* Header */}
           <div style={{
             padding: '16px',
-            borderBottom: '2px solid #e2e8f0',
-            backgroundColor: '#f8fafc'
+            borderBottom: '2px solid var(--border-color)',
+            backgroundColor: 'var(--gray-50)'
           }}>
             <div>
               <h3 style={{ 
                 margin: 0, 
                 fontSize: '14px', 
                 fontWeight: '700', 
-                color: '#0f172a',
+                color: 'var(--text-color)',
                 marginBottom: '8px',
                 display: 'flex',
                 alignItems: 'center',
@@ -1784,12 +1784,12 @@ export default function CockpitInterface({
                 Ressurser
               </h3>
               <div style={{
-                backgroundColor: '#eff6ff',
-                border: '1px solid #bfdbfe',
+                backgroundColor: 'rgba(6, 182, 212, 0.2)',
+                border: '1px solid var(--primary)',
                 borderRadius: '6px',
                 padding: '8px 10px',
                 fontSize: '10px',
-                color: '#1e40af',
+                color: 'var(--primary)',
                 fontWeight: '500',
                 lineHeight: '1.4',
                 marginBottom: '12px'
@@ -1804,7 +1804,7 @@ export default function CockpitInterface({
                   textAlign: 'center',
                   padding: '20px',
                   fontSize: '12px',
-                  color: '#94a3b8'
+                  color: 'var(--gray-400)'
                 }}>
                   <Truck size={32} style={{ margin: '0 auto 8px', opacity: 0.3 }} />
                   <div>Ingen ressurser funnet</div>
@@ -1843,7 +1843,7 @@ export default function CockpitInterface({
                     }}
                     onDragEnd={() => setDraggedResource(null)}
                     style={{
-                      backgroundColor: draggedResource?.id === vehicle.id ? '#ede9fe' : '#faf5ff',
+                      backgroundColor: draggedResource?.id === vehicle.id ? 'rgba(139, 92, 246, 0.3)' : 'rgba(139, 92, 246, 0.2)',
                       border: `2px solid ${draggedResource?.id === vehicle.id ? '#8b5cf6' : '#e9d5ff'}`,
                       borderRadius: '8px',
                       padding: '10px 12px',
@@ -1877,7 +1877,7 @@ export default function CockpitInterface({
                           <span style={{
                             fontSize: '9px',
                             padding: '2px 6px',
-                            backgroundColor: vehicle.vehicleType === 'company_car' ? '#e0e7ff' : vehicle.vehicleType === 'two_man' ? '#dbeafe' : '#f3f4f6',
+                            backgroundColor: vehicle.vehicleType === 'company_car' ? 'rgba(99, 102, 241, 0.2)' : vehicle.vehicleType === 'two_man' ? 'rgba(6, 182, 212, 0.2)' : 'var(--gray-100)',
                             color: vehicle.vehicleType === 'company_car' ? '#4338ca' : vehicle.vehicleType === 'two_man' ? '#1e40af' : '#4b5563',
                             borderRadius: '4px',
                             fontWeight: '700',
@@ -1998,18 +1998,18 @@ export default function CockpitInterface({
           </div>
 
           {/* Biler List med full info */}
-          <div style={{ flex: 1, overflow: 'auto', padding: '16px', backgroundColor: '#f8fafc' }}>
+          <div style={{ flex: 1, overflow: 'auto', padding: '16px', backgroundColor: 'var(--gray-50)' }}>
             {resources.filter(r => r.type === 'vehicle').length === 0 ? (
               <div style={{
                 textAlign: 'center',
                 padding: '60px 20px',
-                color: '#94a3b8'
+                color: 'var(--gray-400)'
               }}>
                 <Truck size={64} style={{ margin: '0 auto 20px', opacity: 0.2 }} />
-                <h4 style={{ fontSize: '16px', fontWeight: '700', color: '#475569', margin: '0 0 8px 0' }}>
+                <h4 style={{ fontSize: '16px', fontWeight: '700', color: 'var(--text-color)', margin: '0 0 8px 0' }}>
                   Ingen biler funnet
                 </h4>
-                <p style={{ fontSize: '13px', marginBottom: '20px', color: '#64748b', lineHeight: '1.5' }}>
+                <p style={{ fontSize: '13px', marginBottom: '20px', color: 'var(--gray-500)', lineHeight: '1.5' }}>
                   Gå til Samarbeidspartnere og legg til kjøretøy for å starte planlegging
                 </p>
                 <a
@@ -2019,8 +2019,8 @@ export default function CockpitInterface({
                     alignItems: 'center',
                     gap: '8px',
                     padding: '12px 20px',
-                    backgroundColor: '#3b82f6',
-                    color: 'white',
+                    backgroundColor: 'var(--primary)',
+                    color: 'var(--text-color)',
                     textDecoration: 'none',
                     borderRadius: '8px',
                     fontSize: '13px',
@@ -2029,11 +2029,11 @@ export default function CockpitInterface({
                     transition: 'all 0.2s ease'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.backgroundColor = '#2563eb';
+                    e.currentTarget.style.backgroundColor = 'var(--primary-dark)';
                     e.currentTarget.style.transform = 'translateY(-2px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#3b82f6';
+                    e.currentTarget.style.backgroundColor = 'var(--primary)';
                     e.currentTarget.style.transform = 'translateY(0)';
                   }}
                 >
@@ -2058,8 +2058,8 @@ export default function CockpitInterface({
                     }}
                     onDragEnd={() => setDraggedResource(null)}
                     style={{
-                      backgroundColor: draggedResource?.id === vehicle.id ? '#faf5ff' : '#ffffff',
-                      border: draggedResource?.id === vehicle.id ? '3px solid #8b5cf6' : '2px solid #e2e8f0',
+                      backgroundColor: draggedResource?.id === vehicle.id ? 'rgba(139, 92, 246, 0.2)' : 'var(--card-background)',
+                      border: draggedResource?.id === vehicle.id ? '3px solid #8b5cf6' : '2px solid var(--border-color)',
                       borderRadius: '12px',
                       padding: '20px',
                       marginBottom: '16px',
@@ -2095,7 +2095,7 @@ export default function CockpitInterface({
                             <span style={{
                               fontSize: '10px',
                               padding: '3px 8px',
-                              backgroundColor: vehicle.vehicleType === 'company_car' ? '#e0e7ff' : vehicle.vehicleType === 'two_man' ? '#dbeafe' : '#f3f4f6',
+                              backgroundColor: vehicle.vehicleType === 'company_car' ? 'rgba(99, 102, 241, 0.2)' : vehicle.vehicleType === 'two_man' ? 'rgba(6, 182, 212, 0.2)' : 'var(--gray-100)',
                               color: vehicle.vehicleType === 'company_car' ? '#4338ca' : vehicle.vehicleType === 'two_man' ? '#1e40af' : '#4b5563',
                               borderRadius: '6px',
                               fontWeight: '700',
@@ -2129,7 +2129,7 @@ export default function CockpitInterface({
 
                     {/* Capacity Info */}
                     <div style={{
-                      backgroundColor: '#f8fafc',
+                      backgroundColor: 'var(--gray-50)',
                       borderRadius: '8px',
                       padding: '12px',
                       marginBottom: '12px'
@@ -2156,12 +2156,12 @@ export default function CockpitInterface({
                       {vehicle.currentLocation && (
                         <div style={{
                           fontSize: '11px',
-                          color: '#64748b',
+                          color: 'var(--gray-500)',
                           display: 'flex',
                           alignItems: 'center',
                           gap: '6px',
                           padding: '8px',
-                          backgroundColor: '#ffffff',
+                          backgroundColor: 'var(--card-background)',
                           borderRadius: '6px'
                         }}>
                           <MapPin size={12} style={{ color: '#3b82f6' }} />
@@ -2173,7 +2173,7 @@ export default function CockpitInterface({
                     {/* Assigned Route Info */}
                     {assignedFO ? (
                       <div style={{
-                        backgroundColor: '#d1fae5',
+                        backgroundColor: 'rgba(16, 185, 129, 0.2)',
                         border: '2px solid #a7f3d0',
                         borderRadius: '8px',
                         padding: '12px'
@@ -2185,7 +2185,7 @@ export default function CockpitInterface({
                           {assignedFO.name}
                         </div>
                         <div style={{ fontSize: '11px', color: '#047857', marginBottom: '8px' }}>
-                          {assignedFO.freightUnits.length} stopp • {assignedFO.totalWeight}kg • {assignedFO.cost.toFixed(0)},-
+                          {assignedFO.freightUnits.length} stopp • {assignedFO.totalWeight || 0}kg • {(assignedFO.cost || 0).toFixed(0)},-
                         </div>
                         
                         {/* Utilization Bar */}
@@ -2193,7 +2193,7 @@ export default function CockpitInterface({
                           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '10px', marginBottom: '4px' }}>
                             <span style={{ fontWeight: '600', color: '#065f46' }}>Utnyttelse</span>
                             <span style={{ fontWeight: '700', color: utilizationPercent > 90 ? '#dc2626' : '#059669' }}>
-                              {utilizationPercent.toFixed(0)}%
+                              {(utilizationPercent || 0).toFixed(0)}%
                             </span>
                           </div>
                           <div style={{
@@ -2215,7 +2215,7 @@ export default function CockpitInterface({
                       </div>
                     ) : (
                       <div style={{
-                        backgroundColor: '#eff6ff',
+                        backgroundColor: 'rgba(6, 182, 212, 0.2)',
                         border: '2px dashed #93c5fd',
                         borderRadius: '8px',
                         padding: '16px',
@@ -2243,7 +2243,7 @@ export default function CockpitInterface({
           position: 'fixed',
           bottom: '24px',
           right: '24px',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--card-background)',
           border: '2px solid #3b82f6',
           borderRadius: '12px',
           padding: '16px 20px',
@@ -2284,7 +2284,7 @@ export default function CockpitInterface({
           position: 'fixed',
           bottom: '24px',
           right: '24px',
-          backgroundColor: '#ffffff',
+          backgroundColor: 'var(--card-background)',
           border: '2px solid #8b5cf6',
           borderRadius: '12px',
           padding: '16px 20px',
@@ -2337,7 +2337,7 @@ export default function CockpitInterface({
           backdropFilter: 'blur(8px)'
         }}>
           <div style={{
-            backgroundColor: 'white',
+            backgroundColor: 'var(--card-background)',
             borderRadius: '20px',
             padding: '40px',
             maxWidth: '800px',
@@ -2357,12 +2357,12 @@ export default function CockpitInterface({
                 margin: '0 auto 20px',
                 boxShadow: '0 10px 25px rgba(59, 130, 246, 0.4)'
               }}>
-                <Navigation size={40} style={{ color: 'white' }} />
+                <Navigation size={40} style={{ color: 'var(--text-color)' }} />
               </div>
-              <h2 style={{ fontSize: '28px', fontWeight: '800', color: '#0f172a', margin: '0 0 12px 0' }}>
+              <h2 style={{ fontSize: '28px', fontWeight: '800', color: 'var(--text-color)', margin: '0 0 12px 0' }}>
                 Velkommen til Transportation Cockpit 🚀
               </h2>
-              <p style={{ fontSize: '15px', color: '#64748b', lineHeight: '1.6' }}>
+              <p style={{ fontSize: '15px', color: 'var(--gray-500)', lineHeight: '1.6' }}>
                 Profesjonelt planleggingssystem inspirert av SAP TM
               </p>
             </div>
@@ -2379,17 +2379,17 @@ export default function CockpitInterface({
                 { icon: '✅', title: 'Bil-info', desc: 'Se full info om hver bil i høyre panel' }
               ].map((step, idx) => (
                 <div key={idx} style={{
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--gray-50)',
                   borderRadius: '12px',
                   padding: '20px',
-                  border: '2px solid #e2e8f0',
+                  border: '2px solid var(--border-color)',
                   textAlign: 'center'
                 }}>
                   <div style={{ fontSize: '40px', marginBottom: '12px' }}>{step.icon}</div>
-                  <div style={{ fontSize: '14px', fontWeight: '700', color: '#0f172a', marginBottom: '6px' }}>
+                  <div style={{ fontSize: '14px', fontWeight: '700', color: 'var(--text-color)', marginBottom: '6px' }}>
                     {step.title}
                   </div>
-                  <div style={{ fontSize: '12px', color: '#64748b', lineHeight: '1.5' }}>
+                  <div style={{ fontSize: '12px', color: 'var(--gray-500)', lineHeight: '1.5' }}>
                     {step.desc}
                   </div>
                 </div>
@@ -2452,7 +2452,7 @@ export default function CockpitInterface({
                 width: '100%',
                 padding: '16px',
                 background: 'linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%)',
-                color: 'white',
+                color: 'var(--text-color)',
                 border: 'none',
                 borderRadius: '12px',
                 fontSize: '16px',
@@ -2494,7 +2494,7 @@ export default function CockpitInterface({
           <div 
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--card-background)',
               borderRadius: '16px',
               padding: '28px',
               maxWidth: '700px',
@@ -2530,7 +2530,7 @@ export default function CockpitInterface({
                   display: 'flex',
                   justifyContent: 'space-between',
                   padding: '12px',
-                  backgroundColor: '#ffffff',
+                  backgroundColor: 'var(--card-background)',
                   borderRadius: '8px',
                   marginBottom: '8px',
                   border: '1px solid #e2e8f0'
@@ -2540,7 +2540,7 @@ export default function CockpitInterface({
                     <div style={{ fontSize: '11px', color: '#64748b' }}>{fu.weight}kg • {fu.volume}m³</div>
                   </div>
                   <div style={{ textAlign: 'right' }}>
-                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#059669' }}>{(fu.price * 0.7).toFixed(0)},-</div>
+                    <div style={{ fontSize: '14px', fontWeight: '700', color: '#059669' }}>{((fu.price || 0) * 0.7).toFixed(0)},-</div>
                     <div style={{ fontSize: '10px', color: '#64748b' }}>Fraktkost</div>
                   </div>
                 </div>
@@ -2557,19 +2557,19 @@ export default function CockpitInterface({
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>Basiskostnad</div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
-                    {showChargesModal.freightUnits.reduce((s, fu) => s + (fu.price * 0.7), 0).toFixed(0)},-
+                    {(showChargesModal.freightUnits?.reduce((s, fu) => s + ((fu.price || 0) * 0.7), 0) || 0).toFixed(0)},-
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>Distansetillegg</div>
                   <div style={{ fontSize: '16px', fontWeight: '700', color: '#0f172a' }}>
-                    {(showChargesModal.distance * 15).toFixed(0)},-
+                    {((showChargesModal.distance || 0) * 15).toFixed(0)},-
                   </div>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <div style={{ fontSize: '11px', color: '#64748b', marginBottom: '4px' }}>Totalkostnad</div>
                   <div style={{ fontSize: '18px', fontWeight: '800', color: '#dc2626' }}>
-                    {showChargesModal.cost.toFixed(0)},-
+                    {(showChargesModal.cost || 0).toFixed(0)},-
                   </div>
                 </div>
               </div>
@@ -2587,8 +2587,8 @@ export default function CockpitInterface({
                 style={{
                   flex: 1,
                   padding: '12px',
-                  backgroundColor: '#3b82f6',
-                  color: 'white',
+                  backgroundColor: 'var(--primary)',
+                  color: 'var(--text-color)',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -2640,7 +2640,7 @@ export default function CockpitInterface({
           <div 
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--card-background)',
               borderRadius: '16px',
               padding: '28px',
               maxWidth: '600px',
@@ -2664,7 +2664,7 @@ export default function CockpitInterface({
               {/* Kjøreordre med Send til sjåfør knapp */}
               <div style={{
                 padding: '16px',
-                backgroundColor: '#f8fafc',
+                backgroundColor: 'var(--gray-50)',
                 border: '2px solid #e2e8f0',
                 borderRadius: '10px',
                 display: 'flex',
@@ -2685,8 +2685,8 @@ export default function CockpitInterface({
                     onClick={() => onDownloadDocument('driving-order', showDocumentsModal)}
                     style={{
                       padding: '8px 12px',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--text-color)',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '12px',
@@ -2704,8 +2704,8 @@ export default function CockpitInterface({
                     onClick={() => onSendToDriver(showDocumentsModal)}
                     style={{
                       padding: '8px 12px',
-                      backgroundColor: '#10b981',
-                      color: 'white',
+                      backgroundColor: 'var(--success)',
+                      color: 'var(--text-color)',
                       border: 'none',
                       borderRadius: '6px',
                       fontSize: '12px',
@@ -2723,8 +2723,8 @@ export default function CockpitInterface({
                       onClick={() => onRemoveRouteAssignment(showDocumentsModal)}
                       style={{
                         padding: '8px 12px',
-                        backgroundColor: '#ef4444',
-                        color: 'white',
+                        backgroundColor: 'var(--danger)',
+                        color: 'var(--text-color)',
                         border: 'none',
                         borderRadius: '6px',
                         fontSize: '12px',
@@ -2754,8 +2754,8 @@ export default function CockpitInterface({
                   onClick={() => onDownloadDocument(doc.type, showDocumentsModal)}
                   style={{
                     padding: '16px',
-                    backgroundColor: '#f8fafc',
-                    border: '2px solid #e2e8f0',
+                    backgroundColor: 'var(--gray-50)',
+                    border: '2px solid var(--border-color)',
                     borderRadius: '10px',
                     cursor: 'pointer',
                     display: 'flex',
@@ -2770,7 +2770,7 @@ export default function CockpitInterface({
                     e.currentTarget.style.transform = 'translateX(4px)';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.backgroundColor = '#f8fafc';
+                    e.currentTarget.style.backgroundColor = 'var(--gray-50)';
                     e.currentTarget.style.borderColor = '#e2e8f0';
                     e.currentTarget.style.transform = 'translateX(0)';
                   }}>
@@ -2794,8 +2794,8 @@ export default function CockpitInterface({
                 width: '100%',
                 marginTop: '20px',
                 padding: '12px',
-                backgroundColor: '#3b82f6',
-                color: 'white',
+                backgroundColor: 'var(--primary)',
+                color: 'var(--text-color)',
                 border: 'none',
                 borderRadius: '8px',
                 fontSize: '14px',
@@ -2827,7 +2827,7 @@ export default function CockpitInterface({
           <div 
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--card-background)',
               borderRadius: '16px',
               padding: '32px',
               maxWidth: '500px',
@@ -2888,7 +2888,7 @@ export default function CockpitInterface({
                   flex: 1,
                   padding: '12px',
                   backgroundColor: routeNumberInput.trim() ? '#10b981' : '#9ca3af',
-                  color: 'white',
+                  color: 'var(--text-color)',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -2903,7 +2903,7 @@ export default function CockpitInterface({
                   flex: 1,
                   padding: '12px',
                   backgroundColor: '#6b7280',
-                  color: 'white',
+                  color: 'var(--text-color)',
                   border: 'none',
                   borderRadius: '8px',
                   fontSize: '14px',
@@ -2936,7 +2936,7 @@ export default function CockpitInterface({
           <div 
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--card-background)',
               borderRadius: '16px',
               padding: '32px',
               maxWidth: '700px',
@@ -2969,11 +2969,11 @@ export default function CockpitInterface({
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '12px' }}>
                 {[
                   { label: 'Total vekt', value: `${freightUnits.filter(fu => selectedFUs.includes(fu.id)).reduce((s, fu) => s + fu.weight, 0)}kg`, icon: '⚖️' },
-                  { label: 'Total volum', value: `${freightUnits.filter(fu => selectedFUs.includes(fu.id)).reduce((s, fu) => s + fu.volume, 0).toFixed(1)}m³`, icon: '📏' },
+                  { label: 'Total volum', value: `${(freightUnits.filter(fu => selectedFUs.includes(fu.id)).reduce((s, fu) => s + (fu.volume || 0), 0) || 0).toFixed(1)}m³`, icon: '📏' },
                   { label: 'Total verdi', value: `${freightUnits.filter(fu => selectedFUs.includes(fu.id)).reduce((s, fu) => s + fu.price, 0)},-`, icon: '💰' }
                 ].map((stat, idx) => (
                   <div key={idx} style={{
-                    backgroundColor: '#ffffff',
+                    backgroundColor: 'var(--card-background)',
                     borderRadius: '8px',
                     padding: '10px',
                     textAlign: 'center'
@@ -2995,7 +2995,7 @@ export default function CockpitInterface({
                 <div style={{
                   textAlign: 'center',
                   padding: '40px 20px',
-                  backgroundColor: '#f8fafc',
+                  backgroundColor: 'var(--gray-50)',
                   borderRadius: '12px',
                   border: '2px dashed #cbd5e1'
                 }}>
@@ -3013,8 +3013,8 @@ export default function CockpitInterface({
                       alignItems: 'center',
                       gap: '6px',
                       padding: '10px 16px',
-                      backgroundColor: '#3b82f6',
-                      color: 'white',
+                      backgroundColor: 'var(--primary)',
+                      color: 'var(--text-color)',
                       textDecoration: 'none',
                       borderRadius: '8px',
                       fontSize: '13px',
@@ -3077,7 +3077,7 @@ export default function CockpitInterface({
                         }}
                         onMouseEnter={(e) => {
                           if (canFit) {
-                            e.currentTarget.style.backgroundColor = '#f8fafc';
+                            e.currentTarget.style.backgroundColor = 'var(--gray-50)';
                             e.currentTarget.style.borderColor = '#8b5cf6';
                             e.currentTarget.style.transform = 'translateX(4px)';
                           }
@@ -3107,7 +3107,7 @@ export default function CockpitInterface({
                                 <span style={{
                                   fontSize: '10px',
                                   padding: '4px 8px',
-                                  backgroundColor: vehicle.vehicleType === 'company_car' ? '#e0e7ff' : vehicle.vehicleType === 'two_man' ? '#dbeafe' : '#f3f4f6',
+                                  backgroundColor: vehicle.vehicleType === 'company_car' ? 'rgba(99, 102, 241, 0.2)' : vehicle.vehicleType === 'two_man' ? 'rgba(6, 182, 212, 0.2)' : 'var(--gray-100)',
                                   color: vehicle.vehicleType === 'company_car' ? '#4338ca' : vehicle.vehicleType === 'two_man' ? '#1e40af' : '#4b5563',
                                   borderRadius: '6px',
                                   fontWeight: '700',
@@ -3135,7 +3135,7 @@ export default function CockpitInterface({
                           display: 'grid', 
                           gridTemplateColumns: 'repeat(2, 1fr)', 
                           gap: '12px',
-                          backgroundColor: '#f8fafc',
+                          backgroundColor: 'var(--gray-50)',
                           borderRadius: '8px',
                           padding: '12px'
                         }}>
@@ -3148,7 +3148,7 @@ export default function CockpitInterface({
                           <div>
                             <div style={{ fontSize: '10px', color: '#64748b', marginBottom: '4px' }}>Volum</div>
                             <div style={{ fontSize: '13px', fontWeight: '700', color: totalVolume > vehicle.volumeCapacity! ? '#dc2626' : '#059669' }}>
-                              {totalVolume.toFixed(1)}m³ / {vehicle.volumeCapacity}m³
+                              {(totalVolume || 0).toFixed(1)}m³ / {vehicle.volumeCapacity || 0}m³
                             </div>
                           </div>
                         </div>
@@ -3156,7 +3156,7 @@ export default function CockpitInterface({
                         {!canFit && (
                           <div style={{
                             marginTop: '12px',
-                            backgroundColor: '#fee2e2',
+                            backgroundColor: 'rgba(239, 68, 68, 0.2)',
                             border: '1px solid #fca5a5',
                             borderRadius: '8px',
                             padding: '10px',
@@ -3233,7 +3233,7 @@ export default function CockpitInterface({
           <div 
             onClick={(e) => e.stopPropagation()}
             style={{
-              backgroundColor: 'white',
+              backgroundColor: 'var(--card-background)',
               borderRadius: '16px',
               padding: '28px',
               maxWidth: '500px',

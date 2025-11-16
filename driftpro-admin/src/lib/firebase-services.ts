@@ -20,6 +20,16 @@ import {
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
+import { microsoftGraphService } from './microsoft-graph-service';
+import type {
+  EmailCase,
+  EmailCaseLink,
+  EmailCaseMessage,
+  EmailEntity,
+  EmailAttachment,
+  EmailCaseSLA,
+  EmailRule
+} from './email-system-types';
 
 // Helper function to check if db is available
 const ensureDb = () => {
@@ -33,11 +43,13 @@ const ensureDb = () => {
 export interface Employee {
   id: string;
   displayName: string;
+  name?: string; // Alias for displayName for backward compatibility
   email: string;
   phone?: string;
   departmentId?: string;
+  department?: string; // For backward compatibility
   position?: string;
-  role: 'admin' | 'department_leader' | 'employee';
+  role: 'admin' | 'super_admin' | 'department_leader' | 'employee';
   avatar?: string;
   createdAt: string;
   updatedAt: string;
@@ -94,6 +106,34 @@ export interface Employee {
     it: boolean;
     legal: boolean;
     audit: boolean;
+    internkontrollOgSamsvar: boolean; // Internkontroll og Samsvar (audit page) - Legacy, kept for backward compatibility
+    internrevisjon: boolean; // Internrevisjon fane
+    avvik: boolean; // Avvik fane
+    risikovurdering: boolean; // Risikovurdering fane
+    oppfølgingstiltak: boolean; // Oppfølgingstiltak fane
+    kontrollpunkter: boolean; // Kontrollpunkter fane
+    internkontrollRapporter: boolean; // Rapporter fane i Internkontroll og Samsvar
+    // Sidebar sider
+    chat: boolean; // Chat
+    emailSystem: boolean; // E-post System
+    smsLogs: boolean; // SMS Logg & Telefonbok
+    partners: boolean; // Samarbeidspartnere
+    // Logistikk System faner
+    logistikkBudPriser: boolean; // BUD Priser fane
+    logistikkLevering: boolean; // Levering fane
+    logistikkPlanlegging: boolean; // Planlegging fane
+    logistikkKunder: boolean; // Kunder fane
+    logistikkLeverandorer: boolean; // Leverandører fane
+    logistikkProdukter: boolean; // Produkter fane
+    logistikkLager: boolean; // Lager fane
+    logistikkFakturering: boolean; // Fakturering fane
+    logistikkFinans: boolean; // Finans fane
+    // HR faner
+    hrAnsatte: boolean; // Ansatte fane i HR
+    hrVakter: boolean; // Vakter fane i HR
+    hrFravær: boolean; // Fravær fane i HR
+    hrFerie: boolean; // Ferie fane i HR
+    hrAvdelinger: boolean; // Avdelinger fane i HR
   };
   // Ferie og fravær-tilgang
   vacationAccess?: {
@@ -126,6 +166,7 @@ export interface Department {
   employeeCount: number;
   budget?: number;
   location?: string;
+  status?: 'active' | 'inactive';
 }
 
 export interface Shift {
@@ -153,9 +194,10 @@ export interface Deviation {
   description: string;
   type: 'safety' | 'quality' | 'security' | 'process' | 'environmental' | 'health' | 'other';
   severity: 'low' | 'medium' | 'high' | 'critical';
-  status: 'reported' | 'investigating' | 'resolved' | 'closed';
+  status: 'reported' | 'investigating' | 'resolved' | 'closed' | 'in_progress';
   reportedBy: string;
   assignedTo?: string;
+  assignedToIds?: string[]; // Multiple assigned persons
   departmentId: string;
   companyId: string;
   location?: string;
@@ -172,7 +214,8 @@ export interface Deviation {
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
-  attachments?: string[];
+  attachments?: string[]; // Legacy - kept for backward compatibility
+  documents?: AuditDocument[]; // New - full document objects with metadata
   comments?: DeviationComment[];
 }
 
@@ -187,6 +230,8 @@ export interface DeviationComment {
 export interface Document {
   id: string;
   title: string;
+  name?: string; // Alias for title
+  type?: string; // Alias for fileType
   description?: string;
   fileName: string;
   fileUrl: string;
@@ -201,6 +246,8 @@ export interface Document {
   isPublic: boolean;
   tags?: string[];
   version?: string;
+  storageType?: 'onedrive' | 'firebase'; // Track which storage was used
+  oneDriveItemId?: string; // OneDrive item ID if stored in OneDrive
 }
 
 export interface TimeClock {
@@ -221,11 +268,11 @@ export interface TimeClock {
 export interface Absence {
   id: string;
   employeeId: string;
-  employeeName: string;
+  employeeName?: string; // Made optional for backward compatibility
   companyId: string;
   startDate: string;
   endDate: string;
-  type: 'sick' | 'personal' | 'other';
+  type: 'sick' | 'personal' | 'sickChild' | 'other' | 'vacation';
   reason: string;
   status: 'pending' | 'approved' | 'rejected';
   approvedBy?: string;
@@ -233,6 +280,7 @@ export interface Absence {
   notes?: string;
   createdAt: string;
   updatedAt: string;
+  requestedBy?: string;
 }
 
 export interface Vacation {
@@ -248,6 +296,21 @@ export interface Vacation {
   approvedBy?: string;
   approvedAt?: string;
   notes?: string;
+  requestedBy?: string;
+  createdAt: string;
+  updatedAt: string;
+  year?: number; // Year the vacation belongs to
+}
+
+export interface VacationAllocation {
+  id: string;
+  employeeId: string;
+  companyId: string;
+  year: number;
+  allocatedDays: number; // Standard 25 days (5 weeks)
+  usedDays: number;
+  transferredDays: number; // Days transferred from previous year
+  remainingDays: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -467,6 +530,7 @@ export interface PartnerAssignment {
   status: 'pending' | 'in_progress' | 'completed' | 'cancelled';
   assignedBy: string;
   assignedTo?: string;
+  assignedToIds?: string[]; // Multiple assigned persons
   partnerResponse?: {
     status: 'accepted' | 'rejected' | 'no_response';
     notes?: string;
@@ -490,22 +554,299 @@ export interface PartnerUser {
   updatedAt: string;
 }
 
+// Comprehensive Internal Audit System Interfaces
+export interface InternalAudit {
+  id: string;
+  title: string;
+  type: 'Internrevisjon' | 'Eksternrevisjon' | 'Regulatorisk' | 'Kvalitetsrevisjon' | 'Sikkerhetsrevisjon' | 'Finansiell';
+  scope: string;
+  status: 'Planlagt' | 'Pågående' | 'Fullført' | 'Avbrutt' | 'Overdue';
+  plannedDate: string;
+  completedDate?: string;
+  responsiblePerson: string;
+  responsiblePersonId?: string;
+  responsiblePersons?: string[]; // Multiple responsible persons
+  responsiblePersonIds?: string[]; // Multiple responsible person IDs
+  department: string;
+  departmentId?: string;
+  findings: string[];
+  recommendations: string[];
+  priority: 'Høy' | 'Middels' | 'Lav';
+  nextReview: string;
+  description?: string;
+  objectives?: string[];
+  standards?: string[];
+  documents?: AuditDocument[];
+  comments?: AuditComment[];
+  assignedAuditors?: string[];
+  estimatedHours?: number;
+  actualHours?: number;
+  cost?: number;
+  complianceScore?: number;
+  companyId: string;
+  createdBy: string;
+  createdAt: string;
+  updatedAt: string;
+  completedBy?: string;
+  approvedBy?: string;
+  approvalDate?: string;
+  notes?: string;
+}
+
+export interface AuditDocument {
+  id: string;
+  fileName: string;
+  fileUrl: string;
+  fileSize: number;
+  fileType: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  description?: string;
+  category?: 'planning' | 'execution' | 'findings' | 'report' | 'evidence' | 'other';
+  storageType?: 'onedrive' | 'firebase'; // Track which storage was used
+  oneDriveItemId?: string; // OneDrive item ID if stored in OneDrive
+}
+
+export interface AuditComment {
+  id: string;
+  text: string;
+  authorId: string;
+  authorName: string;
+  createdAt: string;
+}
+
+export interface RiskAssessment {
+  id: string;
+  riskAssessmentId?: string; // Display ID like "310"
+  title: string;
+  description: string;
+  departmentId: string;
+  location?: string;
+  activity: string;
+  hazard: string;
+  riskLevel: 'low' | 'medium' | 'high' | 'critical';
+  probability: string; // Changed to string to support "0", "1", "2", etc.
+  probabilityValue?: number;
+  probabilityLabel?: string; // e.g., "Lite sannsynlig"
+  consequence: 'low' | 'medium' | 'high' | 'critical';
+  existingControls: string;
+  existingControlsProbability?: string; // Existing measures to reduce probability
+  existingControlsConsequence?: string; // Existing measures to reduce consequence
+  additionalControls?: string;
+  whatCanHappen?: string; // "Hva kan skje?"
+  eventDescriptionAndConsequence?: string; // "Beskrivelse av hendelsen og konsekvens"
+  eventCauseDescription?: string; // "Beskrivelse av årsaken til hendelsen"
+  mappedDate?: string; // "Kartlagt dato"
+  responsiblePerson: string;
+  responsiblePersonId?: string;
+  responsiblePersons?: string[]; // Multiple responsible persons
+  responsiblePersonIds?: string[]; // Multiple responsible person IDs
+  reviewDate: string;
+  attachments?: string[]; // Legacy - kept for backward compatibility
+  documents?: AuditDocument[]; // New - full document objects with metadata
+  companyId: string;
+  createdBy: string;
+  sentToLeader?: boolean;
+  leaderId?: string;
+  status: 'draft' | 'pending_approval' | 'approved' | 'rejected';
+  createdAt: string;
+  updatedAt: string;
+  // New fields from the detailed form
+  area?: string; // Område
+  cause?: string; // Årsak
+  processes?: string; // Prosesser
+  reference2?: string;
+  reference3?: string;
+  reference4?: string;
+  notes?: string; // Notater
+  timestampSignature?: string; // Tidsstempel / Signatur
+  // Risk categories with detailed values
+  riskPerson?: { enabled: boolean; value: string; level: number; status?: string };
+  riskEconomy?: { enabled: boolean; value: string; level: number; status?: string };
+  riskEnvironment?: { enabled: boolean; value: string; level: number; status?: string };
+  riskReputation?: { enabled: boolean; value: string; level: number; status?: string };
+  riskDelivery?: { enabled: boolean; value: string; level: number; status?: string };
+  riskSecurity?: { enabled: boolean; value: string; level: number; status?: string };
+}
+
+export interface FollowUpAction {
+  id: string;
+  title: string;
+  description: string;
+  relatedAuditId?: string;
+  relatedDeviationId?: string;
+  relatedRiskAssessmentId?: string;
+  responsiblePerson: string;
+  responsiblePersonId?: string;
+  responsiblePersons?: string[]; // Multiple responsible persons
+  responsiblePersonIds?: string[]; // Multiple responsible person IDs
+  departmentId: string;
+  dueDate: string;
+  status: 'not_started' | 'in_progress' | 'completed' | 'overdue';
+  priority: 'Høy' | 'Middels' | 'Lav';
+  completedDate?: string;
+  completedBy?: string;
+  verificationRequired: boolean;
+  verifiedBy?: string;
+  verifiedAt?: string;
+  attachments?: string[]; // Legacy - kept for backward compatibility
+  documents?: AuditDocument[]; // New - full document objects with metadata
+  companyId: string;
+  createdBy: string;
+  sentToLeader?: boolean;
+  leaderId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Checkpoint {
+  id: string;
+  title: string;
+  description: string;
+  departmentId: string;
+  category: 'safety' | 'quality' | 'environmental' | 'process' | 'regulatory';
+  frequency: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly';
+  responsiblePerson: string;
+  responsiblePersonId?: string;
+  responsiblePersons?: string[]; // Multiple responsible persons
+  responsiblePersonIds?: string[]; // Multiple responsible person IDs
+  lastChecked?: string;
+  nextCheck: string;
+  status: 'pending' | 'completed' | 'failed' | 'overdue';
+  checklist: Array<{ item: string; checked: boolean; notes?: string }>;
+  attachments?: string[]; // Legacy - kept for backward compatibility
+  documents?: AuditDocument[]; // New - full document objects with metadata
+  companyId: string;
+  createdBy: string;
+  sentToLeader?: boolean;
+  leaderId?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// GDPR Access Control Helper
+export interface UserAccessContext {
+  userId: string;
+  role: 'admin' | 'super_admin' | 'department_leader' | 'employee';
+  departmentId?: string;
+  companyId: string;
+}
+
+// Helper function to create UserAccessContext from userProfile
+export function createUserAccessContext(userProfile: any): UserAccessContext | null {
+  if (!userProfile || !userProfile.id || !userProfile.companyId) {
+    return null;
+  }
+  
+  return {
+    userId: userProfile.id,
+    role: userProfile.role || 'employee',
+    departmentId: userProfile.departmentId,
+    companyId: userProfile.companyId
+  };
+}
+
 class FirebaseService {
-  // Employee Management
-  async getEmployees(companyId: string): Promise<Employee[]> {
+  // GDPR Helper: Check if user has access to department
+  private hasDepartmentAccess(userContext: UserAccessContext, targetDepartmentId?: string): boolean {
+    // Superadmin and admin have access to all departments
+    if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+      return true;
+    }
+    
+    // Department leaders can only access their own department
+    if (userContext.role === 'department_leader') {
+      return userContext.departmentId === targetDepartmentId;
+    }
+    
+    // Employees can only access their own data
+    return false;
+  }
+
+  // GDPR Helper: Log access for audit trail
+  private async logAccess(
+    action: string,
+    userId: string,
+    resourceType: string,
+    resourceId: string,
+    companyId: string,
+    metadata?: Record<string, unknown>
+  ): Promise<void> {
+    const firestore = ensureDb();
+    try {
+      // Clean metadata to remove undefined values
+      const cleanMetadata: Record<string, unknown> = {};
+      if (metadata) {
+        for (const [key, value] of Object.entries(metadata)) {
+          if (value !== undefined && value !== null) {
+            cleanMetadata[key] = value;
+          }
+        }
+      }
+
+      await addDoc(collection(firestore, 'auditLogs'), {
+        action,
+        userId,
+        resourceType,
+        resourceId,
+        companyId,
+        timestamp: serverTimestamp(),
+        metadata: cleanMetadata,
+        createdAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error logging access:', error);
+      // Don't throw - logging failures shouldn't break the app
+    }
+  }
+
+  // Employee Management with GDPR filtering
+  async getEmployees(companyId: string, userContext?: UserAccessContext): Promise<Employee[]> {
     const firestore = ensureDb();
 
-    console.log('Fetching employees for company:', companyId);
+    console.log('Fetching employees for company:', companyId, 'with context:', userContext);
 
     try {
-      // First, let's check what's in the users collection without any filters
-      const allUsersSnapshot = await getDocs(collection(firestore, 'users'));
-      console.log('All users in collection:', allUsersSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+      let q;
       
-      const q = query(
-        collection(firestore, 'users'),
-        where('companyId', '==', companyId)
-      );
+      // GDPR: Filter based on role and department
+      if (userContext) {
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Superadmin and admin see all employees
+          q = query(
+            collection(firestore, 'users'),
+            where('companyId', '==', companyId)
+          );
+        } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          // Department leaders only see employees in their department
+          q = query(
+            collection(firestore, 'users'),
+            where('companyId', '==', companyId),
+            where('departmentId', '==', userContext.departmentId)
+          );
+        } else if (userContext.role === 'employee') {
+          // Employees only see themselves - fetch by document ID
+          const employeeDoc = await getDoc(doc(firestore, 'users', userContext.userId));
+          if (employeeDoc.exists() && employeeDoc.data().companyId === companyId) {
+            const employee = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
+            await this.logAccess('view_employee', userContext.userId, 'employee', userContext.userId, companyId);
+            return [employee];
+          }
+          return [];
+        } else {
+          // No access
+          console.warn('User does not have access to employees');
+          return [];
+        }
+      } else {
+        // Fallback: if no context provided, return all (for backward compatibility)
+        // This should be avoided in production
+        q = query(
+          collection(firestore, 'users'),
+          where('companyId', '==', companyId)
+        );
+      }
+
       const snapshot = await getDocs(q);
       const employees = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -515,6 +856,17 @@ class FirebaseService {
       // Sort by createdAt in memory
       employees.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
       
+      // Log access
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          count: employees.length
+        };
+        if (userContext.departmentId) {
+          logMetadata.departmentId = userContext.departmentId;
+        }
+        await this.logAccess('view_employees', userContext.userId, 'employees', 'list', companyId, logMetadata);
+      }
+      
       console.log('Found employees for company', companyId, ':', employees.length, employees);
       return employees;
     } catch (error) {
@@ -523,15 +875,48 @@ class FirebaseService {
     }
   }
 
-  async getEmployee(id: string): Promise<Employee | null> {
+  async getEmployee(id: string, userContext?: UserAccessContext): Promise<Employee | null> {
     const firestore = ensureDb();
 
     try {
       const docSnap = await getDoc(doc(firestore, 'users', id));
-      if (docSnap.exists()) {
-        return { id: docSnap.id, ...docSnap.data() } as Employee;
+      if (!docSnap.exists()) {
+        return null;
       }
-      return null;
+
+      const employee = { id: docSnap.id, ...docSnap.data() } as Employee;
+
+      // GDPR: Check access
+      if (userContext) {
+        // Superadmin and admin have access to all
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          await this.logAccess('view_employee', userContext.userId, 'employee', id, employee.companyId);
+          return employee;
+        }
+        
+        // Department leaders can only access employees in their department
+        if (userContext.role === 'department_leader') {
+          if (employee.departmentId === userContext.departmentId) {
+            await this.logAccess('view_employee', userContext.userId, 'employee', id, employee.companyId);
+            return employee;
+          }
+          console.warn('Department leader does not have access to this employee');
+          return null;
+        }
+        
+        // Employees can only access themselves
+        if (userContext.role === 'employee') {
+          if (id === userContext.userId) {
+            await this.logAccess('view_employee', userContext.userId, 'employee', id, employee.companyId);
+            return employee;
+          }
+          console.warn('Employee does not have access to this employee');
+          return null;
+        }
+      }
+
+      // If no context provided, return (for backward compatibility)
+      return employee;
     } catch (error) {
       console.error('Error fetching employee:', error);
       return null;
@@ -570,18 +955,93 @@ class FirebaseService {
     }
   }
 
-  async createEmployee(employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async createEmployee(employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>, userContext?: UserAccessContext): Promise<string> {
     const firestore = ensureDb();
 
-    console.log('Creating employee with data:', employeeData);
+    console.log('Creating employee with data:', employeeData, 'userContext:', userContext);
 
     try {
+      // GDPR: Check if user has permission to create employees
+      if (userContext) {
+        // Superadmin and admin can create employees in any department
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        } 
+        // Department leaders can only create employees in their own department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          if (employeeData.departmentId && employeeData.departmentId !== userContext.departmentId) {
+            throw new Error('Du kan kun legge til ansatte i din egen avdeling');
+          }
+          // If no departmentId specified, assign to leader's department
+          if (!employeeData.departmentId) {
+            employeeData.departmentId = userContext.departmentId;
+          }
+        }
+        // Employees cannot create other employees
+        else if (userContext.role === 'employee') {
+          throw new Error('Du har ikke tilgang til å legge til ansatte');
+        }
+      }
+
       const now = new Date().toISOString();
       
-      // Remove undefined values to avoid Firebase errors
-      const cleanEmployeeData = Object.fromEntries(
-        Object.entries(employeeData).filter(([_, value]) => value !== undefined && value !== null)
-      );
+      // Helper function to recursively remove undefined and null values, but keep empty objects and arrays
+      const cleanObject = (obj: any): any => {
+        if (obj === null || obj === undefined) {
+          return undefined;
+        }
+        if (Array.isArray(obj)) {
+          const cleaned = obj.map(cleanObject).filter(item => item !== undefined);
+          return cleaned.length > 0 ? cleaned : []; // Keep empty arrays
+        }
+        if (typeof obj === 'object') {
+          const cleaned: any = {};
+          for (const [key, value] of Object.entries(obj)) {
+            const cleanedValue = cleanObject(value);
+            // Keep empty objects for permissions, vacationAccess, leadership
+            if (key === 'permissions' || key === 'vacationAccess' || key === 'leadership') {
+              cleaned[key] = cleanedValue || {};
+            } else if (cleanedValue !== undefined && cleanedValue !== null) {
+              cleaned[key] = cleanedValue;
+            }
+          }
+          return cleaned;
+        }
+        return obj;
+      };
+      
+      // Remove undefined and null values to avoid Firebase errors, but keep required structure
+      const cleanEmployeeData = cleanObject(employeeData);
+      
+      // Ensure required fields are present
+      if (!cleanEmployeeData || !cleanEmployeeData.displayName || !cleanEmployeeData.email || !cleanEmployeeData.companyId) {
+        throw new Error('Missing required fields: displayName, email, or companyId');
+      }
+      
+      // Ensure permissions, vacationAccess, and leadership are always present (even if empty)
+      if (!cleanEmployeeData.permissions) {
+        cleanEmployeeData.permissions = {};
+      }
+      if (!cleanEmployeeData.vacationAccess) {
+        cleanEmployeeData.vacationAccess = {
+          canRequestVacation: true,
+          canApproveVacation: false,
+          canViewAllVacations: false,
+          vacationDaysPerYear: 25,
+          managerApprovalRequired: true
+        };
+      }
+      if (!cleanEmployeeData.leadership) {
+        cleanEmployeeData.leadership = {
+          isManager: false,
+          managesDepartments: [],
+          managesEmployees: [],
+          reportsTo: '',
+          canApproveExpenses: false,
+          canApprovePurchases: false,
+          budgetLimit: 0
+        };
+      }
       
       const employeeDoc = {
         ...cleanEmployeeData,
@@ -589,57 +1049,150 @@ class FirebaseService {
         updatedAt: now
       };
       
-      console.log('Employee document to save:', employeeDoc);
+      console.log('Employee document to save:', JSON.stringify(employeeDoc, null, 2));
       
       const docRef = await addDoc(collection(firestore, 'users'), employeeDoc);
-      console.log('Employee created with ID:', docRef.id);
+      console.log('✅ Employee created with ID:', docRef.id);
 
-      // Create activity log
-      await this.createActivity({
-        type: 'employee_added',
-        title: 'Ny ansatt registrert',
-        description: `${employeeData.displayName} ble lagt til i systemet`,
-        userId: docRef.id,
-        userName: employeeData.displayName,
-        companyId: employeeData.companyId
-      });
+      // Log access for audit trail
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          employeeName: employeeData.displayName,
+          role: employeeData.role
+        };
+        if (employeeData.departmentId) {
+          logMetadata.departmentId = employeeData.departmentId;
+        }
+        await this.logAccess('create_employee', userContext.userId, 'employee', docRef.id, employeeData.companyId, logMetadata);
+      }
 
-      console.log('Activity log created for employee:', docRef.id);
+      // Create activity log (don't fail if this fails)
+      try {
+        await this.createActivity({
+          type: 'employee_added',
+          title: 'Ny ansatt registrert',
+          description: `${employeeData.displayName} ble lagt til i systemet`,
+          userId: docRef.id,
+          userName: employeeData.displayName,
+          companyId: employeeData.companyId
+        });
+        console.log('Activity log created for employee:', docRef.id);
+      } catch (activityError) {
+        console.warn('Failed to create activity log (non-critical):', activityError);
+      }
+
       return docRef.id;
     } catch (error) {
-      console.error('Error creating employee:', error);
+      console.error('❌ Error creating employee:', error);
       throw error;
     }
   }
 
-  async updateEmployee(id: string, data: Partial<Employee>): Promise<void> {
+  async updateEmployee(id: string, data: Partial<Employee>, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      console.log('Updating employee with ID:', id, 'Data:', data);
+      
+      // Get employee data before update for audit log
+      const employeeDoc = await getDoc(doc(firestore, 'users', id));
+      if (!employeeDoc.exists()) {
+        throw new Error('Employee not found');
+      }
+      const employeeData = employeeDoc.data() as Employee;
+      
+      // Helper function to recursively remove undefined and null values
+      const cleanObject = (obj: any): any => {
+        if (obj === null || obj === undefined) {
+          return undefined;
+        }
+        if (Array.isArray(obj)) {
+          return obj.map(cleanObject).filter(item => item !== undefined);
+        }
+        if (typeof obj === 'object') {
+          const cleaned: any = {};
+          for (const [key, value] of Object.entries(obj)) {
+            const cleanedValue = cleanObject(value);
+            if (cleanedValue !== undefined && cleanedValue !== null) {
+              cleaned[key] = cleanedValue;
+            }
+          }
+          return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+        }
+        return obj;
+      };
+      
+      // Remove undefined and null values to avoid Firebase errors
+      const cleanData = cleanObject(data);
+      
+      console.log('Cleaned data to save:', cleanData);
+      
       await updateDoc(doc(firestore, 'users', id), {
-        ...data,
+        ...cleanData,
         updatedAt: new Date().toISOString()
       });
+      
+      // Log access for audit trail
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          employeeName: employeeData.displayName,
+          employeeEmail: employeeData.email,
+          updatedFields: Object.keys(cleanData || {})
+        };
+        if (employeeData.departmentId) {
+          logMetadata.departmentId = employeeData.departmentId;
+        }
+        await this.logAccess('update_employee', userContext.userId, 'employee', id, employeeData.companyId, logMetadata);
+      }
+      
+      console.log('✅ Employee updated successfully');
     } catch (error) {
-      console.error('Error updating employee:', error);
+      console.error('❌ Error updating employee:', error);
       throw error;
     }
   }
 
-  async deleteEmployee(id: string): Promise<void> {
+  async deleteEmployee(id: string, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      console.log('Deleting employee with ID:', id);
       // Get employee data before deletion
       const employeeDoc = await getDoc(doc(firestore, 'users', id));
       if (!employeeDoc.exists()) {
         throw new Error('Employee not found');
       }
 
-      const employeeData = employeeDoc.data();
+      const employeeData = employeeDoc.data() as Employee;
+      
+      // PROTECTION: Prevent deletion of superadmin or protected users
+      if (employeeData.role === 'super_admin' || 
+          (employeeData as any).isProtected === true || 
+          (employeeData as any).cannotBeDeleted === true ||
+          (employeeData as any).isSuperAdmin === true) {
+        throw new Error('Denne brukeren er beskyttet og kan ikke slettes. Superadmin-brukere har permanent tilgang.');
+      }
+      
+      // PROTECTION: Prevent deletion of the specific superadmin email
+      if (employeeData.email === 'baxigshti@hotmail.de') {
+        throw new Error('Denne superadmin-brukeren kan ikke slettes.');
+      }
       
       // Delete from Firestore
       await deleteDoc(doc(firestore, 'users', id));
+      
+      // Log access for audit trail
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          employeeName: employeeData.displayName,
+          employeeEmail: employeeData.email,
+          role: employeeData.role
+        };
+        if (employeeData.departmentId) {
+          logMetadata.departmentId = employeeData.departmentId;
+        }
+        await this.logAccess('delete_employee', userContext.userId, 'employee', id, employeeData.companyId, logMetadata);
+      }
       
       console.log(`✅ Employee deleted from Firestore: ${employeeData.displayName} (${employeeData.email})`);
       
@@ -677,17 +1230,66 @@ class FirebaseService {
     }
   }
 
-  async createDepartment(departmentData: Omit<Department, 'id' | 'createdAt' | 'updatedAt' | 'employeeCount'>): Promise<string> {
+  async createDepartment(departmentData: Omit<Department, 'id' | 'createdAt' | 'updatedAt' | 'employeeCount'>, userContext?: UserAccessContext): Promise<string> {
     const firestore = ensureDb();
 
     try {
+      // GDPR: Check if user has permission to create departments
+      if (userContext) {
+        // Only superadmin and admin can create departments
+        if (userContext.role !== 'super_admin' && userContext.role !== 'admin') {
+          throw new Error('Du har ikke tilgang til å opprette avdelinger. Kun administratorer kan opprette avdelinger.');
+        }
+      }
+
+      // Helper function to remove undefined and null values
+      const cleanObject = (obj: any): any => {
+        if (obj === null || obj === undefined) {
+          return undefined;
+        }
+        if (Array.isArray(obj)) {
+          const cleaned = obj.map(cleanObject).filter(item => item !== undefined);
+          return cleaned.length > 0 ? cleaned : [];
+        }
+        if (typeof obj === 'object') {
+          const cleaned: any = {};
+          for (const [key, value] of Object.entries(obj)) {
+            const cleanedValue = cleanObject(value);
+            if (cleanedValue !== undefined && cleanedValue !== null) {
+              cleaned[key] = cleanedValue;
+            }
+          }
+          return cleaned;
+        }
+        return obj;
+      };
+
+      // Remove undefined and null values to avoid Firebase errors
+      const cleanDepartmentData = cleanObject({
+        ...departmentData,
+        employeeCount: 0
+      });
+
+      // Ensure required fields are present
+      if (!cleanDepartmentData || !cleanDepartmentData.name || !cleanDepartmentData.companyId) {
+        throw new Error('Missing required fields: name or companyId');
+      }
+
       const now = new Date().toISOString();
       const docRef = await addDoc(collection(firestore, 'departments'), {
-        ...departmentData,
-        employeeCount: 0,
+        ...cleanDepartmentData,
         createdAt: now,
         updatedAt: now
       });
+
+      // Log access for audit trail
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          departmentName: departmentData.name
+        };
+        await this.logAccess('create_department', userContext.userId, 'department', docRef.id, departmentData.companyId, logMetadata);
+      }
+
       return docRef.id;
     } catch (error) {
       console.error('Error creating department:', error);
@@ -695,16 +1297,77 @@ class FirebaseService {
     }
   }
 
-  async updateDepartment(id: string, data: Partial<Department>): Promise<void> {
+  async updateDepartment(id: string, data: Partial<Department>, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get department data before update for audit log
+      const departmentDoc = await getDoc(doc(firestore, 'departments', id));
+      const departmentData = departmentDoc.exists() ? departmentDoc.data() as Department : null;
+      
+      // Helper function to remove undefined and null values
+      const cleanObject = (obj: any): any => {
+        if (obj === null || obj === undefined) {
+          return undefined;
+        }
+        if (Array.isArray(obj)) {
+          const cleaned = obj.map(cleanObject).filter(item => item !== undefined);
+          return cleaned.length > 0 ? cleaned : [];
+        }
+        if (typeof obj === 'object') {
+          const cleaned: any = {};
+          for (const [key, value] of Object.entries(obj)) {
+            const cleanedValue = cleanObject(value);
+            if (cleanedValue !== undefined && cleanedValue !== null) {
+              cleaned[key] = cleanedValue;
+            }
+          }
+          return cleaned;
+        }
+        return obj;
+      };
+
+      // Remove undefined and null values to avoid Firebase errors
+      const cleanData = cleanObject(data);
+
       await updateDoc(doc(firestore, 'departments', id), {
-        ...data,
+        ...cleanData,
         updatedAt: new Date().toISOString()
       });
+      
+      // Log access for audit trail
+      if (userContext && departmentData) {
+        const logMetadata: Record<string, unknown> = {
+          departmentName: departmentData.name,
+          updatedFields: Object.keys(cleanData || {})
+        };
+        await this.logAccess('update_department', userContext.userId, 'department', id, departmentData.companyId, logMetadata);
+      }
     } catch (error) {
       console.error('Error updating department:', error);
+      throw error;
+    }
+  }
+
+  async deleteDepartment(id: string, userContext?: UserAccessContext): Promise<void> {
+    const firestore = ensureDb();
+
+    try {
+      // Get department data before deletion for audit log
+      const departmentDoc = await getDoc(doc(firestore, 'departments', id));
+      const departmentData = departmentDoc.exists() ? departmentDoc.data() as Department : null;
+      
+      await deleteDoc(doc(firestore, 'departments', id));
+      
+      // Log access for audit trail
+      if (userContext && departmentData) {
+        const logMetadata: Record<string, unknown> = {
+          departmentName: departmentData.name
+        };
+        await this.logAccess('delete_department', userContext.userId, 'department', id, departmentData.companyId, logMetadata);
+      }
+    } catch (error) {
+      console.error('Error deleting department:', error);
       throw error;
     }
   }
@@ -783,14 +1446,44 @@ class FirebaseService {
   }
 
   // Deviation Management
-  async getDeviations(companyId: string, filters?: { status?: string; type?: string; severity?: string }): Promise<Deviation[]> {
+  async getDeviations(companyId: string, userContext?: UserAccessContext, filters?: { status?: string; type?: string; severity?: string }): Promise<Deviation[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(
-        collection(firestore, 'deviations'),
-        where('companyId', '==', companyId)
-      );
+      let q;
+      
+      // GDPR: Filter based on role and department
+      if (userContext) {
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Superadmin and admin see all deviations
+          q = query(
+            collection(firestore, 'deviations'),
+            where('companyId', '==', companyId)
+          );
+        } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          // Department leaders only see deviations from their department
+          q = query(
+            collection(firestore, 'deviations'),
+            where('companyId', '==', companyId),
+            where('departmentId', '==', userContext.departmentId)
+          );
+        } else if (userContext.role === 'employee') {
+          // Employees only see their own deviations
+          q = query(
+            collection(firestore, 'deviations'),
+            where('companyId', '==', companyId),
+            where('reportedBy', '==', userContext.userId)
+          );
+        } else {
+          return [];
+        }
+      } else {
+        // Fallback: if no context provided, return all (for backward compatibility)
+        q = query(
+          collection(firestore, 'deviations'),
+          where('companyId', '==', companyId)
+        );
+      }
 
       if (filters?.status) {
         q = query(q, where('status', '==', filters.status));
@@ -807,6 +1500,17 @@ class FirebaseService {
         id: doc.id,
         ...doc.data()
       })) as Deviation[];
+      
+      // Log access
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          count: deviations.length
+        };
+        if (userContext.departmentId) {
+          logMetadata.departmentId = userContext.departmentId;
+        }
+        await this.logAccess('view_deviations', userContext.userId, 'deviations', 'list', companyId, logMetadata);
+      }
       
       // Sort in-memory by createdAt descending
       return deviations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -857,20 +1561,51 @@ class FirebaseService {
     }
   }
 
-  // Document Management
-  async getDocuments(companyId: string, filters?: { category?: string; departmentId?: string }): Promise<Document[]> {
+  // Document Management with GDPR filtering
+  async getDocuments(companyId: string, userContext?: UserAccessContext, filters?: { category?: string; departmentId?: string }): Promise<Document[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(
-        collection(firestore, 'documents'),
-        where('companyId', '==', companyId)
-      );
+      let q;
+      
+      // GDPR: Filter based on role and department
+      if (userContext) {
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Superadmin and admin see all documents
+          q = query(
+            collection(firestore, 'documents'),
+            where('companyId', '==', companyId)
+          );
+        } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          // Department leaders only see documents from their department
+          q = query(
+            collection(firestore, 'documents'),
+            where('companyId', '==', companyId),
+            where('departmentId', '==', userContext.departmentId)
+          );
+        } else if (userContext.role === 'employee') {
+          // Employees only see their own documents
+          q = query(
+            collection(firestore, 'documents'),
+            where('companyId', '==', companyId),
+            where('createdBy', '==', userContext.userId)
+          );
+        } else {
+          return [];
+        }
+      } else {
+        // Fallback: if no context provided, return all (for backward compatibility)
+        q = query(
+          collection(firestore, 'documents'),
+          where('companyId', '==', companyId)
+        );
+      }
 
       if (filters?.category) {
         q = query(q, where('category', '==', filters.category));
       }
-      if (filters?.departmentId) {
+      if (filters?.departmentId && (userContext?.role === 'super_admin' || userContext?.role === 'admin')) {
+        // Only admins can filter by departmentId (department leaders are already filtered)
         q = query(q, where('departmentId', '==', filters.departmentId));
       }
 
@@ -879,6 +1614,17 @@ class FirebaseService {
         id: doc.id,
         ...doc.data()
       })) as Document[];
+      
+      // Log access
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          count: documents.length
+        };
+        if (userContext.departmentId) {
+          logMetadata.departmentId = userContext.departmentId;
+        }
+        await this.logAccess('view_documents', userContext.userId, 'documents', 'list', companyId, logMetadata);
+      }
       
       // Sort in-memory by createdAt descending
       return documents.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -890,14 +1636,38 @@ class FirebaseService {
 
   async uploadDocument(file: File, documentData: Omit<Document, 'id' | 'fileUrl' | 'fileSize' | 'fileType' | 'fileName' | 'createdAt' | 'updatedAt'>): Promise<string> {
     const firestore = ensureDb();
-    if (!storage) throw new Error('Firebase Storage not initialized');
 
     try {
-      // Upload file to storage
-      const fileName = `${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, `documents/${documentData.companyId}/${fileName}`);
-      await uploadBytes(storageRef, file);
-      const fileUrl = await getDownloadURL(storageRef);
+      let fileUrl: string = '';
+      let storageType: 'onedrive' | 'firebase' = 'firebase';
+      let oneDriveItemId: string | undefined;
+
+      // Try OneDrive first if Microsoft Graph is authenticated
+      if (microsoftGraphService.isAuthenticated()) {
+        try {
+          console.log('📁 Uploading to OneDrive...');
+          // Generic dokumenter legges under en egen side-mappe i OneDrive
+          const folderPath = `DriftPro/Dokumenter/${documentData.companyId}`;
+          const oneDriveResult = await microsoftGraphService.uploadFileToOneDrive(file, folderPath);
+          fileUrl = oneDriveResult.downloadUrl;
+          oneDriveItemId = oneDriveResult.id;
+          storageType = 'onedrive';
+          console.log('✅ File uploaded to OneDrive:', oneDriveResult.name);
+        } catch (onedriveError) {
+          console.warn('⚠️ OneDrive upload failed, falling back to Firebase Storage:', onedriveError);
+          // Fall back to Firebase Storage
+        }
+      }
+
+      // Fall back to Firebase Storage if OneDrive failed or not available
+      if (storageType === 'firebase' || !fileUrl) {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const fileName = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `documents/${documentData.companyId}/${fileName}`);
+        await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(storageRef);
+        console.log('✅ File uploaded to Firebase Storage');
+      }
 
       // Create document record
       const now = new Date().toISOString();
@@ -907,6 +1677,8 @@ class FirebaseService {
         fileUrl,
         fileSize: file.size,
         fileType: file.type,
+        storageType, // Track which storage was used
+        oneDriveItemId, // Store OneDrive item ID if used
         createdAt: now,
         updatedAt: now
       });
@@ -929,15 +1701,38 @@ class FirebaseService {
 
   async deleteDocument(id: string, fileUrl: string): Promise<void> {
     const firestore = ensureDb();
-    if (!storage) throw new Error('Firebase Storage not initialized');
 
     try {
-      // Delete from storage
-      const storageRef = ref(storage, fileUrl);
-      await deleteObject(storageRef);
+      // Get document to check storage type
+      const docRef = doc(firestore, 'documents', id);
+      const docSnap = await getDoc(docRef);
+      
+      if (docSnap.exists()) {
+        const docData = docSnap.data();
+        const storageType = docData.storageType || 'firebase';
+        const oneDriveItemId = docData.oneDriveItemId;
+
+        // Delete from appropriate storage
+        if (storageType === 'onedrive' && oneDriveItemId && microsoftGraphService.isAuthenticated()) {
+          try {
+            console.log('🗑️ Deleting from OneDrive...');
+            await microsoftGraphService.deleteOneDriveFile(oneDriveItemId);
+            console.log('✅ File deleted from OneDrive');
+          } catch (onedriveError) {
+            console.warn('⚠️ OneDrive deletion failed:', onedriveError);
+            // Continue with database deletion even if storage deletion fails
+          }
+        } else {
+          // Delete from Firebase Storage
+          if (!storage) throw new Error('Firebase Storage not initialized');
+          const storageRef = ref(storage, fileUrl);
+          await deleteObject(storageRef);
+          console.log('✅ File deleted from Firebase Storage');
+        }
+      }
 
       // Delete from database
-      await deleteDoc(doc(firestore, 'documents', id));
+      await deleteDoc(docRef);
     } catch (error) {
       console.error('Error deleting document:', error);
       throw error;
@@ -1018,16 +1813,77 @@ class FirebaseService {
   }
 
   // Absence Management
-  async getAbsences(companyId: string, filters?: { employeeId?: string; status?: string }): Promise<Absence[]> {
+  async getAbsences(companyId: string, userContext?: UserAccessContext, filters?: { employeeId?: string; status?: string }): Promise<Absence[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(
-        collection(firestore, 'absences'),
-        where('companyId', '==', companyId)
-      );
+      let q;
+      
+      // GDPR: Filter based on role and department
+      if (userContext) {
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Superadmin and admin see all absences
+          q = query(
+            collection(firestore, 'absences'),
+            where('companyId', '==', companyId)
+          );
+        } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          // Department leaders see absences from their department employees
+          // First, get all employees in the department
+          const departmentEmployees = await this.getEmployees(companyId, userContext);
+          const employeeIds = departmentEmployees.map(emp => emp.id);
+          
+          if (employeeIds.length === 0) {
+            return [];
+          }
+          
+          // Firestore 'in' query supports up to 10 items, so we need to batch if more
+          if (employeeIds.length <= 10) {
+            q = query(
+              collection(firestore, 'absences'),
+              where('companyId', '==', companyId),
+              where('employeeId', 'in', employeeIds)
+            );
+          } else {
+            // If more than 10, we need to fetch all and filter in memory
+            q = query(
+              collection(firestore, 'absences'),
+              where('companyId', '==', companyId)
+            );
+          }
+        } else if (userContext.role === 'employee') {
+          // Employees only see their own absences
+          q = query(
+            collection(firestore, 'absences'),
+            where('companyId', '==', companyId),
+            where('employeeId', '==', userContext.userId)
+          );
+        } else {
+          return [];
+        }
+      } else {
+        // Fallback: if no context provided, return all (for backward compatibility)
+        q = query(
+          collection(firestore, 'absences'),
+          where('companyId', '==', companyId)
+        );
+      }
 
       if (filters?.employeeId) {
+        // Additional filter for specific employee (if user has access)
+        if (userContext) {
+          if (userContext.role === 'employee' && filters.employeeId !== userContext.userId) {
+            // Employee trying to access another employee's absences
+            return [];
+          }
+          if (userContext.role === 'department_leader' && userContext.departmentId) {
+            // Check if employee is in leader's department
+            const employee = await this.getEmployee(filters.employeeId, userContext);
+            if (!employee || employee.departmentId !== userContext.departmentId) {
+              return [];
+            }
+          }
+        }
         q = query(q, where('employeeId', '==', filters.employeeId));
       }
       if (filters?.status) {
@@ -1035,10 +1891,28 @@ class FirebaseService {
       }
 
       const snapshot = await getDocs(q);
-      const absences = snapshot.docs.map(doc => ({
+      let absences = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Absence[];
+
+      // If department leader has more than 10 employees, filter in memory
+      if (userContext?.role === 'department_leader' && userContext.departmentId) {
+        const departmentEmployees = await this.getEmployees(companyId, userContext);
+        const employeeIds = new Set(departmentEmployees.map(emp => emp.id));
+        absences = absences.filter(absence => employeeIds.has(absence.employeeId));
+      }
+
+      // Log access
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          count: absences.length
+        };
+        if (userContext.departmentId) {
+          logMetadata.departmentId = userContext.departmentId;
+        }
+        await this.logAccess('view_absences', userContext.userId, 'absences', 'list', companyId, logMetadata);
+      }
 
       // Sort by creation date (newest first) in memory
       return absences.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1048,7 +1922,7 @@ class FirebaseService {
     }
   }
 
-  async createAbsence(absenceData: Omit<Absence, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async createAbsence(absenceData: Omit<Absence, 'id' | 'createdAt' | 'updatedAt'>, userContext?: UserAccessContext): Promise<string> {
     const firestore = ensureDb();
 
     try {
@@ -1058,6 +1932,21 @@ class FirebaseService {
         createdAt: now,
         updatedAt: now
       });
+      
+      // Log access for audit trail
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          employeeId: absenceData.employeeId,
+          employeeName: absenceData.employeeName,
+          type: absenceData.type,
+          startDate: absenceData.startDate,
+          endDate: absenceData.endDate,
+          status: absenceData.status
+        };
+        // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
+        await this.logAccess('create_absence', userContext.userId, 'absence', docRef.id, absenceData.companyId, logMetadata);
+      }
+      
       return docRef.id;
     } catch (error) {
       console.error('Error creating absence:', error);
@@ -1065,42 +1954,136 @@ class FirebaseService {
     }
   }
 
-  async updateAbsence(id: string, data: Partial<Absence>): Promise<void> {
+  async updateAbsence(id: string, data: Partial<Absence>, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get absence data before update for audit log
+      const absenceDoc = await getDoc(doc(firestore, 'absences', id));
+      const absenceData = absenceDoc.exists() ? absenceDoc.data() as Absence : null;
+      
       await updateDoc(doc(firestore, 'absences', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
+      
+      // Log access for audit trail
+      if (userContext && absenceData) {
+        const logMetadata: Record<string, unknown> = {
+          employeeId: absenceData.employeeId,
+          employeeName: absenceData.employeeName,
+          type: absenceData.type,
+          updatedFields: Object.keys(data)
+        };
+        // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
+        await this.logAccess('update_absence', userContext.userId, 'absence', id, absenceData.companyId, logMetadata);
+      }
     } catch (error) {
       console.error('Error updating absence:', error);
       throw error;
     }
   }
 
-  async deleteAbsence(id: string): Promise<void> {
+  async deleteAbsence(id: string, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get absence data before deletion for audit log
+      const absenceDoc = await getDoc(doc(firestore, 'absences', id));
+      const absenceData = absenceDoc.exists() ? absenceDoc.data() as Absence : null;
+      
       await deleteDoc(doc(firestore, 'absences', id));
+      
+      // Log access for audit trail
+      if (userContext && absenceData) {
+        const logMetadata: Record<string, unknown> = {
+          employeeId: absenceData.employeeId,
+          employeeName: absenceData.employeeName,
+          type: absenceData.type,
+          startDate: absenceData.startDate,
+          endDate: absenceData.endDate
+        };
+        // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
+        await this.logAccess('delete_absence', userContext.userId, 'absence', id, absenceData.companyId, logMetadata);
+      }
     } catch (error) {
       console.error('Error deleting absence:', error);
       throw error;
     }
   }
 
-  // Vacation Management
-  async getVacations(companyId: string, filters?: { employeeId?: string; status?: string }): Promise<Vacation[]> {
+  // Vacation Management with GDPR filtering
+  async getVacations(companyId: string, userContext?: UserAccessContext, filters?: { employeeId?: string; status?: string }): Promise<Vacation[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(
-        collection(firestore, 'vacations'),
-        where('companyId', '==', companyId)
-      );
+      let q;
+      
+      // GDPR: Filter based on role and department
+      if (userContext) {
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Superadmin and admin see all vacations
+          q = query(
+            collection(firestore, 'vacations'),
+            where('companyId', '==', companyId)
+          );
+        } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          // Department leaders see vacations from their department employees
+          // First, get all employees in the department
+          const departmentEmployees = await this.getEmployees(companyId, userContext);
+          const employeeIds = departmentEmployees.map(emp => emp.id);
+          
+          if (employeeIds.length === 0) {
+            return [];
+          }
+          
+          // Firestore 'in' query supports up to 10 items, so we need to batch if more
+          if (employeeIds.length <= 10) {
+            q = query(
+              collection(firestore, 'vacations'),
+              where('companyId', '==', companyId),
+              where('employeeId', 'in', employeeIds)
+            );
+          } else {
+            // If more than 10, we need to fetch all and filter in memory
+            q = query(
+              collection(firestore, 'vacations'),
+              where('companyId', '==', companyId)
+            );
+          }
+        } else if (userContext.role === 'employee') {
+          // Employees only see their own vacations
+          q = query(
+            collection(firestore, 'vacations'),
+            where('companyId', '==', companyId),
+            where('employeeId', '==', userContext.userId)
+          );
+        } else {
+          return [];
+        }
+      } else {
+        // Fallback: if no context provided, return all (for backward compatibility)
+        q = query(
+          collection(firestore, 'vacations'),
+          where('companyId', '==', companyId)
+        );
+      }
 
       if (filters?.employeeId) {
+        // Additional filter for specific employee (if user has access)
+        if (userContext) {
+          if (userContext.role === 'employee' && filters.employeeId !== userContext.userId) {
+            // Employee trying to access another employee's vacations
+            return [];
+          }
+          if (userContext.role === 'department_leader' && userContext.departmentId) {
+            // Check if employee is in leader's department
+            const employee = await this.getEmployee(filters.employeeId, userContext);
+            if (!employee || employee.departmentId !== userContext.departmentId) {
+              return [];
+            }
+          }
+        }
         q = query(q, where('employeeId', '==', filters.employeeId));
       }
       if (filters?.status) {
@@ -1108,10 +2091,28 @@ class FirebaseService {
       }
 
       const snapshot = await getDocs(q);
-      const vacations = snapshot.docs.map(doc => ({
+      let vacations = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Vacation[];
+
+      // If department leader has more than 10 employees, filter in memory
+      if (userContext?.role === 'department_leader' && userContext.departmentId) {
+        const departmentEmployees = await this.getEmployees(companyId, userContext);
+        const employeeIds = new Set(departmentEmployees.map(emp => emp.id));
+        vacations = vacations.filter(vacation => employeeIds.has(vacation.employeeId));
+      }
+
+      // Log access
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          count: vacations.length
+        };
+        if (userContext.departmentId) {
+          logMetadata.departmentId = userContext.departmentId;
+        }
+        await this.logAccess('view_vacations', userContext.userId, 'vacations', 'list', companyId, logMetadata);
+      }
 
       // Sort by creation date (newest first) in memory
       return vacations.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -1121,7 +2122,7 @@ class FirebaseService {
     }
   }
 
-  async createVacation(vacationData: Omit<Vacation, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async createVacation(vacationData: Omit<Vacation, 'id' | 'createdAt' | 'updatedAt'>, userContext?: UserAccessContext): Promise<string> {
     const firestore = ensureDb();
 
     try {
@@ -1131,6 +2132,20 @@ class FirebaseService {
         createdAt: now,
         updatedAt: now
       });
+      
+      // Log access for audit trail
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          employeeId: vacationData.employeeId,
+          employeeName: vacationData.employeeName,
+          startDate: vacationData.startDate,
+          endDate: vacationData.endDate,
+          days: vacationData.days,
+          status: vacationData.status
+        };
+        await this.logAccess('create_vacation', userContext.userId, 'vacation', docRef.id, vacationData.companyId, logMetadata);
+      }
+      
       return docRef.id;
     } catch (error) {
       console.error('Error creating vacation:', error);
@@ -1138,27 +2153,191 @@ class FirebaseService {
     }
   }
 
-  async updateVacation(id: string, data: Partial<Vacation>): Promise<void> {
+  async updateVacation(id: string, data: Partial<Vacation>, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get vacation data before update for audit log
+      const vacationDoc = await getDoc(doc(firestore, 'vacations', id));
+      const vacationData = vacationDoc.exists() ? vacationDoc.data() as Vacation : null;
+      
       await updateDoc(doc(firestore, 'vacations', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
+      
+      // Log access for audit trail
+      if (userContext && vacationData) {
+        const logMetadata: Record<string, unknown> = {
+          employeeId: vacationData.employeeId,
+          employeeName: vacationData.employeeName,
+          updatedFields: Object.keys(data),
+          status: data.status || vacationData.status
+        };
+        await this.logAccess('update_vacation', userContext.userId, 'vacation', id, vacationData.companyId, logMetadata);
+      }
     } catch (error) {
       console.error('Error updating vacation:', error);
       throw error;
     }
   }
 
-  async deleteVacation(id: string): Promise<void> {
+  async deleteVacation(id: string, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get vacation data before deletion for audit log
+      const vacationDoc = await getDoc(doc(firestore, 'vacations', id));
+      const vacationData = vacationDoc.exists() ? vacationDoc.data() as Vacation : null;
+      
       await deleteDoc(doc(firestore, 'vacations', id));
+      
+      // Log access for audit trail
+      if (userContext && vacationData) {
+        const logMetadata: Record<string, unknown> = {
+          employeeId: vacationData.employeeId,
+          employeeName: vacationData.employeeName,
+          startDate: vacationData.startDate,
+          endDate: vacationData.endDate,
+          days: vacationData.days
+        };
+        await this.logAccess('delete_vacation', userContext.userId, 'vacation', id, vacationData.companyId, logMetadata);
+      }
     } catch (error) {
       console.error('Error deleting vacation:', error);
+      throw error;
+    }
+  }
+
+  // Vacation Allocation Management
+  async getVacationAllocations(companyId: string, filters?: { employeeId?: string; year?: number }): Promise<VacationAllocation[]> {
+    const firestore = ensureDb();
+
+    try {
+      let q = query(
+        collection(firestore, 'vacationAllocations'),
+        where('companyId', '==', companyId)
+      );
+
+      if (filters?.employeeId) {
+        q = query(q, where('employeeId', '==', filters.employeeId));
+      }
+      if (filters?.year) {
+        q = query(q, where('year', '==', filters.year));
+      }
+
+      const snapshot = await getDocs(q);
+      const allocations = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as VacationAllocation[];
+
+      return allocations.sort((a, b) => b.year - a.year);
+    } catch (error) {
+      console.error('Error fetching vacation allocations:', error);
+      return [];
+    }
+  }
+
+  async createOrUpdateVacationAllocation(allocationData: Omit<VacationAllocation, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const firestore = ensureDb();
+
+    try {
+      // Check if allocation already exists
+      const existingQuery = query(
+        collection(firestore, 'vacationAllocations'),
+        where('companyId', '==', allocationData.companyId),
+        where('employeeId', '==', allocationData.employeeId),
+        where('year', '==', allocationData.year)
+      );
+      const existingSnapshot = await getDocs(existingQuery);
+
+      const now = new Date().toISOString();
+      const allocationDataWithDates = {
+        ...allocationData,
+        remainingDays: allocationData.allocatedDays + allocationData.transferredDays - allocationData.usedDays,
+        updatedAt: now
+      };
+
+      if (existingSnapshot.empty) {
+        // Create new allocation
+        const docRef = await addDoc(collection(firestore, 'vacationAllocations'), {
+          ...allocationDataWithDates,
+          createdAt: now
+        });
+        return docRef.id;
+      } else {
+        // Update existing allocation
+        const existingDoc = existingSnapshot.docs[0];
+        await updateDoc(doc(firestore, 'vacationAllocations', existingDoc.id), allocationDataWithDates);
+        return existingDoc.id;
+      }
+    } catch (error) {
+      console.error('Error creating/updating vacation allocation:', error);
+      throw error;
+    }
+  }
+
+  async transferVacationDays(employeeId: string, companyId: string, fromYear: number, toYear: number, days: number): Promise<void> {
+    const firestore = ensureDb();
+
+    try {
+      // Get allocations for both years
+      const fromYearQuery = query(
+        collection(firestore, 'vacationAllocations'),
+        where('companyId', '==', companyId),
+        where('employeeId', '==', employeeId),
+        where('year', '==', fromYear)
+      );
+      const toYearQuery = query(
+        collection(firestore, 'vacationAllocations'),
+        where('companyId', '==', companyId),
+        where('employeeId', '==', employeeId),
+        where('year', '==', toYear)
+      );
+
+      const [fromSnapshot, toSnapshot] = await Promise.all([
+        getDocs(fromYearQuery),
+        getDocs(toYearQuery)
+      ]);
+
+      const now = new Date().toISOString();
+
+      // Update from year
+      if (!fromSnapshot.empty) {
+        const fromDoc = fromSnapshot.docs[0];
+        const fromData = fromDoc.data() as VacationAllocation;
+        await updateDoc(doc(firestore, 'vacationAllocations', fromDoc.id), {
+          remainingDays: fromData.remainingDays - days,
+          updatedAt: now
+        });
+      }
+
+      // Update to year
+      if (!toSnapshot.empty) {
+        const toDoc = toSnapshot.docs[0];
+        const toData = toDoc.data() as VacationAllocation;
+        await updateDoc(doc(firestore, 'vacationAllocations', toDoc.id), {
+          transferredDays: (toData.transferredDays || 0) + days,
+          remainingDays: toData.remainingDays + days,
+          updatedAt: now
+        });
+      } else {
+        // Create new allocation for to year
+        await addDoc(collection(firestore, 'vacationAllocations'), {
+          employeeId,
+          companyId,
+          year: toYear,
+          allocatedDays: 25, // Standard 5 weeks
+          usedDays: 0,
+          transferredDays: days,
+          remainingDays: 25 + days,
+          createdAt: now,
+          updatedAt: now
+        });
+      }
+    } catch (error) {
+      console.error('Error transferring vacation days:', error);
       throw error;
     }
   }
@@ -1823,7 +3002,7 @@ class FirebaseService {
     }
   }
 
-  async createPartner(partnerData: Omit<Partner, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async createPartner(partnerData: Omit<Partner, 'id' | 'createdAt' | 'updatedAt'>, userContext?: UserAccessContext): Promise<string> {
     const firestore = ensureDb();
 
     try {
@@ -1832,6 +3011,15 @@ class FirebaseService {
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
+
+      // Log access for audit trail
+      if (userContext) {
+        const logMetadata: Record<string, unknown> = {
+          partnerName: partnerData.name,
+          type: partnerData.type
+        };
+        await this.logAccess('create_partner', userContext.userId, 'partner', docRef.id, partnerData.companyId, logMetadata);
+      }
 
       return docRef.id;
     } catch (error) {
@@ -2077,25 +3265,52 @@ class FirebaseService {
     }
   }
 
-  async updatePartner(id: string, data: Partial<Partner>): Promise<void> {
+  async updatePartner(id: string, data: Partial<Partner>, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get partner data before update for audit log
+      const partnerDoc = await getDoc(doc(firestore, 'partners', id));
+      const partnerData = partnerDoc.exists() ? partnerDoc.data() as Partner : null;
+      
       await updateDoc(doc(firestore, 'partners', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
+      
+      // Log access for audit trail
+      if (userContext && partnerData) {
+        const logMetadata: Record<string, unknown> = {
+          partnerName: partnerData.name,
+          type: partnerData.type,
+          updatedFields: Object.keys(data)
+        };
+        await this.logAccess('update_partner', userContext.userId, 'partner', id, partnerData.companyId, logMetadata);
+      }
     } catch (error) {
       console.error('Error updating partner:', error);
       throw error;
     }
   }
 
-  async deletePartner(id: string): Promise<void> {
+  async deletePartner(id: string, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get partner data before deletion for audit log
+      const partnerDoc = await getDoc(doc(firestore, 'partners', id));
+      const partnerData = partnerDoc.exists() ? partnerDoc.data() as Partner : null;
+      
       await deleteDoc(doc(firestore, 'partners', id));
+      
+      // Log access for audit trail
+      if (userContext && partnerData) {
+        const logMetadata: Record<string, unknown> = {
+          partnerName: partnerData.name,
+          type: partnerData.type
+        };
+        await this.logAccess('delete_partner', userContext.userId, 'partner', id, partnerData.companyId, logMetadata);
+      }
     } catch (error) {
       console.error('Error deleting partner:', error);
       throw error;
@@ -2453,7 +3668,650 @@ class FirebaseService {
     }
   }
 
-  // Audit functions
+  // Comprehensive Internal Audit System
+  async createInternalAudit(auditData: Omit<InternalAudit, 'id' | 'createdAt' | 'updatedAt' | 'documents' | 'comments'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'internalAudits'), {
+      ...auditData,
+      documents: [],
+      comments: [],
+      createdAt: now,
+      updatedAt: now
+    });
+    
+    await this.createActivity({
+      type: 'document_uploaded', // Using closest available type
+      title: 'Internrevisjon opprettet',
+      description: auditData.title,
+      userId: auditData.createdBy,
+      userName: 'System',
+      companyId: auditData.companyId
+    });
+
+    return docRef.id;
+  }
+
+  async getInternalAudits(companyId: string, filters?: { status?: string; type?: string; priority?: string; department?: string }): Promise<InternalAudit[]> {
+    const firestore = ensureDb();
+    
+    let q = query(
+      collection(firestore, 'internalAudits'),
+      where('companyId', '==', companyId)
+    );
+
+    const snapshot = await getDocs(q);
+    let audits = snapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    })) as InternalAudit[];
+
+    // Apply filters in memory
+    if (filters?.status && filters.status !== 'all') {
+      audits = audits.filter(a => a.status === filters.status);
+    }
+    if (filters?.type && filters.type !== 'all') {
+      audits = audits.filter(a => a.type === filters.type);
+    }
+    if (filters?.priority && filters.priority !== 'all') {
+      audits = audits.filter(a => a.priority === filters.priority);
+    }
+    if (filters?.department) {
+      audits = audits.filter(a => a.departmentId === filters.department);
+    }
+    
+    // Sort by planned date (newest first)
+    return audits.sort((a, b) => {
+      const dateA = new Date(a.plannedDate).getTime();
+      const dateB = new Date(b.plannedDate).getTime();
+      return dateB - dateA;
+    });
+  }
+
+  async getInternalAudit(auditId: string): Promise<InternalAudit | null> {
+    const firestore = ensureDb();
+    const auditDoc = await getDoc(doc(firestore, 'internalAudits', auditId));
+    if (!auditDoc.exists()) return null;
+    return { id: auditDoc.id, ...auditDoc.data() } as InternalAudit;
+  }
+
+  async updateInternalAudit(auditId: string, updateData: Partial<InternalAudit>): Promise<void> {
+    const firestore = ensureDb();
+    await updateDoc(doc(firestore, 'internalAudits', auditId), {
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async deleteInternalAudit(auditId: string): Promise<void> {
+    const firestore = ensureDb();
+    const audit = await this.getInternalAudit(auditId);
+    if (!audit) return;
+
+    // Delete associated documents from storage
+    if (audit.documents && audit.documents.length > 0 && storage) {
+      for (const doc of audit.documents) {
+        try {
+          const storageRef = ref(storage, doc.fileUrl);
+          await deleteObject(storageRef);
+        } catch (error) {
+          console.error(`Error deleting document ${doc.id}:`, error);
+        }
+      }
+    }
+
+    await deleteDoc(doc(firestore, 'internalAudits', auditId));
+  }
+
+  async uploadAuditDocument(file: File, auditId: string, companyId: string, uploadedBy: string, description?: string, category?: string): Promise<AuditDocument> {
+    const firestore = ensureDb();
+
+    try {
+      let fileUrl: string = '';
+      let storageType: 'onedrive' | 'firebase' = 'firebase';
+      let oneDriveItemId: string | undefined;
+
+      // Try OneDrive first if Microsoft Graph is authenticated
+      if (microsoftGraphService.isAuthenticated()) {
+        try {
+          console.log('📁 Uploading audit document to OneDrive...');
+          // Egen mappe for Internkontroll og Samsvar → Internrevisjon
+          const folderPath = `DriftPro/Internkontroll og Samsvar/Internrevisjon/${companyId}/${auditId}`;
+          const oneDriveResult = await microsoftGraphService.uploadFileToOneDrive(file, folderPath);
+          fileUrl = oneDriveResult.downloadUrl;
+          oneDriveItemId = oneDriveResult.id;
+          storageType = 'onedrive';
+          console.log('✅ File uploaded to OneDrive:', oneDriveResult.name);
+        } catch (onedriveError) {
+          console.warn('⚠️ OneDrive upload failed, falling back to Firebase Storage:', onedriveError);
+          // Fall back to Firebase Storage
+        }
+      }
+
+      // Fall back to Firebase Storage if OneDrive failed or not available
+      if (storageType === 'firebase' || !fileUrl) {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const fileName = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `audits/${companyId}/${auditId}/${fileName}`);
+        await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(storageRef);
+        console.log('✅ File uploaded to Firebase Storage');
+      }
+
+      const document: AuditDocument = {
+        id: `doc_${Date.now()}`,
+        fileName: file.name,
+        fileUrl,
+        fileSize: file.size,
+        fileType: file.type,
+        uploadedBy,
+        uploadedAt: new Date().toISOString(),
+        description,
+        category: category as any || 'other',
+        storageType,
+        oneDriveItemId
+      };
+
+      // Add document to audit
+      const auditRef = doc(firestore, 'internalAudits', auditId);
+      const auditDoc = await getDoc(auditRef);
+      if (auditDoc.exists()) {
+        const auditData = auditDoc.data();
+        const documents = auditData.documents || [];
+        documents.push(document);
+        await updateDoc(auditRef, {
+          documents,
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      return document;
+    } catch (error) {
+      console.error('Error uploading audit document:', error);
+      throw error;
+    }
+  }
+
+  async deleteAuditDocument(auditId: string, documentId: string): Promise<void> {
+    const firestore = ensureDb();
+
+    const auditRef = doc(firestore, 'internalAudits', auditId);
+    const auditDoc = await getDoc(auditRef);
+    if (!auditDoc.exists()) return;
+
+    const auditData = auditDoc.data() as InternalAudit;
+    const document = auditData.documents?.find(d => d.id === documentId);
+    if (!document) return;
+
+    // Delete from appropriate storage
+    try {
+      if (document.storageType === 'onedrive' && document.oneDriveItemId && microsoftGraphService.isAuthenticated()) {
+        console.log('🗑️ Deleting from OneDrive...');
+        await microsoftGraphService.deleteOneDriveFile(document.oneDriveItemId);
+        console.log('✅ File deleted from OneDrive');
+      } else {
+        // Delete from Firebase Storage
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const storageRef = ref(storage, document.fileUrl);
+        await deleteObject(storageRef);
+        console.log('✅ File deleted from Firebase Storage');
+      }
+    } catch (error) {
+      console.error('Error deleting document from storage:', error);
+      // Continue with database deletion even if storage deletion fails
+    }
+
+    // Remove from audit
+    const documents = auditData.documents?.filter(d => d.id !== documentId) || [];
+    await updateDoc(auditRef, {
+      documents,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async addAuditComment(auditId: string, comment: Omit<AuditComment, 'id' | 'createdAt'>): Promise<void> {
+    const firestore = ensureDb();
+    const auditRef = doc(firestore, 'internalAudits', auditId);
+    const auditDoc = await getDoc(auditRef);
+    if (!auditDoc.exists()) return;
+
+    const auditData = auditDoc.data();
+    const comments = auditData.comments || [];
+    comments.push({
+      ...comment,
+      id: `comment_${Date.now()}`,
+      createdAt: new Date().toISOString()
+    });
+
+    await updateDoc(auditRef, {
+      comments,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  // Upload functions for all types (Deviations, Risk Assessments, Follow-up Actions, Checkpoints)
+  async uploadDeviationFile(file: File, deviationId: string, companyId: string, uploadedBy: string, description?: string): Promise<AuditDocument> {
+    const firestore = ensureDb();
+
+    try {
+      let fileUrl: string = '';
+      let storageType: 'onedrive' | 'firebase' = 'firebase';
+      let oneDriveItemId: string | undefined;
+
+      // Try OneDrive first if Microsoft Graph is authenticated
+      if (microsoftGraphService.isAuthenticated()) {
+        try {
+          console.log('📁 Uploading deviation file to OneDrive...');
+          // Egen mappe for Internkontroll og Samsvar → Avvik
+          const folderPath = `DriftPro/Internkontroll og Samsvar/Avvik/${companyId}/${deviationId}`;
+          const oneDriveResult = await microsoftGraphService.uploadFileToOneDrive(file, folderPath);
+          fileUrl = oneDriveResult.downloadUrl;
+          oneDriveItemId = oneDriveResult.id;
+          storageType = 'onedrive';
+          console.log('✅ File uploaded to OneDrive:', oneDriveResult.name);
+        } catch (onedriveError) {
+          console.warn('⚠️ OneDrive upload failed, falling back to Firebase Storage:', onedriveError);
+          // Fall back to Firebase Storage
+        }
+      }
+
+      // Fall back to Firebase Storage if OneDrive failed or not available
+      if (storageType === 'firebase' || !fileUrl) {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const fileName = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `deviations/${companyId}/${deviationId}/${fileName}`);
+        await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(storageRef);
+        console.log('✅ File uploaded to Firebase Storage');
+      }
+
+      const document: AuditDocument = {
+        id: `doc_${Date.now()}`,
+        fileName: file.name,
+        fileUrl,
+        fileSize: file.size,
+        fileType: file.type,
+        uploadedBy,
+        uploadedAt: new Date().toISOString(),
+        description,
+        category: 'evidence',
+        storageType,
+        oneDriveItemId
+      };
+
+      const deviationRef = doc(firestore, 'deviations', deviationId);
+      const deviationDoc = await getDoc(deviationRef);
+      if (deviationDoc.exists()) {
+        const deviationData = deviationDoc.data();
+        const documents = deviationData.documents || [];
+        documents.push(document);
+        await updateDoc(deviationRef, {
+          documents,
+          attachments: [...(deviationData.attachments || []), fileUrl], // Keep for backward compatibility
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      return document;
+    } catch (error) {
+      console.error('Error uploading deviation file:', error);
+      throw error;
+    }
+  }
+
+  async uploadRiskAssessmentFile(file: File, riskId: string, companyId: string, uploadedBy: string, description?: string): Promise<AuditDocument> {
+    const firestore = ensureDb();
+
+    try {
+      let fileUrl: string = '';
+      let storageType: 'onedrive' | 'firebase' = 'firebase';
+      let oneDriveItemId: string | undefined;
+
+      // Try OneDrive first if Microsoft Graph is authenticated
+      if (microsoftGraphService.isAuthenticated()) {
+        try {
+          console.log('📁 Uploading risk assessment file to OneDrive...');
+          // Egen mappe for Internkontroll og Samsvar → Risikovurderinger
+          const folderPath = `DriftPro/Internkontroll og Samsvar/Risikovurderinger/${companyId}/${riskId}`;
+          const oneDriveResult = await microsoftGraphService.uploadFileToOneDrive(file, folderPath);
+          fileUrl = oneDriveResult.downloadUrl;
+          oneDriveItemId = oneDriveResult.id;
+          storageType = 'onedrive';
+          console.log('✅ File uploaded to OneDrive:', oneDriveResult.name);
+        } catch (onedriveError) {
+          console.warn('⚠️ OneDrive upload failed, falling back to Firebase Storage:', onedriveError);
+          // Fall back to Firebase Storage
+        }
+      }
+
+      // Fall back to Firebase Storage if OneDrive failed or not available
+      if (storageType === 'firebase' || !fileUrl) {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const fileName = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `riskAssessments/${companyId}/${riskId}/${fileName}`);
+        await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(storageRef);
+        console.log('✅ File uploaded to Firebase Storage');
+      }
+
+      const document: AuditDocument = {
+        id: `doc_${Date.now()}`,
+        fileName: file.name,
+        fileUrl,
+        fileSize: file.size,
+        fileType: file.type,
+        uploadedBy,
+        uploadedAt: new Date().toISOString(),
+        description,
+        category: 'evidence',
+        storageType,
+        oneDriveItemId
+      };
+
+      const riskRef = doc(firestore, 'riskAssessments', riskId);
+      const riskDoc = await getDoc(riskRef);
+      if (riskDoc.exists()) {
+        const riskData = riskDoc.data();
+        const documents = riskData.documents || [];
+        documents.push(document);
+        await updateDoc(riskRef, {
+          documents,
+          attachments: [...(riskData.attachments || []), fileUrl], // Keep for backward compatibility
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      return document;
+    } catch (error) {
+      console.error('Error uploading risk assessment file:', error);
+      throw error;
+    }
+  }
+
+  async uploadFollowUpActionFile(file: File, actionId: string, companyId: string, uploadedBy: string, description?: string): Promise<AuditDocument> {
+    const firestore = ensureDb();
+
+    try {
+      let fileUrl: string = '';
+      let storageType: 'onedrive' | 'firebase' = 'firebase';
+      let oneDriveItemId: string | undefined;
+
+      // Try OneDrive first if Microsoft Graph is authenticated
+      if (microsoftGraphService.isAuthenticated()) {
+        try {
+          console.log('📁 Uploading follow-up action file to OneDrive...');
+          // Egen mappe for Internkontroll og Samsvar → Oppfølgingstiltak
+          const folderPath = `DriftPro/Internkontroll og Samsvar/Oppfølgingstiltak/${companyId}/${actionId}`;
+          const oneDriveResult = await microsoftGraphService.uploadFileToOneDrive(file, folderPath);
+          fileUrl = oneDriveResult.downloadUrl;
+          oneDriveItemId = oneDriveResult.id;
+          storageType = 'onedrive';
+          console.log('✅ File uploaded to OneDrive:', oneDriveResult.name);
+        } catch (onedriveError) {
+          console.warn('⚠️ OneDrive upload failed, falling back to Firebase Storage:', onedriveError);
+          // Fall back to Firebase Storage
+        }
+      }
+
+      // Fall back to Firebase Storage if OneDrive failed or not available
+      if (storageType === 'firebase' || !fileUrl) {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const fileName = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `followUpActions/${companyId}/${actionId}/${fileName}`);
+        await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(storageRef);
+        console.log('✅ File uploaded to Firebase Storage');
+      }
+
+      const document: AuditDocument = {
+        id: `doc_${Date.now()}`,
+        fileName: file.name,
+        fileUrl,
+        fileSize: file.size,
+        fileType: file.type,
+        uploadedBy,
+        uploadedAt: new Date().toISOString(),
+        description,
+        category: 'evidence',
+        storageType,
+        oneDriveItemId
+      };
+
+      const actionRef = doc(firestore, 'followUpActions', actionId);
+      const actionDoc = await getDoc(actionRef);
+      if (actionDoc.exists()) {
+        const actionData = actionDoc.data();
+        const documents = actionData.documents || [];
+        documents.push(document);
+        await updateDoc(actionRef, {
+          documents,
+          attachments: [...(actionData.attachments || []), fileUrl], // Keep for backward compatibility
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      return document;
+    } catch (error) {
+      console.error('Error uploading follow-up action file:', error);
+      throw error;
+    }
+  }
+
+  async uploadCheckpointFile(file: File, checkpointId: string, companyId: string, uploadedBy: string, description?: string): Promise<AuditDocument> {
+    const firestore = ensureDb();
+
+    try {
+      let fileUrl: string = '';
+      let storageType: 'onedrive' | 'firebase' = 'firebase';
+      let oneDriveItemId: string | undefined;
+
+      // Try OneDrive first if Microsoft Graph is authenticated
+      if (microsoftGraphService.isAuthenticated()) {
+        try {
+          console.log('📁 Uploading checkpoint file to OneDrive...');
+          // Egen mappe for Internkontroll og Samsvar → Kontrollpunkter
+          const folderPath = `DriftPro/Internkontroll og Samsvar/Kontrollpunkter/${companyId}/${checkpointId}`;
+          const oneDriveResult = await microsoftGraphService.uploadFileToOneDrive(file, folderPath);
+          fileUrl = oneDriveResult.downloadUrl;
+          oneDriveItemId = oneDriveResult.id;
+          storageType = 'onedrive';
+          console.log('✅ File uploaded to OneDrive:', oneDriveResult.name);
+        } catch (onedriveError) {
+          console.warn('⚠️ OneDrive upload failed, falling back to Firebase Storage:', onedriveError);
+          // Fall back to Firebase Storage
+        }
+      }
+
+      // Fall back to Firebase Storage if OneDrive failed or not available
+      if (storageType === 'firebase' || !fileUrl) {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const fileName = `${Date.now()}_${file.name}`;
+        const storageRef = ref(storage, `checkpoints/${companyId}/${checkpointId}/${fileName}`);
+        await uploadBytes(storageRef, file);
+        fileUrl = await getDownloadURL(storageRef);
+        console.log('✅ File uploaded to Firebase Storage');
+      }
+
+      const document: AuditDocument = {
+        id: `doc_${Date.now()}`,
+        fileName: file.name,
+        fileUrl,
+        fileSize: file.size,
+        fileType: file.type,
+        uploadedBy,
+        uploadedAt: new Date().toISOString(),
+        description,
+        category: 'evidence',
+        storageType,
+        oneDriveItemId
+      };
+
+      const checkpointRef = doc(firestore, 'checkpoints', checkpointId);
+      const checkpointDoc = await getDoc(checkpointRef);
+      if (checkpointDoc.exists()) {
+        const checkpointData = checkpointDoc.data();
+        const documents = checkpointData.documents || [];
+        documents.push(document);
+        await updateDoc(checkpointRef, {
+          documents,
+          attachments: [...(checkpointData.attachments || []), fileUrl], // Keep for backward compatibility
+          updatedAt: new Date().toISOString()
+        });
+      }
+
+      return document;
+    } catch (error) {
+      console.error('Error uploading checkpoint file:', error);
+      throw error;
+    }
+  }
+
+  // Delete file functions for all types
+  async deleteDeviationFile(deviationId: string, documentId: string): Promise<void> {
+    const firestore = ensureDb();
+
+    const deviationRef = doc(firestore, 'deviations', deviationId);
+    const deviationDoc = await getDoc(deviationRef);
+    if (!deviationDoc.exists()) return;
+
+    const deviationData = deviationDoc.data();
+    const documents = deviationData.documents || [];
+    const document = documents.find((d: AuditDocument) => d.id === documentId);
+    if (!document) return;
+
+    try {
+      if (document.storageType === 'onedrive' && document.oneDriveItemId && microsoftGraphService.isAuthenticated()) {
+        console.log('🗑️ Deleting from OneDrive...');
+        await microsoftGraphService.deleteOneDriveFile(document.oneDriveItemId);
+        console.log('✅ File deleted from OneDrive');
+      } else {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const storageRef = ref(storage, document.fileUrl);
+        await deleteObject(storageRef);
+        console.log('✅ File deleted from Firebase Storage');
+      }
+    } catch (error) {
+      console.error('Error deleting file from storage:', error);
+      // Continue with database deletion even if storage deletion fails
+    }
+
+    const updatedDocuments = documents.filter((d: AuditDocument) => d.id !== documentId);
+    await updateDoc(deviationRef, {
+      documents: updatedDocuments,
+      attachments: updatedDocuments.map((d: AuditDocument) => d.fileUrl), // Keep for backward compatibility
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async deleteRiskAssessmentFile(riskId: string, documentId: string): Promise<void> {
+    const firestore = ensureDb();
+
+    const riskRef = doc(firestore, 'riskAssessments', riskId);
+    const riskDoc = await getDoc(riskRef);
+    if (!riskDoc.exists()) return;
+
+    const riskData = riskDoc.data();
+    const documents = riskData.documents || [];
+    const document = documents.find((d: AuditDocument) => d.id === documentId);
+    if (!document) return;
+
+    try {
+      if (document.storageType === 'onedrive' && document.oneDriveItemId && microsoftGraphService.isAuthenticated()) {
+        console.log('🗑️ Deleting from OneDrive...');
+        await microsoftGraphService.deleteOneDriveFile(document.oneDriveItemId);
+        console.log('✅ File deleted from OneDrive');
+      } else {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const storageRef = ref(storage, document.fileUrl);
+        await deleteObject(storageRef);
+        console.log('✅ File deleted from Firebase Storage');
+      }
+    } catch (error) {
+      console.error('Error deleting file from storage:', error);
+      // Continue with database deletion even if storage deletion fails
+    }
+
+    const updatedDocuments = documents.filter((d: AuditDocument) => d.id !== documentId);
+    await updateDoc(riskRef, {
+      documents: updatedDocuments,
+      attachments: updatedDocuments.map((d: AuditDocument) => d.fileUrl), // Keep for backward compatibility
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async deleteFollowUpActionFile(actionId: string, documentId: string): Promise<void> {
+    const firestore = ensureDb();
+
+    const actionRef = doc(firestore, 'followUpActions', actionId);
+    const actionDoc = await getDoc(actionRef);
+    if (!actionDoc.exists()) return;
+
+    const actionData = actionDoc.data();
+    const documents = actionData.documents || [];
+    const document = documents.find((d: AuditDocument) => d.id === documentId);
+    if (!document) return;
+
+    try {
+      if (document.storageType === 'onedrive' && document.oneDriveItemId && microsoftGraphService.isAuthenticated()) {
+        console.log('🗑️ Deleting from OneDrive...');
+        await microsoftGraphService.deleteOneDriveFile(document.oneDriveItemId);
+        console.log('✅ File deleted from OneDrive');
+      } else {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const storageRef = ref(storage, document.fileUrl);
+        await deleteObject(storageRef);
+        console.log('✅ File deleted from Firebase Storage');
+      }
+    } catch (error) {
+      console.error('Error deleting file from storage:', error);
+      // Continue with database deletion even if storage deletion fails
+    }
+
+    const updatedDocuments = documents.filter((d: AuditDocument) => d.id !== documentId);
+    await updateDoc(actionRef, {
+      documents: updatedDocuments,
+      attachments: updatedDocuments.map((d: AuditDocument) => d.fileUrl), // Keep for backward compatibility
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async deleteCheckpointFile(checkpointId: string, documentId: string): Promise<void> {
+    const firestore = ensureDb();
+
+    const checkpointRef = doc(firestore, 'checkpoints', checkpointId);
+    const checkpointDoc = await getDoc(checkpointRef);
+    if (!checkpointDoc.exists()) return;
+
+    const checkpointData = checkpointDoc.data();
+    const documents = checkpointData.documents || [];
+    const document = documents.find((d: AuditDocument) => d.id === documentId);
+    if (!document) return;
+
+    try {
+      if (document.storageType === 'onedrive' && document.oneDriveItemId && microsoftGraphService.isAuthenticated()) {
+        console.log('🗑️ Deleting from OneDrive...');
+        await microsoftGraphService.deleteOneDriveFile(document.oneDriveItemId);
+        console.log('✅ File deleted from OneDrive');
+      } else {
+        if (!storage) throw new Error('Firebase Storage not initialized');
+        const storageRef = ref(storage, document.fileUrl);
+        await deleteObject(storageRef);
+        console.log('✅ File deleted from Firebase Storage');
+      }
+    } catch (error) {
+      console.error('Error deleting file from storage:', error);
+      // Continue with database deletion even if storage deletion fails
+    }
+
+    const updatedDocuments = documents.filter((d: AuditDocument) => d.id !== documentId);
+    await updateDoc(checkpointRef, {
+      documents: updatedDocuments,
+      attachments: updatedDocuments.map((d: AuditDocument) => d.fileUrl), // Keep for backward compatibility
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  // Legacy audit functions (for partner audits)
   async createAudit(auditData: {
     partnerId: string;
     partnerName: string;
@@ -2542,6 +4400,557 @@ class FirebaseService {
       createdBy: auditData.createdBy,
       notes: `Neste audit planlagt 3 måneder etter forrige audit (${completedDate.toLocaleDateString('no-NO')})`
     });
+  }
+
+  // ============================================================================
+  // EMAIL CASE MANAGEMENT SYSTEM (MAVI)
+  // ============================================================================
+
+  // Create case
+  async createEmailCase(caseData: Omit<EmailCase, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'emailCases'), {
+      ...caseData,
+      createdAt: now,
+      updatedAt: now
+    });
+    return docRef.id;
+  }
+
+  // Get cases
+  async getEmailCases(companyId: string, filters?: { status?: string; caseType?: string; priority?: string }): Promise<EmailCase[]> {
+    const firestore = ensureDb();
+    let q = query(
+      collection(firestore, 'emailCases'),
+      where('companyId', '==', companyId)
+    );
+    const snapshot = await getDocs(q);
+    let cases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailCase[];
+    
+    // Apply filters
+    if (filters?.status && filters.status !== 'all') {
+      cases = cases.filter(c => c.status === filters.status);
+    }
+    if (filters?.caseType && filters.caseType !== 'all') {
+      cases = cases.filter(c => c.caseType === filters.caseType);
+    }
+    if (filters?.priority && filters.priority !== 'all') {
+      cases = cases.filter(c => c.priority === filters.priority);
+    }
+    
+    // Sort by last activity
+    return cases.sort((a, b) => new Date(b.lastActivityAt).getTime() - new Date(a.lastActivityAt).getTime());
+  }
+
+  // Get case by ID or caseId
+  async getEmailCase(caseIdOrId: string, companyId: string): Promise<EmailCase | null> {
+    const firestore = ensureDb();
+    // Try by caseId first
+    let q = query(
+      collection(firestore, 'emailCases'),
+      where('caseId', '==', caseIdOrId),
+      where('companyId', '==', companyId)
+    );
+    let snapshot = await getDocs(q);
+    if (!snapshot.empty) {
+      return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as EmailCase;
+    }
+    // Try by id
+    const caseDoc = await getDoc(doc(firestore, 'emailCases', caseIdOrId));
+    if (caseDoc.exists() && caseDoc.data().companyId === companyId) {
+      return { id: caseDoc.id, ...caseDoc.data() } as EmailCase;
+    }
+    return null;
+  }
+
+  // Update case
+  async updateEmailCase(caseId: string, updateData: Partial<EmailCase>): Promise<void> {
+    const firestore = ensureDb();
+    await updateDoc(doc(firestore, 'emailCases', caseId), {
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  // Add case link
+  async addEmailCaseLink(caseId: string, kind: string, value: string, companyId: string): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'emailCaseLinks'), {
+      caseId,
+      kind,
+      value,
+      companyId,
+      createdAt: now
+    });
+    return docRef.id;
+  }
+
+  // Find case by links
+  async findEmailCaseByLinks(kinds: string[], values: string[], companyId: string): Promise<EmailCase | null> {
+    const firestore = ensureDb();
+    for (const [index, kind] of kinds.entries()) {
+      const value = values[index];
+      if (!value) continue;
+      
+      const q = query(
+        collection(firestore, 'emailCaseLinks'),
+        where('kind', '==', kind),
+        where('value', '==', value),
+        where('companyId', '==', companyId)
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        const link = snapshot.docs[0].data() as EmailCaseLink;
+        return this.getEmailCase(link.caseId, companyId);
+      }
+    }
+    return null;
+  }
+
+  // Create message
+  async createEmailCaseMessage(messageData: Omit<EmailCaseMessage, 'id' | 'createdAt'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'emailCaseMessages'), {
+      ...messageData,
+      createdAt: now
+    });
+    return docRef.id;
+  }
+
+  // Get messages for case
+  async getEmailCaseMessages(caseId: string, companyId: string): Promise<EmailCaseMessage[]> {
+    const firestore = ensureDb();
+    const q = query(
+      collection(firestore, 'emailCaseMessages'),
+      where('caseId', '==', caseId),
+      where('companyId', '==', companyId)
+    );
+    const snapshot = await getDocs(q);
+    const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailCaseMessage[];
+    return messages.sort((a, b) => new Date(b.receivedAt).getTime() - new Date(a.receivedAt).getTime());
+  }
+
+  // Create entity
+  async createEmailEntity(entityData: Omit<EmailEntity, 'id' | 'createdAt'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'emailEntities'), {
+      ...entityData,
+      createdAt: now
+    });
+    return docRef.id;
+  }
+
+  // Get entities for message
+  async getEmailEntities(messageId: string): Promise<EmailEntity[]> {
+    const firestore = ensureDb();
+    const q = query(
+      collection(firestore, 'emailEntities'),
+      where('messageId', '==', messageId)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailEntity[];
+  }
+
+  // Create attachment
+  async createEmailAttachment(attachmentData: Omit<EmailAttachment, 'id' | 'createdAt'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'emailAttachments'), {
+      ...attachmentData,
+      createdAt: now
+    });
+    return docRef.id;
+  }
+
+  // Find attachments by SHA256
+  async findEmailAttachmentsBySHA256(sha256: string, companyId: string): Promise<EmailAttachment[]> {
+    const firestore = ensureDb();
+    const q = query(
+      collection(firestore, 'emailAttachments'),
+      where('sha256', '==', sha256),
+      where('companyId', '==', companyId)
+    );
+    const snapshot = await getDocs(q);
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailAttachment[];
+  }
+
+  // Create SLA
+  async createEmailCaseSLA(slaData: Omit<EmailCaseSLA, 'id' | 'createdAt'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'emailCaseSLAs'), {
+      ...slaData,
+      createdAt: now
+    });
+    return docRef.id;
+  }
+
+  // Update SLA
+  async updateEmailCaseSLA(slaId: string, updateData: Partial<EmailCaseSLA>): Promise<void> {
+    const firestore = ensureDb();
+    await updateDoc(doc(firestore, 'emailCaseSLAs', slaId), updateData);
+  }
+
+  // Get SLA for case
+  async getEmailCaseSLA(caseId: string): Promise<EmailCaseSLA | null> {
+    const firestore = ensureDb();
+    const q = query(
+      collection(firestore, 'emailCaseSLAs'),
+      where('caseId', '==', caseId)
+    );
+    const snapshot = await getDocs(q);
+    if (snapshot.empty) return null;
+    return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as EmailCaseSLA;
+  }
+
+  // Create/update rule
+  async saveEmailRule(ruleData: Omit<EmailRule, 'id' | 'createdAt' | 'updatedAt'>, ruleId?: string): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    if (ruleId) {
+      await updateDoc(doc(firestore, 'emailRules', ruleId), {
+        ...ruleData,
+        updatedAt: now
+      });
+      return ruleId;
+    } else {
+      const docRef = await addDoc(collection(firestore, 'emailRules'), {
+        ...ruleData,
+        createdAt: now,
+        updatedAt: now
+      });
+      return docRef.id;
+    }
+  }
+
+  // Get rules
+  async getEmailRules(companyId: string): Promise<EmailRule[]> {
+    const firestore = ensureDb();
+    const q = query(
+      collection(firestore, 'emailRules'),
+      where('companyId', '==', companyId)
+    );
+    const snapshot = await getDocs(q);
+    const rules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailRule[];
+    return rules.sort((a, b) => b.priority - a.priority);
+  }
+
+  // Delete rule
+  async deleteEmailRule(ruleId: string): Promise<void> {
+    const firestore = ensureDb();
+    await deleteDoc(doc(firestore, 'emailRules', ruleId));
+  }
+
+  // Risk Assessment Management
+  async createRiskAssessment(riskData: Omit<RiskAssessment, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    
+    // Generate unique numeric ID
+    const allRisks = await this.getRiskAssessments(riskData.companyId);
+    const maxId = allRisks.reduce((max, risk) => {
+      const riskId = risk.riskAssessmentId ? parseInt(risk.riskAssessmentId) : 0;
+      return riskId > max ? riskId : max;
+    }, 0);
+    const newRiskId = (maxId + 1).toString();
+    
+    // Clean the data to remove undefined values
+    const cleanObject = (obj: any): any => {
+      if (obj === null || obj === undefined) return undefined;
+      if (Array.isArray(obj)) {
+        const cleaned = obj.map(cleanObject).filter(item => item !== undefined);
+        return cleaned.length > 0 ? cleaned : undefined;
+      }
+      if (typeof obj === 'object') {
+        const cleaned: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+          const cleanedValue = cleanObject(value);
+          if (cleanedValue !== undefined) {
+            cleaned[key] = cleanedValue;
+          }
+        }
+        return Object.keys(cleaned).length > 0 ? cleaned : undefined;
+      }
+      return obj;
+    };
+    
+    const cleanedRiskData = cleanObject({
+      ...riskData,
+      riskAssessmentId: newRiskId,
+      createdAt: now,
+      updatedAt: now
+    });
+    
+    const docRef = await addDoc(collection(firestore, 'riskAssessments'), cleanedRiskData);
+    
+    await this.createActivity({
+      type: 'document_uploaded',
+      title: 'Risikovurdering opprettet',
+      description: riskData.title,
+      userId: riskData.createdBy,
+      userName: 'System',
+      companyId: riskData.companyId
+    });
+
+    return docRef.id;
+  }
+
+  async getRiskAssessments(companyId: string, filters?: { status?: string; riskLevel?: string; departmentId?: string }): Promise<RiskAssessment[]> {
+    const firestore = ensureDb();
+    
+    let q = query(
+      collection(firestore, 'riskAssessments'),
+      where('companyId', '==', companyId)
+    );
+
+    const snapshot = await getDocs(q);
+    let risks = snapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    })) as RiskAssessment[];
+
+    // Apply filters in memory
+    if (filters?.status && filters.status !== 'all') {
+      risks = risks.filter(r => r.status === filters.status);
+    }
+    if (filters?.riskLevel && filters.riskLevel !== 'all') {
+      risks = risks.filter(r => r.riskLevel === filters.riskLevel);
+    }
+    if (filters?.departmentId) {
+      risks = risks.filter(r => r.departmentId === filters.departmentId);
+    }
+    
+    // Sort by review date (newest first)
+    return risks.sort((a, b) => {
+      const dateA = new Date(a.reviewDate).getTime();
+      const dateB = new Date(b.reviewDate).getTime();
+      return dateB - dateA;
+    });
+  }
+
+  async getRiskAssessment(riskId: string): Promise<RiskAssessment | null> {
+    const firestore = ensureDb();
+    const riskDoc = await getDoc(doc(firestore, 'riskAssessments', riskId));
+    if (!riskDoc.exists()) return null;
+    return { id: riskDoc.id, ...riskDoc.data() } as RiskAssessment;
+  }
+
+  async updateRiskAssessment(riskId: string, updateData: Partial<RiskAssessment>): Promise<void> {
+    const firestore = ensureDb();
+    await updateDoc(doc(firestore, 'riskAssessments', riskId), {
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async deleteRiskAssessment(riskId: string): Promise<void> {
+    const firestore = ensureDb();
+    await deleteDoc(doc(firestore, 'riskAssessments', riskId));
+  }
+
+  // Follow-up Action Management
+  async createFollowUpAction(actionData: Omit<FollowUpAction, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'followUpActions'), {
+      ...actionData,
+      createdAt: now,
+      updatedAt: now
+    });
+    
+    await this.createActivity({
+      type: 'document_uploaded',
+      title: 'Oppfølgingstiltak opprettet',
+      description: actionData.title,
+      userId: actionData.createdBy,
+      userName: 'System',
+      companyId: actionData.companyId
+    });
+
+    return docRef.id;
+  }
+
+  async getFollowUpActions(companyId: string, filters?: { status?: string; priority?: string; departmentId?: string }): Promise<FollowUpAction[]> {
+    const firestore = ensureDb();
+    
+    let q = query(
+      collection(firestore, 'followUpActions'),
+      where('companyId', '==', companyId)
+    );
+
+    const snapshot = await getDocs(q);
+    let actions = snapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    })) as FollowUpAction[];
+
+    // Apply filters in memory
+    if (filters?.status && filters.status !== 'all') {
+      actions = actions.filter(a => a.status === filters.status);
+    }
+    if (filters?.priority && filters.priority !== 'all') {
+      actions = actions.filter(a => a.priority === filters.priority);
+    }
+    if (filters?.departmentId) {
+      actions = actions.filter(a => a.departmentId === filters.departmentId);
+    }
+    
+    // Sort by due date (oldest first)
+    return actions.sort((a, b) => {
+      const dateA = new Date(a.dueDate).getTime();
+      const dateB = new Date(b.dueDate).getTime();
+      return dateA - dateB;
+    });
+  }
+
+  async getFollowUpAction(actionId: string): Promise<FollowUpAction | null> {
+    const firestore = ensureDb();
+    const actionDoc = await getDoc(doc(firestore, 'followUpActions', actionId));
+    if (!actionDoc.exists()) return null;
+    return { id: actionDoc.id, ...actionDoc.data() } as FollowUpAction;
+  }
+
+  async updateFollowUpAction(actionId: string, updateData: Partial<FollowUpAction>): Promise<void> {
+    const firestore = ensureDb();
+    await updateDoc(doc(firestore, 'followUpActions', actionId), {
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async deleteFollowUpAction(actionId: string): Promise<void> {
+    const firestore = ensureDb();
+    await deleteDoc(doc(firestore, 'followUpActions', actionId));
+  }
+
+  // Checkpoint Management
+  async createCheckpoint(checkpointData: Omit<Checkpoint, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+    const firestore = ensureDb();
+    const now = new Date().toISOString();
+    const docRef = await addDoc(collection(firestore, 'checkpoints'), {
+      ...checkpointData,
+      createdAt: now,
+      updatedAt: now
+    });
+    
+    await this.createActivity({
+      type: 'document_uploaded',
+      title: 'Kontrollpunkt opprettet',
+      description: checkpointData.title,
+      userId: checkpointData.createdBy,
+      userName: 'System',
+      companyId: checkpointData.companyId
+    });
+
+    return docRef.id;
+  }
+
+  async getCheckpoints(companyId: string, filters?: { status?: string; category?: string; departmentId?: string }): Promise<Checkpoint[]> {
+    const firestore = ensureDb();
+    
+    let q = query(
+      collection(firestore, 'checkpoints'),
+      where('companyId', '==', companyId)
+    );
+
+    const snapshot = await getDocs(q);
+    let checkpoints = snapshot.docs.map(doc => ({ 
+      id: doc.id, 
+      ...doc.data() 
+    })) as Checkpoint[];
+
+    // Apply filters in memory
+    if (filters?.status && filters.status !== 'all') {
+      checkpoints = checkpoints.filter(c => c.status === filters.status);
+    }
+    if (filters?.category && filters.category !== 'all') {
+      checkpoints = checkpoints.filter(c => c.category === filters.category);
+    }
+    if (filters?.departmentId) {
+      checkpoints = checkpoints.filter(c => c.departmentId === filters.departmentId);
+    }
+    
+    // Sort by next check date (oldest first)
+    return checkpoints.sort((a, b) => {
+      const dateA = new Date(a.nextCheck).getTime();
+      const dateB = new Date(b.nextCheck).getTime();
+      return dateA - dateB;
+    });
+  }
+
+  async getCheckpoint(checkpointId: string): Promise<Checkpoint | null> {
+    const firestore = ensureDb();
+    const checkpointDoc = await getDoc(doc(firestore, 'checkpoints', checkpointId));
+    if (!checkpointDoc.exists()) return null;
+    return { id: checkpointDoc.id, ...checkpointDoc.data() } as Checkpoint;
+  }
+
+  async updateCheckpoint(checkpointId: string, updateData: Partial<Checkpoint>): Promise<void> {
+    const firestore = ensureDb();
+    await updateDoc(doc(firestore, 'checkpoints', checkpointId), {
+      ...updateData,
+      updatedAt: new Date().toISOString()
+    });
+  }
+
+  async deleteCheckpoint(checkpointId: string): Promise<void> {
+    const firestore = ensureDb();
+    await deleteDoc(doc(firestore, 'checkpoints', checkpointId));
+  }
+
+  // Helper function to get nearest leader for an employee
+  async getNearestLeader(employeeId: string, companyId: string): Promise<Employee | null> {
+    const firestore = ensureDb();
+    
+    try {
+      // Get employee
+      const employeeDoc = await getDoc(doc(firestore, 'users', employeeId));
+      if (!employeeDoc.exists()) return null;
+      
+      const employee = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
+      
+      // If employee has a managerId, return that manager
+      if (employee.managerId) {
+        const managerDoc = await getDoc(doc(firestore, 'users', employee.managerId));
+        if (managerDoc.exists()) {
+          return { id: managerDoc.id, ...managerDoc.data() } as Employee;
+        }
+      }
+      
+      // If employee has a departmentId, get department leader
+      if (employee.departmentId) {
+        const deptDoc = await getDoc(doc(firestore, 'departments', employee.departmentId));
+        if (deptDoc.exists()) {
+          const dept = deptDoc.data();
+          if (dept.managerId) {
+            const leaderDoc = await getDoc(doc(firestore, 'users', dept.managerId));
+            if (leaderDoc.exists()) {
+              return { id: leaderDoc.id, ...leaderDoc.data() } as Employee;
+            }
+          }
+        }
+      }
+      
+      // Fallback: get first department_leader or admin
+      const q = query(
+        collection(firestore, 'users'),
+        where('companyId', '==', companyId),
+        where('role', 'in', ['admin', 'department_leader'])
+      );
+      const snapshot = await getDocs(q);
+      if (!snapshot.empty) {
+        return { id: snapshot.docs[0].id, ...snapshot.docs[0].data() } as Employee;
+      }
+      
+      return null;
+    } catch (error) {
+      console.error('Error getting nearest leader:', error);
+      return null;
+    }
   }
 }
 

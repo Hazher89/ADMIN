@@ -17,24 +17,9 @@ export async function POST(request: NextRequest) {
       provider: 'cloudflare_email_routing'
     });
 
-    // Mock bulk import results
-    const results = orgNumbers.map((orgNumber, index) => ({
-      orgNumber,
-      name: `Test Company ${orgNumber}`,
-      address: {
-        street: `Test Street ${index + 1}`,
-        city: 'Oslo',
-        postalCode: '0001',
-        country: 'Norway'
-      },
-      contact: {
-        email: `test${index + 1}@example.com`,
-        phone: `+47 123 45 ${String(index + 1).padStart(3, '0')}`
-      },
-      status: 'active',
-      imported: true,
-      provider: 'cloudflare_email_routing'
-    }));
+    // TODO: Implement actual BRRG bulk import
+    // For now, return empty results as we only support single company
+    const results: any[] = [];
 
     console.log(`✅ BRRG bulk import completed successfully for Cloudflare Email Routing: ${results.length} companies`);
 

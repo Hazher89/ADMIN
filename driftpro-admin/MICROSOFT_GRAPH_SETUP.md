@@ -29,6 +29,9 @@ The mail page in DriftPro requires Microsoft Graph API credentials to connect to
    - `Mail.ReadWrite` 
    - `Mail.Send`
    - `User.Read`
+   - `Files.Read` (for OneDrive read access)
+   - `Files.ReadWrite` (for OneDrive read/write access)
+   - `Files.Read.All` (for OneDrive full access)
    - `offline_access`
 6. Click "Grant admin consent"
 

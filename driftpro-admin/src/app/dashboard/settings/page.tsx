@@ -715,11 +715,17 @@ export default function SettingsPage() {
   };
 
   const sendTestEmail = async (template: string) => {
-    if (!testEmailAddress) {
-      setEmailTestMessage('Vennligst skriv inn en e-postadresse for testing');
+    // Alltid spør hvilken e-post som skal brukes
+    const targetEmail = window.prompt('Hvilken e-postadresse vil du sende testmeldingen til?', testEmailAddress || '');
+    
+    if (!targetEmail || !targetEmail.trim()) {
+      setEmailTestMessage('Du må skrive inn en e-postadresse for å sende test.');
       setEmailTestStatus('error');
       return;
     }
+
+    // Oppdater feltet slik at brukeren også ser adressen i UI om det brukes senere
+    setTestEmailAddress(targetEmail.trim());
 
     // Check if email service is available
     if (!globalEmailService.isEmailServiceAvailable()) {
@@ -729,26 +735,32 @@ export default function SettingsPage() {
     }
 
     setEmailTestStatus('testing');
-    setEmailTestMessage(`Sender ${template} til ${testEmailAddress}...`);
+    setEmailTestMessage(`Sender ${template} til ${targetEmail.trim()}...`);
 
     try {
       const result = await globalEmailService.sendEmail({
-        to: testEmailAddress,
+        to: targetEmail.trim(),
         subject: `DriftPro Test - ${template}`,
         html: `<h1>Test ${template}</h1><p>Dette er en test-e-post fra DriftPro.</p>`
       });
 
       if (result.success) {
         setEmailTestStatus('success');
-        setEmailTestMessage(`✅ ${template} sendt til ${testEmailAddress}!`);
+        const successMsg = `✅ ${template} sendt til ${targetEmail.trim()}!`;
+        setEmailTestMessage(successMsg);
+        window.alert(successMsg);
       } else {
+        const errorMsg = result.error || 'E-postsending feilet';
         setEmailTestStatus('error');
-        setEmailTestMessage(result.error || 'E-postsending feilet');
+        setEmailTestMessage(errorMsg);
+        window.alert(`❌ ${errorMsg}`);
       }
     } catch (error) {
+      const errorMsg = 'Feil ved sending av e-post';
       setEmailTestStatus('error');
-      setEmailTestMessage('Feil ved sending av e-post');
+      setEmailTestMessage(errorMsg);
       console.error('Email test error:', error);
+      window.alert(`❌ ${errorMsg}`);
     }
   };
 
@@ -1410,50 +1422,7 @@ export default function SettingsPage() {
               </div>
             )}
             
-            {/* Email Test Section */}
-            <div style={{ marginBottom: '2rem', padding: '1.5rem', background: '#f8f9fa', borderRadius: '8px' }}>
-              <h3 style={{ marginBottom: '1rem', fontSize: '1.1rem' }}>🧪 Test e-posttilkobling</h3>
-              <div style={{ display: 'flex', gap: '1rem', alignItems: 'flex-end', marginBottom: '1rem' }}>
-                <div style={{ flex: 1 }}>
-                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500' }}>
-                    Test e-postadresse:
-                  </label>
-                  <input
-                    type="email"
-                    value={testEmailAddress}
-                    onChange={(e) => setTestEmailAddress(e.target.value)}
-                    placeholder="skriv@din-epost.no"
-                    style={{
-                      width: '100%',
-                      padding: '0.75rem',
-                      border: '1px solid #ddd',
-                      borderRadius: '6px',
-                      fontSize: '0.875rem'
-                    }}
-                  />
-                </div>
-                <button
-                  className="btn btn-primary"
-                  onClick={testEmailConnection}
-                  disabled={emailTestStatus === 'testing'}
-                  style={{ padding: '0.75rem 1.5rem' }}
-                >
-                  {emailTestStatus === 'testing' ? 'Tester...' : '🔗 Test tilkobling'}
-                </button>
-              </div>
-              
-              {emailTestMessage && (
-                <div style={{
-                  padding: '1rem',
-                  borderRadius: '6px',
-                  background: emailTestStatus === 'success' ? '#d4edda' : emailTestStatus === 'error' ? '#f8d7da' : '#d1ecf1',
-                  color: emailTestStatus === 'success' ? '#155724' : emailTestStatus === 'error' ? '#721c24' : '#0c5460',
-                  border: `1px solid ${emailTestStatus === 'success' ? '#c3e6cb' : emailTestStatus === 'error' ? '#f5c6cb' : '#bee5eb'}`
-                }}>
-                  {emailTestMessage}
-                </div>
-              )}
-            </div>
+            
 
             {/* Email Templates Section */}
             <div style={{ marginBottom: '2rem' }}>

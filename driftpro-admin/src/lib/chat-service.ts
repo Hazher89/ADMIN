@@ -8,7 +8,9 @@ import {
   where,
   limit,
   getDocs,
-  writeBatch
+  writeBatch,
+  serverTimestamp,
+  Timestamp
 } from 'firebase/firestore';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 import { db, storage } from './firebase';
@@ -61,6 +63,9 @@ export interface Chat {
     typingIndicators: boolean;
     notifications: boolean;
   };
+  mutedBy?: Record<string, string>;
+  pinnedBy?: Record<string, string>;
+  archivedBy?: Record<string, string>;
   createdAt: string;
   updatedAt: string;
 }
@@ -157,11 +162,26 @@ class ChatService {
     if (!db) throw new Error('Database not initialized');
 
     try {
-      const messageData = {
-        ...message,
-        createdAt: new Date().toISOString(),
-        readBy: [message.senderId]
+      // Build message data, excluding undefined fields
+      const messageData: any = {
+        chatId: message.chatId,
+        senderId: message.senderId,
+        senderName: message.senderName,
+        content: message.content,
+        type: message.type,
+        reactions: message.reactions || {},
+        readBy: [message.senderId],
+        createdAt: serverTimestamp()
       };
+
+      // Only include optional fields if they exist
+      if (message.fileUrl) messageData.fileUrl = message.fileUrl;
+      if (message.fileName) messageData.fileName = message.fileName;
+      if (message.fileSize) messageData.fileSize = message.fileSize;
+      if (message.thumbnailUrl) messageData.thumbnailUrl = message.thumbnailUrl;
+      if (message.duration) messageData.duration = message.duration;
+      if (message.replyTo) messageData.replyTo = message.replyTo;
+      if (message.forwardedFrom) messageData.forwardedFrom = message.forwardedFrom;
 
       const docRef = await addDoc(collection(db, `chats/${chatId}/messages`), messageData);
       
@@ -171,10 +191,10 @@ class ChatService {
           content: message.content,
           senderId: message.senderId,
           senderName: message.senderName,
-          timestamp: messageData.createdAt,
+          timestamp: serverTimestamp(),
           type: message.type
         },
-        updatedAt: messageData.createdAt
+        updatedAt: serverTimestamp()
       });
 
       // Send notifications to other participants
@@ -231,19 +251,51 @@ class ChatService {
 
   // Mark messages as read
   async markMessagesAsRead(chatId: string, userId: string, messageIds: string[]): Promise<void> {
-    if (!db) return;
+    if (!db || messageIds.length === 0) return;
 
     try {
       const batch = writeBatch(db);
+      const readMessageIds = new Set<string>();
       
-      messageIds.forEach(messageId => {
-        const messageRef = doc(db!, `chats/${chatId}/messages`, messageId);
-        batch.update(messageRef, {
-          readBy: [userId]
-        });
-      });
+      // Get all messages first
+      const messagesSnapshot = await getDocs(collection(db, `chats/${chatId}/messages`));
+      
+      for (const messageDoc of messagesSnapshot.docs) {
+        if (messageIds.includes(messageDoc.id)) {
+          const messageData = messageDoc.data() as ChatMessage;
+          const currentReadBy = messageData.readBy || [];
+          if (!currentReadBy.includes(userId)) {
+            batch.update(messageDoc.ref, {
+              readBy: [...currentReadBy, userId]
+            });
+            readMessageIds.add(messageDoc.id);
+          }
+        }
+      }
 
-      await batch.commit();
+      if (readMessageIds.size > 0) {
+        await batch.commit();
+        
+        // Update unread count for chat
+        const chatRef = doc(db, 'chats', chatId);
+        const chatDoc = await getDocs(query(
+          collection(db, 'chats'),
+          where('__name__', '==', chatId),
+          limit(1)
+        ));
+        
+        if (!chatDoc.empty) {
+          const chatData = chatDoc.docs[0].data() as Chat;
+          const currentUnread = chatData.unreadCount?.[userId] || 0;
+          const updatedUnreadCount = {
+            ...chatData.unreadCount,
+            [userId]: Math.max(0, currentUnread - readMessageIds.size)
+          };
+          await updateDoc(chatRef, {
+            unreadCount: updatedUnreadCount
+          });
+        }
+      }
     } catch (error) {
       console.error('Error marking messages as read:', error);
     }

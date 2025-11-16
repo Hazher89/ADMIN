@@ -583,29 +583,9 @@ export default function PartnersPage() {
   // Load users for a specific partner
   const loadPartnerUsers = async (partnerId: string) => {
     try {
-      // Here you would typically load from Firebase
-      // For now, we'll use mock data
-      const mockUsers = [
-        {
-          id: '1',
-          name: 'Ola Nordmann',
-          phone: '+47 123 45 678',
-          email: 'ola@partner.no',
-          role: 'admin',
-          createdAt: '2024-01-15',
-          lastLogin: '2024-01-20'
-        },
-        {
-          id: '2',
-          name: 'Kari Hansen',
-          phone: '+47 987 65 432',
-          email: 'kari@partner.no',
-          role: 'user',
-          createdAt: '2024-01-16',
-          lastLogin: '2024-01-19'
-        }
-      ];
-      setPartnerUsers(mockUsers);
+      // Load from Firebase
+      const users = await firebaseService.getPartnerUsers(partnerId);
+      setPartnerUsers(users);
     } catch (error) {
       console.error('Error loading users:', error);
       setError('Feil ved lasting av brukere');

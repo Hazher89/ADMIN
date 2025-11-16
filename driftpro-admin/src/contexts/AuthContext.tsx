@@ -16,6 +16,7 @@ import { auth, db } from '@/lib/firebase';
 interface UserProfile {
   id: string;
   displayName: string;
+  name?: string; // Alias for displayName
   email: string;
   phone?: string;
   departmentId?: string;
@@ -29,6 +30,77 @@ interface UserProfile {
   companyName?: string; // Add company information
   companyId?: string; // Add company ID for isolation
   passwordSet?: boolean; // Track if password has been set
+  permissions?: {
+    dashboard?: boolean;
+    employees?: boolean;
+    departments?: boolean;
+    projects?: boolean;
+    tasks?: boolean;
+    inventory?: boolean;
+    suppliers?: boolean;
+    finance?: boolean;
+    invoicing?: boolean;
+    payments?: boolean;
+    hr?: boolean;
+    crm?: boolean;
+    delivery?: boolean;
+    settings?: boolean;
+    mail?: boolean;
+    reports?: boolean;
+    analytics?: boolean;
+    notifications?: boolean;
+    calendar?: boolean;
+    documents?: boolean;
+    training?: boolean;
+    compliance?: boolean;
+    maintenance?: boolean;
+    quality?: boolean;
+    safety?: boolean;
+    procurement?: boolean;
+    logistics?: boolean;
+    production?: boolean;
+    sales?: boolean;
+    marketing?: boolean;
+    customerService?: boolean;
+    it?: boolean;
+    legal?: boolean;
+    audit?: boolean;
+    internkontrollOgSamsvar?: boolean;
+    internrevisjon?: boolean;
+    avvik?: boolean;
+    risikovurdering?: boolean;
+    oppfølgingstiltak?: boolean;
+    kontrollpunkter?: boolean;
+    internkontrollRapporter?: boolean;
+    // Sidebar sider
+    chat?: boolean;
+    emailSystem?: boolean;
+    smsLogs?: boolean;
+    partners?: boolean;
+    // Logistikk System faner
+    logistikkBudPriser?: boolean;
+    logistikkLevering?: boolean;
+    logistikkPlanlegging?: boolean;
+    logistikkKunder?: boolean;
+    logistikkLeverandorer?: boolean;
+    logistikkProdukter?: boolean;
+    logistikkLager?: boolean;
+    logistikkFakturering?: boolean;
+    logistikkFinans?: boolean;
+    // HR faner
+    hrAnsatte?: boolean;
+    hrVakter?: boolean;
+    hrFravær?: boolean;
+    hrFerie?: boolean;
+    hrAvdelinger?: boolean;
+  };
+  vacationAccess?: {
+    canRequestVacation?: boolean;
+    canApproveVacation?: boolean;
+    canViewAllVacations?: boolean;
+    vacationDaysPerYear?: number;
+    managerApprovalRequired?: boolean;
+  };
 }
 
 interface AuthContextType {
@@ -86,7 +158,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               emergencyContact: data.emergencyContact || undefined,
               companyName: data.companyName || undefined, // Add company information
               companyId: data.companyId || undefined,
-              passwordSet: data.passwordSet || false
+              passwordSet: data.passwordSet || false,
+              permissions: data.permissions || undefined,
+              vacationAccess: data.vacationAccess || undefined
             };
             setUserProfile(userProfile);
           } else {
@@ -117,102 +191,110 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (!db) throw new Error('Database ikke tilgjengelig.');
     
     try {
-      // FIRST: Check if user exists and get their companyId
-      const usersQuery = query(collection(db, 'users'), where('email', '==', email));
-      const userSnapshot = await getDocs(usersQuery);
-      
-      let userDoc;
-      let userData;
-      
-      if (userSnapshot.empty) {
-        // Special handling for superadmin - try to authenticate first and then create profile
-        if (email === 'baxigsti@hotmail.de') {
-          console.log('Attempting superadmin login...');
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-          const user = userCredential.user;
+      // Special handling for superadmin - check FIRST before anything else
+      if (email === 'baxigshti@hotmail.de') {
+        console.log('Attempting superadmin login...');
+        const userCredential = await signInWithEmailAndPassword(auth, email, password);
+        const user = userCredential.user;
+        
+        // Create or update superadmin profile
+        const userRef = doc(db, 'users', user.uid);
+        const userDocSnap = await getDoc(userRef);
+        
+        if (!userDocSnap.exists()) {
+          // Create DriftPro main company if it doesn't exist
+          const companyRef = doc(db, 'companies', 'driftpro_main');
+          const companyDoc = await getDoc(companyRef);
           
-          // Create superadmin profile if it doesn't exist
-          const userRef = doc(db, 'users', user.uid);
-          const userDocSnap = await getDoc(userRef);
-          
-          if (!userDocSnap.exists()) {
-            // Create DriftPro main company if it doesn't exist
-            const companyRef = doc(db, 'companies', 'driftpro_main');
-            const companyDoc = await getDoc(companyRef);
-            
-            if (!companyDoc.exists()) {
-              await setDoc(companyRef, {
-                id: 'driftpro_main',
-                name: 'DriftPro Administrasjon',
-                industry: 'Software',
-                employees: 1,
-                location: 'Norge',
-                phone: '+47 12345678',
-                email: 'admin@driftpro.no',
-                website: 'https://admin.driftpro.no',
-                status: 'active',
-                joinedDate: new Date().toISOString(),
-                revenue: 'N/A',
-                description: 'Hovedadministrasjon for DriftPro systemet',
-                adminUserId: user.uid,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-                orgNumber: '123456789',
-                address: {
-                  street: 'DriftPro Gate 1',
-                  city: 'Oslo',
-                  postalCode: '0001',
-                  country: 'Norge'
-                },
-                contactPerson: {
-                  name: 'Super Administrator',
-                  email: email,
-                  phone: '+47 12345678',
-                  position: 'Super Administrator'
-                }
-              });
-            }
-            
-            // Create superadmin user profile
-            await setDoc(userRef, {
-              id: user.uid,
-              displayName: 'Super Administrator',
-              email: email,
-              role: 'super_admin',
-              companyId: 'driftpro_main',
+          if (!companyDoc.exists()) {
+            await setDoc(companyRef, {
+              id: 'driftpro_main',
+              name: 'DriftPro Administrasjon',
+              industry: 'Software',
+              employees: 1,
+              location: 'Norge',
+              phone: '+47 12345678',
+              email: 'admin@driftpro.no',
+              website: 'https://admin.driftpro.no',
               status: 'active',
+              joinedDate: new Date().toISOString(),
+              revenue: 'N/A',
+              description: 'Hovedadministrasjon for DriftPro systemet',
+              adminUserId: user.uid,
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
-              hireDate: new Date().toISOString(),
-              position: 'Super Administrator',
-              departmentId: 'admin',
-              bio: 'Super Administrator for DriftPro systemet',
-              avatar: '',
-              phone: '',
-              address: '',
-              emergencyContact: '',
-              birthDate: '',
-              salary: 0,
-              managerId: '',
-              employeeNumber: 'SA001',
-              taxId: '',
-              bankAccount: '',
-              insuranceNumber: '',
-              skills: ['Administration', 'System Management', 'User Management'],
-              certifications: ['Super Admin Certification'],
-              education: 'System Administration',
-              workExperience: 'DriftPro Super Administrator'
+              orgNumber: '123456789',
+              address: {
+                street: 'DriftPro Gate 1',
+                city: 'Oslo',
+                postalCode: '0001',
+                country: 'Norge'
+              },
+              contactPerson: {
+                name: 'Super Administrator',
+                email: email,
+                phone: '+47 12345678',
+                position: 'Super Administrator'
+              }
             });
           }
           
-          return; // Superadmin login successful
+          // Create superadmin user profile
+          await setDoc(userRef, {
+            id: user.uid,
+            uid: user.uid, // Make sure uid is set
+            displayName: 'Super Administrator',
+            email: email,
+            role: 'super_admin',
+            companyId: 'driftpro_main',
+            status: 'active',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            hireDate: new Date().toISOString(),
+            position: 'Super Administrator',
+            departmentId: 'admin',
+            bio: 'Super Administrator for DriftPro systemet',
+            avatar: '',
+            phone: '',
+            address: '',
+            emergencyContact: '',
+            birthDate: '',
+            salary: 0,
+            managerId: '',
+            employeeNumber: 'SA001',
+            taxId: '',
+            bankAccount: '',
+            insuranceNumber: '',
+            skills: ['Administration', 'System Management', 'User Management'],
+            certifications: ['Super Admin Certification'],
+            education: 'System Administration',
+            workExperience: 'DriftPro Super Administrator'
+          });
         } else {
-          throw new Error('Bruker ikke funnet. Kontakt administrator.');
+          // Update existing profile to ensure uid is set
+          const existingData = userDocSnap.data();
+          if (!existingData.uid || existingData.uid !== user.uid) {
+            await updateDoc(userRef, {
+              uid: user.uid,
+              id: user.uid,
+              updatedAt: new Date().toISOString()
+            });
+          }
         }
+        
+        return; // Superadmin login successful
       }
       
-      userDoc = userSnapshot.docs[0];
-      userData = userDoc.data();
+      // For all other users, check if user exists and get their companyId
+      const usersQuery = query(collection(db, 'users'), where('email', '==', email));
+      const userSnapshot = await getDocs(usersQuery);
+      
+      if (userSnapshot.empty) {
+        throw new Error('Bruker ikke funnet. Kontakt administrator.');
+      }
+      
+      const userDoc = userSnapshot.docs[0];
+      const userData = userDoc.data();
       
       // Check if user has a companyId
       if (!userData.companyId) {

@@ -18,47 +18,7 @@ import {
 } from 'lucide-react';
 
 export default function SuppliersPage() {
-  const [suppliers, setSuppliers] = useState([
-    {
-      id: 1,
-      name: 'ABC Leverandør AS',
-      contactPerson: 'Lars Andersen',
-      email: 'lars@abcleverandor.no',
-      phone: '+47 123 45 678',
-      address: 'Industriveien 123, 0123 Oslo',
-      category: 'Elektronikk',
-      rating: 4.5,
-      status: 'active',
-      lastOrder: '2024-01-05',
-      totalOrders: 45
-    },
-    {
-      id: 2,
-      name: 'Nordic Materials',
-      contactPerson: 'Kari Nordmann',
-      email: 'kari@nordicmaterials.no',
-      phone: '+47 987 65 432',
-      address: 'Materialgata 456, 5432 Bergen',
-      category: 'Råvarer',
-      rating: 4.2,
-      status: 'active',
-      lastOrder: '2024-01-08',
-      totalOrders: 23
-    },
-    {
-      id: 3,
-      name: 'Tech Solutions Ltd',
-      contactPerson: 'John Smith',
-      email: 'john@techsolutions.com',
-      phone: '+44 20 7946 0958',
-      address: 'Technology Street 789, London SW1A 1AA',
-      category: 'IT-utstyr',
-      rating: 4.8,
-      status: 'inactive',
-      lastOrder: '2023-12-15',
-      totalOrders: 12
-    }
-  ]);
+  const [suppliers, setSuppliers] = useState<any[]>([]);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
@@ -302,6 +262,12 @@ export default function SuppliersPage() {
     </div>
   );
 }
+
+
+
+
+
+
 
 
 

@@ -68,9 +68,27 @@ function SetupPasswordContent() {
     e.preventDefault();
     setError('');
 
-    // Validate passwords
+    // Validate passwords (GDPR / sikkerhet)
     if (password.length < 8) {
       setError('Passordet må være minst 8 tegn langt');
+      return;
+    }
+
+    // Må inneholde bokstaver
+    if (!/[A-Za-zÆØÅæøå]/.test(password)) {
+      setError('Passordet må inneholde minst én bokstav');
+      return;
+    }
+
+    // Må inneholde tall
+    if (!/[0-9]/.test(password)) {
+      setError('Passordet må inneholde minst ett tall');
+      return;
+    }
+
+    // Må inneholde spesialtegn
+    if (!/[!@#$%^&*()[\]{}_\-+=,.?;:|<>]/.test(password)) {
+      setError('Passordet må inneholde minst ett spesialtegn (f.eks. !, #, ?, %)');
       return;
     }
 

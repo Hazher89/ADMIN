@@ -845,9 +845,9 @@ export default function MailPage() {
                     </div>
                   </div>
                 ) : (
-                  sortedEmails.map((email) => (
+                  sortedEmails.map((email, index) => (
                     <div
-                      key={email.id}
+                      key={`${email.id}-${index}`}
                       className={`border-b border-gray-100 hover:bg-gray-50 cursor-pointer transition-colors ${
                         !email.isRead ? 'bg-blue-50' : ''
                       }`}

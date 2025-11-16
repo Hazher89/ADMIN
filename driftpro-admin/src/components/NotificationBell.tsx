@@ -174,25 +174,26 @@ export default function NotificationBell() {
   }, []);
 
   const getNotificationIcon = (type: string) => {
+    const iconStyle = { width: '16px', height: '16px' };
     switch (type) {
       case 'deviation':
-        return <AlertTriangle className="h-4 w-4 text-red-500" />;
+        return <AlertTriangle size={16} style={{ ...iconStyle, color: '#ef4444' }} />;
       case 'vacation':
-        return <Calendar className="h-4 w-4 text-blue-500" />;
+        return <Calendar size={16} style={{ ...iconStyle, color: '#3b82f6' }} />;
       case 'absence':
-        return <User className="h-4 w-4 text-orange-500" />;
+        return <User size={16} style={{ ...iconStyle, color: '#f97316' }} />;
       case 'shift':
-        return <Clock className="h-4 w-4 text-green-500" />;
+        return <Clock size={16} style={{ ...iconStyle, color: '#22c55e' }} />;
       case 'document':
-        return <FileText className="h-4 w-4 text-purple-500" />;
+        return <FileText size={16} style={{ ...iconStyle, color: '#a855f7' }} />;
       case 'chat':
-        return <MessageSquare className="h-4 w-4 text-indigo-500" />;
+        return <MessageSquare size={16} style={{ ...iconStyle, color: '#6366f1' }} />;
       case 'employee':
-        return <User className="h-4 w-4 text-teal-500" />;
+        return <User size={16} style={{ ...iconStyle, color: '#14b8a6' }} />;
       case 'system':
-        return <Building className="h-4 w-4 text-gray-500" />;
+        return <Building size={16} style={{ ...iconStyle, color: 'var(--gray-500)' }} />;
       default:
-        return <Bell className="h-4 w-4 text-gray-500" />;
+        return <Bell size={16} style={{ ...iconStyle, color: 'var(--gray-500)' }} />;
     }
   };
 
@@ -230,134 +231,473 @@ export default function NotificationBell() {
     };
   }, [loadNotifications]);
 
+  const getPriorityColorDark = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return { border: 'rgba(239, 68, 68, 0.3)', bg: 'rgba(239, 68, 68, 0.1)' };
+      case 'high':
+        return { border: 'rgba(249, 115, 22, 0.3)', bg: 'rgba(249, 115, 22, 0.1)' };
+      case 'medium':
+        return { border: 'rgba(234, 179, 8, 0.3)', bg: 'rgba(234, 179, 8, 0.1)' };
+      case 'low':
+        return { border: 'rgba(34, 197, 94, 0.3)', bg: 'rgba(34, 197, 94, 0.1)' };
+      default:
+        return { border: 'rgba(107, 114, 128, 0.3)', bg: 'rgba(107, 114, 128, 0.1)' };
+    }
+  };
+
+  const getPriorityBadgeColor = (priority: string) => {
+    switch (priority) {
+      case 'urgent':
+        return { bg: 'rgba(239, 68, 68, 0.2)', text: '#fca5a5' };
+      case 'high':
+        return { bg: 'rgba(249, 115, 22, 0.2)', text: '#fdba74' };
+      case 'medium':
+        return { bg: 'rgba(234, 179, 8, 0.2)', text: '#fde047' };
+      case 'low':
+        return { bg: 'rgba(34, 197, 94, 0.2)', text: '#86efac' };
+      default:
+        return { bg: 'rgba(107, 114, 128, 0.2)', text: '#d1d5db' };
+    }
+  };
+
   return (
-    <div className="relative">
+    <div style={{ position: 'relative' }}>
       <button
         onClick={() => setShowDropdown(!showDropdown)}
-        className="relative p-2 text-gray-600 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+        style={{
+          position: 'relative',
+          padding: '0.5rem',
+          color: 'var(--gray-400)',
+          background: 'transparent',
+          border: 'none',
+          borderRadius: 'var(--radius-lg)',
+          cursor: 'pointer',
+          transition: 'all var(--transition-normal)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center'
+        }}
+        onMouseEnter={(e) => {
+          e.currentTarget.style.background = 'var(--gray-100)';
+          e.currentTarget.style.color = 'var(--text-color)';
+        }}
+        onMouseLeave={(e) => {
+          e.currentTarget.style.background = 'transparent';
+          e.currentTarget.style.color = 'var(--gray-400)';
+        }}
       >
-        <Bell className="h-6 w-6" />
+        <Bell size={20} />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-5 w-5 flex items-center justify-center">
+          <span style={{
+            position: 'absolute',
+            top: '-2px',
+            right: '-2px',
+            background: 'var(--danger)',
+            color: 'white',
+            fontSize: '0.75rem',
+            borderRadius: '50%',
+            height: '18px',
+            width: '18px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            fontWeight: '600',
+            boxShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
+          }}>
             {unreadCount > 9 ? '9+' : unreadCount}
           </span>
         )}
       </button>
 
       {showDropdown && (
-        <div className="absolute right-0 mt-2 w-80 bg-white rounded-lg shadow-lg border border-gray-200 z-50">
-          <div className="p-4 border-b border-gray-200">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-gray-900">Varsler</h3>
-              <button
-                onClick={() => setShowDropdown(false)}
-                className="text-gray-400 hover:text-gray-600"
-              >
-                <X className="h-5 w-5" />
-              </button>
+        <>
+          {/* Backdrop */}
+          <div
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 999,
+              background: 'rgba(0, 0, 0, 0.3)',
+              backdropFilter: 'blur(2px)'
+            }}
+            onClick={() => setShowDropdown(false)}
+          />
+          
+          {/* Dropdown */}
+          <div style={{
+            position: 'absolute',
+            right: 0,
+            top: 'calc(100% + 0.5rem)',
+            width: '380px',
+            maxWidth: '90vw',
+            background: 'var(--card-background)',
+            borderRadius: 'var(--radius-xl)',
+            boxShadow: 'var(--shadow-xl)',
+            border: '1px solid var(--border-color)',
+            zIndex: 1000,
+            overflow: 'hidden',
+            animation: 'fadeIn 0.2s ease'
+          }}>
+            {/* Header */}
+            <div style={{
+              padding: '1rem 1.25rem',
+              borderBottom: '1px solid var(--border-color)',
+              background: 'var(--gray-50)'
+            }}>
+              <div style={{
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                marginBottom: unreadCount > 0 ? '0.5rem' : '0'
+              }}>
+                <h3 style={{
+                  fontSize: 'var(--font-size-lg)',
+                  fontWeight: '600',
+                  color: 'var(--text-color)'
+                }}>
+                  Varsler
+                </h3>
+                <button
+                  onClick={() => setShowDropdown(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    color: 'var(--gray-400)',
+                    cursor: 'pointer',
+                    padding: '0.25rem',
+                    borderRadius: 'var(--radius-md)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = 'var(--gray-100)';
+                    e.currentTarget.style.color = 'var(--text-color)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'none';
+                    e.currentTarget.style.color = 'var(--gray-400)';
+                  }}
+                >
+                  <X size={18} />
+                </button>
+              </div>
+              {unreadCount > 0 && (
+                <p style={{
+                  fontSize: 'var(--font-size-sm)',
+                  color: 'var(--gray-500)',
+                  margin: 0
+                }}>
+                  {unreadCount} {unreadCount === 1 ? 'ulest varsel' : 'uleste varsler'}
+                </p>
+              )}
             </div>
-            {unreadCount > 0 && (
-              <p className="text-sm text-gray-600 mt-1">
-                {unreadCount} uleste varsler
-              </p>
-            )}
-          </div>
 
-          <div className="max-h-96 overflow-y-auto">
-            {loading ? (
-              <div className="p-4 text-center">
-                <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600 mx-auto"></div>
-              </div>
-            ) : notifications.length === 0 ? (
-              <div className="p-4 text-center text-gray-500">
-                <Bell className="h-8 w-8 mx-auto mb-2 text-gray-400" />
-                <p>Ingen uleste varsler</p>
-              </div>
-            ) : (
-              <div className="divide-y divide-gray-200">
-                {notifications.map((notification) => (
-                  <div
-                    key={notification.id}
-                    className={`p-4 hover:bg-gray-50 transition-colors ${
-                      getPriorityColor(notification.priority)
-                    }`}
-                  >
-                    <div className="flex items-start space-x-3">
-                      {getNotificationIcon(notification.type)}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center justify-between mb-1">
-                          <h4 className="text-sm font-medium text-gray-900 truncate">
-                            {notification.title}
-                          </h4>
-                          <span className={`px-2 py-1 text-xs rounded-full ${
-                            notification.priority === 'urgent' ? 'bg-red-100 text-red-800' :
-                            notification.priority === 'high' ? 'bg-orange-100 text-orange-800' :
-                            notification.priority === 'medium' ? 'bg-yellow-100 text-yellow-800' :
-                            'bg-green-100 text-green-800'
-                          }`}>
-                            {notification.priority}
-                          </span>
-                        </div>
-                        <p className="text-sm text-gray-600 mb-2 line-clamp-2">
-                          {notification.message}
-                        </p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-xs text-gray-500">
-                            {new Date(notification.createdAt).toLocaleString('no-NO')}
-                          </span>
-                          <div className="flex items-center space-x-1">
-                            <button
-                              onClick={() => markAsRead(notification.id)}
-                              className="p-1 text-gray-400 hover:text-green-600"
-                              title="Merk som lest"
-                            >
-                              <Check className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={() => archiveNotification(notification.id)}
-                              className="p-1 text-gray-400 hover:text-gray-600"
-                              title="Arkiver"
-                            >
-                              <Archive className="h-3 w-3" />
-                            </button>
-                            <button
-                              onClick={() => deleteNotification(notification.id)}
-                              className="p-1 text-gray-400 hover:text-red-600"
-                              title="Slett"
-                            >
-                              <Trash2 className="h-3 w-3" />
-                            </button>
+            {/* Notifications List */}
+            <div style={{
+              maxHeight: '400px',
+              overflowY: 'auto',
+              overflowX: 'hidden'
+            }}>
+              {loading ? (
+                <div style={{
+                  padding: '2rem',
+                  textAlign: 'center'
+                }}>
+                  <div style={{
+                    width: '24px',
+                    height: '24px',
+                    border: '2px solid var(--border-color)',
+                    borderTopColor: 'var(--primary)',
+                    borderRadius: '50%',
+                    animation: 'spin 1s linear infinite',
+                    margin: '0 auto'
+                  }}></div>
+                </div>
+              ) : notifications.length === 0 ? (
+                <div style={{
+                  padding: '2rem',
+                  textAlign: 'center',
+                  color: 'var(--gray-500)'
+                }}>
+                  <Bell size={32} style={{ margin: '0 auto 0.75rem', opacity: 0.5 }} />
+                  <p style={{ margin: 0, fontSize: 'var(--font-size-sm)' }}>
+                    Ingen varsler
+                  </p>
+                </div>
+              ) : (
+                <div>
+                  {notifications.map((notification) => {
+                    const priorityColors = getPriorityColorDark(notification.priority);
+                    const badgeColors = getPriorityBadgeColor(notification.priority);
+                    const isUnread = notification.status === 'unread';
+                    
+                    return (
+                      <div
+                        key={notification.id}
+                        style={{
+                          padding: '1rem 1.25rem',
+                          borderBottom: '1px solid var(--border-color)',
+                          background: isUnread ? priorityColors.bg : 'transparent',
+                          borderLeft: `3px solid ${priorityColors.border}`,
+                          transition: 'all 0.2s',
+                          cursor: 'pointer'
+                        }}
+                        onMouseEnter={(e) => {
+                          e.currentTarget.style.background = 'var(--gray-100)';
+                        }}
+                        onMouseLeave={(e) => {
+                          e.currentTarget.style.background = isUnread ? priorityColors.bg : 'transparent';
+                        }}
+                      >
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          gap: '0.75rem'
+                        }}>
+                          <div style={{
+                            flexShrink: 0,
+                            marginTop: '0.125rem'
+                          }}>
+                            {getNotificationIcon(notification.type)}
+                          </div>
+                          <div style={{
+                            flex: 1,
+                            minWidth: 0
+                          }}>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              marginBottom: '0.5rem',
+                              gap: '0.5rem'
+                            }}>
+                              <h4 style={{
+                                fontSize: 'var(--font-size-sm)',
+                                fontWeight: isUnread ? '600' : '500',
+                                color: 'var(--text-color)',
+                                margin: 0,
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                flex: 1
+                              }}>
+                                {notification.title}
+                              </h4>
+                              <span style={{
+                                padding: '0.25rem 0.5rem',
+                                fontSize: '0.625rem',
+                                borderRadius: 'var(--radius-full)',
+                                background: badgeColors.bg,
+                                color: badgeColors.text,
+                                fontWeight: '600',
+                                textTransform: 'uppercase',
+                                flexShrink: 0
+                              }}>
+                                {notification.priority === 'urgent' ? 'Høy' :
+                                 notification.priority === 'high' ? 'Høy' :
+                                 notification.priority === 'medium' ? 'Middels' : 'Lav'}
+                              </span>
+                            </div>
+                            <p style={{
+                              fontSize: 'var(--font-size-sm)',
+                              color: 'var(--gray-500)',
+                              margin: '0 0 0.75rem 0',
+                              lineHeight: '1.5',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical',
+                              overflow: 'hidden'
+                            }}>
+                              {notification.message}
+                            </p>
+                            <div style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              gap: '0.5rem'
+                            }}>
+                              <span style={{
+                                fontSize: '0.75rem',
+                                color: 'var(--gray-500)'
+                              }}>
+                                {new Date(notification.createdAt).toLocaleString('no-NO', {
+                                  day: '2-digit',
+                                  month: 'short',
+                                  hour: '2-digit',
+                                  minute: '2-digit'
+                                })}
+                              </span>
+                              <div style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '0.25rem'
+                              }}>
+                                {notification.status === 'unread' && (
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      markAsRead(notification.id);
+                                    }}
+                                    style={{
+                                      padding: '0.375rem',
+                                      background: 'none',
+                                      border: 'none',
+                                      color: 'var(--gray-400)',
+                                      cursor: 'pointer',
+                                      borderRadius: 'var(--radius-md)',
+                                      display: 'flex',
+                                      alignItems: 'center',
+                                      justifyContent: 'center',
+                                      transition: 'all 0.2s'
+                                    }}
+                                    onMouseEnter={(e) => {
+                                      e.currentTarget.style.background = 'var(--gray-100)';
+                                      e.currentTarget.style.color = '#10b981';
+                                    }}
+                                    onMouseLeave={(e) => {
+                                      e.currentTarget.style.background = 'none';
+                                      e.currentTarget.style.color = 'var(--gray-400)';
+                                    }}
+                                    title="Merk som lest"
+                                  >
+                                    <Check size={14} />
+                                  </button>
+                                )}
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    archiveNotification(notification.id);
+                                  }}
+                                  style={{
+                                    padding: '0.375rem',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--gray-400)',
+                                    cursor: 'pointer',
+                                    borderRadius: 'var(--radius-md)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'var(--gray-100)';
+                                    e.currentTarget.style.color = 'var(--text-color)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'none';
+                                    e.currentTarget.style.color = 'var(--gray-400)';
+                                  }}
+                                  title="Arkiver"
+                                >
+                                  <Archive size={14} />
+                                </button>
+                                <button
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    deleteNotification(notification.id);
+                                  }}
+                                  style={{
+                                    padding: '0.375rem',
+                                    background: 'none',
+                                    border: 'none',
+                                    color: 'var(--gray-400)',
+                                    cursor: 'pointer',
+                                    borderRadius: 'var(--radius-md)',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    transition: 'all 0.2s'
+                                  }}
+                                  onMouseEnter={(e) => {
+                                    e.currentTarget.style.background = 'var(--gray-100)';
+                                    e.currentTarget.style.color = 'var(--danger)';
+                                  }}
+                                  onMouseLeave={(e) => {
+                                    e.currentTarget.style.background = 'none';
+                                    e.currentTarget.style.color = 'var(--gray-400)';
+                                  }}
+                                  title="Slett"
+                                >
+                                  <Trash2 size={14} />
+                                </button>
+                              </div>
+                            </div>
                           </div>
                         </div>
                       </div>
-                    </div>
-                  </div>
-                ))}
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            {notifications.length > 0 && (
+              <div style={{
+                padding: '1rem 1.25rem',
+                borderTop: '1px solid var(--border-color)',
+                background: 'var(--gray-50)'
+              }}>
+                <Link
+                  href="/dashboard/notifications"
+                  onClick={() => setShowDropdown(false)}
+                  style={{
+                    display: 'block',
+                    width: '100%',
+                    textAlign: 'center',
+                    padding: '0.625rem 1rem',
+                    background: 'var(--primary)',
+                    color: 'white',
+                    borderRadius: 'var(--radius-lg)',
+                    textDecoration: 'none',
+                    fontSize: 'var(--font-size-sm)',
+                    fontWeight: '500',
+                    transition: 'all 0.2s'
+                  }}
+                  onMouseEnter={(e) => {
+                    e.currentTarget.style.background = '#0891b2';
+                    e.currentTarget.style.transform = 'translateY(-1px)';
+                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(6, 182, 212, 0.3)';
+                  }}
+                  onMouseLeave={(e) => {
+                    e.currentTarget.style.background = 'var(--primary)';
+                    e.currentTarget.style.transform = 'translateY(0)';
+                    e.currentTarget.style.boxShadow = 'none';
+                  }}
+                >
+                  Se alle varsler
+                </Link>
               </div>
             )}
           </div>
-
-          {notifications.length > 0 && (
-            <div className="p-4 border-t border-gray-200">
-              <Link
-                href="/dashboard/notifications"
-                className="block w-full text-center px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-                onClick={() => setShowDropdown(false)}
-              >
-                Se alle varsler
-              </Link>
-            </div>
-          )}
-        </div>
+        </>
       )}
 
-      {/* Backdrop */}
-      {showDropdown && (
-        <div
-          className="fixed inset-0 z-40"
-          onClick={() => setShowDropdown(false)}
-        />
-      )}
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(-10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+
+        @keyframes spin {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+      `}</style>
     </div>
   );
 }

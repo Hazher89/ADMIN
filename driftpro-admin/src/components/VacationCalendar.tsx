@@ -177,7 +177,13 @@ export default function VacationCalendar({
 
     // Add empty cells for days before the first day of the month
     for (let i = 0; i < firstDay; i++) {
-      days.push(<div key={`empty-${i}`} className="p-2 border border-gray-200 bg-gray-50"></div>);
+      days.push(
+        <div
+          key={`empty-${i}`}
+          className="bg-gray-50"
+          style={{ padding: '8px', border: '1px solid #e5e7eb', minHeight: '80px' }}
+        ></div>
+      );
     }
 
     // Add cells for each day of the month
@@ -191,9 +197,13 @@ export default function VacationCalendar({
         <div
           key={day}
           onClick={() => handleDateClick(date, requests)}
-          className={`p-2 border border-gray-200 cursor-pointer hover:bg-gray-50 min-h-[80px] ${
-            requests.length > 0 ? 'bg-blue-50' : ''
-          }`}
+          className={requests.length > 0 ? 'bg-blue-50' : ''}
+          style={{
+            padding: '8px',
+            border: '1px solid #e5e7eb',
+            cursor: 'pointer',
+            minHeight: '80px',
+          }}
         >
           <div className="text-sm font-medium text-gray-900">{day}</div>
           {requests.length > 0 && (
@@ -292,81 +302,43 @@ export default function VacationCalendar({
           <h2 className="text-xl font-bold">Feriekalender</h2>
           <button
             onClick={onClose}
-            className="text-gray-400 hover:text-gray-600"
+            className="btn btn-secondary"
           >
             <X className="h-6 w-6" />
           </button>
         </div>
 
-        {/* Employee Filter */}
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center space-x-4">
-            <div className="relative">
-              <button
-                onClick={() => setShowEmployeeFilter(!showEmployeeFilter)}
-                className="flex items-center space-x-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
-              >
-                <span>
-                  {selectedEmployee === 'all' 
-                    ? 'Alle ansatte' 
-                    : employees.find(emp => emp.id === selectedEmployee)?.firstName + ' ' + 
-                      employees.find(emp => emp.id === selectedEmployee)?.lastName
-                  }
-                </span>
-              </button>
-              
-              {showEmployeeFilter && (
-                <div className="absolute top-full left-0 mt-1 w-64 bg-white border border-gray-300 rounded-lg shadow-lg z-10">
-                  <div className="p-2">
-                    <button
-                      onClick={() => {
-                        setSelectedEmployee('all');
-                        setShowEmployeeFilter(false);
-                      }}
-                      className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${
-                        selectedEmployee === 'all' ? 'bg-blue-100 text-blue-700' : ''
-                      }`}
-                    >
-                      Alle ansatte
-                    </button>
-                    {employees.map(employee => (
-                      <button
-                        key={employee.id}
-                        onClick={() => {
-                          setSelectedEmployee(employee.id);
-                          setShowEmployeeFilter(false);
-                        }}
-                        className={`w-full text-left px-3 py-2 rounded hover:bg-gray-100 ${
-                          selectedEmployee === employee.id ? 'bg-blue-100 text-blue-700' : ''
-                        }`}
-                      >
-                        {employee.firstName} {employee.lastName} - {employee.department}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-              )}
-            </div>
-          </div>
+        {/* Toolbar */}
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <select
+              value={selectedEmployee}
+              onChange={(e) => setSelectedEmployee(e.target.value)}
+              style={{
+                padding: '8px 12px',
+                border: '1px solid var(--gray-300)',
+                borderRadius: '8px',
+                background: 'white',
+                color: 'var(--gray-900)'
+              }}
+            >
+              <option value="all">Alle ansatte</option>
+              {employees.map((employee) => (
+                <option key={employee.id} value={employee.id}>
+                  {employee.firstName} {employee.lastName} - {employee.department}
+                </option>
+              ))}
+            </select>
 
-          <div className="flex items-center space-x-4">
             <button
               onClick={() => setViewMode('month')}
-              className={`px-4 py-2 rounded-lg ${
-                viewMode === 'month' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className={`btn ${viewMode === 'month' ? 'btn-primary' : 'btn-secondary'}`}
             >
               Måned
             </button>
             <button
               onClick={() => setViewMode('year')}
-              className={`px-4 py-2 rounded-lg ${
-                viewMode === 'year' 
-                  ? 'bg-blue-600 text-white' 
-                  : 'bg-gray-200 text-gray-700 hover:bg-gray-300'
-              }`}
+              className={`btn ${viewMode === 'year' ? 'btn-primary' : 'btn-secondary'}`}
             >
               År
             </button>
@@ -380,7 +352,7 @@ export default function VacationCalendar({
               <>
                 <button
                   onClick={() => navigateMonth('prev')}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="btn btn-secondary"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
@@ -392,7 +364,7 @@ export default function VacationCalendar({
                 </h3>
                 <button
                   onClick={() => navigateMonth('next')}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="btn btn-secondary"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>
@@ -401,14 +373,14 @@ export default function VacationCalendar({
               <>
                 <button
                   onClick={() => navigateYear('prev')}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="btn btn-secondary"
                 >
                   <ChevronLeft className="h-5 w-5" />
                 </button>
                 <h3 className="text-lg font-semibold">{selectedYear}</h3>
                 <button
                   onClick={() => navigateYear('next')}
-                  className="p-2 hover:bg-gray-100 rounded-lg"
+                  className="btn btn-secondary"
                 >
                   <ChevronRight className="h-5 w-5" />
                 </button>
@@ -435,17 +407,35 @@ export default function VacationCalendar({
 
         {/* Calendar Grid */}
         {viewMode === 'month' ? (
-          <div className="grid grid-cols-7 gap-1">
+          <div
+            className="calendar-grid-month"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(7, minmax(0, 1fr))',
+              gap: '4px',
+            }}
+          >
             {/* Day headers */}
             {['Man', 'Tir', 'Ons', 'Tor', 'Fre', 'Lør', 'Søn'].map(day => (
-              <div key={day} className="p-2 text-center text-sm font-medium text-gray-500 bg-gray-100">
+              <div
+                key={day}
+                className="text-center text-sm font-medium text-gray-500 bg-gray-100"
+                style={{ padding: '8px' }}
+              >
                 {day}
               </div>
             ))}
             {renderMonthView()}
           </div>
         ) : (
-          <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-4">
+          <div
+            className="calendar-grid-year"
+            style={{
+              display: 'grid',
+              gridTemplateColumns: 'repeat(6, minmax(0, 1fr))',
+              gap: '16px',
+            }}
+          >
             {renderYearView()}
           </div>
         )}

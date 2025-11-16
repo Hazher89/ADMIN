@@ -113,15 +113,25 @@ export default function OrdersPage() {
 
   // Load orders from Firestore
   const loadOrders = async () => {
-    if (!db) return;
+    if (!db || !userProfile?.companyId) return;
     try {
       setLoading(true);
-      const ordersQuery = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
+      const ordersQuery = query(
+        collection(db, 'orders'),
+        where('companyId', '==', userProfile.companyId)
+      );
       const querySnapshot = await getDocs(ordersQuery);
       const loadedOrders: Order[] = [];
       
       querySnapshot.forEach((doc) => {
         loadedOrders.push({ id: doc.id, ...doc.data() } as Order);
+      });
+      
+      // Sort in memory by createdAt descending
+      loadedOrders.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+        const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+        return bTime.getTime() - aTime.getTime();
       });
       
       setOrders(loadedOrders);
@@ -312,6 +322,7 @@ export default function OrdersPage() {
         returnOrderId: newOrder.returnOrderId,
         totalProducts: newOrder.products?.reduce((sum, p) => sum + p.quantity, 0) || 0,
         status: 'pending',
+        companyId: userProfile?.companyId || '',
         createdAt: serverTimestamp()
       };
 

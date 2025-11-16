@@ -96,34 +96,34 @@ export default function DashboardPage() {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case 'employee_added':
-        return <Users style={{ width: '20px', height: '20px', color: 'white' }} />;
+        return <Users style={{ width: '20px', height: '20px', color: 'var(--text-color)' }} />;
       case 'shift_created':
-        return <Clock style={{ width: '20px', height: '20px', color: 'white' }} />;
+        return <Clock style={{ width: '20px', height: '20px', color: 'var(--text-color)' }} />;
       case 'deviation_reported':
-        return <AlertTriangle style={{ width: '20px', height: '20px', color: 'white' }} />;
+        return <AlertTriangle style={{ width: '20px', height: '20px', color: 'var(--text-color)' }} />;
       case 'document_uploaded':
-        return <FileText style={{ width: '20px', height: '20px', color: 'white' }} />;
+        return <FileText style={{ width: '20px', height: '20px', color: 'var(--text-color)' }} />;
       case 'timeclock_event':
-        return <Clock style={{ width: '20px', height: '20px', color: 'white' }} />;
+        return <Clock style={{ width: '20px', height: '20px', color: 'var(--text-color)' }} />;
       default:
-        return <Bell style={{ width: '20px', height: '20px', color: 'white' }} />;
+        return <Bell style={{ width: '20px', height: '20px', color: 'var(--text-color)' }} />;
     }
   };
 
   const getActivityColor = (type: string) => {
     switch (type) {
       case 'employee_added':
-        return '#10b981';
+        return 'var(--success)';
       case 'shift_created':
-        return '#3b82f6';
+        return 'var(--primary)';
       case 'deviation_reported':
-        return '#f59e0b';
+        return 'var(--warning)';
       case 'document_uploaded':
-        return '#8b5cf6';
+        return 'var(--primary)';
       case 'timeclock_event':
-        return '#06b6d4';
+        return 'var(--primary)';
       default:
-        return '#6b7280';
+        return 'var(--gray-500)';
     }
   };
 
@@ -147,28 +147,15 @@ export default function DashboardPage() {
       <div className="flex items-center justify-center min-h-screen p-4">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Laster dashboard...</p>
+          <p className="mt-4" style={{ color: 'var(--gray-500)' }}>Laster dashboard...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Mobile Header */}
-      {isMobile && (
-        <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-lg font-semibold text-gray-900">Dashboard</h1>
-              <p className="text-sm text-gray-600">Velkommen, {userProfile?.displayName || 'Bruker'}!</p>
-            </div>
-            <button className="p-2 rounded-lg bg-gray-100">
-              <Bell className="w-5 h-5 text-gray-600" />
-            </button>
-          </div>
-        </div>
-      )}
+    <div className="min-h-screen" style={{ background: 'var(--background-color)' }}>
+      {/* Mobile Header - Removed bell (now in Topbar) */}
 
       {/* Desktop Header */}
       {!isMobile && (
@@ -184,11 +171,11 @@ export default function DashboardPage() {
         {/* Stats Grid - Mobile */}
         {isMobile ? (
           <div className="space-y-2 mb-6">
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Total Ansatte</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.totalEmployees}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Total Ansatte</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.totalEmployees}</p>
                 </div>
                 <div className="p-2 bg-blue-50 rounded-lg">
                   <Users className="w-5 h-5 text-blue-600" />
@@ -196,11 +183,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Aktive Skift</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.activeShifts}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Aktive Skift</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.activeShifts}</p>
                 </div>
                 <div className="p-2 bg-green-50 rounded-lg">
                   <Clock className="w-5 h-5 text-green-600" />
@@ -208,11 +195,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Ventende Forespørsler</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.pendingRequests}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Ventende Forespørsler</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.pendingRequests}</p>
                 </div>
                 <div className="p-2 bg-yellow-50 rounded-lg">
                   <AlertTriangle className="w-5 h-5 text-yellow-600" />
@@ -220,11 +207,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Avdelinger</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.departments}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Avdelinger</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.departments}</p>
                 </div>
                 <div className="p-2 bg-purple-50 rounded-lg">
                   <Building className="w-5 h-5 text-purple-600" />
@@ -232,11 +219,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Åpne Avvik</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.openDeviations}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Åpne Avvik</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.openDeviations}</p>
                 </div>
                 <div className="p-2 bg-red-50 rounded-lg">
                   <AlertTriangle className="w-5 h-5 text-red-600" />
@@ -244,11 +231,11 @@ export default function DashboardPage() {
               </div>
             </div>
 
-            <div className="bg-white rounded-lg p-3 shadow-sm border border-gray-200">
+            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-xs font-medium text-gray-600">Aktive Stemplinger</p>
-                  <p className="text-xl font-bold text-gray-900">{stats.activeTimeClocks}</p>
+                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Aktive Stemplinger</p>
+                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.activeTimeClocks}</p>
                 </div>
                 <div className="p-2 bg-cyan-50 rounded-lg">
                   <Clock className="w-5 h-5 text-cyan-600" />

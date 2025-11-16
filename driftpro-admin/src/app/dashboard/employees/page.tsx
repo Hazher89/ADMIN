@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService } from '@/lib/firebase-services';
+import { firebaseService, createUserAccessContext } from '@/lib/firebase-services';
 import { microsoftGraphService } from '@/lib/microsoft-graph-service';
 // import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 import { UserPlus, Search, Filter, Edit, Trash2, Plus, MoreHorizontal, User, Building, MapPin, CheckCircle, Eye, Settings, Key, UserX, UserCheck, Calendar, AlertTriangle, Clock } from 'lucide-react';
@@ -92,6 +92,34 @@ export default function EmployeesPage() {
       it: false,
       legal: false,
       audit: false,
+      internkontrollOgSamsvar: false, // Legacy
+      internrevisjon: false,
+      avvik: false,
+      risikovurdering: false,
+      oppfølgingstiltak: false,
+      kontrollpunkter: false,
+      internkontrollRapporter: false,
+      // Sidebar sider
+      chat: false,
+      emailSystem: false,
+      smsLogs: false,
+      partners: false,
+      // Logistikk System faner
+      logistikkBudPriser: false,
+      logistikkLevering: false,
+      logistikkPlanlegging: false,
+      logistikkKunder: false,
+      logistikkLeverandorer: false,
+      logistikkProdukter: false,
+      logistikkLager: false,
+      logistikkFakturering: false,
+      logistikkFinans: false,
+      // HR faner
+      hrAnsatte: false,
+      hrVakter: false,
+      hrFravær: false,
+      hrFerie: false,
+      hrAvdelinger: false,
     },
     // Ferie og fravær-tilgang
     vacationAccess: {
@@ -153,7 +181,8 @@ export default function EmployeesPage() {
         console.log('Loading employees for company:', userProfile.companyId);
 
         try {
-          const data = await firebaseService.getEmployees(userProfile.companyId);
+          const userContext = createUserAccessContext(userProfile);
+          const data = await firebaseService.getEmployees(userProfile.companyId, userContext || undefined);
           console.log('Loaded employees:', data);
           setEmployees(data);
         } catch (error) {
@@ -208,7 +237,8 @@ export default function EmployeesPage() {
     console.log('Loading employees for company:', userProfile.companyId);
 
     try {
-      const data = await firebaseService.getEmployees(userProfile.companyId);
+      const userContext = createUserAccessContext(userProfile);
+      const data = await firebaseService.getEmployees(userProfile.companyId, userContext || undefined);
       console.log('Loaded employees:', data);
       setEmployees(data);
     } catch (error) {
@@ -253,47 +283,114 @@ export default function EmployeesPage() {
     });
 
     try {
-      // Create employee data without undefined fields
-        const employeeData: Omit<Employee, "id" | "createdAt" | "updatedAt"> = {
-        displayName: newEmployee.displayName,
-        email: newEmployee.email,
-        phone: newEmployee.phone || undefined,
+      // Create employee data - only include fields that have values
+      const employeeData: any = {
+        displayName: newEmployee.displayName.trim(),
+        email: newEmployee.email.trim(),
         role: newEmployee.role as 'admin' | 'department_leader' | 'employee',
         status: newEmployee.status as 'active' | 'inactive' | 'on_leave',
         companyId: userProfile.companyId,
         hireDate: newEmployee.hireDate || new Date().toISOString(),
-        birthDate: newEmployee.birthDate || undefined,
-        employeeNumber: newEmployee.employeeNumber || undefined,
-        taxId: newEmployee.taxId || undefined,
-        address: newEmployee.address || undefined,
-        emergencyContact: newEmployee.emergencyContact || undefined,
-        bio: newEmployee.bio || undefined,
-        education: newEmployee.education || undefined,
-        workExperience: newEmployee.workExperience || undefined,
-        skills: newEmployee.skills || undefined,
-        certifications: newEmployee.certifications || undefined,
-        salary: newEmployee.salary ? Number(newEmployee.salary) : undefined,
-        managerId: newEmployee.managerId || undefined,
-        bankAccount: newEmployee.bankAccount || undefined,
-        insuranceNumber: newEmployee.insuranceNumber || undefined,
-        avatar: newEmployee.avatar || undefined,
-        // Tilgangskontroll og rettigheter
-        permissions: newEmployee.permissions,
-        vacationAccess: newEmployee.vacationAccess,
-        leadership: newEmployee.leadership
+      };
+      
+      // Add optional fields only if they have values
+      if (newEmployee.phone?.trim()) employeeData.phone = newEmployee.phone.trim();
+      if (newEmployee.birthDate) employeeData.birthDate = newEmployee.birthDate;
+      if (newEmployee.employeeNumber?.trim()) employeeData.employeeNumber = newEmployee.employeeNumber.trim();
+      if (newEmployee.taxId?.trim()) employeeData.taxId = newEmployee.taxId.trim();
+      if (newEmployee.address?.trim()) employeeData.address = newEmployee.address.trim();
+      if (newEmployee.emergencyContact?.trim()) employeeData.emergencyContact = newEmployee.emergencyContact.trim();
+      if (newEmployee.bio?.trim()) employeeData.bio = newEmployee.bio.trim();
+      if (newEmployee.education?.trim()) employeeData.education = newEmployee.education.trim();
+      if (newEmployee.workExperience?.trim()) employeeData.workExperience = newEmployee.workExperience.trim();
+      if (newEmployee.skills && newEmployee.skills.length > 0) employeeData.skills = newEmployee.skills;
+      if (newEmployee.certifications && newEmployee.certifications.length > 0) employeeData.certifications = newEmployee.certifications;
+      if (newEmployee.salary) employeeData.salary = Number(newEmployee.salary);
+      if (newEmployee.managerId?.trim()) employeeData.managerId = newEmployee.managerId.trim();
+      if (newEmployee.bankAccount?.trim()) employeeData.bankAccount = newEmployee.bankAccount.trim();
+      if (newEmployee.insuranceNumber?.trim()) employeeData.insuranceNumber = newEmployee.insuranceNumber.trim();
+      if (newEmployee.avatar?.trim()) employeeData.avatar = newEmployee.avatar.trim();
+      if (newEmployee.departmentId?.trim()) employeeData.departmentId = newEmployee.departmentId.trim();
+      if (newEmployee.position?.trim()) employeeData.position = newEmployee.position.trim();
+      
+      // Set default permissions based on role
+      const defaultPermissions: any = {
+        dashboard: true,
+        notifications: true,
+        calendar: true,
+        internkontrollOgSamsvar: true, // Legacy - kept for backward compatibility
+        // Internkontroll og Samsvar faner - alle ansatte får tilgang til alle faner som standard
+        internrevisjon: true,
+        avvik: true,
+        risikovurdering: true,
+        oppfølgingstiltak: true,
+        kontrollpunkter: true,
+        internkontrollRapporter: true,
+        // All other permissions default to false
+        employees: false,
+        departments: false,
+        projects: false,
+        tasks: false,
+        inventory: false,
+        suppliers: false,
+        finance: false,
+        invoicing: false,
+        payments: false,
+        hr: false,
+        crm: false,
+        delivery: false,
+        settings: false,
+        mail: false,
+        reports: false,
+        analytics: false,
+        documents: false,
+        training: false,
+        compliance: false,
+        maintenance: false,
+        quality: false,
+        safety: false,
+        procurement: false,
+        logistics: false,
+        production: false,
+        sales: false,
+        marketing: false,
+        customerService: false,
+        it: false,
+        legal: false,
+        audit: false,
       };
 
-      // Only add departmentId and position if they have values
-      if (newEmployee.departmentId && newEmployee.departmentId.trim()) {
-        employeeData.departmentId = newEmployee.departmentId;
-      }
-      if (newEmployee.position && newEmployee.position.trim()) {
-        employeeData.position = newEmployee.position;
+      // Set default vacation access based on role
+      const defaultVacationAccess: any = {
+        canRequestVacation: true, // All employees can request vacation
+        canApproveVacation: false,
+        canViewAllVacations: false,
+        vacationDaysPerYear: 25,
+        managerApprovalRequired: true,
+      };
+
+      // Department leaders get additional permissions
+      if (newEmployee.role === 'department_leader') {
+        defaultVacationAccess.canApproveVacation = true;
+        defaultVacationAccess.canViewAllVacations = true;
       }
 
-      const employeeId = await firebaseService.createEmployee(employeeData);
+      // Admin/super_admin get all permissions (but these are set in edit modal)
+      if (newEmployee.role === 'admin' || newEmployee.role === 'super_admin') {
+        // Admins get all permissions - but these should be set in edit modal
+        // For now, just give them basic access
+      }
 
-      console.log('Employee created successfully with ID:', employeeId);
+      employeeData.permissions = defaultPermissions;
+      employeeData.vacationAccess = defaultVacationAccess;
+      employeeData.leadership = newEmployee.leadership || {};
+
+      console.log('Calling firebaseService.createEmployee with data:', employeeData);
+      
+      const userContext = createUserAccessContext(userProfile);
+      const employeeId = await firebaseService.createEmployee(employeeData, userContext || undefined);
+
+      console.log('✅ Employee created successfully with ID:', employeeId);
 
       // Send welcome email to the new employee
       let emailSent = false;
@@ -430,6 +527,7 @@ export default function EmployeesPage() {
           it: false,
           legal: false,
           audit: false,
+          internkontrollOgSamsvar: false,
         },
         vacationAccess: {
           canRequestVacation: true,
@@ -467,8 +565,56 @@ export default function EmployeesPage() {
   const handleEditEmployee = async () => {
     if (!selectedEmployee) return;
 
+    if (!userProfile?.companyId) {
+      console.error('No company ID found');
+      alert('Ingen bedrift funnet. Vennligst logg inn på nytt.');
+      return;
+    }
+
+    // Validate required fields
+    if (!selectedEmployee.displayName?.trim()) {
+      alert('Navn er påkrevd');
+      return;
+    }
+
+    if (!selectedEmployee.email?.trim()) {
+      alert('E-post er påkrevd');
+      return;
+    }
+
     try {
-      await firebaseService.updateEmployee(selectedEmployee.id, selectedEmployee);
+      // Prepare update data
+      const updateData: Partial<Employee> = {
+        displayName: selectedEmployee.displayName,
+        email: selectedEmployee.email,
+        phone: selectedEmployee.phone || undefined,
+        role: selectedEmployee.role,
+        status: selectedEmployee.status,
+        position: selectedEmployee.position || undefined,
+        departmentId: selectedEmployee.departmentId || undefined,
+        birthDate: selectedEmployee.birthDate || undefined,
+        employeeNumber: selectedEmployee.employeeNumber || undefined,
+        taxId: selectedEmployee.taxId || undefined,
+        address: selectedEmployee.address || undefined,
+        emergencyContact: selectedEmployee.emergencyContact || undefined,
+        bio: selectedEmployee.bio || undefined,
+        education: selectedEmployee.education || undefined,
+        workExperience: selectedEmployee.workExperience || undefined,
+        skills: selectedEmployee.skills || undefined,
+        certifications: selectedEmployee.certifications || undefined,
+        salary: selectedEmployee.salary ? Number(selectedEmployee.salary) : undefined,
+        managerId: selectedEmployee.managerId || undefined,
+        bankAccount: selectedEmployee.bankAccount || undefined,
+        insuranceNumber: selectedEmployee.insuranceNumber || undefined,
+        avatar: selectedEmployee.avatar || undefined,
+        // Include permissions, vacationAccess, and leadership if they exist
+        permissions: (selectedEmployee as any).permissions || newEmployee.permissions,
+        vacationAccess: (selectedEmployee as any).vacationAccess || newEmployee.vacationAccess,
+        leadership: (selectedEmployee as any).leadership || newEmployee.leadership,
+      };
+
+      const userContext = createUserAccessContext(userProfile);
+      await firebaseService.updateEmployee(selectedEmployee.id, updateData, userContext || undefined);
       setShowEditModal(false);
       setSelectedEmployee(null);
       loadEmployees();
@@ -479,18 +625,43 @@ export default function EmployeesPage() {
     }
   };
 
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState<string | null>(null);
+  const [deletingEmployeeId, setDeletingEmployeeId] = useState<string | null>(null);
+
   const handleDeleteEmployee = async (employeeId: string) => {
-    if (!confirm('Er du sikker på at du vil slette denne ansatten?')) {
+    if (!employeeId) {
+      alert('Ingen ansatt-ID funnet');
       return;
     }
 
+    setShowDeleteConfirm(employeeId);
+  };
+
+  const confirmDeleteEmployee = async () => {
+    if (!showDeleteConfirm) return;
+
+    const employeeId = showDeleteConfirm;
+    setDeletingEmployeeId(employeeId);
+    setShowDeleteConfirm(null);
+
     try {
-      await firebaseService.deleteEmployee(employeeId);
-      loadEmployees();
-      alert('Ansatt ble slettet!');
+      console.log('Attempting to delete employee with ID:', employeeId);
+      const userContext = createUserAccessContext(userProfile);
+      await firebaseService.deleteEmployee(employeeId, userContext || undefined);
+      console.log('Employee deleted successfully, reloading list...');
+      
+      // Reload employees after a short delay to ensure Firebase has updated
+      setTimeout(() => {
+        loadEmployees();
+        setDeletingEmployeeId(null);
+      }, 500);
+      
+      alert('✅ Ansatt ble slettet!');
     } catch (error) {
       console.error('Error deleting employee:', error);
-      alert(`Feil ved sletting av ansatt: ${error instanceof Error ? error.message : 'Ukjent feil'}`);
+      const errorMessage = error instanceof Error ? error.message : 'Ukjent feil';
+      alert(`❌ Feil ved sletting av ansatt: ${errorMessage}`);
+      setDeletingEmployeeId(null);
     }
   };
 
@@ -615,7 +786,7 @@ export default function EmployeesPage() {
 
   if (authLoading || loading) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-4">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '1rem' }}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto"></div>
           <p className="mt-4 text-gray-600">
@@ -640,7 +811,7 @@ export default function EmployeesPage() {
   // Show error state if no companyId after loading and auth is done
   if (!authLoading && !loading && !userProfile?.companyId) {
     return (
-      <div className="flex items-center justify-center min-h-screen p-4">
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '100vh', padding: '1rem' }}>
         <div className="text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
             <span className="text-red-600 text-2xl">⚠️</span>
@@ -661,7 +832,7 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
       {/* Mobile Header */}
       {isMobile && (
         <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
@@ -814,7 +985,7 @@ export default function EmployeesPage() {
                 </div>
               </div>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
                 <button 
                   className="btn btn-secondary" 
                   style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
@@ -841,6 +1012,24 @@ export default function EmployeesPage() {
                 >
                   <Settings style={{ width: '14px', height: '14px' }} />
                   Innstillinger
+                </button>
+                <button 
+                  className="btn btn-danger" 
+                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', opacity: deletingEmployeeId === employee.id ? 0.5 : 1 }}
+                  onClick={() => handleDeleteEmployee(employee.id)}
+                  disabled={deletingEmployeeId === employee.id}
+                >
+                  {deletingEmployeeId === employee.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block mr-1"></div>
+                      Sletter...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 style={{ width: '14px', height: '14px' }} />
+                      Slett
+                    </>
+                  )}
                 </button>
               </div>
             </div>
@@ -881,7 +1070,11 @@ export default function EmployeesPage() {
       {/* Add Employee Modal */}
       {showAddModal && (
         <div className="modal-overlay">
-          <div className="modal-content">
+          {/* Stor modal så ALT er synlig (inkl. tilgangskontroll) */}
+          <div
+            className="modal-content"
+            style={{ maxWidth: '90vw', maxHeight: '90vh', width: '1200px' }}
+          >
             <div className="modal-header">
               <h2 className="modal-title">Legg til ny ansatt</h2>
               <button
@@ -948,32 +1141,84 @@ export default function EmployeesPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Avdeling</label>
-                  <select
-                    value={newEmployee.departmentId}
-                    onChange={(e) => setNewEmployee({...newEmployee, departmentId: e.target.value})}
-                    className="form-input"
-                  >
-                    <option value="">Velg avdeling</option>
-                    {departments.map(dept => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Rolle</label>
+                  <label className="form-label">Rolle *</label>
                   <select
                     value={newEmployee.role}
-                    onChange={(e) => setNewEmployee({...newEmployee, role: e.target.value as "admin" | "department_leader" | "employee"})}
+                    onChange={(e) => {
+                      const newRole = e.target.value as "admin" | "department_leader" | "employee";
+                      setNewEmployee({
+                        ...newEmployee, 
+                        role: newRole,
+                        // Nullstill avdeling-relaterte felt når rolle endres
+                        departmentId: newRole === 'employee' ? newEmployee.departmentId : '',
+                        leadership: {
+                          ...newEmployee.leadership,
+                          managesDepartments: newRole === 'department_leader' ? newEmployee.leadership.managesDepartments : []
+                        }
+                      });
+                    }}
                     className="form-input"
+                    required
                   >
                     <option value="employee">Ansatt</option>
                     <option value="department_leader">Avdelingsleder</option>
                     <option value="admin">Administrator</option>
                   </select>
                 </div>
+                {newEmployee.role === 'employee' && (
+                  <div className="form-group">
+                    <label className="form-label">Avdeling *</label>
+                    <select
+                      value={newEmployee.departmentId}
+                      onChange={(e) => setNewEmployee({...newEmployee, departmentId: e.target.value})}
+                      className="form-input"
+                      required
+                    >
+                      <option value="">Velg avdeling</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Velg hvilken avdeling denne ansatte tilhører
+                    </small>
+                  </div>
+                )}
+                {newEmployee.role === 'department_leader' && (
+                  <div className="form-group">
+                    <label className="form-label">Leder for avdeling *</label>
+                    <select
+                      value={newEmployee.leadership.managesDepartments[0] || ''}
+                      onChange={(e) => {
+                        const selectedDeptId = e.target.value;
+                        setNewEmployee({
+                          ...newEmployee,
+                          leadership: {
+                            ...newEmployee.leadership,
+                            managesDepartments: selectedDeptId ? [selectedDeptId] : [],
+                            isManager: true
+                          },
+                          // Sett også departmentId til den avdelingen de leder
+                          departmentId: selectedDeptId
+                        });
+                      }}
+                      className="form-input"
+                      required
+                    >
+                      <option value="">Velg avdeling</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Velg hvilken avdeling denne personen skal være leder for
+                    </small>
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Ansattnummer</label>
                   <input
@@ -1092,269 +1337,6 @@ export default function EmployeesPage() {
                   />
                 </div>
               </div>
-
-              {/* Tilgangskontroll-seksjon */}
-              <div style={{ marginTop: '2rem', padding: '1.5rem', background: '#f8fafc', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1rem', color: '#1f2937' }}>
-                  🔐 Tilgangskontroll og rettigheter
-                </h3>
-                
-                {/* Side-tilganger */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
-                    📱 Side-tilganger
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '0.75rem' }}>
-                    {[
-                      { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
-                      { key: 'employees', label: 'Ansatte', icon: '👥' },
-                      { key: 'departments', label: 'Avdelinger', icon: '🏢' },
-                      { key: 'projects', label: 'Prosjekter', icon: '📋' },
-                      { key: 'tasks', label: 'Oppgaver', icon: '✅' },
-                      { key: 'inventory', label: 'Lager', icon: '📦' },
-                      { key: 'suppliers', label: 'Leverandører', icon: '🚚' },
-                      { key: 'finance', label: 'Økonomi', icon: '💰' },
-                      { key: 'invoicing', label: 'Fakturering', icon: '🧾' },
-                      { key: 'payments', label: 'Betalinger', icon: '💳' },
-                      { key: 'hr', label: 'HR', icon: '👤' },
-                      { key: 'crm', label: 'CRM', icon: '🤝' },
-                      { key: 'delivery', label: 'Levering', icon: '🚛' },
-                      { key: 'settings', label: 'Innstillinger', icon: '⚙️' },
-                      { key: 'mail', label: 'E-post', icon: '📧' },
-                      { key: 'reports', label: 'Rapporter', icon: '📊' },
-                      { key: 'analytics', label: 'Analyser', icon: '📈' },
-                      { key: 'notifications', label: 'Varsler', icon: '🔔' },
-                      { key: 'calendar', label: 'Kalender', icon: '📅' },
-                      { key: 'documents', label: 'Dokumenter', icon: '📄' },
-                      { key: 'training', label: 'Opplæring', icon: '🎓' },
-                      { key: 'compliance', label: 'Compliance', icon: '⚖️' },
-                      { key: 'maintenance', label: 'Vedlikehold', icon: '🔧' },
-                      { key: 'quality', label: 'Kvalitet', icon: '⭐' },
-                      { key: 'safety', label: 'Sikkerhet', icon: '🛡️' },
-                      { key: 'procurement', label: 'Innkjøp', icon: '🛒' },
-                      { key: 'logistics', label: 'Logistikk', icon: '📦' },
-                      { key: 'production', label: 'Produksjon', icon: '🏭' },
-                      { key: 'sales', label: 'Salg', icon: '💼' },
-                      { key: 'marketing', label: 'Markedsføring', icon: '📢' },
-                      { key: 'customerService', label: 'Kundeservice', icon: '🎧' },
-                      { key: 'it', label: 'IT', icon: '💻' },
-                      { key: 'legal', label: 'Juridisk', icon: '⚖️' },
-                      { key: 'audit', label: 'Revisjon', icon: '🔍' },
-                    ].map(({ key, label, icon }) => (
-                      <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.permissions[key as keyof typeof newEmployee.permissions]}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            permissions: {
-                              ...newEmployee.permissions,
-                              [key]: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>{icon} {label}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
-
-                {/* Ferie og fravær-tilgang */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
-                    🏖️ Ferie og fravær-tilgang
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.vacationAccess.canRequestVacation}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            vacationAccess: {
-                              ...newEmployee.vacationAccess,
-                              canRequestVacation: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan be om ferie</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.vacationAccess.canApproveVacation}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            vacationAccess: {
-                              ...newEmployee.vacationAccess,
-                              canApproveVacation: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan godkjenne ferie</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.vacationAccess.canViewAllVacations}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            vacationAccess: {
-                              ...newEmployee.vacationAccess,
-                              canViewAllVacations: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan se alle ferier</span>
-                      </label>
-                    </div>
-                    <div>
-                      <div style={{ marginBottom: '0.75rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
-                          Feriedager per år
-                        </label>
-                        <input
-                          type="number"
-                          value={newEmployee.vacationAccess.vacationDaysPerYear}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            vacationAccess: {
-                              ...newEmployee.vacationAccess,
-                              vacationDaysPerYear: parseInt(e.target.value) || 25
-                            }
-                          })}
-                          className="form-input"
-                          style={{ width: '100%', padding: '0.5rem' }}
-                          min="0"
-                          max="50"
-                        />
-                      </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.vacationAccess.managerApprovalRequired}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            vacationAccess: {
-                              ...newEmployee.vacationAccess,
-                              managerApprovalRequired: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Leder-godkjenning påkrevd</span>
-                      </label>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Lederskap og hierarki */}
-                <div>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
-                    👔 Lederskap og hierarki
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.leadership.isManager}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            leadership: {
-                              ...newEmployee.leadership,
-                              isManager: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Er leder</span>
-                      </label>
-                      <div style={{ marginBottom: '0.75rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
-                          Rapporterer til
-                        </label>
-                        <select
-                          value={newEmployee.leadership.reportsTo}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            leadership: {
-                              ...newEmployee.leadership,
-                              reportsTo: e.target.value
-                            }
-                          })}
-                          className="form-input"
-                          style={{ width: '100%', padding: '0.5rem' }}
-                        >
-                          <option value="">Velg leder</option>
-                          {employees.filter(emp => emp.role === 'department_leader' || emp.role === 'admin').map(emp => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.displayName} ({emp.role === 'admin' ? 'Administrator' : 'Avdelingsleder'})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                    <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.leadership.canApproveExpenses}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            leadership: {
-                              ...newEmployee.leadership,
-                              canApproveExpenses: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan godkjenne utgifter</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.leadership.canApprovePurchases}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            leadership: {
-                              ...newEmployee.leadership,
-                              canApprovePurchases: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan godkjenne innkjøp</span>
-                      </label>
-                      <div>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
-                          Budsjettgrense (kr)
-                        </label>
-                        <input
-                          type="number"
-                          value={newEmployee.leadership.budgetLimit}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            leadership: {
-                              ...newEmployee.leadership,
-                              budgetLimit: parseInt(e.target.value) || 0
-                            }
-                          })}
-                          className="form-input"
-                          style={{ width: '100%', padding: '0.5rem' }}
-                          min="0"
-                          placeholder="0"
-                        />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
             </div>
             <div className="modal-footer">
               <button
@@ -1376,8 +1358,8 @@ export default function EmployeesPage() {
 
       {/* Edit Employee Modal */}
       {showEditModal && selectedEmployee && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        <div className="modal-overlay" style={{ zIndex: 1000 }}>
+          <div className="modal-content" style={{ maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div className="modal-header">
               <h2 className="modal-title">Rediger ansatt</h2>
               <button
@@ -1389,22 +1371,25 @@ export default function EmployeesPage() {
             </div>
             <div className="modal-body">
               <div className="form-grid">
+                {/* Grunnleggende informasjon */}
                 <div className="form-group">
-                  <label className="form-label">Navn</label>
+                  <label className="form-label">Navn *</label>
                   <input
                     type="text"
-                    value={selectedEmployee.displayName}
+                    value={selectedEmployee.displayName || ''}
                     onChange={(e) => setSelectedEmployee({...selectedEmployee, displayName: e.target.value})}
                     className="form-input"
+                    required
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">E-post</label>
+                  <label className="form-label">E-post *</label>
                   <input
                     type="email"
-                    value={selectedEmployee.email}
+                    value={selectedEmployee.email || ''}
                     onChange={(e) => setSelectedEmployee({...selectedEmployee, email: e.target.value})}
                     className="form-input"
+                    required
                   />
                 </div>
                 <div className="form-group">
@@ -1417,6 +1402,17 @@ export default function EmployeesPage() {
                   />
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Fødselsdato</label>
+                  <input
+                    type="date"
+                    value={(selectedEmployee as any).birthDate || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, birthDate: e.target.value} as any)}
+                    className="form-input"
+                  />
+                </div>
+
+                {/* Arbeidsinformasjon */}
+                <div className="form-group">
                   <label className="form-label">Stilling</label>
                   <input
                     type="text"
@@ -1426,36 +1422,106 @@ export default function EmployeesPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Avdeling</label>
-                  <select
-                    value={selectedEmployee.departmentId || ''}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, departmentId: e.target.value})}
-                    className="form-input"
-                  >
-                    <option value="">Velg avdeling</option>
-                    {departments.map(dept => (
-                      <option key={dept.id} value={dept.id}>
-                        {dept.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Rolle</label>
+                  <label className="form-label">Rolle *</label>
                   <select
                     value={selectedEmployee.role}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, role: e.target.value as "admin" | "department_leader" | "employee"})}
+                    onChange={(e) => {
+                      const newRole = e.target.value as "admin" | "department_leader" | "employee";
+                      const currentLeadership = (selectedEmployee as any).leadership || {
+                        isManager: false,
+                        managesDepartments: [] as string[],
+                        managesEmployees: [] as string[],
+                        reportsTo: '',
+                        canApproveExpenses: false,
+                        canApprovePurchases: false,
+                        budgetLimit: 0,
+                      };
+                      setSelectedEmployee({
+                        ...selectedEmployee, 
+                        role: newRole,
+                        // Nullstill avdeling-relaterte felt når rolle endres
+                        departmentId: newRole === 'employee' ? selectedEmployee.departmentId : '',
+                        leadership: {
+                          ...currentLeadership,
+                          managesDepartments: newRole === 'department_leader' ? currentLeadership.managesDepartments : []
+                        }
+                      } as any);
+                    }}
                     className="form-input"
+                    required
                   >
                     <option value="employee">Ansatt</option>
                     <option value="department_leader">Avdelingsleder</option>
                     <option value="admin">Administrator</option>
                   </select>
                 </div>
+                {selectedEmployee.role === 'employee' && (
+                  <div className="form-group">
+                    <label className="form-label">Avdeling *</label>
+                    <select
+                      value={selectedEmployee.departmentId || ''}
+                      onChange={(e) => setSelectedEmployee({...selectedEmployee, departmentId: e.target.value})}
+                      className="form-input"
+                      required
+                    >
+                      <option value="">Velg avdeling</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Velg hvilken avdeling denne ansatte tilhører
+                    </small>
+                  </div>
+                )}
+                {selectedEmployee.role === 'department_leader' && (
+                  <div className="form-group">
+                    <label className="form-label">Leder for avdeling *</label>
+                    <select
+                      value={((selectedEmployee as any).leadership?.managesDepartments?.[0] || selectedEmployee.departmentId || '')}
+                      onChange={(e) => {
+                        const selectedDeptId = e.target.value;
+                        const currentLeadership = (selectedEmployee as any).leadership || {
+                          isManager: false,
+                          managesDepartments: [] as string[],
+                          managesEmployees: [] as string[],
+                          reportsTo: '',
+                          canApproveExpenses: false,
+                          canApprovePurchases: false,
+                          budgetLimit: 0,
+                        };
+                        setSelectedEmployee({
+                          ...selectedEmployee,
+                          leadership: {
+                            ...currentLeadership,
+                            managesDepartments: selectedDeptId ? [selectedDeptId] : [],
+                            isManager: true
+                          },
+                          // Sett også departmentId til den avdelingen de leder
+                          departmentId: selectedDeptId
+                        } as any);
+                      }}
+                      className="form-input"
+                      required
+                    >
+                      <option value="">Velg avdeling</option>
+                      {departments.map(dept => (
+                        <option key={dept.id} value={dept.id}>
+                          {dept.name}
+                        </option>
+                      ))}
+                    </select>
+                    <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Velg hvilken avdeling denne personen skal være leder for
+                    </small>
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Status</label>
                   <select
-                    value={selectedEmployee.status}
+                    value={selectedEmployee.status || 'active'}
                     onChange={(e) => setSelectedEmployee({...selectedEmployee, status: e.target.value as "active" | "inactive" | "on_leave"})}
                     className="form-input"
                   >
@@ -1463,6 +1529,516 @@ export default function EmployeesPage() {
                     <option value="inactive">Inaktiv</option>
                     <option value="on_leave">Permisjon</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Ansattnummer</label>
+                  <input
+                    type="text"
+                    value={(selectedEmployee as any).employeeNumber || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, employeeNumber: e.target.value} as any)}
+                    className="form-input"
+                  />
+                </div>
+
+                {/* Kontrakt og økonomi */}
+                <div className="form-group">
+                  <label className="form-label">Ansettelsesdato</label>
+                  <input
+                    type="date"
+                    value={(selectedEmployee as any).hireDate ? (selectedEmployee as any).hireDate.split('T')[0] : ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, hireDate: e.target.value} as any)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Lønn (årlig)</label>
+                  <input
+                    type="number"
+                    value={(selectedEmployee as any).salary || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, salary: e.target.value} as any)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Skattetrekk</label>
+                  <input
+                    type="text"
+                    value={(selectedEmployee as any).taxId || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, taxId: e.target.value} as any)}
+                    className="form-input"
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Bankkonto</label>
+                  <input
+                    type="text"
+                    value={(selectedEmployee as any).bankAccount || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, bankAccount: e.target.value} as any)}
+                    className="form-input"
+                  />
+                </div>
+
+                {/* Kontaktinformasjon */}
+                <div className="form-group">
+                  <label className="form-label">Adresse</label>
+                  <textarea
+                    value={(selectedEmployee as any).address || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, address: e.target.value} as any)}
+                    className="form-input"
+                    rows={3}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Nødkontakt</label>
+                  <input
+                    type="text"
+                    value={(selectedEmployee as any).emergencyContact || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, emergencyContact: e.target.value} as any)}
+                    className="form-input"
+                  />
+                </div>
+
+                {/* Sikkerhet og forsikring */}
+                <div className="form-group">
+                  <label className="form-label">Forsikringsnummer</label>
+                  <input
+                    type="text"
+                    value={(selectedEmployee as any).insuranceNumber || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, insuranceNumber: e.target.value} as any)}
+                    className="form-input"
+                  />
+                </div>
+
+                {/* Profil og kompetanse */}
+                <div className="form-group">
+                  <label className="form-label">Biografi</label>
+                  <textarea
+                    value={(selectedEmployee as any).bio || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, bio: e.target.value} as any)}
+                    className="form-input"
+                    rows={3}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Utdanning</label>
+                  <textarea
+                    value={(selectedEmployee as any).education || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, education: e.target.value} as any)}
+                    className="form-input"
+                    rows={3}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Arbeidserfaring</label>
+                  <textarea
+                    value={(selectedEmployee as any).workExperience || ''}
+                    onChange={(e) => setSelectedEmployee({...selectedEmployee, workExperience: e.target.value} as any)}
+                    className="form-input"
+                    rows={3}
+                  />
+                </div>
+              </div>
+
+              {/* Tilgangskontroll-seksjon */}
+              <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--card-background)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem', color: 'var(--text-color)' }}>
+                  🔐 Tilgangskontroll og rettigheter
+                </h3>
+                
+                {/* Kategoriserte side-tilganger */}
+                {[
+                  {
+                    category: 'Hovedside',
+                    icon: '🏠',
+                    permissions: [
+                      { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
+                    ]
+                  },
+                  {
+                    category: 'Internkontroll og Samsvar',
+                    icon: '📋',
+                    permissions: [
+                      { key: 'internrevisjon', label: 'Internrevisjon', icon: '📊' },
+                      { key: 'avvik', label: 'Avvik', icon: '⚠️' },
+                      { key: 'risikovurdering', label: 'Risikovurdering', icon: '🛡️' },
+                      { key: 'oppfølgingstiltak', label: 'Oppfølgingstiltak', icon: '✅' },
+                      { key: 'kontrollpunkter', label: 'Kontrollpunkter', icon: '✓' },
+                      { key: 'internkontrollRapporter', label: 'Rapporter', icon: '📈' },
+                    ]
+                  },
+                  {
+                    category: 'HR & Personal - Faner',
+                    icon: '👥',
+                    permissions: [
+                      { key: 'hrAnsatte', label: 'Ansatte', icon: '👤' },
+                      { key: 'hrVakter', label: 'Vakter', icon: '📅' },
+                      { key: 'hrFravær', label: 'Fravær', icon: '🤒' },
+                      { key: 'hrFerie', label: 'Ferie', icon: '🏖️' },
+                      { key: 'hrAvdelinger', label: 'Avdelinger', icon: '🏢' },
+                    ]
+                  },
+                  {
+                    category: 'Logistikk System - Faner',
+                    icon: '🚚',
+                    permissions: [
+                      { key: 'logistikkBudPriser', label: 'BUD Priser', icon: '💰' },
+                      { key: 'logistikkLevering', label: 'Levering', icon: '🚛' },
+                      { key: 'logistikkPlanlegging', label: 'Planlegging', icon: '🗺️' },
+                      { key: 'logistikkKunder', label: 'Kunder', icon: '👥' },
+                      { key: 'logistikkLeverandorer', label: 'Leverandører', icon: '📦' },
+                      { key: 'logistikkProdukter', label: 'Produkter', icon: '🛍️' },
+                      { key: 'logistikkLager', label: 'Lager', icon: '📦' },
+                      { key: 'logistikkFakturering', label: 'Fakturering', icon: '🧾' },
+                      { key: 'logistikkFinans', label: 'Finans', icon: '💵' },
+                    ]
+                  },
+                  {
+                    category: 'Kommunikasjon',
+                    icon: '💬',
+                    permissions: [
+                      { key: 'chat', label: 'Chat', icon: '💬' },
+                      { key: 'emailSystem', label: 'E-post System', icon: '📧' },
+                      { key: 'smsLogs', label: 'SMS Logg & Telefonbok', icon: '📱' },
+                    ]
+                  },
+                  {
+                    category: 'Samarbeid og dokumenter',
+                    icon: '🤝',
+                    permissions: [
+                      { key: 'partners', label: 'Samarbeidspartnere', icon: '🤝' },
+                      { key: 'documents', label: 'Dokumenter', icon: '📄' },
+                    ]
+                  },
+                  {
+                    category: 'Kjernefunksjoner',
+                    icon: '⚙️',
+                    permissions: [
+                      { key: 'employees', label: 'Ansatte', icon: '👥' },
+                      { key: 'departments', label: 'Avdelinger', icon: '🏢' },
+                      { key: 'calendar', label: 'Kalender', icon: '📅' },
+                      { key: 'notifications', label: 'Varsler', icon: '🔔' },
+                    ]
+                  },
+                  {
+                    category: 'Prosjekt og oppgaver',
+                    icon: '📋',
+                    permissions: [
+                      { key: 'projects', label: 'Prosjekter', icon: '📋' },
+                      { key: 'tasks', label: 'Oppgaver', icon: '✅' },
+                    ]
+                  },
+                  {
+                    category: 'Økonomi og finans',
+                    icon: '💰',
+                    permissions: [
+                      { key: 'finance', label: 'Økonomi', icon: '💰' },
+                      { key: 'invoicing', label: 'Fakturering', icon: '🧾' },
+                      { key: 'payments', label: 'Betalinger', icon: '💳' },
+                      { key: 'procurement', label: 'Innkjøp', icon: '🛒' },
+                    ]
+                  },
+                  {
+                    category: 'Lager og logistikk',
+                    icon: '📦',
+                    permissions: [
+                      { key: 'inventory', label: 'Lager', icon: '📦' },
+                      { key: 'suppliers', label: 'Leverandører', icon: '🚚' },
+                      { key: 'logistics', label: 'Logistikk', icon: '📦' },
+                      { key: 'delivery', label: 'Levering', icon: '🚛' },
+                    ]
+                  },
+                  {
+                    category: 'HR og personal',
+                    icon: '👤',
+                    permissions: [
+                      { key: 'hr', label: 'HR', icon: '👤' },
+                      { key: 'training', label: 'Opplæring', icon: '🎓' },
+                    ]
+                  },
+                  {
+                    category: 'Salg og markedsføring',
+                    icon: '💼',
+                    permissions: [
+                      { key: 'crm', label: 'CRM', icon: '🤝' },
+                      { key: 'sales', label: 'Salg', icon: '💼' },
+                      { key: 'marketing', label: 'Markedsføring', icon: '📢' },
+                      { key: 'customerService', label: 'Kundeservice', icon: '🎧' },
+                    ]
+                  },
+                  {
+                    category: 'Produksjon og kvalitet',
+                    icon: '🏭',
+                    permissions: [
+                      { key: 'production', label: 'Produksjon', icon: '🏭' },
+                      { key: 'quality', label: 'Kvalitet', icon: '⭐' },
+                      { key: 'maintenance', label: 'Vedlikehold', icon: '🔧' },
+                    ]
+                  },
+                  {
+                    category: 'Sikkerhet og compliance',
+                    icon: '🛡️',
+                    permissions: [
+                      { key: 'safety', label: 'Sikkerhet', icon: '🛡️' },
+                      { key: 'compliance', label: 'Compliance', icon: '⚖️' },
+                      { key: 'legal', label: 'Juridisk', icon: '⚖️' },
+                      { key: 'audit', label: 'Revisjon', icon: '🔍' },
+                    ]
+                  },
+                  {
+                    category: 'IT og dokumenter',
+                    icon: '💻',
+                    permissions: [
+                      { key: 'it', label: 'IT', icon: '💻' },
+                      { key: 'mail', label: 'E-post', icon: '📧' },
+                    ]
+                  },
+                  {
+                    category: 'Rapporter og analyser',
+                    icon: '📊',
+                    permissions: [
+                      { key: 'reports', label: 'Rapporter', icon: '📊' },
+                      { key: 'analytics', label: 'Analyser', icon: '📈' },
+                    ]
+                  },
+                  {
+                    category: 'System',
+                    icon: '⚙️',
+                    permissions: [
+                      { key: 'settings', label: 'Innstillinger', icon: '⚙️' },
+                    ]
+                  },
+                ].map((category) => {
+                  const currentPermissions = (selectedEmployee as any).permissions || newEmployee.permissions;
+                  return (
+                    <div key={category.category} style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--card-background)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>{category.icon}</span>
+                        {category.category}
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                        {category.permissions.map(({ key, label, icon }) => {
+                          const isChecked = currentPermissions[key as keyof typeof currentPermissions] || false;
+                          return (
+                            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '0.375rem', transition: 'background 0.2s', background: isChecked ? 'rgba(56, 189, 248, 0.15)' : 'transparent' }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => setSelectedEmployee({
+                                  ...selectedEmployee,
+                                  permissions: {
+                                    ...currentPermissions,
+                                    [key]: e.target.checked
+                                  }
+                                } as any)}
+                                style={{ margin: 0, width: '16px', height: '16px', cursor: 'pointer' }}
+                              />
+                              <span style={{ color: isChecked ? 'var(--primary)' : 'var(--text-color)' }}>
+                                {icon} {label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Ferie og fravær-tilgang */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                    🏖️ Ferie og fravær-tilgang
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={(selectedEmployee as any).vacationAccess?.canRequestVacation ?? true}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            vacationAccess: {
+                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                              canRequestVacation: e.target.checked
+                            }
+                          } as any)}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Kan be om ferie</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={(selectedEmployee as any).vacationAccess?.canApproveVacation ?? false}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            vacationAccess: {
+                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                              canApproveVacation: e.target.checked
+                            }
+                          } as any)}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Kan godkjenne ferie</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={(selectedEmployee as any).vacationAccess?.canViewAllVacations ?? false}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            vacationAccess: {
+                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                              canViewAllVacations: e.target.checked
+                            }
+                          } as any)}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Kan se alle ferier</span>
+                      </label>
+                    </div>
+                    <div>
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
+                          Feriedager per år
+                        </label>
+                        <input
+                          type="number"
+                          value={(selectedEmployee as any).vacationAccess?.vacationDaysPerYear ?? 25}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            vacationAccess: {
+                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                              vacationDaysPerYear: parseInt(e.target.value) || 25
+                            }
+                          } as any)}
+                          className="form-input"
+                          style={{ width: '100%', padding: '0.5rem' }}
+                          min="0"
+                          max="50"
+                        />
+                      </div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={(selectedEmployee as any).vacationAccess?.managerApprovalRequired ?? true}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            vacationAccess: {
+                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                              managerApprovalRequired: e.target.checked
+                            }
+                          } as any)}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Leder-godkjenning påkrevd</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Lederskap og hierarki */}
+                <div>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                    👔 Lederskap og hierarki
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={(selectedEmployee as any).leadership?.isManager ?? false}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            leadership: {
+                              ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                              isManager: e.target.checked
+                            }
+                          } as any)}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Er leder</span>
+                      </label>
+                      <div style={{ marginBottom: '0.75rem' }}>
+                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
+                          Rapporterer til
+                        </label>
+                        <select
+                          value={(selectedEmployee as any).leadership?.reportsTo || (selectedEmployee as any).managerId || ''}
+                          onChange={(e) => {
+                            setSelectedEmployee({
+                              ...selectedEmployee,
+                              leadership: {
+                                ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                                reportsTo: e.target.value
+                              },
+                              managerId: e.target.value
+                            } as any);
+                          }}
+                          className="form-input"
+                          style={{ width: '100%', padding: '0.5rem' }}
+                        >
+                          <option value="">Velg leder</option>
+                          {employees.filter(emp => emp.id !== selectedEmployee.id && (emp.role === 'department_leader' || emp.role === 'admin')).map(emp => (
+                            <option key={emp.id} value={emp.id}>
+                              {emp.displayName} ({emp.role === 'admin' ? 'Administrator' : 'Avdelingsleder'})
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    </div>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={(selectedEmployee as any).leadership?.canApproveExpenses ?? false}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            leadership: {
+                              ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                              canApproveExpenses: e.target.checked
+                            }
+                          } as any)}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Kan godkjenne utgifter</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={(selectedEmployee as any).leadership?.canApprovePurchases ?? false}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            leadership: {
+                              ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                              canApprovePurchases: e.target.checked
+                            }
+                          } as any)}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Kan godkjenne innkjøp</span>
+                      </label>
+                      <div>
+                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
+                          Budsjettgrense (kr)
+                        </label>
+                        <input
+                          type="number"
+                          value={(selectedEmployee as any).leadership?.budgetLimit ?? 0}
+                          onChange={(e) => setSelectedEmployee({
+                            ...selectedEmployee,
+                            leadership: {
+                              ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                              budgetLimit: parseInt(e.target.value) || 0
+                            }
+                          } as any)}
+                          className="form-input"
+                          style={{ width: '100%', padding: '0.5rem' }}
+                          min="0"
+                          placeholder="0"
+                        />
+                      </div>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>
@@ -2136,6 +2712,80 @@ export default function EmployeesPage() {
                 className="btn btn-secondary"
               >
                 Lukk
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Bekreft sletting</h2>
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="modal-close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <AlertTriangle style={{ width: '24px', height: '24px', color: '#dc2626' }} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontWeight: '600', color: '#991b1b' }}>Advarsel!</h4>
+                    <p style={{ margin: '0.25rem 0 0 0', color: '#7f1d1d', fontSize: '0.875rem' }}>
+                      Denne handlingen kan ikke angres
+                    </p>
+                  </div>
+                </div>
+
+                <p style={{ color: 'var(--gray-700)', lineHeight: '1.6' }}>
+                  Er du sikker på at du vil slette <strong>{employees.find(e => e.id === showDeleteConfirm)?.displayName || 'denne ansatten'}</strong>?
+                </p>
+
+                <div style={{ padding: '1rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem' }}>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#92400e', fontWeight: '500', marginBottom: '0.5rem' }}>
+                    Dette vil:
+                  </p>
+                  <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#78350f', lineHeight: '1.6' }}>
+                    <li>Slette alle ansattdata permanent</li>
+                    <li>Fjerne tilgang til systemet</li>
+                    <li>Ikke kunne gjenopprettes</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="btn btn-secondary"
+                disabled={deletingEmployeeId !== null}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={confirmDeleteEmployee}
+                className="btn btn-danger"
+                disabled={deletingEmployeeId !== null}
+                style={{ opacity: deletingEmployeeId !== null ? 0.5 : 1 }}
+              >
+                {deletingEmployeeId ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
+                    Sletter...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                    Ja, slett ansatt
+                  </>
+                )}
               </button>
             </div>
           </div>

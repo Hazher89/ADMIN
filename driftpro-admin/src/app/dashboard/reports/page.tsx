@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService } from '@/lib/firebase-services';
+import { firebaseService, createUserAccessContext } from '@/lib/firebase-services';
 import { 
   BarChart3, 
   Download, 
@@ -144,8 +144,9 @@ export default function ReportsPage() {
         activeTimeClocks: 0
       });
 
-      // Load employees for department chart
-      const employees = await firebaseService.getEmployees(userProfile.companyId);
+      // Load employees for department chart with GDPR filtering
+      const userContext = createUserAccessContext(userProfile);
+      const employees = await firebaseService.getEmployees(userProfile.companyId, userContext);
       const departments = await firebaseService.getDepartments(userProfile.companyId);
       
       // Generate department chart data

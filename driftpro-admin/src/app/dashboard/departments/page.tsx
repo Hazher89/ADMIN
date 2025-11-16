@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService, Department, Employee } from '@/lib/firebase-services';
+import { firebaseService, Department, Employee, createUserAccessContext } from '@/lib/firebase-services';
 import { 
   Building, 
   Plus, 
@@ -64,7 +64,8 @@ export default function DepartmentsPage() {
     if (!userProfile?.companyId) return;
 
     try {
-      const data = await firebaseService.getEmployees(userProfile.companyId);
+      const userContext = createUserAccessContext(userProfile);
+      const data = await firebaseService.getEmployees(userProfile.companyId, userContext || undefined);
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -94,14 +95,31 @@ export default function DepartmentsPage() {
     if (!userProfile?.companyId) return;
 
     try {
-      await firebaseService.createDepartment({
-        name: newDepartment.name,
-        description: newDepartment.description,
-        location: newDepartment.location,
-        budget: newDepartment.budget,
-        managerId: newDepartment.managerId || undefined,
+      const userContext = createUserAccessContext(userProfile);
+      
+      // Build department data, only including fields that have values
+      const departmentData: any = {
+        name: newDepartment.name.trim(),
         companyId: userProfile.companyId
-      });
+      };
+      
+      if (newDepartment.description?.trim()) {
+        departmentData.description = newDepartment.description.trim();
+      }
+      
+      if (newDepartment.location?.trim()) {
+        departmentData.location = newDepartment.location.trim();
+      }
+      
+      if (newDepartment.budget && newDepartment.budget > 0) {
+        departmentData.budget = newDepartment.budget;
+      }
+      
+      if (newDepartment.managerId?.trim()) {
+        departmentData.managerId = newDepartment.managerId.trim();
+      }
+      
+      await firebaseService.createDepartment(departmentData, userContext || undefined);
 
       setShowAddModal(false);
       setNewDepartment({

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService } from '@/lib/firebase-services';
+import { firebaseService, createUserAccessContext } from '@/lib/firebase-services';
 import type { Employee } from '@/lib/firebase-services';
 import { 
   Clock, 
@@ -143,9 +143,10 @@ export default function StempelPage() {
       
       if (!userProfile?.companyId) return;
 
-      // Load real data from Firebase
+      // Load real data from Firebase with GDPR filtering
+      const userContext = createUserAccessContext(userProfile);
       const [employeesData, timeClocksData] = await Promise.all([
-        firebaseService.getEmployees(userProfile.companyId),
+        firebaseService.getEmployees(userProfile.companyId, userContext),
         firebaseService.getTimeClocks(userProfile.companyId)
       ]);
 
@@ -197,115 +198,6 @@ export default function StempelPage() {
     }
   }, [userProfile?.companyId]);
 
-  const createSampleStempelData = () => {
-    const currentTime = new Date().toISOString();
-    const sampleEmployees: Employee[] = [
-      {
-        id: 'emp1',
-        employeeNumber: 'EMP001',
-        displayName: 'Ola Nordmann',
-        email: 'ola@driftpro.no',
-        phone: '+47 123 45 678',
-        departmentId: 'IT',
-        position: 'Utvikler',
-        hireDate: '2023-01-15',
-        status: 'active',
-        companyId: userProfile?.companyId || '',
-        role: 'employee',
-        createdAt: currentTime,
-        updatedAt: currentTime
-      },
-      {
-        id: 'emp2',
-        employeeNumber: 'EMP002',
-        displayName: 'Kari Hansen',
-        email: 'kari@driftpro.no',
-        phone: '+47 234 56 789',
-        departmentId: 'HR',
-        position: 'HR Manager',
-        hireDate: '2022-06-01',
-        status: 'active',
-        companyId: userProfile?.companyId || '',
-        role: 'department_leader',
-        createdAt: currentTime,
-        updatedAt: currentTime
-      },
-      {
-        id: 'emp3',
-        employeeNumber: 'EMP003',
-        displayName: 'Per Olsen',
-        email: 'per@driftpro.no',
-        phone: '+47 345 67 890',
-        departmentId: 'Produksjon',
-        position: 'Produksjonsleder',
-        hireDate: '2021-09-10',
-        status: 'active',
-        companyId: userProfile?.companyId || '',
-        role: 'department_leader',
-        createdAt: currentTime,
-        updatedAt: currentTime
-      }
-    ];
-
-    const today = new Date().toISOString().split('T')[0];
-    
-    const sampleEntries: StempelEntry[] = [
-      {
-        id: '1',
-        employeeId: 'emp1',
-        employeeName: 'Ola Nordmann',
-        date: today,
-        punchIn: '08:00',
-        punchOut: '16:00',
-        breakStart: '12:00',
-        breakEnd: '12:30',
-        totalWorkHours: 7.5,
-        totalBreakHours: 0.5,
-        status: 'completed',
-        workType: 'normal',
-        location: { type: 'office', address: 'Hovedkontor, Oslo' },
-        device: { type: 'mobile', browser: 'Chrome Mobile' },
-        verification: { method: 'pin', verified: true },
-        department: 'IT',
-        shift: 'morning',
-        project: 'Systemutvikling',
-        task: 'Frontend-utvikling'
-      },
-      {
-        id: '2',
-        employeeId: 'emp2',
-        employeeName: 'Kari Hansen',
-        date: today,
-        punchIn: '07:45',
-        status: 'active',
-        workType: 'normal',
-        location: { type: 'remote', address: 'Hjemmekontor' },
-        device: { type: 'desktop', browser: 'Safari' },
-        verification: { method: 'qr', verified: true },
-        department: 'HR',
-        shift: 'flexible',
-        project: 'HR-system'
-      },
-      {
-        id: '3',
-        employeeId: 'emp3',
-        employeeName: 'Per Olsen',
-        date: today,
-        punchIn: '08:30',
-        breakStart: '12:00',
-        status: 'break',
-        workType: 'normal',
-        location: { type: 'office', address: 'Kontorbygning B' },
-        device: { type: 'kiosk' },
-        verification: { method: 'fingerprint', verified: true },
-        department: 'Produksjon',
-        shift: 'morning',
-        lateMinutes: 30
-      }
-    ];
-
-    return { entries: sampleEntries, employees: sampleEmployees };
-  };
 
   const getEntryStatus = (clock: any): StempelEntry['status'] => {
     if (!clock.clockOutTime) {
@@ -328,7 +220,9 @@ export default function StempelPage() {
 
   const loadEmployees = useCallback(async () => {
     try {
-      const data = await firebaseService.getEmployees(userProfile?.companyId || '');
+      if (!userProfile?.companyId) return;
+      const userContext = createUserAccessContext(userProfile);
+      const data = await firebaseService.getEmployees(userProfile.companyId, userContext);
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);

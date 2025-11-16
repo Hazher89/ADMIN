@@ -53,7 +53,6 @@ import {
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import { firebaseService } from '@/lib/firebase-services';
-import NotificationBell from '@/components/NotificationBell';
 
 interface SidebarItem {
   name: string;
@@ -81,7 +80,6 @@ export default function DashboardLayout({
   // Mobile state
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
-  const [showLogoutModal, setShowLogoutModal] = useState(false);
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const [tooltipPosition, setTooltipPosition] = useState({ x: 0, y: 0 });
   const [unreadCount, setUnreadCount] = useState(0);
@@ -172,62 +170,72 @@ export default function DashboardLayout({
     }
   }, [userProfile?.companyId, isDriftProAdmin]);
 
+  // Icon style helper to prevent large icons before CSS loads
+  const iconStyle = { width: '20px', height: '20px', flexShrink: 0, display: 'block' };
+
   // Sidebar items configuration
   const allSidebarItems: SidebarItem[] = [
     // Main navigation
     {
       name: 'Dashboard',
       href: '/dashboard',
-      icon: <Home size={20} />,
+      icon: <Home size={20} style={iconStyle} />,
       category: 'main',
       id: 'dashboard'
     },
     {
       name: 'HR & Personal',
       href: '/dashboard/hr',
-      icon: <Users size={20} />,
+      icon: <Users size={20} style={iconStyle} />,
       category: 'main',
       id: 'hr'
     },
       {
         name: 'Logistikk System',
         href: '/dashboard/logistikk-system',
-        icon: <Truck size={20} />,
+        icon: <Truck size={20} style={iconStyle} />,
         category: 'main',
         id: 'logistikk-system'
       },
     {
-      name: 'Internrevisjon',
+      name: 'Internkontroll og Samsvar',
       href: '/dashboard/audit',
-      icon: <Activity size={20} />,
+      icon: <Activity size={20} style={iconStyle} />,
       category: 'main',
       id: 'audit'
     },
     {
       name: 'Dokumenter',
       href: '/dashboard/documents',
-      icon: <FileText size={20} />,
+      icon: <FileText size={20} style={iconStyle} />,
       category: 'main',
       id: 'documents'
     },
     {
       name: 'Chat',
       href: '/dashboard/chat',
-      icon: <MessageSquare size={20} />,
+      icon: <MessageSquare size={20} style={iconStyle} />,
       category: 'main',
       id: 'chat'
     },
     {
+      name: 'E-post System',
+      href: '/dashboard/email-system',
+      icon: <Mail size={20} style={iconStyle} />,
+      category: 'main',
+      id: 'email-system'
+    },
+    {
       name: 'Rapporter',
       href: '/dashboard/reports',
-      icon: <BarChart3 size={20} />,
+      icon: <BarChart3 size={20} style={iconStyle} />,
       category: 'main',
       id: 'reports'
     },
     {
       name: 'SMS Logg & Telefonbok',
       href: '/dashboard/sms-logs',
-      icon: <Phone size={20} />,
+      icon: <Phone size={20} style={iconStyle} />,
       category: 'main',
       id: 'sms-logs'
     },
@@ -236,7 +244,7 @@ export default function DashboardLayout({
     {
       name: 'Samarbeidspartnere',
       href: '/dashboard/partners',
-      icon: <Handshake size={20} />,
+      icon: <Handshake size={20} style={iconStyle} />,
       category: 'management',
       id: 'partners'
     },
@@ -245,19 +253,11 @@ export default function DashboardLayout({
     ...(userProfile?.role === 'employee' ? [{
       name: 'Partner Portal',
       href: '/partner-login',
-      icon: <Globe size={20} />,
+      icon: <Globe size={20} style={iconStyle} />,
       category: 'management',
       id: 'partner-portal'
     }] : []),
     
-    // Finance & Accounting
-    {
-      name: 'Innstillinger',
-      href: '/dashboard/settings',
-      icon: <Settings size={20} />,
-      category: 'settings',
-      id: 'settings'
-    },
     
     // Admin-only pages (only visible for DriftPro AS)
     ...(isDriftProAdmin ? [
@@ -271,23 +271,9 @@ export default function DashboardLayout({
     : allSidebarItems.filter(item => 
         item.isAdmin || 
         (item.id && companyPermissions.includes(item.id)) ||
-        item.id === 'dashboard' || 
-        item.id === 'settings'
+        item.id === 'dashboard'
       );
 
-  const handleLogout = async () => {
-    setShowLogoutModal(true);
-  };
-
-  const confirmLogout = async () => {
-    try {
-      await logout();
-      setShowLogoutModal(false);
-      window.location.href = '/login';
-    } catch (error) {
-      console.error('Error during logout:', error);
-    }
-  };
 
   const groupedItems = sidebarItems.reduce((acc, item) => {
     if (!acc[item.category!]) {
@@ -344,6 +330,26 @@ export default function DashboardLayout({
     setupNotifications();
   }, [user]);
 
+  // Check if cockpit is active to hide sidebar - only on advanced-planning page
+  const [cockpitActive, setCockpitActive] = useState(false);
+  
+  useEffect(() => {
+    const checkCockpit = () => {
+      // Only hide Sidebar if we're on advanced-planning page AND cockpit is active
+      const isAdvancedPlanning = pathname === '/dashboard/advanced-planning';
+      const active = sessionStorage.getItem('cockpitActive') === 'true';
+      setCockpitActive(isAdvancedPlanning && active);
+    };
+    
+    checkCockpit();
+    // Check periodically in case it changes
+    const interval = setInterval(checkCockpit, 100);
+    
+    return () => clearInterval(interval);
+  }, [pathname]);
+
+  const isLogisticsPage = pathname === '/dashboard/logistikk-system';
+
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       {/* Mobile Overlay */}
@@ -363,12 +369,13 @@ export default function DashboardLayout({
       )}
       
       {/* Responsive Sidebar */}
+      {!cockpitActive && (
       <div 
         className={`sidebar ${sidebarOpen ? 'open' : ''}`}
         style={{
           width: isMobile ? (sidebarOpen ? '280px' : '0') : '80px',
-          background: 'var(--gray-900)',
-          borderRight: '1px solid var(--gray-800)',
+          background: 'var(--sidebar-bg)',
+          borderRight: '1px solid var(--border-color)',
           display: 'flex',
           flexDirection: 'column',
           alignItems: isMobile ? 'stretch' : 'center',
@@ -441,8 +448,8 @@ export default function DashboardLayout({
                 <div style={{
                   padding: '0.5rem 0',
                   marginBottom: '0.5rem',
-                  borderBottom: '1px solid var(--gray-800)',
-                  color: 'var(--gray-400)',
+                  borderBottom: '1px solid var(--border-color)',
+                  color: 'var(--sidebar-text)',
                   fontSize: '0.75rem',
                   fontWeight: '600',
                   textTransform: 'uppercase',
@@ -456,7 +463,6 @@ export default function DashboardLayout({
                   {category === 'crm' && 'CRM & Kunder'}
                   {category === 'projects' && 'Prosjektstyring'}
                   {category === 'logistics' && 'Logistikk & Planlegging'}
-                  {category === 'settings' && 'Innstillinger'}
                   {category === 'admin' && 'Administrasjon'}
                 </div>
               )}
@@ -486,7 +492,7 @@ export default function DashboardLayout({
                         alignItems: 'center',
                         justifyContent: isMobile ? 'flex-start' : 'center',
                         background: isActive ? 'var(--primary)' : 'transparent',
-                        color: isActive ? 'white' : 'var(--gray-400)',
+                        color: isActive ? 'white' : 'var(--sidebar-text)',
                         textDecoration: 'none',
                         transition: 'all var(--transition-normal)',
                         position: 'relative',
@@ -524,7 +530,7 @@ export default function DashboardLayout({
                           color: '#ef4444',
                           fontSize: '12px'
                         }}>
-                          <Star size={12} fill="#ef4444" />
+                          <Star size={12} fill="#ef4444" style={{ width: '12px', height: '12px', flexShrink: 0 }} />
                         </div>
                       )}
                       
@@ -554,61 +560,13 @@ export default function DashboardLayout({
             </div>
           ))}
         </div>
-
-        {/* Logout Button */}
-        <div style={{
-          width: '100%',
-          padding: isMobile ? '1rem 0' : '0',
-          borderTop: isMobile ? '1px solid var(--gray-800)' : 'none',
-          marginTop: '2rem',
-          flexShrink: 0,
-          position: 'relative',
-          zIndex: 10
-        }}>
-          <button
-            onClick={handleLogout}
-            style={{
-              width: isMobile ? '100%' : '48px',
-              height: '48px',
-              borderRadius: '12px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: isMobile ? 'flex-start' : 'center',
-              background: 'transparent',
-              color: 'var(--gray-400)',
-              border: '1px solid var(--gray-700)',
-              cursor: 'pointer',
-              transition: 'all var(--transition-normal)',
-              padding: isMobile ? '0 1rem' : '0',
-              gap: isMobile ? '0.75rem' : '0',
-              position: 'relative',
-              zIndex: 11
-            }}
-            onMouseEnter={() => {
-              if (!isMobile) {
-                setTooltipPosition({ x: 80, y: window.innerHeight - 80 });
-                setHoveredItem('logout');
-              }
-            }}
-            onMouseLeave={handleMouseLeave}
-          >
-            <LogOut size={20} />
-            {isMobile && (
-              <span style={{
-                fontSize: '0.875rem',
-                fontWeight: '500'
-              }}>
-                Logg ut
-              </span>
-            )}
-          </button>
-        </div>
       </div>
+      )}
 
       {/* Main Content */}
       <div style={{
         flex: 1,
-        marginLeft: isMobile ? '0' : '80px',
+        marginLeft: cockpitActive ? 0 : (isMobile ? '0' : '80px'),
         minHeight: '100vh',
         background: 'var(--gray-50)',
         transition: 'margin-left var(--transition-normal)'
@@ -618,8 +576,8 @@ export default function DashboardLayout({
           <div style={{
             position: 'sticky',
             top: 0,
-            background: 'white',
-            borderBottom: '1px solid var(--gray-200)',
+            background: 'var(--card-background)',
+            borderBottom: '1px solid var(--border-color)',
             padding: '1rem',
             display: 'flex',
             alignItems: 'center',
@@ -674,42 +632,21 @@ export default function DashboardLayout({
               <span style={{
                 fontSize: '1.125rem',
                 fontWeight: '600',
-                color: 'var(--gray-900)'
+                color: 'var(--text-color)'
               }}>
                 MAVI Logistikk AS
               </span>
             </div>
 
-            {/* Mobile Actions */}
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '0.5rem'
-            }}>
-              <NotificationBell />
-              <div style={{
-                width: '32px',
-                height: '32px',
-                borderRadius: '50%',
-                background: 'var(--gradient-primary)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontSize: '0.875rem',
-                fontWeight: '600'
-              }}>
-                {userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
-              </div>
-            </div>
+            {/* Mobile Actions - Removed (now in Topbar) */}
           </div>
         )}
 
         {/* Desktop Header */}
         {!isMobile && (
           <div style={{
-            background: 'white',
-            borderBottom: '1px solid var(--gray-200)',
+            background: 'var(--card-background)',
+            borderBottom: '1px solid var(--border-color)',
             padding: '1rem 2rem',
             display: 'flex',
             alignItems: 'center',
@@ -723,71 +660,94 @@ export default function DashboardLayout({
               <h1 style={{
                 fontSize: '1.5rem',
                 fontWeight: '600',
-                color: 'var(--gray-900)',
+                color: 'var(--text-color)',
                 margin: 0
               }}>
                 {sidebarItems.find(item => item.href === pathname)?.name || 'Dashboard'}
               </h1>
             </div>
 
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem'
-            }}>
-              <NotificationBell />
-              <div style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                padding: '0.5rem 1rem',
-                background: 'var(--gray-100)',
-                borderRadius: '8px',
-                cursor: 'pointer',
-                transition: 'all var(--transition-normal)'
-              }}>
-                <div style={{
-                  width: '32px',
-                  height: '32px',
-                  borderRadius: '50%',
-                  background: 'var(--gradient-primary)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  color: 'white',
-                  fontSize: '0.875rem',
-                  fontWeight: '600'
-                }}>
-                  {userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
-                </div>
-                <div>
-                  <div style={{
-                    fontSize: '0.875rem',
-                    fontWeight: '500',
-                    color: 'var(--gray-900)'
-                  }}>
-                    {userProfile?.displayName || 'Bruker'}
-                  </div>
-                  <div style={{
-                    fontSize: '0.75rem',
-                    color: 'var(--gray-500)'
-                  }}>
-                    {userProfile?.role || 'Bruker'}
-                  </div>
-                </div>
-              </div>
-            </div>
+            {/* Desktop Actions - Removed (now in Topbar) */}
           </div>
         )}
 
         {/* Page Content */}
         <div style={{
           padding: isMobile ? '1rem' : '2rem',
+          // På mobil legger vi inn ekstra bunn-padding for å gi plass til bunnnavigasjonen
+          paddingBottom: isMobile && !isLogisticsPage ? '4.5rem' : (isMobile ? '1.5rem' : '2rem'),
           minHeight: 'calc(100vh - 80px)'
         }}>
           {children}
         </div>
       </div>
+
+      {/* Mobil bunnnavigasjon – gjelder alle sider unntatt logistikk-systemet og cockpit */}
+      {isMobile && !cockpitActive && !isLogisticsPage && (
+        <div
+          style={{
+            position: 'fixed',
+            left: 0,
+            right: 0,
+            bottom: 0,
+            height: '64px',
+            background: 'var(--card-background)',
+            borderTop: '1px solid var(--border-color)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'space-around',
+            zIndex: 1500,
+            backdropFilter: 'blur(16px)'
+          }}
+        >
+          {[
+            { id: 'dashboard', href: '/dashboard', icon: <Home size={20} style={iconStyle} />, label: 'Hjem' },
+            { id: 'hr', href: '/dashboard/hr', icon: <Users size={20} style={iconStyle} />, label: 'HR' },
+            { id: 'audit', href: '/dashboard/audit', icon: <Activity size={20} style={iconStyle} />, label: 'Internkontroll' },
+            { id: 'documents', href: '/dashboard/documents', icon: <FileText size={20} style={iconStyle} />, label: 'Dokumenter' },
+            { id: 'settings', href: '/dashboard/settings', icon: <Settings size={20} style={iconStyle} />, label: 'Innstillinger' },
+          ].map(item => {
+            const active = pathname === item.href;
+            return (
+              <button
+                key={item.id}
+                onClick={() => router.push(item.href)}
+                style={{
+                  flex: 1,
+                  height: '100%',
+                  border: 'none',
+                  background: 'none',
+                  display: 'flex',
+                  flexDirection: 'column',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: active ? 'var(--primary)' : 'var(--gray-500)',
+                  fontSize: '0.7rem',
+                  fontWeight: active ? 600 : 500,
+                  gap: '0.15rem',
+                  cursor: 'pointer'
+                }}
+              >
+                <div
+                  style={{
+                    width: '28px',
+                    height: '28px',
+                    borderRadius: '9999px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    background: active ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
+                    transition: 'background var(--transition-fast), transform var(--transition-fast)'
+                  }}
+                >
+                  {item.icon}
+                </div>
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      )}
 
       {/* Desktop Tooltip */}
       {!isMobile && hoveredItem && (
@@ -796,21 +756,21 @@ export default function DashboardLayout({
           left: tooltipPosition.x,
           top: tooltipPosition.y,
           transform: 'translateY(-50%)',
-          background: 'var(--gray-800)',
-          color: 'white',
+          background: 'var(--card-background)',
+          color: 'var(--text-color)',
           padding: '0.5rem 0.75rem',
           borderRadius: '6px',
           fontSize: '0.875rem',
           fontWeight: '500',
           zIndex: 1001,
           boxShadow: 'var(--shadow-lg)',
-          border: '1px solid var(--gray-700)',
+          border: '1px solid var(--border-color)',
           animation: 'fadeIn 0.2s ease',
           pointerEvents: 'none'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
             <span>
-              {hoveredItem === 'logout' ? 'Logg ut' : sidebarItems.find(item => item.href === hoveredItem)?.name || ''}
+              {sidebarItems.find(item => item.href === hoveredItem)?.name || ''}
             </span>
             {sidebarItems.find(item => item.href === hoveredItem)?.isAdmin && (
               <Star size={12} fill="#ef4444" color="#ef4444" />
@@ -825,71 +785,8 @@ export default function DashboardLayout({
             height: '0',
             borderTop: '4px solid transparent',
             borderBottom: '4px solid transparent',
-            borderRight: '4px solid var(--gray-800)'
+            borderRight: '4px solid var(--card-background)'
           }}></div>
-        </div>
-      )}
-
-      {/* Logout Confirmation Modal */}
-      {showLogoutModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <div style={{
-              padding: '1.5rem',
-              borderBottom: '1px solid var(--gray-200)',
-              display: 'flex',
-              justifyContent: 'space-between',
-              alignItems: 'center'
-            }}>
-              <h3 style={{
-                fontSize: 'var(--font-size-lg)',
-                fontWeight: '600',
-                color: 'var(--gray-900)'
-              }}>
-                Bekreft utlogging
-              </h3>
-              <button
-                onClick={() => setShowLogoutModal(false)}
-                style={{
-                  background: 'none',
-                  border: 'none',
-                  fontSize: '1.5rem',
-                  color: 'var(--gray-400)',
-                  cursor: 'pointer',
-                  padding: '0.25rem'
-                }}
-              >
-                ×
-              </button>
-            </div>
-            <div style={{ padding: '1.5rem' }}>
-              <p style={{ 
-                marginBottom: '1.5rem', 
-                color: 'var(--gray-600)',
-                lineHeight: '1.6'
-              }}>
-                Er du sikker på at du vil logge ut? Du må logge inn på nytt for å få tilgang til systemet.
-              </p>
-              <div style={{ 
-                display: 'flex', 
-                gap: '1rem', 
-                justifyContent: 'flex-end' 
-              }}>
-                <button
-                  onClick={() => setShowLogoutModal(false)}
-                  className="btn btn-secondary"
-                >
-                  Avbryt
-                </button>
-                <button
-                  onClick={confirmLogout}
-                  className="btn btn-danger"
-                >
-                  Logg ut
-                </button>
-              </div>
-            </div>
-          </div>
         </div>
       )}
 
@@ -897,6 +794,77 @@ export default function DashboardLayout({
         @keyframes fadeIn {
           from { opacity: 0; transform: translateX(-10px); }
           to { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes rotate-ring {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes rotate-ring-reverse {
+          from {
+            transform: rotate(360deg);
+          }
+          to {
+            transform: rotate(0deg);
+          }
+        }
+
+        @keyframes rotate-gear {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+
+        @keyframes pulse-icon {
+          0%, 100% {
+            opacity: 0.95;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.02);
+          }
+        }
+
+        @keyframes pulse-tooth {
+          0%, 100% {
+            opacity: 1;
+            stroke-width: 2.5;
+          }
+          50% {
+            opacity: 0.7;
+            stroke-width: 3;
+          }
+        }
+
+        @keyframes flow-line {
+          0%, 100% {
+            opacity: 0.6;
+            stroke-dasharray: 0 20;
+          }
+          50% {
+            opacity: 1;
+            stroke-dasharray: 20 0;
+          }
+        }
+
+        @keyframes float-particle {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.6;
+          }
+          50% {
+            transform: translate(2px, -2px) scale(1.3);
+            opacity: 1;
+          }
         }
         
         /* Mobile optimizations */

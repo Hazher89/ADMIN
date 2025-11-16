@@ -320,11 +320,11 @@ export default function DocumentsPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
       {/* Header */}
-      <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: isMobile ? '1rem' : '1.5rem 2rem' }}>
+      <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: isMobile ? '1rem' : '1.5rem 2rem' }}>
         <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div>
-            <h1 style={{ fontSize: isMobile ? 'var(--font-size-xl)' : 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Dokumenter</h1>
-            <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)' }}>
+            <h1 style={{ fontSize: isMobile ? 'var(--font-size-xl)' : 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--text-color)' }}>Dokumenter</h1>
+            <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)' }}>
               {documents.length} dokumenter • {formatFileSize(documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0))} total størrelse
             </p>
           </div>

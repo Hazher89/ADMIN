@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService } from '@/lib/firebase-services';
 import { collection, getDocs, query, orderBy, where, addDoc, updateDoc, serverTimestamp, doc } from 'firebase/firestore';
@@ -61,6 +62,7 @@ import {
   Layers,
   Satellite
 } from 'lucide-react';
+import CockpitInterface from './cockpit-interface';
 
 interface Order {
   id?: string;
@@ -168,9 +170,24 @@ interface PlannedRoute {
 
 export default function AdvancedPlanningPage() {
   const { userProfile } = useAuth();
+  const router = useRouter();
   
   // UI state
-  const [activeView, setActiveView] = useState('map');
+  const [activeView, setActiveView] = useState('cockpit');
+  
+  // Set sessionStorage when cockpit is active to hide Topbar/Sidebar
+  useEffect(() => {
+    if (activeView === 'cockpit') {
+      sessionStorage.setItem('cockpitActive', 'true');
+    } else {
+      sessionStorage.removeItem('cockpitActive');
+    }
+    
+    // Cleanup: Remove cockpitActive when component unmounts (navigating away)
+    return () => {
+      sessionStorage.removeItem('cockpitActive');
+    };
+  }, [activeView]);
   const [selectedDate, setSelectedDate] = useState('');
   const [isInitialized, setIsInitialized] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -649,7 +666,7 @@ export default function AdvancedPlanningPage() {
               padding: '0.875rem 1.25rem',
               borderRadius: '12px',
               border: 'none',
-              background: 'rgba(255, 255, 255, 0.95)',
+              background: 'var(--card-background)',
               fontSize: '1rem',
               fontWeight: '500',
               boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
@@ -674,10 +691,10 @@ export default function AdvancedPlanningPage() {
               padding: '0.875rem 1.5rem 0.875rem 3rem',
               borderRadius: '12px',
               border: 'none',
-              background: 'rgba(255, 255, 255, 0.95)',
+              background: 'var(--card-background)',
               fontSize: '0.95rem',
               fontWeight: '600',
-              color: '#374151',
+              color: 'var(--text-color)',
               boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
               cursor: 'pointer',
               appearance: 'none',
@@ -707,10 +724,10 @@ export default function AdvancedPlanningPage() {
               padding: '0.875rem 1.5rem 0.875rem 3rem',
               borderRadius: '12px',
               border: 'none',
-              background: 'rgba(255, 255, 255, 0.95)',
+              background: 'var(--card-background)',
               fontSize: '0.95rem',
               fontWeight: '600',
-              color: '#374151',
+              color: 'var(--text-color)',
               boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
               cursor: 'pointer',
               appearance: 'none',
@@ -743,10 +760,10 @@ export default function AdvancedPlanningPage() {
                 padding: '0.875rem 1.5rem 0.875rem 3rem',
                 borderRadius: '12px',
                 border: 'none',
-                background: 'rgba(255, 255, 255, 0.95)',
+                background: 'var(--card-background)',
                 fontSize: '0.95rem',
                 fontWeight: '600',
-                color: '#374151',
+                color: 'var(--text-color)',
                 boxShadow: '0 4px 15px rgba(0, 0, 0, 0.1)',
                 cursor: 'pointer',
                 transition: 'all 0.3s ease',
@@ -770,7 +787,7 @@ export default function AdvancedPlanningPage() {
             borderRadius: '12px',
             border: 'none',
             background: 'linear-gradient(135deg, #ff6b6b 0%, #ee5a24 100%)',
-            color: 'white',
+            color: 'var(--text-color)',
             fontSize: '0.95rem',
             fontWeight: '600',
             cursor: 'pointer',
@@ -795,6 +812,48 @@ export default function AdvancedPlanningPage() {
         boxShadow: '0 10px 30px rgba(245, 87, 108, 0.3)'
       }}>
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+          <button
+            onClick={() => setActiveView('cockpit')}
+            style={{
+              padding: '1rem 2rem',
+              borderRadius: '16px',
+              border: 'none',
+           background: activeView === 'cockpit'
+             ? 'linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)'
+             : 'rgba(255, 255, 255, 0.2)',
+           color: 'white',
+           fontSize: '1rem',
+           fontWeight: '600',
+           cursor: 'pointer',
+           display: 'flex',
+           alignItems: 'center',
+           gap: '0.75rem',
+           transition: 'all 0.3s ease',
+           backdropFilter: 'blur(10px)',
+              boxShadow: activeView === 'cockpit' 
+                ? '0 8px 25px rgba(6, 182, 212, 0.4)' 
+                : '0 4px 15px rgba(0, 0, 0, 0.1)',
+              transform: activeView === 'cockpit' ? 'translateY(-2px)' : 'translateY(0)'
+            }}
+         onMouseEnter={(e) => {
+           if (activeView !== 'cockpit') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.3)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(-2px)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 8px 25px rgba(0, 0, 0, 0.2)';
+           }
+         }}
+         onMouseLeave={(e) => {
+           if (activeView !== 'cockpit') {
+             (e.target as HTMLButtonElement).style.background = 'rgba(255, 255, 255, 0.2)';
+             (e.target as HTMLButtonElement).style.transform = 'translateY(0)';
+             (e.target as HTMLButtonElement).style.boxShadow = '0 4px 15px rgba(0, 0, 0, 0.1)';
+           }
+         }}
+          >
+            <Navigation style={{ width: '20px', height: '20px' }} />
+            <span>🚀 Cockpit</span>
+          </button>
+          
           <button
             onClick={() => setActiveView('map')}
             style={{
@@ -1005,7 +1064,134 @@ export default function AdvancedPlanningPage() {
         </button>
       </div>
 
+      {/* Cockpit View - Advanced 4-Panel System */}
+      {activeView === 'cockpit' && (
+        <CockpitInterface
+          freightUnits={(orders && Array.isArray(orders) ? orders : []).map(order => ({
+            id: order.id || '',
+            orderNumber: order.orderNumber,
+            customer: order.customerName,
+            address: order.customerAddress,
+            weight: order.totalWeight || 0,
+            volume: order.totalVolume || 0,
+            deliveryDate: order.deliveryDate,
+            deliveryTimeFrom: order.deliveryTimeFrom || '08:00',
+            deliveryTimeTo: order.deliveryTimeTo,
+            zone: (order.customerAddress && typeof order.customerAddress === 'string' ? order.customerAddress.split(',')[0] : '') || 'Ukjent',
+            priority: order.priority === 'high' ? 'high' : order.priority === 'medium' ? 'medium' : 'low',
+            status: order.status === 'pending' ? 'unassigned' : order.status === 'assigned' ? 'assigned' : order.status === 'in_progress' ? 'in_transit' : 'delivered',
+            price: order.products?.reduce((sum, p) => sum + (p.price * p.quantity), 0) || 0,
+            specialRequirements: order.specialRequirements?.join(', '),
+            products: order.products,
+            totalProducts: order.totalProducts,
+            returnType: order.returnType,
+            returnDescription: order.returnDescription,
+            returnOrderId: order.returnOrderId,
+            customerPhone: order.customerPhone,
+            customerEmail: order.customerEmail
+          }))}
+          freightOrders={(plannedRoutes && Array.isArray(plannedRoutes) ? plannedRoutes : []).map(route => ({
+            id: route.id,
+            name: route.routeName,
+            routeNumber: route.id,
+            vehicle: route.vehicleName,
+            driver: route.driverName,
+            freightUnits: (route.orders && Array.isArray(route.orders) ? route.orders : []).map(order => ({
+              id: order.id || '',
+              orderNumber: order.orderNumber,
+              customer: order.customerName,
+              address: order.customerAddress,
+              weight: order.totalWeight || 0,
+              volume: order.totalVolume || 0,
+              deliveryDate: order.deliveryDate,
+              deliveryTimeFrom: order.deliveryTimeFrom || '08:00',
+              deliveryTimeTo: order.deliveryTimeTo,
+              zone: (order.customerAddress && typeof order.customerAddress === 'string' ? order.customerAddress.split(',')[0] : '') || 'Ukjent',
+              priority: order.priority === 'high' ? 'high' : order.priority === 'medium' ? 'medium' : 'low',
+              status: order.status === 'pending' ? 'unassigned' : order.status === 'assigned' ? 'assigned' : order.status === 'in_progress' ? 'in_transit' : 'delivered',
+              price: order.products?.reduce((sum, p) => sum + (p.price * p.quantity), 0) || 0,
+              products: order.products,
+              totalProducts: order.totalProducts
+            })),
+            totalWeight: (route.orders && Array.isArray(route.orders) ? route.orders : []).reduce((sum, o) => sum + (o.totalWeight || 0), 0),
+            totalVolume: (route.orders && Array.isArray(route.orders) ? route.orders : []).reduce((sum, o) => sum + (o.totalVolume || 0), 0),
+            maxWeight: route.vehicle?.capacity?.weight || 1000,
+            maxVolume: route.vehicle?.capacity?.volume || 10000,
+            distance: route.totalDistance,
+            status: route.status === 'planned' ? 'planned' : route.status === 'active' ? 'in_progress' : 'completed',
+            startTime: route.createdAt,
+            endTime: route.estimatedArrival || route.createdAt,
+            cost: route.totalCost,
+            warnings: []
+          }))}
+          resources={(vehicles && Array.isArray(vehicles) ? vehicles : []).map(vehicle => ({
+            id: vehicle.registrationNumber,
+            name: vehicle.driverName || vehicle.registrationNumber,
+            type: 'vehicle' as const,
+            capacity: vehicle.capacity?.weight || 1000,
+            volumeCapacity: vehicle.capacity?.volume || 10000,
+            available: vehicle.status === 'active',
+            vehicleType: vehicle.vehicleType as any,
+            vehicleNumber: vehicle.registrationNumber,
+            driverName: vehicle.driverName,
+            typeEmoji: '🚗'
+          }))}
+          selectedProfile="all"
+          searchFilter=""
+          showGantt={false}
+          showMap={false}
+          viewMode="day"
+          editMode={false}
+          draggedFU={null}
+          selectedFUs={selectedOrders}
+          visibleColumns={['orderNumber', 'customer', 'address', 'weight', 'volume', 'deliveryDate', 'priority', 'status']}
+          onSetSelectedProfile={() => {}}
+          onSetSearchFilter={() => {}}
+          onSetShowGantt={() => {}}
+          onSetShowMap={() => {}}
+          onSetViewMode={() => {}}
+          onDragFUStart={() => {}}
+          onDropFUOnFO={() => {}}
+          onRemoveFUFromFO={() => {}}
+          onCreateNewFO={() => {}}
+          onAutoAssign={() => {}}
+          onOptimizeFO={() => {}}
+          onReleaseFO={() => {}}
+          onRefresh={() => loadRealData()}
+          onExport={() => {}}
+          onCloseCockpit={() => {
+            sessionStorage.removeItem('cockpitActive');
+            router.push('/dashboard/logistikk-system');
+          }}
+          onOpenSettings={() => {}}
+          onSaveLayout={() => {}}
+          onCancelEdit={() => {}}
+          onToggleFUSelection={(fuId) => {
+            setSelectedOrders(prev => 
+              prev.includes(fuId) 
+                ? prev.filter(id => id !== fuId)
+                : [...prev, fuId]
+            );
+          }}
+          onRecalculateCharges={() => {}}
+          onChangeFUDate={() => {}}
+          onAddNoteToFO={() => {}}
+          onAssignResourceToFO={() => {}}
+          onDropFUOnResource={() => {}}
+          onDownloadDocument={() => {}}
+          onSendToDriver={() => {}}
+          onRemoveRouteAssignment={() => {}}
+          onSaveRoutes={() => {}}
+          onSetRouteNumber={() => {}}
+          showRouteNumberModal={null}
+          setShowRouteNumberModal={() => {}}
+          routeNumberInput=""
+          setRouteNumberInput={() => {}}
+        />
+      )}
+
       {/* Main Content - Original 3-Column Layout */}
+      {activeView !== 'cockpit' && (
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr 1fr', gap: '2rem', minHeight: '600px' }}>
         
         {/* LEFT SIDE - Planned Routes */}
@@ -1089,7 +1275,7 @@ export default function AdvancedPlanningPage() {
                     style={{
                       padding: '0.5rem',
                       borderRadius: '8px',
-                      border: '1px solid #e5e7eb',
+                      border: '1px solid var(--border-color)',
                       fontSize: '0.875rem',
                       background: 'white'
                     }}
@@ -1131,7 +1317,7 @@ export default function AdvancedPlanningPage() {
                     }}
                   >
                     {/* Order Markers */}
-                    {orders.filter(o => o.status === 'pending' && o.coordinates).map((order, index) => (
+                    {orders && Array.isArray(orders) && orders.filter(o => o.status === 'pending' && o.coordinates).map((order, index) => (
                       <div
                         key={order.id}
                         draggable={true}
@@ -1153,7 +1339,7 @@ export default function AdvancedPlanningPage() {
                           justifyContent: 'center',
                           fontSize: '12px',
                           fontWeight: 'bold',
-                          color: 'white',
+                          color: 'var(--text-color)',
                           zIndex: 10,
                           transition: 'all 0.3s ease'
                         }}
@@ -1172,9 +1358,11 @@ export default function AdvancedPlanningPage() {
                     ))}
 
                     {/* Route Lines for Planned Routes */}
-                    {selectedRoute && plannedRoutes.find(r => r.id === selectedRoute) && (
-                      <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: 5 }}>
-                        {plannedRoutes.find(r => r.id === selectedRoute)?.orders.map((order, index, array) => {
+                    {selectedRoute && (() => {
+                      const selectedRouteData = plannedRoutes.find(r => r.id === selectedRoute);
+                      return selectedRouteData && selectedRouteData.orders && Array.isArray(selectedRouteData.orders) && (
+                        <svg style={{ position: 'absolute', inset: '0', width: '100%', height: '100%', zIndex: 5 }}>
+                          {selectedRouteData.orders.map((order, index, array) => {
                           if (index < array.length - 1) {
                             const nextOrder = array[index + 1];
                             return (
@@ -1203,10 +1391,11 @@ export default function AdvancedPlanningPage() {
                           </marker>
                         </defs>
                       </svg>
-                    )}
+                      );
+                    })()}
 
                     {/* Vehicle Positions */}
-                    {vehicles.filter(v => v.status === 'active').map((vehicle, index) => (
+                    {vehicles && Array.isArray(vehicles) && vehicles.filter(v => v.status === 'active').map((vehicle, index) => (
                       <div
                         key={vehicle.registrationNumber}
                         style={{
@@ -1215,7 +1404,7 @@ export default function AdvancedPlanningPage() {
                           top: `${70 + index * 5}%`,
                           width: '32px',
                           height: '32px',
-                          backgroundColor: '#8b5cf6',
+                          backgroundColor: 'var(--primary)',
                           borderRadius: '8px',
                           border: '3px solid white',
                           cursor: 'pointer',
@@ -1393,11 +1582,11 @@ export default function AdvancedPlanningPage() {
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
             <h3>🚛 Kjøretøy & Sjåfører</h3>
-            <span className="badge badge-green">{vehicles.length}</span>
+            <span className="badge badge-green">{vehicles?.length || 0}</span>
           </div>
           
           <div style={{ maxHeight: '500px', overflowY: 'auto' }}>
-            {vehicles.length > 0 ? (
+            {vehicles && vehicles.length > 0 ? (
               vehicles.map((vehicle, index) => (
                 <div key={vehicle.registrationNumber} className="card" style={{ marginBottom: '0.75rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: '8px' }}>
                   {/* Vehicle Header */}
@@ -1477,7 +1666,7 @@ export default function AdvancedPlanningPage() {
                   </div>
 
                   {/* Special Equipment */}
-                  {vehicle.specialEquipment && vehicle.specialEquipment.length > 0 && (
+                  {vehicle.specialEquipment && Array.isArray(vehicle.specialEquipment) && vehicle.specialEquipment.length > 0 && (
                     <div style={{ marginBottom: '0.75rem' }}>
                       <div style={{ fontSize: '0.75rem', fontWeight: '600', color: '#374151', marginBottom: '0.5rem' }}>🔧 Spesialutstyr:</div>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.25rem' }}>
@@ -1485,7 +1674,7 @@ export default function AdvancedPlanningPage() {
                           <span key={eqIndex} style={{ 
                             fontSize: '0.65rem', 
                             padding: '0.25rem 0.5rem', 
-                            backgroundColor: '#f3f4f6', 
+                            backgroundColor: 'var(--gray-100)', 
                             borderRadius: '4px',
                             color: '#6b7280'
                           }}>
@@ -1525,7 +1714,7 @@ export default function AdvancedPlanningPage() {
                         borderRadius: '6px',
                         border: 'none',
                         background: 'linear-gradient(135deg, #3b82f6, #1d4ed8)',
-                        color: 'white',
+                        color: 'var(--text-color)',
                         fontSize: '0.7rem',
                         fontWeight: '600',
                         cursor: 'pointer',
@@ -1542,9 +1731,9 @@ export default function AdvancedPlanningPage() {
                       style={{
                         padding: '0.5rem',
                         borderRadius: '6px',
-                        border: '1px solid #d1d5db',
-                        background: 'white',
-                        color: '#6b7280',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--card-background)',
+                        color: 'var(--gray-500)',
                         fontSize: '0.7rem',
                         fontWeight: '600',
                         cursor: 'pointer',
@@ -1565,8 +1754,8 @@ export default function AdvancedPlanningPage() {
             )}
           </div>
         </div>
-
       </div>
+      )}
 
       {/* Pending Orders Section - Below the main layout */}
       <div className="card" style={{ marginTop: '2rem' }}>
@@ -1575,7 +1764,7 @@ export default function AdvancedPlanningPage() {
           <div style={{ display: 'flex', gap: '0.5rem' }}>
             <button 
               onClick={() => {
-                const pendingIds = orders.filter(o => o.status === 'pending').map(o => o.id || '');
+                const pendingIds = (orders && Array.isArray(orders) ? orders.filter(o => o.status === 'pending') : []).map(o => o.id || '');
                 setSelectedOrders(pendingIds);
               }}
               className="btn btn-sm btn-primary"
@@ -1638,7 +1827,7 @@ export default function AdvancedPlanningPage() {
         )}
         
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
-          {orders.filter(o => o.status === 'pending').map((order) => (
+          {orders && Array.isArray(orders) && orders.filter(o => o.status === 'pending').map((order) => (
             <div 
               key={order.id}
               onClick={() => {

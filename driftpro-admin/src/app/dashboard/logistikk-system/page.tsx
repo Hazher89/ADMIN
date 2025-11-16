@@ -174,7 +174,7 @@ export default function LogistikkSystemPage() {
   const [isOptimizing, setIsOptimizing] = useState(false);
 
   // Delivery states
-  const [deliveries, setDeliveries] = useState([]);
+  const [deliveries, setDeliveries] = useState<any[]>([]);
   const [currentDelivery, setCurrentDelivery] = useState(null);
   const [showScanner, setShowScanner] = useState(false);
   const [showSignature, setShowSignature] = useState(false);
@@ -340,14 +340,20 @@ export default function LogistikkSystemPage() {
     try {
       const ordersQuery = query(
         collection(db, 'orders'),
-        where('companyId', '==', userProfile.companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', userProfile.companyId)
       );
       const ordersSnapshot = await getDocs(ordersQuery);
       const ordersData = ordersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Order[];
+      
+      // Sort in memory by createdAt descending
+      ordersData.sort((a, b) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+        const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+        return bTime.getTime() - aTime.getTime();
+      });
       
       setOrders(ordersData);
     } catch (error) {
@@ -381,16 +387,22 @@ export default function LogistikkSystemPage() {
     try {
       const deliveriesQuery = query(
         collection(db, 'deliveries'),
-        where('companyId', '==', userProfile.companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', userProfile.companyId)
       );
       const deliveriesSnapshot = await getDocs(deliveriesQuery);
       const deliveriesData = deliveriesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as any[];
       
-      setDeliveries(deliveriesData);
+      // Sort in memory by createdAt descending
+      deliveriesData.sort((a: any, b: any) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt || 0);
+        const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt || 0);
+        return bTime.getTime() - aTime.getTime();
+      });
+      
+      setDeliveries(deliveriesData as any[]);
     } catch (error) {
       console.error('Error loading deliveries:', error);
     }
@@ -408,7 +420,7 @@ export default function LogistikkSystemPage() {
       const suppliersData = suppliersSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as Supplier[];
       
       setSuppliers(suppliersData);
     } catch (error) {
@@ -428,7 +440,7 @@ export default function LogistikkSystemPage() {
       const productsData = productsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as Product[];
       
       setProducts(productsData);
     } catch (error) {
@@ -442,14 +454,20 @@ export default function LogistikkSystemPage() {
     try {
       const invoicesQuery = query(
         collection(db, 'invoices'),
-        where('companyId', '==', userProfile.companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', userProfile.companyId)
       );
       const invoicesSnapshot = await getDocs(invoicesQuery);
       const invoicesData = invoicesSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as Invoice[];
+      
+      // Sort in memory by createdAt descending
+      invoicesData.sort((a: any, b: any) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt || a.createdDate || 0);
+        const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt || b.createdDate || 0);
+        return bTime.getTime() - aTime.getTime();
+      });
       
       setInvoices(invoicesData);
     } catch (error) {
@@ -463,14 +481,20 @@ export default function LogistikkSystemPage() {
     try {
       const paymentsQuery = query(
         collection(db, 'payments'),
-        where('companyId', '==', userProfile.companyId),
-        orderBy('createdAt', 'desc')
+        where('companyId', '==', userProfile.companyId)
       );
       const paymentsSnapshot = await getDocs(paymentsQuery);
       const paymentsData = paymentsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
-      }));
+      })) as Payment[];
+      
+      // Sort in memory by createdAt descending
+      paymentsData.sort((a: any, b: any) => {
+        const aTime = a.createdAt?.toDate?.() || new Date(a.createdAt || a.date || 0);
+        const bTime = b.createdAt?.toDate?.() || new Date(b.createdAt || b.date || 0);
+        return bTime.getTime() - aTime.getTime();
+      });
       
       setPayments(paymentsData);
     } catch (error) {
@@ -513,7 +537,11 @@ export default function LogistikkSystemPage() {
     setIsLoadingBudPriser(true);
     try {
       const results = await searchPostcodes(postcodeValue);
-      setAddressSuggestions(results);
+      setAddressSuggestions(results.map(r => ({
+        display: `${r.postcode} ${r.place}`,
+        postcode: r.postcode,
+        fullAddress: r.place
+      })));
       setShowAddressSuggestions(true);
     } catch (error) {
       console.error('Error searching postcodes:', error);
@@ -563,16 +591,22 @@ export default function LogistikkSystemPage() {
       const allServices = [];
       
       for (const category of categories) {
-        const services = await getServicesByCategory(category.id);
+        const services = await getServicesByCategory(category);
         allServices.push(...services);
       }
       
-      const filtered = allServices.filter(service =>
-        service.name.toLowerCase().includes(searchValue.toLowerCase()) ||
-        service.description.toLowerCase().includes(searchValue.toLowerCase())
+      const filtered = allServices.filter((service: any) =>
+        service.name?.toLowerCase().includes(searchValue.toLowerCase()) ||
+        service.description?.toLowerCase().includes(searchValue.toLowerCase())
       );
       
-      setServiceSuggestions(filtered.slice(0, 10));
+      setServiceSuggestions(filtered.slice(0, 10).map((s: any) => ({
+        id: s.id || s.name,
+        name: s.name,
+        category: s.category || '',
+        price: s.price || 0,
+        description: s.description || ''
+      })));
       setShowServiceSuggestions(true);
     } catch (error) {
       console.error('Error searching services:', error);
@@ -676,7 +710,7 @@ export default function LogistikkSystemPage() {
     return {
       totalBudPriser: searchHistory.length,
       totalDeliveries: deliveries.length,
-      activeDeliveries: deliveries.filter(d => d.status === 'in_transit' || d.status === 'assigned').length,
+      activeDeliveries: deliveries.filter((d: any) => d.status === 'in_transit' || d.status === 'assigned').length,
       totalCustomers: customers.length,
       totalSuppliers: suppliers.length,
       totalProducts: products.length,
@@ -1284,8 +1318,464 @@ export default function LogistikkSystemPage() {
             </div>
           )}
 
-          {/* Continue with other tabs... */}
-          {/* This is a complete implementation - all other tabs would follow the same pattern */}
+          {/* Planning Tab - Advanced Cockpit Interface */}
+          {activeTab === 'planning' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                Avansert Ruteplanlegging
+              </h2>
+              <p style={{ color: 'var(--gray-500)', marginBottom: '2rem' }}>
+                Bruk det avanserte cockpit-systemet for å planlegge og optimalisere leveringsruter.
+              </p>
+              
+              <div style={{ 
+                border: '2px solid var(--border-color)', 
+                borderRadius: 'var(--radius-lg)',
+                padding: '1rem',
+                background: 'var(--card-background)',
+                textAlign: 'center'
+              }}>
+                <Navigation size={48} style={{ margin: '0 auto 1rem', color: 'var(--primary)', opacity: 0.7 }} />
+                <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '0.5rem' }}>
+                  Avansert Planleggingssystem
+                </h3>
+                <p style={{ color: 'var(--gray-500)', marginBottom: '1.5rem' }}>
+                  Gå til Ruteplanlegging for å bruke det avanserte cockpit-systemet med 4-panel visning
+                </p>
+                <a 
+                  href="/dashboard/advanced-planning"
+                  className="btn btn-primary"
+                  style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <Navigation size={16} />
+                  Åpne Ruteplanlegging
+                </a>
+              </div>
+            </div>
+          )}
+
+          {/* Delivery Tab */}
+          {activeTab === 'delivery' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                Leveringer
+              </h2>
+              <p style={{ color: 'var(--gray-500)', marginBottom: '2rem' }}>
+                Administrer og spore leveringer i sanntid.
+              </p>
+              
+              {deliveries.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-500)' }}>
+                  <Truck size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <p>Ingen leveringer funnet</p>
+                </div>
+              ) : (
+                <div className="card" style={{ padding: 0 }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--border-color)' }}>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Ordrenummer</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Kunde</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Adresse</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Status</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Dato</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {deliveries.map((delivery: any) => (
+                          <tr key={delivery.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>{delivery.orderNumber || 'N/A'}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>{delivery.customerName || 'N/A'}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-500)' }}>{delivery.address || 'N/A'}</td>
+                            <td style={{ padding: 'var(--space-4)' }}>
+                              <span style={{
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: 'var(--radius-full)',
+                                fontSize: 'var(--font-size-sm)',
+                                fontWeight: '500',
+                                background: delivery.status === 'completed' ? 'var(--success)' : delivery.status === 'in_transit' ? 'var(--warning)' : 'var(--gray-100)',
+                                color: delivery.status === 'completed' ? 'white' : delivery.status === 'in_transit' ? 'var(--text-color)' : 'var(--gray-600)'
+                              }}>
+                                {delivery.status || 'pending'}
+                              </span>
+                            </td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-500)' }}>
+                              {delivery.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Customers Tab */}
+          {activeTab === 'customers' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                Kunder
+              </h2>
+              <p style={{ color: 'var(--gray-500)', marginBottom: '2rem' }}>
+                Administrer kunder og deres ordrehistorikk.
+              </p>
+              
+              {customers.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-500)' }}>
+                  <Users size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <p>Ingen kunder funnet</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                  {customers.map((customer) => (
+                    <div key={customer.id} className="card">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                        <div>
+                          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                            {customer.name}
+                          </h3>
+                          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)' }}>
+                            {customer.type === 'bedrift' ? 'Bedrift' : 'Privat'}
+                          </p>
+                        </div>
+                        <span style={{
+                          padding: '0.25rem 0.75rem',
+                          borderRadius: 'var(--radius-full)',
+                          fontSize: 'var(--font-size-sm)',
+                          fontWeight: '500',
+                          background: customer.status === 'active' ? 'var(--success)' : 'var(--gray-100)',
+                          color: customer.status === 'active' ? 'white' : 'var(--gray-600)'
+                        }}>
+                          {customer.status}
+                        </span>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Mail size={14} />
+                          {customer.email}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Phone size={14} />
+                          {customer.phone}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <MapPin size={14} />
+                          {customer.address}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)', display: 'flex', justifyContent: 'space-between' }}>
+                        <div>
+                          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>Totale ordre</div>
+                          <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)' }}>{customer.totalOrders}</div>
+                        </div>
+                        <div>
+                          <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>Totalverdi</div>
+                          <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)' }}>kr {customer.totalValue.toLocaleString()}</div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Suppliers Tab */}
+          {activeTab === 'suppliers' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                Leverandører
+              </h2>
+              <p style={{ color: 'var(--gray-500)', marginBottom: '2rem' }}>
+                Administrer leverandører og deres produkter.
+              </p>
+              
+              {suppliers.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-500)' }}>
+                  <Package size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <p>Ingen leverandører funnet</p>
+                </div>
+              ) : (
+                <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fill, minmax(300px, 1fr))', gap: '1rem' }}>
+                  {suppliers.map((supplier) => (
+                    <div key={supplier.id} className="card">
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'start', marginBottom: '1rem' }}>
+                        <div>
+                          <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                            {supplier.name}
+                          </h3>
+                          <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)' }}>
+                            {supplier.category}
+                          </p>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+                          <Star size={14} style={{ color: '#fbbf24' }} />
+                          <span style={{ fontSize: 'var(--font-size-sm)', fontWeight: '600', color: 'var(--text-color)' }}>
+                            {supplier.rating}
+                          </span>
+                        </div>
+                      </div>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Mail size={14} />
+                          {supplier.email}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <Phone size={14} />
+                          {supplier.phone}
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <MapPin size={14} />
+                          {supplier.address}
+                        </div>
+                      </div>
+                      <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid var(--border-color)' }}>
+                        <div style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>Totale ordre</div>
+                        <div style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)' }}>{supplier.totalOrders}</div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Products Tab */}
+          {activeTab === 'products' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                Produkter
+              </h2>
+              <p style={{ color: 'var(--gray-500)', marginBottom: '2rem' }}>
+                Administrer produkter og lagerbeholdning.
+              </p>
+              
+              {products.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-500)' }}>
+                  <ShoppingCart size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <p>Ingen produkter funnet</p>
+                </div>
+              ) : (
+                <div className="card" style={{ padding: 0 }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--border-color)' }}>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Navn</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>SKU</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Kategori</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Lager</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Pris</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {products.map((product) => (
+                          <tr key={product.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>{product.name}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-500)' }}>{product.sku}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-500)' }}>{product.category}</td>
+                            <td style={{ padding: 'var(--space-4)', color: product.stock < product.minStock ? 'var(--danger)' : 'var(--text-color)' }}>
+                              {product.stock} {product.stock < product.minStock && <AlertCircle size={14} style={{ display: 'inline', marginLeft: '0.25rem' }} />}
+                            </td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>kr {product.price}</td>
+                            <td style={{ padding: 'var(--space-4)' }}>
+                              <span style={{
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: 'var(--radius-full)',
+                                fontSize: 'var(--font-size-sm)',
+                                fontWeight: '500',
+                                background: product.status === 'active' ? 'var(--success)' : 'var(--gray-100)',
+                                color: product.status === 'active' ? 'white' : 'var(--gray-600)'
+                              }}>
+                                {product.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Inventory Tab */}
+          {activeTab === 'inventory' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                Lager
+              </h2>
+              <p style={{ color: 'var(--gray-500)', marginBottom: '2rem' }}>
+                Oversikt over lagerbeholdning og lagerverdi.
+              </p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+                <div className="card">
+                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)', marginBottom: '0.5rem' }}>Total lagerverdi</div>
+                  <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--text-color)' }}>
+                    kr {stats.inventoryValue.toLocaleString()}
+                  </div>
+                </div>
+                <div className="card">
+                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)', marginBottom: '0.5rem' }}>Totale produkter</div>
+                  <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--text-color)' }}>
+                    {products.length}
+                  </div>
+                </div>
+                <div className="card">
+                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)', marginBottom: '0.5rem' }}>Lavt lager</div>
+                  <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--danger)' }}>
+                    {products.filter(p => p.stock < p.minStock).length}
+                  </div>
+                </div>
+              </div>
+
+              {products.filter(p => p.stock < p.minStock).length > 0 && (
+                <div className="card" style={{ background: 'var(--warning)', color: 'white', marginBottom: '2rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <AlertTriangle size={20} />
+                    <strong>Advarsel: {products.filter(p => p.stock < p.minStock).length} produkter har lavt lager</strong>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Invoicing Tab */}
+          {activeTab === 'invoicing' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                Fakturering
+              </h2>
+              <p style={{ color: 'var(--gray-500)', marginBottom: '2rem' }}>
+                Administrer fakturaer og betalingsstatus.
+              </p>
+              
+              {invoices.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem', color: 'var(--gray-500)' }}>
+                  <FileText size={48} style={{ marginBottom: '1rem', opacity: 0.5 }} />
+                  <p>Ingen fakturaer funnet</p>
+                </div>
+              ) : (
+                <div className="card" style={{ padding: 0 }}>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--border-color)' }}>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Fakturanummer</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Kunde</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Beløp</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Status</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Forfallsdato</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {invoices.map((invoice) => (
+                          <tr key={invoice.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>{invoice.id}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>{invoice.customer}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>kr {invoice.amount.toLocaleString()}</td>
+                            <td style={{ padding: 'var(--space-4)' }}>
+                              <span style={{
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: 'var(--radius-full)',
+                                fontSize: 'var(--font-size-sm)',
+                                fontWeight: '500',
+                                background: invoice.status === 'paid' ? 'var(--success)' : invoice.status === 'overdue' ? 'var(--danger)' : 'var(--warning)',
+                                color: 'white'
+                              }}>
+                                {invoice.status}
+                              </span>
+                            </td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-500)' }}>
+                              {invoice.dueDate}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Finance Tab */}
+          {activeTab === 'finance' && (
+            <div>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                Finans
+              </h2>
+              <p style={{ color: 'var(--gray-500)', marginBottom: '2rem' }}>
+                Oversikt over finansielle nøkkeltall og betalinger.
+              </p>
+              
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : 'repeat(2, 1fr)', gap: '1rem', marginBottom: '2rem' }}>
+                <div className="card">
+                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)', marginBottom: '0.5rem' }}>Månedlig omsetning</div>
+                  <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--success)' }}>
+                    kr {stats.monthlyRevenue.toLocaleString()}
+                  </div>
+                </div>
+                <div className="card">
+                  <div style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-500)', marginBottom: '0.5rem' }}>Ventende fakturaer</div>
+                  <div style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--warning)' }}>
+                    {stats.pendingInvoices}
+                  </div>
+                </div>
+              </div>
+
+              {payments.length > 0 && (
+                <div className="card" style={{ padding: 0 }}>
+                  <h3 style={{ padding: '1rem', fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--text-color)', borderBottom: '1px solid var(--border-color)' }}>
+                    Siste betalinger
+                  </h3>
+                  <div style={{ overflowX: 'auto' }}>
+                    <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                      <thead>
+                        <tr style={{ background: 'var(--gray-50)', borderBottom: '1px solid var(--border-color)' }}>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Dato</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Faktura</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Beløp</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Metode</th>
+                          <th style={{ padding: 'var(--space-4)', textAlign: 'left', fontWeight: '600', color: 'var(--text-color)' }}>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {payments.slice(0, 10).map((payment: any) => (
+                          <tr key={payment.id} style={{ borderBottom: '1px solid var(--border-color)' }}>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-500)' }}>
+                              {payment.date || payment.createdAt?.toDate?.()?.toLocaleDateString() || 'N/A'}
+                            </td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>{payment.invoiceId}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--text-color)' }}>kr {payment.amount.toLocaleString()}</td>
+                            <td style={{ padding: 'var(--space-4)', color: 'var(--gray-500)' }}>{payment.method}</td>
+                            <td style={{ padding: 'var(--space-4)' }}>
+                              <span style={{
+                                padding: '0.25rem 0.75rem',
+                                borderRadius: 'var(--radius-full)',
+                                fontSize: 'var(--font-size-sm)',
+                                fontWeight: '500',
+                                background: payment.status === 'completed' ? 'var(--success)' : 'var(--gray-100)',
+                                color: payment.status === 'completed' ? 'white' : 'var(--gray-600)'
+                              }}>
+                                {payment.status}
+                              </span>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </div>
     </div>
