@@ -984,7 +984,8 @@ export default function CompaniesPage() {
             Legg til manuelt
           </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Search and Filters */}
       <div className="card" style={{ marginBottom: '2rem' }}>
