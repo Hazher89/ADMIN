@@ -26,6 +26,8 @@ export default function ChatPage() {
   const [users, setUsers] = useState<User[]>([]);
   const [onlineUsers, setOnlineUsers] = useState<Set<string>>(new Set());
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  const [showChatList, setShowChatList] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [messageSearchTerm, setMessageSearchTerm] = useState('');
   const [newMessage, setNewMessage] = useState('');
@@ -131,10 +133,30 @@ export default function ChatPage() {
   }, [selectedChat?.id, userProfile?.id]);
 
   useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+      if (window.innerWidth >= 768) {
+        setShowChatList(true);
+      }
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  useEffect(() => {
     if (userProfile?.id && userProfile?.companyId) {
       loadData();
     }
   }, [userProfile?.id, userProfile?.companyId]);
+
+  useEffect(() => {
+    if (isMobile && selectedChat) {
+      setShowChatList(false);
+    } else if (!isMobile) {
+      setShowChatList(true);
+    }
+  }, [selectedChat, isMobile]);
 
   const loadData = async () => {
     if (!userProfile?.id || !userProfile?.companyId) return;
@@ -416,80 +438,91 @@ export default function ChatPage() {
   return (
     <div style={{ 
       display: 'flex', 
-      height: 'calc(100vh - 80px)',
-      background: 'var(--background-color)'
+      height: isMobile ? 'calc(100vh - 60px)' : 'calc(100vh - 80px)',
+      background: 'var(--background-color)',
+      width: '100%',
+      overflow: 'hidden',
+      position: 'relative'
     }}>
       {/* Chat List Sidebar */}
       <div style={{
-        width: '350px',
+        width: isMobile ? '100%' : '350px',
         background: 'var(--card-background)',
-        borderRight: '1px solid var(--border-color)',
-        display: 'flex',
+        borderRight: isMobile ? 'none' : '1px solid var(--border-color)',
+        display: isMobile ? (showChatList ? 'flex' : 'none') : 'flex',
         flexDirection: 'column',
-        height: '100%'
+        height: '100%',
+        position: isMobile ? 'absolute' : 'relative',
+        zIndex: isMobile ? 100 : 'auto',
+        left: 0,
+        top: 0
       }}>
         <div style={{
-          padding: '1rem',
-          borderBottom: '1px solid var(--border-color)',
+          padding: isMobile ? '0.75rem' : '1rem',
+          borderBottom: '0.5px solid var(--border-color)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}>
           <h2 style={{ 
-            fontSize: '1.25rem', 
-            fontWeight: '700', 
+            fontSize: isMobile ? '1.125rem' : '1.25rem', 
+            fontWeight: 600, 
             color: 'var(--text-color)',
             margin: 0
           }}>
             💬 Chat
           </h2>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', gap: isMobile ? '0.375rem' : '0.5rem' }}>
             <button
               onClick={() => setShowNewChat(true)}
               style={{
-                padding: '0.5rem',
+                padding: isMobile ? '0.625rem' : '0.5rem',
                 background: 'var(--gray-100)',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: isMobile ? '0.625rem' : '8px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                minWidth: isMobile ? '44px' : undefined,
+                minHeight: isMobile ? '44px' : undefined
               }}
               title="Ny chat"
             >
-              <MessageSquare size={18} style={{ color: 'var(--text-color)' }} />
+              <MessageSquare size={isMobile ? 20 : 18} style={{ color: 'var(--text-color)' }} />
             </button>
             <button 
               style={{
-                padding: '0.5rem',
+                padding: isMobile ? '0.625rem' : '0.5rem',
                 background: 'var(--gray-100)',
                 border: 'none',
-                borderRadius: '8px',
+                borderRadius: isMobile ? '0.625rem' : '8px',
                 cursor: 'pointer',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                minWidth: isMobile ? '44px' : undefined,
+                minHeight: isMobile ? '44px' : undefined
               }}
               title="Innstillinger"
             >
-              <Settings size={18} style={{ color: 'var(--text-color)' }} />
+              <Settings size={isMobile ? 20 : 18} style={{ color: 'var(--text-color)' }} />
             </button>
           </div>
         </div>
 
         <div style={{
-          padding: '0.75rem',
-          borderBottom: '1px solid var(--border-color)'
+          padding: isMobile ? '0.625rem 0.75rem' : '0.75rem',
+          borderBottom: '0.5px solid var(--border-color)'
         }}>
           <div style={{
             position: 'relative',
             display: 'flex',
             alignItems: 'center'
           }}>
-            <Search size={16} style={{ 
+            <Search size={isMobile ? 18 : 16} style={{ 
               position: 'absolute', 
-              left: '12px', 
+              left: isMobile ? '0.875rem' : '12px', 
               color: 'var(--gray-400)' 
             }} />
             <input
@@ -499,10 +532,10 @@ export default function ChatPage() {
               onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 width: '100%',
-                padding: '0.5rem 0.5rem 0.5rem 2.5rem',
+                padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.5rem 0.5rem 0.5rem 2.5rem',
                 border: '1px solid var(--border-color)',
-                borderRadius: '8px',
-                fontSize: '0.875rem',
+                borderRadius: isMobile ? '0.5rem' : '8px',
+                fontSize: isMobile ? '16px' : '0.875rem',
                 background: 'var(--card-background)',
                 color: 'var(--text-color)'
               }}
@@ -651,47 +684,74 @@ export default function ChatPage() {
       {/* Chat Messages Area */}
       <div style={{
         flex: 1,
-        display: 'flex',
+        display: isMobile ? (showChatList ? 'none' : 'flex') : 'flex',
         flexDirection: 'column',
         height: '100%',
-        background: 'var(--card-background)'
+        background: 'var(--card-background)',
+        width: isMobile ? '100%' : undefined
       }}>
         {selectedChat ? (
           <>
             {/* Messages Header */}
             <div style={{
-              padding: '1rem 1.5rem',
-              borderBottom: '1px solid var(--border-color)',
+              padding: isMobile ? '0.75rem' : '1rem 1.5rem',
+              borderBottom: '0.5px solid var(--border-color)',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'space-between',
               background: 'var(--card-background)'
             }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '0.75rem', flex: 1, minWidth: 0 }}>
+                {isMobile && (
+                  <button
+                    onClick={() => {
+                      setShowChatList(true);
+                      setSelectedChat(null);
+                    }}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'transparent',
+                      border: 'none',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      minWidth: '44px',
+                      minHeight: '44px',
+                      flexShrink: 0
+                    }}
+                  >
+                    <X size={20} style={{ color: 'var(--text-color)' }} />
+                  </button>
+                )}
                 <div style={{
-                  width: '40px',
-                  height: '40px',
+                  width: isMobile ? '36px' : '40px',
+                  height: isMobile ? '36px' : '40px',
                   borderRadius: '50%',
                   background: 'var(--primary)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: 'white',
-                  fontSize: '1rem',
-                  fontWeight: '600'
+                  fontSize: isMobile ? '0.875rem' : '1rem',
+                  fontWeight: '600',
+                  flexShrink: 0
                 }}>
                   {selectedChat.type === 'group' ? (
-                    <Users size={20} />
+                    <Users size={isMobile ? 18 : 20} />
                   ) : (
                     selectedChat.name?.charAt(0)?.toUpperCase() || 'U'
                   )}
                 </div>
-                <div>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ 
-                    fontSize: '1rem', 
-                    fontWeight: '600', 
+                    fontSize: isMobile ? '0.9375rem' : '1rem', 
+                    fontWeight: 600, 
                     color: 'var(--text-color)',
-                    margin: 0
+                    margin: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
                   }}>
                     {selectedChat.name || 'Ukjent chat'}
                   </h3>
@@ -729,24 +789,26 @@ export default function ChatPage() {
                   </div>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <button
-                  onClick={() => setShowSearchMessages(!showSearchMessages)}
-                  style={{
-                    padding: '0.5rem',
-                    background: 'var(--gray-100)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  title="Søk i meldinger"
-                >
-                  <Search size={18} style={{ color: 'var(--text-color)' }} />
-                </button>
-                {selectedChat.type === 'group' && (
+              <div style={{ display: 'flex', gap: isMobile ? '0.375rem' : '0.5rem', flexShrink: 0 }}>
+                {!isMobile && (
+                  <button
+                    onClick={() => setShowSearchMessages(!showSearchMessages)}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'var(--gray-100)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Søk i meldinger"
+                  >
+                    <Search size={18} style={{ color: 'var(--text-color)' }} />
+                  </button>
+                )}
+                {selectedChat.type === 'group' && !isMobile && (
                   <button
                     onClick={() => setShowGroupMembers(true)}
                     style={{
@@ -764,22 +826,24 @@ export default function ChatPage() {
                     <Users size={18} style={{ color: 'var(--text-color)' }} />
                   </button>
                 )}
-                <button
-                  onClick={() => setShowChatSettings(true)}
-                  style={{
-                    padding: '0.5rem',
-                    background: 'var(--gray-100)',
-                    border: 'none',
-                    borderRadius: '8px',
-                    cursor: 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}
-                  title="Chat-innstillinger"
-                >
-                  <MoreHorizontal size={18} style={{ color: 'var(--text-color)' }} />
-                </button>
+                {!isMobile && (
+                  <button
+                    onClick={() => setShowChatSettings(true)}
+                    style={{
+                      padding: '0.5rem',
+                      background: 'var(--gray-100)',
+                      border: 'none',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    title="Chat-innstillinger"
+                  >
+                    <MoreHorizontal size={18} style={{ color: 'var(--text-color)' }} />
+                  </button>
+                )}
               </div>
             </div>
 
