@@ -2870,24 +2870,38 @@ body::after {
     overflow-x: hidden;
     width: 100%;
     max-width: 100vw;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* App-like container */
+  #__next, [data-nextjs-scroll-focus-boundary] {
+    width: 100%;
+    max-width: 100vw;
+    overflow-x: hidden;
   }
 
   /* Better touch targets */
   button, a, [role="button"] {
     min-height: 44px;
     min-width: 44px;
+    touch-action: manipulation;
   }
 
   /* Improved text readability */
   p, span, div {
     word-wrap: break-word;
     overflow-wrap: break-word;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
   }
 
   /* Better form inputs on mobile */
   input, textarea, select {
     font-size: 16px !important; /* Prevents zoom on iOS */
-    padding: 0.75rem !important;
+    padding: 0.875rem !important;
+    border-radius: 0.5rem !important;
+    -webkit-appearance: none;
+    appearance: none;
   }
 
   /* Table responsiveness */
@@ -2895,31 +2909,38 @@ body::after {
     display: block;
     overflow-x: auto;
     -webkit-overflow-scrolling: touch;
+    width: 100%;
   }
 
-  /* Modal improvements */
+  /* Modal improvements - App-like */
   [style*="max-width"] {
-    max-width: calc(100vw - 2rem) !important;
-    margin: 1rem !important;
+    max-width: calc(100vw - 1rem) !important;
+    margin: 0.5rem !important;
+    border-radius: 1rem !important;
   }
 
-  /* Better spacing */
+  /* Better spacing - App-like */
   .page-header {
-    padding: 1rem 0.75rem !important;
+    padding: 0.75rem 0.75rem !important;
   }
 
   .page-title {
     font-size: 1.25rem !important;
+    font-weight: 600 !important;
+    line-height: 1.4 !important;
   }
 
   .page-subtitle {
     font-size: 0.875rem !important;
+    line-height: 1.5 !important;
   }
 
-  /* Card improvements */
+  /* Card improvements - App-like */
   .card, [style*="background: var(--card-background)"] {
-    border-radius: 0.75rem !important;
+    border-radius: 0.875rem !important;
     padding: 1rem !important;
+    margin-bottom: 0.75rem !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1) !important;
   }
 
   /* Grid improvements */
@@ -2932,6 +2953,49 @@ body::after {
   .stats-grid {
     grid-template-columns: 1fr !important;
     gap: 0.75rem !important;
+  }
+
+  /* App-like list items */
+  [style*="padding: 1rem"], 
+  [style*="padding: 0.75rem"] {
+    padding: 0.875rem 0.75rem !important;
+  }
+
+  /* Better button spacing */
+  button {
+    padding: 0.75rem 1rem !important;
+    font-size: 0.9375rem !important;
+    font-weight: 500 !important;
+    border-radius: 0.625rem !important;
+  }
+
+  /* Improved spacing between sections */
+  section, [style*="margin-bottom"] {
+    margin-bottom: 1rem !important;
+  }
+
+  /* Better header spacing */
+  h1, h2, h3 {
+    margin-bottom: 0.75rem !important;
+    line-height: 1.3 !important;
+  }
+
+  /* App-like scroll behavior */
+  * {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Better focus states for accessibility */
+  button:focus-visible,
+  a:focus-visible,
+  input:focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 2px;
+  }
+
+  /* Smooth scrolling */
+  html {
+    scroll-behavior: smooth;
   }
 }
 

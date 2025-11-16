@@ -671,13 +671,14 @@ export default function DashboardLayout({
 
         {/* Page Content */}
         <div style={{
-          padding: isMobile ? '0.75rem' : '2rem',
+          padding: isMobile ? '0.5rem 0.75rem' : '2rem',
           // På mobil legger vi inn ekstra bunn-padding for å gi plass til bunnnavigasjonen
-          paddingBottom: isMobile && !isLogisticsPage ? '5rem' : (isMobile ? '1rem' : '2rem'),
+          paddingBottom: isMobile && !isLogisticsPage ? '5.5rem' : (isMobile ? '1rem' : '2rem'),
           minHeight: 'calc(100vh - 80px)',
           width: '100%',
           maxWidth: '100%',
-          overflowX: 'hidden'
+          overflowX: 'hidden',
+          WebkitOverflowScrolling: 'touch'
         }}>
           {children}
         </div>
@@ -691,14 +692,16 @@ export default function DashboardLayout({
             left: 0,
             right: 0,
             bottom: 0,
-            height: '64px',
+            height: '60px',
             background: 'var(--card-background)',
-            borderTop: '1px solid var(--border-color)',
+            borderTop: '0.5px solid var(--border-color)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-around',
             zIndex: 1500,
-            backdropFilter: 'blur(16px)'
+            backdropFilter: 'blur(20px)',
+            boxShadow: '0 -2px 10px rgba(0, 0, 0, 0.05)',
+            paddingBottom: 'env(safe-area-inset-bottom, 0)'
           }}
         >
           {[
@@ -723,27 +726,41 @@ export default function DashboardLayout({
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: active ? 'var(--primary)' : 'var(--gray-500)',
-                  fontSize: '0.7rem',
+                  fontSize: '0.6875rem',
                   fontWeight: active ? 600 : 500,
-                  gap: '0.15rem',
-                  cursor: 'pointer'
+                  gap: '0.125rem',
+                  cursor: 'pointer',
+                  transition: 'all 0.2s ease',
+                  padding: '0.5rem 0.25rem',
+                  touchAction: 'manipulation'
+                }}
+                onTouchStart={(e) => {
+                  e.currentTarget.style.opacity = '0.7';
+                }}
+                onTouchEnd={(e) => {
+                  e.currentTarget.style.opacity = '1';
                 }}
               >
                 <div
                   style={{
-                    width: '28px',
-                    height: '28px',
+                    width: '32px',
+                    height: '32px',
                     borderRadius: '9999px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    background: active ? 'rgba(6, 182, 212, 0.12)' : 'transparent',
-                    transition: 'background var(--transition-fast), transform var(--transition-fast)'
+                    background: active ? 'rgba(6, 182, 212, 0.15)' : 'transparent',
+                    transition: 'all 0.2s ease',
+                    transform: active ? 'scale(1.05)' : 'scale(1)'
                   }}
                 >
                   {item.icon}
                 </div>
-                <span>{item.label}</span>
+                <span style={{ 
+                  fontSize: '0.6875rem',
+                  lineHeight: '1',
+                  marginTop: '0.125rem'
+                }}>{item.label}</span>
               </button>
             );
           })}

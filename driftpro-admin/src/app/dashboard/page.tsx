@@ -184,17 +184,19 @@ export default function DashboardPage() {
         padding: isMobile ? '0' : '1rem 2rem', 
         maxWidth: isMobile ? '100%' : '1280px', 
         margin: '0 auto',
-        width: '100%'
+        width: '100%',
+        overflowX: 'hidden'
       }}>
         {/* Stats Grid - Mobile */}
         {isMobile ? (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem', padding: '0 0.75rem' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.625rem', marginBottom: '0.75rem', padding: '0' }}>
             <div style={{ 
-              borderRadius: '0.75rem', 
+              borderRadius: '0.875rem', 
               padding: '1rem', 
-              boxShadow: 'var(--shadow-sm)', 
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
               background: 'var(--card-background)', 
-              border: '1px solid var(--border-color)' 
+              border: '1px solid var(--border-color)',
+              transition: 'all 0.2s ease'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 1 }}>
@@ -202,34 +204,38 @@ export default function DashboardPage() {
                     fontSize: '0.75rem', 
                     fontWeight: '500', 
                     color: 'var(--gray-500)',
-                    margin: '0 0 0.25rem 0'
+                    margin: '0 0 0.375rem 0',
+                    letterSpacing: '0.01em'
                   }}>Total Ansatte</p>
                   <p style={{ 
-                    fontSize: '1.5rem', 
+                    fontSize: '1.625rem', 
                     fontWeight: '700', 
                     color: 'var(--text-color)',
-                    margin: 0
+                    margin: 0,
+                    lineHeight: '1.2'
                   }}>{stats.totalEmployees}</p>
                 </div>
                 <div style={{ 
                   padding: '0.75rem', 
                   background: 'rgba(59, 130, 246, 0.1)', 
-                  borderRadius: '0.5rem',
+                  borderRadius: '0.625rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
-                  <Users size={24} style={{ color: '#3b82f6' }} />
+                  <Users size={22} style={{ color: '#3b82f6' }} />
                 </div>
               </div>
             </div>
 
             <div style={{ 
-              borderRadius: '0.75rem', 
+              borderRadius: '0.875rem', 
               padding: '1rem', 
-              boxShadow: 'var(--shadow-sm)', 
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
               background: 'var(--card-background)', 
-              border: '1px solid var(--border-color)' 
+              border: '1px solid var(--border-color)',
+              transition: 'all 0.2s ease'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 1 }}>
@@ -237,34 +243,38 @@ export default function DashboardPage() {
                     fontSize: '0.75rem', 
                     fontWeight: '500', 
                     color: 'var(--gray-500)',
-                    margin: '0 0 0.25rem 0'
+                    margin: '0 0 0.375rem 0',
+                    letterSpacing: '0.01em'
                   }}>Aktive Skift</p>
                   <p style={{ 
-                    fontSize: '1.5rem', 
+                    fontSize: '1.625rem', 
                     fontWeight: '700', 
                     color: 'var(--text-color)',
-                    margin: 0
+                    margin: 0,
+                    lineHeight: '1.2'
                   }}>{stats.activeShifts}</p>
                 </div>
                 <div style={{ 
                   padding: '0.75rem', 
                   background: 'rgba(34, 197, 94, 0.1)', 
-                  borderRadius: '0.5rem',
+                  borderRadius: '0.625rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
-                  <Clock size={24} style={{ color: '#22c55e' }} />
+                  <Clock size={22} style={{ color: '#22c55e' }} />
                 </div>
               </div>
             </div>
 
             <div style={{ 
-              borderRadius: '0.75rem', 
+              borderRadius: '0.875rem', 
               padding: '1rem', 
-              boxShadow: 'var(--shadow-sm)', 
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
               background: 'var(--card-background)', 
-              border: '1px solid var(--border-color)' 
+              border: '1px solid var(--border-color)',
+              transition: 'all 0.2s ease'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 1 }}>
@@ -272,34 +282,38 @@ export default function DashboardPage() {
                     fontSize: '0.75rem', 
                     fontWeight: '500', 
                     color: 'var(--gray-500)',
-                    margin: '0 0 0.25rem 0'
+                    margin: '0 0 0.375rem 0',
+                    letterSpacing: '0.01em'
                   }}>Ventende Forespørsler</p>
                   <p style={{ 
-                    fontSize: '1.5rem', 
+                    fontSize: '1.625rem', 
                     fontWeight: '700', 
                     color: 'var(--text-color)',
-                    margin: 0
+                    margin: 0,
+                    lineHeight: '1.2'
                   }}>{stats.pendingRequests}</p>
                 </div>
                 <div style={{ 
                   padding: '0.75rem', 
                   background: 'rgba(234, 179, 8, 0.1)', 
-                  borderRadius: '0.5rem',
+                  borderRadius: '0.625rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
-                  <AlertTriangle size={24} style={{ color: '#eab308' }} />
+                  <AlertTriangle size={22} style={{ color: '#eab308' }} />
                 </div>
               </div>
             </div>
 
             <div style={{ 
-              borderRadius: '0.75rem', 
+              borderRadius: '0.875rem', 
               padding: '1rem', 
-              boxShadow: 'var(--shadow-sm)', 
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
               background: 'var(--card-background)', 
-              border: '1px solid var(--border-color)' 
+              border: '1px solid var(--border-color)',
+              transition: 'all 0.2s ease'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 1 }}>
@@ -307,34 +321,38 @@ export default function DashboardPage() {
                     fontSize: '0.75rem', 
                     fontWeight: '500', 
                     color: 'var(--gray-500)',
-                    margin: '0 0 0.25rem 0'
+                    margin: '0 0 0.375rem 0',
+                    letterSpacing: '0.01em'
                   }}>Avdelinger</p>
                   <p style={{ 
-                    fontSize: '1.5rem', 
+                    fontSize: '1.625rem', 
                     fontWeight: '700', 
                     color: 'var(--text-color)',
-                    margin: 0
+                    margin: 0,
+                    lineHeight: '1.2'
                   }}>{stats.departments}</p>
                 </div>
                 <div style={{ 
                   padding: '0.75rem', 
                   background: 'rgba(168, 85, 247, 0.1)', 
-                  borderRadius: '0.5rem',
+                  borderRadius: '0.625rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
-                  <Building size={24} style={{ color: '#a855f7' }} />
+                  <Building size={22} style={{ color: '#a855f7' }} />
                 </div>
               </div>
             </div>
 
             <div style={{ 
-              borderRadius: '0.75rem', 
+              borderRadius: '0.875rem', 
               padding: '1rem', 
-              boxShadow: 'var(--shadow-sm)', 
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
               background: 'var(--card-background)', 
-              border: '1px solid var(--border-color)' 
+              border: '1px solid var(--border-color)',
+              transition: 'all 0.2s ease'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 1 }}>
@@ -342,34 +360,38 @@ export default function DashboardPage() {
                     fontSize: '0.75rem', 
                     fontWeight: '500', 
                     color: 'var(--gray-500)',
-                    margin: '0 0 0.25rem 0'
+                    margin: '0 0 0.375rem 0',
+                    letterSpacing: '0.01em'
                   }}>Åpne Avvik</p>
                   <p style={{ 
-                    fontSize: '1.5rem', 
+                    fontSize: '1.625rem', 
                     fontWeight: '700', 
                     color: 'var(--text-color)',
-                    margin: 0
+                    margin: 0,
+                    lineHeight: '1.2'
                   }}>{stats.openDeviations}</p>
                 </div>
                 <div style={{ 
                   padding: '0.75rem', 
                   background: 'rgba(239, 68, 68, 0.1)', 
-                  borderRadius: '0.5rem',
+                  borderRadius: '0.625rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
-                  <AlertTriangle size={24} style={{ color: '#ef4444' }} />
+                  <AlertTriangle size={22} style={{ color: '#ef4444' }} />
                 </div>
               </div>
             </div>
 
             <div style={{ 
-              borderRadius: '0.75rem', 
+              borderRadius: '0.875rem', 
               padding: '1rem', 
-              boxShadow: 'var(--shadow-sm)', 
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', 
               background: 'var(--card-background)', 
-              border: '1px solid var(--border-color)' 
+              border: '1px solid var(--border-color)',
+              transition: 'all 0.2s ease'
             }}>
               <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                 <div style={{ flex: 1 }}>
@@ -377,24 +399,27 @@ export default function DashboardPage() {
                     fontSize: '0.75rem', 
                     fontWeight: '500', 
                     color: 'var(--gray-500)',
-                    margin: '0 0 0.25rem 0'
+                    margin: '0 0 0.375rem 0',
+                    letterSpacing: '0.01em'
                   }}>Aktive Stemplinger</p>
                   <p style={{ 
-                    fontSize: '1.5rem', 
+                    fontSize: '1.625rem', 
                     fontWeight: '700', 
                     color: 'var(--text-color)',
-                    margin: 0
+                    margin: 0,
+                    lineHeight: '1.2'
                   }}>{stats.activeTimeClocks}</p>
                 </div>
                 <div style={{ 
                   padding: '0.75rem', 
                   background: 'rgba(6, 182, 212, 0.1)', 
-                  borderRadius: '0.5rem',
+                  borderRadius: '0.625rem',
                   display: 'flex',
                   alignItems: 'center',
-                  justifyContent: 'center'
+                  justifyContent: 'center',
+                  flexShrink: 0
                 }}>
-                  <Clock size={24} style={{ color: '#06b6d4' }} />
+                  <Clock size={22} style={{ color: '#06b6d4' }} />
                 </div>
               </div>
             </div>

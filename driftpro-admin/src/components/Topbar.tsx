@@ -63,8 +63,8 @@ export default function Topbar() {
 	}, [showUserMenu]);
 	
 	return (
-		<header className="header" style={{ position: 'sticky', top: 0, zIndex: 900, width: '100%', padding: isMobile ? '0.5rem 0' : '0.5rem 0', background: 'var(--card-background)', borderBottom: '1px solid var(--border-color)' }}>
-			<div className="header-content" style={{ display: 'flex', gap: isMobile ? 8 : 12, alignItems: 'center', flexWrap: 'nowrap', justifyContent: 'space-between', width: '100%', paddingLeft: isMobile ? '0.75rem' : '1rem', paddingRight: isMobile ? '0.75rem' : '1rem', paddingTop: isMobile ? '0.25rem' : '0.25rem', paddingBottom: isMobile ? '0.25rem' : '0.25rem' }}>
+		<header className="header" style={{ position: 'sticky', top: 0, zIndex: 900, width: '100%', padding: isMobile ? '0.25rem 0' : '0.5rem 0', background: 'var(--card-background)', borderBottom: isMobile ? '0.5px solid var(--border-color)' : '1px solid var(--border-color)' }}>
+			<div className="header-content" style={{ display: 'flex', gap: isMobile ? 6 : 12, alignItems: 'center', flexWrap: 'nowrap', justifyContent: 'space-between', width: '100%', paddingLeft: isMobile ? '0.75rem' : '1rem', paddingRight: isMobile ? '0.75rem' : '1rem', paddingTop: isMobile ? '0.125rem' : '0.25rem', paddingBottom: isMobile ? '0.125rem' : '0.25rem', minHeight: isMobile ? '48px' : 'auto' }}>
 				{/* Logo Section - Left */}
 				<div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.25rem' : '0.5rem', flexShrink: 0 }}>
 					{/* Live Animated Icon */}
@@ -73,8 +73,8 @@ export default function Topbar() {
 							display: 'flex',
 							alignItems: 'center',
 							justifyContent: 'center',
-							width: isMobile ? '2rem' : '2.5rem',
-							height: isMobile ? '2rem' : '2.5rem',
+							width: isMobile ? '1.75rem' : '2.5rem',
+							height: isMobile ? '1.75rem' : '2.5rem',
 							flexShrink: 0,
 							marginRight: isMobile ? '-0.125rem' : '-0.25rem'
 						}}
