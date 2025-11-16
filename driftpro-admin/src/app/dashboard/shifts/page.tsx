@@ -182,70 +182,229 @@ export default function ShiftsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Vakter</h1>
-            <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem' }}>Administrer vakter og arbeidstider</p>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                margin: 0,
+                lineHeight: '1.3'
+              }}>
+                Vakter
+              </h1>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--gray-500)',
+                margin: 0
+              }}>
+                {shifts.length} vakter
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              style={{
+                padding: '0.625rem',
+                borderRadius: '0.625rem',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
+            >
+              <Plus size={20} />
+            </button>
           </div>
-          <button
-            onClick={() => setShowAddModal(true)}
-            className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-          >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Ny vakt
-          </button>
         </div>
-      </div>
+      )}
 
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Vakter</h1>
+              <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem' }}>Administrer vakter og arbeidstider</p>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              Ny vakt
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ 
+        maxWidth: '1280px', 
+        margin: '0 auto', 
+        padding: isMobile ? '0.5rem 0.75rem' : '2rem 1rem',
+        width: '100%'
+      }}>
         {/* Stats Overview */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
-                <Calendar style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />
-              </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Totalt</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.total}</p>
-              </div>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: isMobile ? '0.625rem' : '1rem', 
+          marginBottom: isMobile ? '0.75rem' : '2rem' 
+        }}>
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.875rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              padding: isMobile ? '0.625rem' : '0.75rem', 
+              background: 'rgba(59, 130, 246, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <Calendar size={isMobile ? 20 : 24} style={{ color: '#3b82f6' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)', 
+                fontWeight: 500, 
+                color: 'var(--gray-500)',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Totalt</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.5rem' : 'var(--font-size-2xl)', 
+                fontWeight: 600, 
+                color: 'var(--text-color)',
+                margin: 0
+              }}>{stats.total}</p>
             </div>
           </div>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
-                <Clock style={{ width: '24px', height: '24px', color: 'var(--blue-600)' }} />
-              </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Planlagt</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.scheduled}</p>
-              </div>
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.875rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              padding: isMobile ? '0.625rem' : '0.75rem', 
+              background: 'rgba(59, 130, 246, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <Clock size={isMobile ? 20 : 24} style={{ color: '#3b82f6' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)', 
+                fontWeight: 500, 
+                color: 'var(--gray-500)',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Planlagt</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.5rem' : 'var(--font-size-2xl)', 
+                fontWeight: 600, 
+                color: 'var(--text-color)',
+                margin: 0
+              }}>{stats.scheduled}</p>
             </div>
           </div>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--yellow-100)', borderRadius: 'var(--radius-lg)' }}>
-                <Play style={{ width: '24px', height: '24px', color: 'var(--yellow-600)' }} />
-              </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Pågår</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.inProgress}</p>
-              </div>
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.875rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              padding: isMobile ? '0.625rem' : '0.75rem', 
+              background: 'rgba(245, 158, 11, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <Play size={isMobile ? 20 : 24} style={{ color: '#f59e0b' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)', 
+                fontWeight: 500, 
+                color: 'var(--gray-500)',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Pågår</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.5rem' : 'var(--font-size-2xl)', 
+                fontWeight: 600, 
+                color: 'var(--text-color)',
+                margin: 0
+              }}>{stats.inProgress}</p>
             </div>
           </div>
-          <div className="card">
-            <div style={{ display: 'flex', alignItems: 'center' }}>
-              <div style={{ padding: '0.75rem', background: 'var(--green-100)', borderRadius: 'var(--radius-lg)' }}>
-                <CheckCircle style={{ width: '24px', height: '24px', color: 'var(--green-600)' }} />
-              </div>
-              <div style={{ marginLeft: '1rem' }}>
-                <p style={{ fontSize: 'var(--font-size-sm)', fontWeight: '500', color: 'var(--gray-600)' }}>Fullført</p>
-                <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--gray-900)' }}>{stats.completed}</p>
-              </div>
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.875rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              padding: isMobile ? '0.625rem' : '0.75rem', 
+              background: 'rgba(34, 197, 94, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <CheckCircle size={isMobile ? 20 : 24} style={{ color: '#22c55e' }} />
+            </div>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)', 
+                fontWeight: 500, 
+                color: 'var(--gray-500)',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Fullført</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.5rem' : 'var(--font-size-2xl)', 
+                fontWeight: 600, 
+                color: 'var(--text-color)',
+                margin: 0
+              }}>{stats.completed}</p>
             </div>
           </div>
         </div>

@@ -31,6 +31,7 @@ type VacationWithEmployee = Vacation & { employeeName?: string; department?: str
 export default function VacationPage() {
   const { userProfile } = useAuth();
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [vacations, setVacations] = useState<VacationWithEmployee[]>([]);
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [searchTerm, setSearchTerm] = useState('');
@@ -72,6 +73,13 @@ export default function VacationPage() {
       setLoading(false);
     }
   }, [userProfile?.companyId]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => { loadData(); }, [loadData]);
 
@@ -173,103 +181,325 @@ export default function VacationPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 2rem' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--text-color)' }}>Ferie</h1>
-            <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>Full oversikt over alle ferieforespørsler og feriedager</p>
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <div style={{ display: 'inline-flex', border: '1px solid var(--gray-200)', borderRadius: '10px', overflow: 'hidden' }}>
-              <button
-                onClick={() => setShowCalendar(true)}
-                className="btn"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRight: '1px solid var(--gray-200)', background: 'white' }}
-              >
-                <Calendar style={{ width: 16, height: 16 }} /> Kalender
-              </button>
-              <button
-                onClick={() => setShowManage(true)}
-                className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-              >
-                <SettingsIcon style={{ width: 16, height: 16 }} /> Administrer
-              </button>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Ferie
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 2rem' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--text-color)' }}>Ferie</h1>
+              <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>Full oversikt over alle ferieforespørsler og feriedager</p>
+            </div>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div style={{ display: 'inline-flex', border: '1px solid var(--gray-200)', borderRadius: '10px', overflow: 'hidden' }}>
+                <button
+                  onClick={() => setShowCalendar(true)}
+                  className="btn"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRight: '1px solid var(--gray-200)', background: 'white' }}
+                >
+                  <Calendar style={{ width: 16, height: 16 }} /> Kalender
+                </button>
+                <button
+                  onClick={() => setShowManage(true)}
+                  className="btn btn-secondary"
+                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                >
+                  <SettingsIcon style={{ width: 16, height: 16 }} /> Administrer
+                </button>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+      {/* Mobile Action Buttons */}
+      {isMobile && (
+        <div style={{
+          padding: '0 0.75rem 0.75rem',
+          display: 'flex',
+          gap: '0.5rem'
+        }}>
+          <button
+            onClick={() => setShowCalendar(true)}
+            className="btn btn-secondary"
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              minHeight: '44px'
+            }}
+          >
+            <Calendar size={18} />
+            Kalender
+          </button>
+          <button
+            onClick={() => setShowManage(true)}
+            className="btn btn-secondary"
+            style={{
+              flex: 1,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: '0.5rem',
+              minHeight: '44px'
+            }}
+          >
+            <SettingsIcon size={18} />
+            Administrer
+          </button>
+        </div>
+      )}
+
+      <div style={{ 
+        maxWidth: '1280px', 
+        margin: '0 auto', 
+        padding: isMobile ? '0.5rem 0.75rem' : '2rem 1rem',
+        width: '100%'
+      }}>
         {/* Stats */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1.5rem' }}>
-          <div className="card" style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ padding: '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
-              <Users style={{ width: 24, height: 24, color: 'var(--blue-600)' }} />
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: isMobile ? '0.625rem' : '1rem', 
+          marginBottom: isMobile ? '0.75rem' : '1.5rem' 
+        }}>
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.875rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              padding: isMobile ? '0.625rem' : '0.75rem', 
+              background: 'rgba(59, 130, 246, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <Users size={isMobile ? 20 : 24} style={{ color: '#3b82f6' }} />
             </div>
-            <div style={{ marginLeft: '1rem' }}>
-              <p style={{ color: 'var(--gray-600)' }}>Totalt</p>
-              <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 600 }}>{stats.total}</p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                color: 'var(--gray-500)', 
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Totalt</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.5rem' : 'var(--font-size-2xl)', 
+                fontWeight: 600,
+                margin: 0,
+                color: 'var(--text-color)'
+              }}>{stats.total}</p>
             </div>
           </div>
-          <div className="card" style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ padding: '0.75rem', background: 'var(--yellow-100)', borderRadius: 'var(--radius-lg)' }}>
-              <Clock style={{ width: 24, height: 24, color: 'var(--yellow-600)' }} />
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.875rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              padding: isMobile ? '0.625rem' : '0.75rem', 
+              background: 'rgba(245, 158, 11, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <Clock size={isMobile ? 20 : 24} style={{ color: '#f59e0b' }} />
             </div>
-            <div style={{ marginLeft: '1rem' }}>
-              <p style={{ color: 'var(--gray-600)' }}>Venter</p>
-              <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 600 }}>{stats.pending}</p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                color: 'var(--gray-500)', 
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Venter</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.5rem' : 'var(--font-size-2xl)', 
+                fontWeight: 600,
+                margin: 0,
+                color: 'var(--text-color)'
+              }}>{stats.pending}</p>
             </div>
           </div>
-          <div className="card" style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ padding: '0.75rem', background: 'var(--green-100)', borderRadius: 'var(--radius-lg)' }}>
-              <CheckCircle style={{ width: 24, height: 24, color: 'var(--green-600)' }} />
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.875rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              padding: isMobile ? '0.625rem' : '0.75rem', 
+              background: 'rgba(34, 197, 94, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <CheckCircle size={isMobile ? 20 : 24} style={{ color: '#22c55e' }} />
             </div>
-            <div style={{ marginLeft: '1rem' }}>
-              <p style={{ color: 'var(--gray-600)' }}>Godkjent</p>
-              <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 600 }}>{stats.approved}</p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                color: 'var(--gray-500)', 
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Godkjent</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.5rem' : 'var(--font-size-2xl)', 
+                fontWeight: 600,
+                margin: 0,
+                color: 'var(--text-color)'
+              }}>{stats.approved}</p>
             </div>
           </div>
-          <div className="card" style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ padding: '0.75rem', background: 'var(--red-100)', borderRadius: 'var(--radius-lg)' }}>
-              <AlertCircle style={{ width: 24, height: 24, color: 'var(--red-600)' }} />
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '0.875rem' : '1rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: isMobile ? '0.75rem' : '1rem'
+          }}>
+            <div style={{ 
+              padding: isMobile ? '0.625rem' : '0.75rem', 
+              background: 'rgba(239, 68, 68, 0.1)', 
+              borderRadius: '0.625rem',
+              flexShrink: 0
+            }}>
+              <AlertCircle size={isMobile ? 20 : 24} style={{ color: '#ef4444' }} />
             </div>
-            <div style={{ marginLeft: '1rem' }}>
-              <p style={{ color: 'var(--gray-600)' }}>Avvist</p>
-              <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 600 }}>{stats.rejected}</p>
+            <div style={{ flex: 1, minWidth: 0 }}>
+              <p style={{ 
+                color: 'var(--gray-500)', 
+                fontSize: isMobile ? '0.75rem' : '0.875rem',
+                margin: 0,
+                marginBottom: '0.25rem'
+              }}>Avvist</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.5rem' : 'var(--font-size-2xl)', 
+                fontWeight: 600,
+                margin: 0,
+                color: 'var(--text-color)'
+              }}>{stats.rejected}</p>
             </div>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="card" style={{ marginBottom: '1.5rem', display: 'flex', flexWrap: 'wrap', gap: '1rem', alignItems: 'center', padding: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', background: 'var(--gray-50)', borderRadius: '0.375rem', padding: '0.5rem 0.75rem', flex: '1 1 250px' }}>
-            <Search size={16} style={{ color: 'var(--gray-400)' }} />
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.75rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          marginBottom: isMobile ? '0.75rem' : '1.5rem',
+          display: 'flex',
+          flexDirection: isMobile ? 'column' : 'row',
+          flexWrap: 'wrap',
+          gap: isMobile ? '0.5rem' : '1rem',
+          alignItems: 'center'
+        }}>
+          <div style={{ 
+            position: 'relative',
+            width: isMobile ? '100%' : undefined,
+            flex: isMobile ? 'none' : '1 1 250px'
+          }}>
+            <Search size={isMobile ? 18 : 16} style={{ 
+              position: 'absolute',
+              left: isMobile ? '0.875rem' : '0.75rem',
+              top: '50%',
+              transform: 'translateY(-50%)',
+              color: 'var(--gray-400)',
+              pointerEvents: 'none'
+            }} />
             <input
               type="text"
               placeholder="Søk etter ansatt eller notat..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              style={{ background: 'transparent', border: 'none', outline: 'none', width: '100%', color: 'var(--gray-900)' }}
+              style={{ 
+                width: '100%',
+                padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.5rem 0.5rem 0.5rem 2.5rem',
+                background: 'var(--gray-50)',
+                border: '1px solid var(--border-color)',
+                borderRadius: isMobile ? '0.5rem' : '0.375rem',
+                outline: 'none',
+                fontSize: isMobile ? '16px' : undefined,
+                color: 'var(--text-color)'
+              }}
             />
           </div>
 
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', width: isMobile ? '100%' : undefined }}>
             <select value={selectedEmployee} onChange={(e) => setSelectedEmployee(e.target.value)}
-              style={{ appearance: 'none', padding: '0.5rem 2rem 0.5rem 0.75rem', border: '1px solid var(--gray-200)', borderRadius: '0.375rem' }}>
+              style={{ 
+                width: '100%',
+                appearance: 'none', 
+                padding: isMobile ? '0.875rem 2.5rem 0.875rem 0.875rem' : '0.5rem 2rem 0.5rem 0.75rem', 
+                border: '1px solid var(--border-color)', 
+                borderRadius: isMobile ? '0.5rem' : '0.375rem',
+                fontSize: isMobile ? '16px' : undefined,
+                background: 'var(--card-background)'
+              }}>
               <option value="all">Alle ansatte</option>
               {employees.map(e => (
                 <option key={e.id} value={e.id}>{e.name || `${e.firstName || ''} ${e.lastName || ''}`.trim() || e.email}</option>
               ))}
             </select>
-            <ChevronDown size={16} style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
+            <ChevronDown size={isMobile ? 18 : 16} style={{ position: 'absolute', right: isMobile ? '0.875rem' : '0.5rem', top: '50%', transform: 'translateY(-50%)', color: 'var(--gray-400)', pointerEvents: 'none' }} />
           </div>
 
-          <div style={{ position: 'relative' }}>
+          <div style={{ position: 'relative', width: isMobile ? '100%' : undefined }}>
             <select value={selectedStatus} onChange={(e) => setSelectedStatus(e.target.value as any)}
-              style={{ appearance: 'none', padding: '0.5rem 2rem 0.5rem 0.75rem', border: '1px solid var(--gray-200)', borderRadius: '0.375rem' }}>
+              style={{ 
+                width: '100%',
+                appearance: 'none', 
+                padding: isMobile ? '0.875rem 2.5rem 0.875rem 0.875rem' : '0.5rem 2rem 0.5rem 0.75rem', 
+                border: '1px solid var(--border-color)', 
+                borderRadius: isMobile ? '0.5rem' : '0.375rem',
+                fontSize: isMobile ? '16px' : undefined,
+                background: 'var(--card-background)'
+              }}>
               <option value="all">Alle statuser</option>
               <option value="pending">Venter</option>
               <option value="approved">Godkjent</option>
