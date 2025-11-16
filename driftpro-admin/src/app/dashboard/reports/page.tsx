@@ -369,110 +369,282 @@ export default function ReportsPage() {
   }
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header" style={{ padding: isMobile ? '1rem' : undefined }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <div className="card-icon">
-            <BarChart3 />
+    <div style={{ 
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            📊 Rapporter
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div className="card-icon">
+              <BarChart3 />
+            </div>
+            <div>
+              <h1 className="page-title">📊 Rapporter</h1>
+              <p className="page-subtitle">
+                Generer og administrer rapporter og analyser
+              </p>
+            </div>
           </div>
-          <div>
-            <h1 className="page-title">📊 Rapporter</h1>
-            <p className="page-subtitle">
-              Generer og administrer rapporter og analyser
-            </p>
+
+          {/* Tab Navigation */}
+          <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
+            <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0' }}>
+              <button
+                onClick={() => setActiveTab('overview')}
+                style={{
+                  padding: '1rem 2rem',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'overview' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: activeTab === 'overview' ? 'var(--primary)' : 'var(--gray-600)',
+                  fontWeight: activeTab === 'overview' ? '600' : '500',
+                  fontSize: 'var(--font-size-base)'
+                }}
+              >
+                <BarChart3 style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+                Oversikt
+              </button>
+              <button
+                onClick={() => setActiveTab('reports')}
+                style={{
+                  padding: '1rem 2rem',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'reports' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: activeTab === 'reports' ? 'var(--primary)' : 'var(--gray-600)',
+                  fontWeight: activeTab === 'reports' ? '600' : '500',
+                  fontSize: 'var(--font-size-base)'
+                }}
+              >
+                <FileText style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+                Rapporter
+              </button>
+              <button
+                onClick={() => setActiveTab('templates')}
+                style={{
+                  padding: '1rem 2rem',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'templates' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: activeTab === 'templates' ? 'var(--primary)' : 'var(--gray-600)',
+                  fontWeight: activeTab === 'templates' ? '600' : '500',
+                  fontSize: 'var(--font-size-base)'
+                }}
+              >
+                <Settings style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+                Maler
+              </button>
+              <button
+                onClick={() => setActiveTab('scheduled')}
+                style={{
+                  padding: '1rem 2rem',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'scheduled' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: activeTab === 'scheduled' ? 'var(--primary)' : 'var(--gray-600)',
+                  fontWeight: activeTab === 'scheduled' ? '600' : '500',
+                  fontSize: 'var(--font-size-base)'
+                }}
+              >
+                <Calendar style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+                Planlagte
+              </button>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <button 
+              onClick={() => setShowCreateModal(true)}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              Ny rapport
+            </button>
+            <button 
+              onClick={loadData}
+              className="btn btn-secondary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <RefreshCw style={{ width: '16px', height: '16px' }} />
+              Oppdater
+            </button>
           </div>
         </div>
+      )}
 
-        {/* Tab Navigation */}
-        <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
-          <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0', minWidth: isMobile ? '650px' : 'auto' }}>
+      {/* Mobile Tab Navigation */}
+      {isMobile && (
+        <div style={{ 
+          marginBottom: '0.75rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          padding: '0 0.75rem',
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            borderBottom: '0.5px solid var(--border-color)', 
+            gap: '0',
+            minWidth: 'max-content'
+          }}>
             <button
               onClick={() => setActiveTab('overview')}
               style={{
-                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
+                padding: '0.75rem 1rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'overview' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'overview' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'overview' ? '600' : '500',
-                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
+                fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem'
               }}
             >
-              <BarChart3 style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              <BarChart3 size={16} />
               Oversikt
             </button>
             <button
               onClick={() => setActiveTab('reports')}
               style={{
-                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
+                padding: '0.75rem 1rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'reports' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'reports' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'reports' ? '600' : '500',
-                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
+                fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem'
               }}
             >
-              <FileText style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              <FileText size={16} />
               Rapporter
             </button>
             <button
               onClick={() => setActiveTab('templates')}
               style={{
-                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
+                padding: '0.75rem 1rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'templates' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'templates' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'templates' ? '600' : '500',
-                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
+                fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem'
               }}
             >
-              <Settings style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              <Settings size={16} />
               Maler
             </button>
             <button
               onClick={() => setActiveTab('scheduled')}
               style={{
-                padding: isMobile ? '0.75rem 1rem' : '1rem 2rem',
+                padding: '0.75rem 1rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'scheduled' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'scheduled' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'scheduled' ? '600' : '500',
-                fontSize: isMobile ? '0.9rem' : 'var(--font-size-base)'
+                fontSize: '0.875rem',
+                whiteSpace: 'nowrap',
+                flexShrink: 0,
+                minHeight: '44px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.375rem'
               }}
             >
-              <Calendar style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              <Calendar size={16} />
               Planlagte
             </button>
           </div>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+      )}
+
+      {/* Mobile Action Buttons */}
+      {isMobile && (
+        <div style={{
+          padding: '0 0.75rem 0.75rem',
+          display: 'flex',
+          gap: '0.5rem'
+        }}>
           <button 
             onClick={() => setShowCreateModal(true)}
             className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              flex: 1,
+              justifyContent: 'center',
+              minHeight: '44px'
+            }}
           >
-            <Plus style={{ width: '16px', height: '16px' }} />
+            <Plus size={18} />
             Ny rapport
           </button>
           <button 
             onClick={loadData}
             className="btn btn-secondary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{ 
+              display: 'flex', 
+              alignItems: 'center', 
+              gap: '0.5rem',
+              minWidth: '44px',
+              minHeight: '44px',
+              padding: '0.75rem'
+            }}
           >
-            <RefreshCw style={{ width: '16px', height: '16px' }} />
-            Oppdater
+            <RefreshCw size={18} />
           </button>
         </div>
-      </div>
+      )}
 
       {/* Success/Error Messages */}
       {success && (
@@ -509,78 +681,199 @@ export default function ReportsPage() {
 
       {/* Overview Tab */}
       {activeTab === 'overview' && (
-        <div>
+        <div style={{ padding: isMobile ? '0 0.75rem' : undefined }}>
           {/* Stats Grid */}
-          <div className="stats-grid">
-            <div className="stat-card">
-              <div className="stat-number">{stats.totalEmployees}</div>
-              <div className="stat-label">Totalt ansatte</div>
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(3, 1fr)',
+            gap: isMobile ? '0.625rem' : '1rem',
+            marginBottom: isMobile ? '0.75rem' : '2rem',
+            padding: isMobile ? '0' : undefined
+          }}>
+            <div style={{
+              borderRadius: '0.875rem',
+              padding: isMobile ? '0.875rem' : '1rem',
+              background: 'var(--card-background)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                {stats.totalEmployees}
+              </div>
+              <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+                Totalt ansatte
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-number">{stats.totalDepartments}</div>
-              <div className="stat-label">Avdelinger</div>
+            <div style={{
+              borderRadius: '0.875rem',
+              padding: isMobile ? '0.875rem' : '1rem',
+              background: 'var(--card-background)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                {stats.totalDepartments}
+              </div>
+              <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+                Avdelinger
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-number">{stats.activeShifts}</div>
-              <div className="stat-label">Aktive skift</div>
+            <div style={{
+              borderRadius: '0.875rem',
+              padding: isMobile ? '0.875rem' : '1rem',
+              background: 'var(--card-background)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                {stats.activeShifts}
+              </div>
+              <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+                Aktive skift
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-number">{stats.openDeviations}</div>
-              <div className="stat-label">Åpne avvik</div>
+            <div style={{
+              borderRadius: '0.875rem',
+              padding: isMobile ? '0.875rem' : '1rem',
+              background: 'var(--card-background)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                {stats.openDeviations}
+              </div>
+              <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+                Åpne avvik
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-number">{stats.totalDocuments}</div>
-              <div className="stat-label">Dokumenter</div>
+            <div style={{
+              borderRadius: '0.875rem',
+              padding: isMobile ? '0.875rem' : '1rem',
+              background: 'var(--card-background)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                {stats.totalDocuments}
+              </div>
+              <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+                Dokumenter
+              </div>
             </div>
-            <div className="stat-card">
-              <div className="stat-number">{reports.length}</div>
-              <div className="stat-label">Rapporter</div>
+            <div style={{
+              borderRadius: '0.875rem',
+              padding: isMobile ? '0.875rem' : '1rem',
+              background: 'var(--card-background)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+              textAlign: 'center'
+            }}>
+              <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                {reports.length}
+              </div>
+              <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+                Rapporter
+              </div>
             </div>
           </div>
 
           {/* Quick Actions */}
-          <div className="card" style={{ marginBottom: '2rem' }}>
-            <h3 style={{ fontSize: '1.25rem', fontWeight: '600', color: '#333', marginBottom: '1rem' }}>
+          <div style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '1rem' : '1.5rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+            marginBottom: isMobile ? '0.75rem' : '2rem'
+          }}>
+            <h3 style={{ 
+              fontSize: isMobile ? '1rem' : '1.25rem', 
+              fontWeight: 600, 
+              color: 'var(--text-color)', 
+              marginBottom: isMobile ? '0.75rem' : '1rem' 
+            }}>
               Hurtiggenerering
             </h3>
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', 
+              gap: isMobile ? '0.5rem' : '1rem' 
+            }}>
               <button 
                 onClick={() => handleGenerateReport('employee')}
                 className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '0.5rem', 
+                  padding: isMobile ? '0.75rem' : '1rem',
+                  minHeight: isMobile ? '44px' : undefined
+                }}
               >
-                <Users style={{ width: '20px', height: '20px' }} />
+                <Users size={isMobile ? 18 : 20} />
                 Personalrapport
               </button>
               <button 
                 onClick={() => handleGenerateReport('attendance')}
                 className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '0.5rem', 
+                  padding: isMobile ? '0.75rem' : '1rem',
+                  minHeight: isMobile ? '44px' : undefined
+                }}
               >
-                <Clock style={{ width: '20px', height: '20px' }} />
+                <Clock size={isMobile ? 18 : 20} />
                 Fraværsrapport
               </button>
               <button 
                 onClick={() => handleGenerateReport('performance')}
                 className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '0.5rem', 
+                  padding: isMobile ? '0.75rem' : '1rem',
+                  minHeight: isMobile ? '44px' : undefined
+                }}
               >
-                <TrendingUp style={{ width: '20px', height: '20px' }} />
+                <TrendingUp size={isMobile ? 18 : 20} />
                 Ytelsesrapport
               </button>
               <button 
                 onClick={() => handleGenerateReport('hms')}
                 className="btn btn-secondary"
-                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', padding: '1rem' }}
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  gap: '0.5rem', 
+                  padding: isMobile ? '0.75rem' : '1rem',
+                  minHeight: isMobile ? '44px' : undefined
+                }}
               >
-                <AlertTriangle style={{ width: '20px', height: '20px' }} />
+                <AlertTriangle size={isMobile ? 18 : 20} />
                 HMS-rapport
               </button>
             </div>
           </div>
 
           {/* Charts Grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(400px, 1fr))', gap: '2rem', marginBottom: '2rem' }}>
+          <div style={{ 
+            display: 'grid', 
+            gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(400px, 1fr))', 
+            gap: isMobile ? '0.75rem' : '2rem', 
+            marginBottom: isMobile ? '0.75rem' : '2rem' 
+          }}>
             {/* Attendance Chart */}
             <div className="card">
               <h3 style={{ fontSize: '1.1rem', fontWeight: '600', color: '#333', marginBottom: '1rem' }}>
