@@ -14,7 +14,18 @@ export default function Topbar() {
 	const [showLogoutModal, setShowLogoutModal] = useState(false);
 	const [theme, setTheme] = useState<'light' | 'dark'>('dark');
 	const [mounted, setMounted] = useState(false);
+	const [isMobile, setIsMobile] = useState(false);
 	const menuRef = useRef<HTMLDivElement>(null);
+
+	// Check if mobile
+	useEffect(() => {
+		const checkMobile = () => {
+			setIsMobile(window.innerWidth < 768);
+		};
+		checkMobile();
+		window.addEventListener('resize', checkMobile);
+		return () => window.removeEventListener('resize', checkMobile);
+	}, []);
 
 	// Handle theme
 	useEffect(() => {
@@ -52,20 +63,20 @@ export default function Topbar() {
 	}, [showUserMenu]);
 	
 	return (
-		<header className="header" style={{ position: 'sticky', top: 0, zIndex: 900, width: '100%', padding: '0.5rem 0' }}>
-			<div className="header-content" style={{ display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'nowrap', justifyContent: 'space-between', width: '100%', paddingLeft: '1rem', paddingRight: '1rem', paddingTop: '0.25rem', paddingBottom: '0.25rem' }}>
+		<header className="header" style={{ position: 'sticky', top: 0, zIndex: 900, width: '100%', padding: isMobile ? '0.5rem 0' : '0.5rem 0', background: 'var(--card-background)', borderBottom: '1px solid var(--border-color)' }}>
+			<div className="header-content" style={{ display: 'flex', gap: isMobile ? 8 : 12, alignItems: 'center', flexWrap: 'nowrap', justifyContent: 'space-between', width: '100%', paddingLeft: isMobile ? '0.75rem' : '1rem', paddingRight: isMobile ? '0.75rem' : '1rem', paddingTop: isMobile ? '0.25rem' : '0.25rem', paddingBottom: isMobile ? '0.25rem' : '0.25rem' }}>
 				{/* Logo Section - Left */}
-				<div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexShrink: 0 }}>
+				<div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.25rem' : '0.5rem', flexShrink: 0 }}>
 					{/* Live Animated Icon */}
 					<div 
 						style={{
 							display: 'flex',
 							alignItems: 'center',
 							justifyContent: 'center',
-							width: '2.5rem',
-							height: '2.5rem',
+							width: isMobile ? '2rem' : '2.5rem',
+							height: isMobile ? '2rem' : '2.5rem',
 							flexShrink: 0,
-							marginRight: '-0.25rem'
+							marginRight: isMobile ? '-0.125rem' : '-0.25rem'
 						}}
 					>
 					<svg
@@ -226,96 +237,106 @@ export default function Topbar() {
 					</svg>
 				</div>
 				
-					<a className="logo" href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', marginLeft: '-0.25rem' }}>
-						<span style={{
-							background: 'linear-gradient(135deg, #22d3ee 0%, #0ea5e9 40%, #06b6d4 100%)',
-							WebkitBackgroundClip: 'text',
-							WebkitTextFillColor: 'transparent',
-							backgroundClip: 'text',
-							filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.4))',
-							animation: 'text-glow 3s ease-in-out infinite',
-							position: 'relative'
-						}}>DriftPro</span>
-				</a>
+					{!isMobile && (
+						<a className="logo" href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', marginLeft: '-0.25rem' }}>
+							<span style={{
+								background: 'linear-gradient(135deg, #22d3ee 0%, #0ea5e9 40%, #06b6d4 100%)',
+								WebkitBackgroundClip: 'text',
+								WebkitTextFillColor: 'transparent',
+								backgroundClip: 'text',
+								filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.4))',
+								animation: 'text-glow 3s ease-in-out infinite',
+								position: 'relative',
+								fontSize: '1.125rem',
+								fontWeight: '600'
+							}}>DriftPro</span>
+						</a>
+					)}
 				</div>
 
-				{/* Center - Search */}
-				<div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '600px', margin: '0 auto' }}>
-				<GlobalSearch />
-				</div>
+				{/* Center - Search (Hidden on mobile) */}
+				{!isMobile && (
+					<div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '600px', margin: '0 auto' }}>
+						<GlobalSearch />
+					</div>
+				)}
 
 				{/* Right Section - Notifications and User */}
-				<div style={{ display: 'flex', gap: 12, alignItems: 'center', flexShrink: 0, marginRight: 0 }}>
+				<div style={{ display: 'flex', gap: isMobile ? 8 : 12, alignItems: 'center', flexShrink: 0, marginRight: 0 }}>
 					<NotificationBell />
 					<div style={{ position: 'relative' }} ref={menuRef}>
 						<div 
 							style={{
-						display: 'flex',
-						alignItems: 'center',
-						gap: '0.5rem',
-						padding: '0.375rem 0.75rem',
+								display: 'flex',
+								alignItems: 'center',
+								gap: isMobile ? '0.375rem' : '0.5rem',
+								padding: isMobile ? '0.25rem 0.5rem' : '0.375rem 0.75rem',
 								background: showUserMenu ? 'var(--gray-100)' : 'var(--card-background)',
-						border: '1px solid var(--border-color)',
-						borderRadius: 'var(--radius-full)',
-						cursor: 'pointer',
-						transition: 'all var(--transition-normal)'
-					}}
+								border: '1px solid var(--border-color)',
+								borderRadius: 'var(--radius-full)',
+								cursor: 'pointer',
+								transition: 'all var(--transition-normal)'
+							}}
 							onClick={() => setShowUserMenu(!showUserMenu)}
-					onMouseEnter={(e) => {
-								if (!showUserMenu) {
-						e.currentTarget.style.background = 'var(--gray-100)';
+							onMouseEnter={(e) => {
+								if (!showUserMenu && !isMobile) {
+									e.currentTarget.style.background = 'var(--gray-100)';
 								}
-					}}
-					onMouseLeave={(e) => {
-								if (!showUserMenu) {
-						e.currentTarget.style.background = 'var(--card-background)';
+							}}
+							onMouseLeave={(e) => {
+								if (!showUserMenu && !isMobile) {
+									e.currentTarget.style.background = 'var(--card-background)';
 								}
 							}}
 						>
-						<div style={{
-							width: '28px',
-							height: '28px',
-							borderRadius: '50%',
-							background: 'var(--gradient-primary)',
-							display: 'flex',
-							alignItems: 'center',
-							justifyContent: 'center',
-							color: 'white',
-							fontSize: '0.75rem',
-							fontWeight: '600',
-							flexShrink: 0
-						}}>
-							{userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
-						</div>
-						<div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
 							<div style={{
-								fontSize: '0.8125rem',
-								fontWeight: '500',
-								color: 'var(--text-color)',
-								whiteSpace: 'nowrap',
-								overflow: 'hidden',
-								textOverflow: 'ellipsis'
+								width: isMobile ? '32px' : '28px',
+								height: isMobile ? '32px' : '28px',
+								borderRadius: '50%',
+								background: 'var(--gradient-primary)',
+								display: 'flex',
+								alignItems: 'center',
+								justifyContent: 'center',
+								color: 'white',
+								fontSize: isMobile ? '0.875rem' : '0.75rem',
+								fontWeight: '600',
+								flexShrink: 0
 							}}>
-								{userProfile?.displayName || 'Bruker'}
+								{userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
 							</div>
-							<div style={{
-								fontSize: '0.6875rem',
-								color: 'var(--gray-500)',
-								whiteSpace: 'nowrap',
-								overflow: 'hidden',
-								textOverflow: 'ellipsis'
-							}}>
-								{userProfile?.role || 'Bruker'}
-							</div>
-						</div>
-							<ChevronDown 
-								size={16} 
-								style={{ 
-									color: 'var(--gray-500)',
-									transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)',
-									transition: 'transform 0.2s'
-								}} 
-							/>
+							{!isMobile && (
+								<div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+									<div style={{
+										fontSize: '0.8125rem',
+										fontWeight: '500',
+										color: 'var(--text-color)',
+										whiteSpace: 'nowrap',
+										overflow: 'hidden',
+										textOverflow: 'ellipsis'
+									}}>
+										{userProfile?.displayName || 'Bruker'}
+									</div>
+									<div style={{
+										fontSize: '0.6875rem',
+										color: 'var(--gray-500)',
+										whiteSpace: 'nowrap',
+										overflow: 'hidden',
+										textOverflow: 'ellipsis'
+									}}>
+										{userProfile?.role || 'Bruker'}
+									</div>
+								</div>
+							)}
+							{!isMobile && (
+								<ChevronDown 
+									size={16} 
+									style={{ 
+										color: 'var(--gray-500)',
+										transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)',
+										transition: 'transform 0.2s'
+									}} 
+								/>
+							)}
 						</div>
 
 						{/* User Dropdown Menu */}
@@ -323,12 +344,13 @@ export default function Topbar() {
 							<div style={{
 								position: 'absolute',
 								top: 'calc(100% + 0.5rem)',
-								right: 0,
+								right: isMobile ? '-0.75rem' : 0,
 								background: 'var(--card-background)',
 								border: '1px solid var(--border-color)',
 								borderRadius: 'var(--radius-lg)',
 								boxShadow: 'var(--shadow-xl)',
-								minWidth: '200px',
+								minWidth: isMobile ? 'calc(100vw - 1.5rem)' : '200px',
+								maxWidth: isMobile ? 'calc(100vw - 1.5rem)' : '300px',
 								zIndex: 1000,
 								overflow: 'hidden',
 								animation: 'fadeIn 0.2s ease'
@@ -473,21 +495,21 @@ export default function Topbar() {
 							background: 'var(--card-background)',
 							borderRadius: 'var(--radius-xl)',
 							boxShadow: 'var(--shadow-xl)',
-							maxWidth: '400px',
-							width: '90%',
+							maxWidth: isMobile ? 'calc(100vw - 2rem)' : '400px',
+							width: isMobile ? 'calc(100vw - 2rem)' : '90%',
 							border: '1px solid var(--border-color)'
 						}}
 						onClick={(e) => e.stopPropagation()}
 					>
 						<div style={{
-							padding: '1.5rem',
+							padding: isMobile ? '1rem' : '1.5rem',
 							borderBottom: '1px solid var(--border-color)',
 							display: 'flex',
 							justifyContent: 'space-between',
 							alignItems: 'center'
 						}}>
 							<h3 style={{
-								fontSize: 'var(--font-size-lg)',
+								fontSize: isMobile ? 'var(--font-size-base)' : 'var(--font-size-lg)',
 								fontWeight: '600',
 								color: 'var(--text-color)'
 							}}>
@@ -508,36 +530,49 @@ export default function Topbar() {
 								×
 							</button>
 						</div>
-						<div style={{ padding: '1.5rem' }}>
+						<div style={{ padding: isMobile ? '1rem' : '1.5rem' }}>
 							<p style={{ 
-								marginBottom: '1.5rem', 
+								marginBottom: isMobile ? '1rem' : '1.5rem', 
 								color: 'var(--text-color)',
-								lineHeight: '1.6'
+								lineHeight: '1.6',
+								fontSize: isMobile ? '0.875rem' : '1rem'
 							}}>
 								Er du sikker på at du vil logge ut? Du må logge inn på nytt for å få tilgang til systemet.
 							</p>
 							<div style={{ 
 								display: 'flex', 
-								gap: '1rem', 
-								justifyContent: 'flex-end' 
+								gap: isMobile ? '0.75rem' : '1rem', 
+								justifyContent: 'flex-end',
+								flexDirection: isMobile ? 'column' : 'row'
 							}}>
 								<button
 									onClick={() => setShowLogoutModal(false)}
 									style={{
-										padding: '0.5rem 1rem',
+										padding: isMobile ? '0.75rem 1rem' : '0.5rem 1rem',
 										borderRadius: 'var(--radius-md)',
 										border: '1px solid var(--border-color)',
 										background: 'var(--card-background)',
 										color: 'var(--text-color)',
 										cursor: 'pointer',
-										fontSize: '0.875rem',
+										fontSize: isMobile ? '0.9375rem' : '0.875rem',
 										fontWeight: '500',
-										transition: 'all 0.2s'
+										transition: 'all 0.2s',
+										width: isMobile ? '100%' : 'auto'
 									}}
 									onMouseEnter={(e) => {
-										e.currentTarget.style.background = 'var(--gray-100)';
+										if (!isMobile) {
+											e.currentTarget.style.background = 'var(--gray-100)';
+										}
 									}}
 									onMouseLeave={(e) => {
+										if (!isMobile) {
+											e.currentTarget.style.background = 'var(--card-background)';
+										}
+									}}
+									onTouchStart={(e) => {
+										e.currentTarget.style.background = 'var(--gray-100)';
+									}}
+									onTouchEnd={(e) => {
 										e.currentTarget.style.background = 'var(--card-background)';
 									}}
 								>
@@ -554,20 +589,31 @@ export default function Topbar() {
 										}
 									}}
 									style={{
-										padding: '0.5rem 1rem',
+										padding: isMobile ? '0.75rem 1rem' : '0.5rem 1rem',
 										borderRadius: 'var(--radius-md)',
 										border: 'none',
 										background: 'var(--danger)',
 										color: 'white',
 										cursor: 'pointer',
-										fontSize: '0.875rem',
+										fontSize: isMobile ? '0.9375rem' : '0.875rem',
 										fontWeight: '500',
-										transition: 'all 0.2s'
+										transition: 'all 0.2s',
+										width: isMobile ? '100%' : 'auto'
 									}}
 									onMouseEnter={(e) => {
-										e.currentTarget.style.background = '#dc2626';
+										if (!isMobile) {
+											e.currentTarget.style.background = '#dc2626';
+										}
 									}}
 									onMouseLeave={(e) => {
+										if (!isMobile) {
+											e.currentTarget.style.background = 'var(--danger)';
+										}
+									}}
+									onTouchStart={(e) => {
+										e.currentTarget.style.background = '#dc2626';
+									}}
+									onTouchEnd={(e) => {
 										e.currentTarget.style.background = 'var(--danger)';
 									}}
 								>

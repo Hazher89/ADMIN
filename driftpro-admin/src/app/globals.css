@@ -2861,6 +2861,81 @@ body::after {
 }
 
 /* ============================================
+   MOBILE OPTIMIZATIONS (Additional)
+   ============================================ */
+
+@media (max-width: 768px) {
+  /* Prevent horizontal scroll */
+  body, html {
+    overflow-x: hidden;
+    width: 100%;
+    max-width: 100vw;
+  }
+
+  /* Better touch targets */
+  button, a, [role="button"] {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improved text readability */
+  p, span, div {
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+  }
+
+  /* Better form inputs on mobile */
+  input, textarea, select {
+    font-size: 16px !important; /* Prevents zoom on iOS */
+    padding: 0.75rem !important;
+  }
+
+  /* Table responsiveness */
+  table {
+    display: block;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Modal improvements */
+  [style*="max-width"] {
+    max-width: calc(100vw - 2rem) !important;
+    margin: 1rem !important;
+  }
+
+  /* Better spacing */
+  .page-header {
+    padding: 1rem 0.75rem !important;
+  }
+
+  .page-title {
+    font-size: 1.25rem !important;
+  }
+
+  .page-subtitle {
+    font-size: 0.875rem !important;
+  }
+
+  /* Card improvements */
+  .card, [style*="background: var(--card-background)"] {
+    border-radius: 0.75rem !important;
+    padding: 1rem !important;
+  }
+
+  /* Grid improvements */
+  .grid, [style*="display: grid"] {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+
+  /* Stats grid */
+  .stats-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.75rem !important;
+  }
+}
+
+/* ============================================
    PRINT STYLES (Mobile-friendly)
    ============================================ */
 

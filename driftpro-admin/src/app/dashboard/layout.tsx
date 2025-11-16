@@ -666,17 +666,18 @@ export default function DashboardLayout({
                 {sidebarItems.find(item => item.href === pathname)?.name || 'Dashboard'}
               </h1>
             </div>
-
-            {/* Desktop Actions - Removed (now in Topbar) */}
           </div>
         )}
 
         {/* Page Content */}
         <div style={{
-          padding: isMobile ? '1rem' : '2rem',
+          padding: isMobile ? '0.75rem' : '2rem',
           // På mobil legger vi inn ekstra bunn-padding for å gi plass til bunnnavigasjonen
-          paddingBottom: isMobile && !isLogisticsPage ? '4.5rem' : (isMobile ? '1.5rem' : '2rem'),
-          minHeight: 'calc(100vh - 80px)'
+          paddingBottom: isMobile && !isLogisticsPage ? '5rem' : (isMobile ? '1rem' : '2rem'),
+          minHeight: 'calc(100vh - 80px)',
+          width: '100%',
+          maxWidth: '100%',
+          overflowX: 'hidden'
         }}>
           {children}
         </div>

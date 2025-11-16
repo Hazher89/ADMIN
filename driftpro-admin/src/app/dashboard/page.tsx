@@ -154,8 +154,21 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background-color)' }}>
-      {/* Mobile Header - Removed bell (now in Topbar) */}
+    <div className="min-h-screen" style={{ background: 'var(--background-color)', width: '100%', overflowX: 'hidden' }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{ padding: '0.75rem 0', marginBottom: '0.5rem' }}>
+          <h1 style={{ 
+            fontSize: '1.25rem', 
+            fontWeight: '600', 
+            color: 'var(--text-color)',
+            margin: 0,
+            padding: '0 0.75rem'
+          }}>
+            Velkommen, {userProfile?.displayName?.split(' ')[0] || 'Bruker'}!
+          </h1>
+        </div>
+      )}
 
       {/* Desktop Header */}
       {!isMobile && (
@@ -167,78 +180,221 @@ export default function DashboardPage() {
         </div>
       )}
 
-      <div className="px-4 py-6 max-w-7xl mx-auto">
+      <div style={{ 
+        padding: isMobile ? '0' : '1rem 2rem', 
+        maxWidth: isMobile ? '100%' : '1280px', 
+        margin: '0 auto',
+        width: '100%'
+      }}>
         {/* Stats Grid - Mobile */}
         {isMobile ? (
-          <div className="space-y-2 mb-6">
-            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Total Ansatte</p>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.totalEmployees}</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem', marginBottom: '1rem', padding: '0 0.75rem' }}>
+            <div style={{ 
+              borderRadius: '0.75rem', 
+              padding: '1rem', 
+              boxShadow: 'var(--shadow-sm)', 
+              background: 'var(--card-background)', 
+              border: '1px solid var(--border-color)' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-500)',
+                    margin: '0 0 0.25rem 0'
+                  }}>Total Ansatte</p>
+                  <p style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '700', 
+                    color: 'var(--text-color)',
+                    margin: 0
+                  }}>{stats.totalEmployees}</p>
                 </div>
-                <div className="p-2 bg-blue-50 rounded-lg">
-                  <Users className="w-5 h-5 text-blue-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Aktive Skift</p>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.activeShifts}</p>
-                </div>
-                <div className="p-2 bg-green-50 rounded-lg">
-                  <Clock className="w-5 h-5 text-green-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Ventende Forespørsler</p>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.pendingRequests}</p>
-                </div>
-                <div className="p-2 bg-yellow-50 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-yellow-600" />
-                </div>
-              </div>
-            </div>
-
-            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Avdelinger</p>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.departments}</p>
-                </div>
-                <div className="p-2 bg-purple-50 rounded-lg">
-                  <Building className="w-5 h-5 text-purple-600" />
+                <div style={{ 
+                  padding: '0.75rem', 
+                  background: 'rgba(59, 130, 246, 0.1)', 
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Users size={24} style={{ color: '#3b82f6' }} />
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Åpne Avvik</p>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.openDeviations}</p>
+            <div style={{ 
+              borderRadius: '0.75rem', 
+              padding: '1rem', 
+              boxShadow: 'var(--shadow-sm)', 
+              background: 'var(--card-background)', 
+              border: '1px solid var(--border-color)' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-500)',
+                    margin: '0 0 0.25rem 0'
+                  }}>Aktive Skift</p>
+                  <p style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '700', 
+                    color: 'var(--text-color)',
+                    margin: 0
+                  }}>{stats.activeShifts}</p>
                 </div>
-                <div className="p-2 bg-red-50 rounded-lg">
-                  <AlertTriangle className="w-5 h-5 text-red-600" />
+                <div style={{ 
+                  padding: '0.75rem', 
+                  background: 'rgba(34, 197, 94, 0.1)', 
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Clock size={24} style={{ color: '#22c55e' }} />
                 </div>
               </div>
             </div>
 
-            <div className="rounded-lg p-3 shadow-sm" style={{ background: 'var(--card-background)', border: '1px solid var(--border-color)' }}>
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-xs font-medium" style={{ color: 'var(--gray-500)' }}>Aktive Stemplinger</p>
-                  <p className="text-xl font-bold" style={{ color: 'var(--text-color)' }}>{stats.activeTimeClocks}</p>
+            <div style={{ 
+              borderRadius: '0.75rem', 
+              padding: '1rem', 
+              boxShadow: 'var(--shadow-sm)', 
+              background: 'var(--card-background)', 
+              border: '1px solid var(--border-color)' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-500)',
+                    margin: '0 0 0.25rem 0'
+                  }}>Ventende Forespørsler</p>
+                  <p style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '700', 
+                    color: 'var(--text-color)',
+                    margin: 0
+                  }}>{stats.pendingRequests}</p>
                 </div>
-                <div className="p-2 bg-cyan-50 rounded-lg">
-                  <Clock className="w-5 h-5 text-cyan-600" />
+                <div style={{ 
+                  padding: '0.75rem', 
+                  background: 'rgba(234, 179, 8, 0.1)', 
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <AlertTriangle size={24} style={{ color: '#eab308' }} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ 
+              borderRadius: '0.75rem', 
+              padding: '1rem', 
+              boxShadow: 'var(--shadow-sm)', 
+              background: 'var(--card-background)', 
+              border: '1px solid var(--border-color)' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-500)',
+                    margin: '0 0 0.25rem 0'
+                  }}>Avdelinger</p>
+                  <p style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '700', 
+                    color: 'var(--text-color)',
+                    margin: 0
+                  }}>{stats.departments}</p>
+                </div>
+                <div style={{ 
+                  padding: '0.75rem', 
+                  background: 'rgba(168, 85, 247, 0.1)', 
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Building size={24} style={{ color: '#a855f7' }} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ 
+              borderRadius: '0.75rem', 
+              padding: '1rem', 
+              boxShadow: 'var(--shadow-sm)', 
+              background: 'var(--card-background)', 
+              border: '1px solid var(--border-color)' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-500)',
+                    margin: '0 0 0.25rem 0'
+                  }}>Åpne Avvik</p>
+                  <p style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '700', 
+                    color: 'var(--text-color)',
+                    margin: 0
+                  }}>{stats.openDeviations}</p>
+                </div>
+                <div style={{ 
+                  padding: '0.75rem', 
+                  background: 'rgba(239, 68, 68, 0.1)', 
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <AlertTriangle size={24} style={{ color: '#ef4444' }} />
+                </div>
+              </div>
+            </div>
+
+            <div style={{ 
+              borderRadius: '0.75rem', 
+              padding: '1rem', 
+              boxShadow: 'var(--shadow-sm)', 
+              background: 'var(--card-background)', 
+              border: '1px solid var(--border-color)' 
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ flex: 1 }}>
+                  <p style={{ 
+                    fontSize: '0.75rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-500)',
+                    margin: '0 0 0.25rem 0'
+                  }}>Aktive Stemplinger</p>
+                  <p style={{ 
+                    fontSize: '1.5rem', 
+                    fontWeight: '700', 
+                    color: 'var(--text-color)',
+                    margin: 0
+                  }}>{stats.activeTimeClocks}</p>
+                </div>
+                <div style={{ 
+                  padding: '0.75rem', 
+                  background: 'rgba(6, 182, 212, 0.1)', 
+                  borderRadius: '0.5rem',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}>
+                  <Clock size={24} style={{ color: '#06b6d4' }} />
                 </div>
               </div>
             </div>
