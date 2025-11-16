@@ -157,13 +157,18 @@ export default function DashboardPage() {
     <div className="min-h-screen" style={{ background: 'var(--background-color)', width: '100%', overflowX: 'hidden' }}>
       {/* Mobile Header */}
       {isMobile && (
-        <div style={{ padding: '0.75rem 0', marginBottom: '0.5rem' }}>
+        <div style={{ 
+          padding: '0.625rem 0.75rem 0.5rem', 
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)'
+        }}>
           <h1 style={{ 
-            fontSize: '1.25rem', 
+            fontSize: '1.125rem', 
             fontWeight: '600', 
             color: 'var(--text-color)',
             margin: 0,
-            padding: '0 0.75rem'
+            lineHeight: '1.3',
+            letterSpacing: '-0.01em'
           }}>
             Velkommen, {userProfile?.displayName?.split(' ')[0] || 'Bruker'}!
           </h1>
