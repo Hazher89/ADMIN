@@ -832,20 +832,57 @@ export default function EmployeesPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
       {/* Mobile Header */}
       {isMobile && (
-        <div className="bg-white shadow-sm border-b border-gray-200 px-4 py-3">
-          <div className="flex items-center justify-between">
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
             <div>
-              <h1 className="text-lg font-semibold text-gray-900">Ansatte</h1>
-              <p className="text-sm text-gray-600">{filteredEmployees.length} ansatte</p>
+              <h1 style={{
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                margin: '0 0 0.125rem 0',
+                lineHeight: '1.3'
+              }}>
+                Ansatte
+              </h1>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--gray-500)',
+                margin: 0
+              }}>
+                {filteredEmployees.length} ansatte
+              </p>
             </div>
             <button
               onClick={() => setShowAddModal(true)}
-              className="p-2 rounded-lg bg-blue-600 text-white"
+              style={{
+                padding: '0.625rem',
+                borderRadius: '0.625rem',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
             >
-              <Plus className="w-5 h-5" />
+              <Plus size={20} />
             </button>
           </div>
         </div>
@@ -873,43 +910,133 @@ export default function EmployeesPage() {
       )}
 
       {/* Stats Section */}
-      <div className="stats-section">
-        <div className="stat-item">
-          <div className="stat-number">{stats.total}</div>
-          <div className="stat-label">Totalt</div>
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '0.625rem' : '1rem',
+        padding: isMobile ? '0 0.75rem 0.75rem' : '1rem 2rem',
+        marginBottom: isMobile ? '0.75rem' : '1rem'
+      }}>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+            {stats.total}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Totalt
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.active}</div>
-          <div className="stat-label">Aktive</div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: '#22c55e', marginBottom: '0.25rem' }}>
+            {stats.active}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Aktive
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.leaders}</div>
-          <div className="stat-label">Ledere</div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: '#3b82f6', marginBottom: '0.25rem' }}>
+            {stats.leaders}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Ledere
+          </div>
         </div>
-        <div className="stat-item">
-          <div className="stat-number">{stats.admins}</div>
-          <div className="stat-label">Admins</div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: '#a855f7', marginBottom: '0.25rem' }}>
+            {stats.admins}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Admins
+          </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="search-filters-section">
-        <div className="search-container">
-          <Search className="search-icon" />
+      <div style={{
+        padding: isMobile ? '0 0.75rem 0.75rem' : '0 2rem 1rem',
+        display: 'flex',
+        gap: isMobile ? '0.5rem' : '1rem',
+        flexDirection: isMobile ? 'column' : 'row'
+      }}>
+        <div style={{ position: 'relative', flex: isMobile ? 'none' : 1, width: isMobile ? '100%' : undefined }}>
+          <Search style={{
+            position: 'absolute',
+            left: isMobile ? '0.875rem' : '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--gray-400)',
+            width: isMobile ? '18px' : '16px',
+            height: isMobile ? '18px' : '16px'
+          }} />
           <input
             type="text"
             placeholder="Søk etter navn, e-post eller stilling..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="search-input"
+            style={{
+              width: '100%',
+              padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              outline: 'none',
+              fontSize: isMobile ? '16px' : undefined,
+              background: 'var(--card-background)'
+            }}
           />
         </div>
-        <div className="filter-container">
-          <Filter className="filter-icon" />
+        <div style={{ position: 'relative', width: isMobile ? '100%' : '200px' }}>
+          <Filter style={{
+            position: 'absolute',
+            left: isMobile ? '0.875rem' : '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--gray-400)',
+            width: isMobile ? '18px' : '16px',
+            height: isMobile ? '18px' : '16px',
+            pointerEvents: 'none'
+          }} />
           <select
             value={selectedDepartment}
             onChange={(e) => setSelectedDepartment(e.target.value)}
-            className="filter-select"
+            style={{
+              width: '100%',
+              padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              outline: 'none',
+              fontSize: isMobile ? '16px' : undefined,
+              background: 'var(--card-background)',
+              appearance: 'none',
+              WebkitAppearance: 'none'
+            }}
           >
             <option value="all">Alle avdelinger</option>
             {departments.map(dept => (
@@ -921,116 +1048,180 @@ export default function EmployeesPage() {
         </div>
       </div>
 
-            {/* Employees Grid */}
-      <div className="grid grid-cols-3">
+      {/* Employees Grid/List */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+        gap: isMobile ? '0.625rem' : '1rem',
+        padding: isMobile ? '0 0.75rem' : '0 2rem 2rem'
+      }}>
         {filteredEmployees.map((employee) => {
           const roleBadge = getRoleBadge(employee.role);
           return (
-            <div key={employee.id} className="card">
-              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
-                <div className="card-icon">
-                  <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-full flex items-center justify-center text-white font-semibold text-sm">
-                    {(employee.displayName?.charAt(0) || 'U').toUpperCase()}
-                  </div>
+            <div key={employee.id} style={{
+              borderRadius: '0.875rem',
+              padding: isMobile ? '1rem' : '1.25rem',
+              background: 'var(--card-background)',
+              border: '1px solid var(--border-color)',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            }}>
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '0.75rem' : '1rem', marginBottom: isMobile ? '0.75rem' : '1rem' }}>
+                <div style={{
+                  width: isMobile ? '48px' : '40px',
+                  height: isMobile ? '48px' : '40px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #3b82f6 0%, #6366f1 100%)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  color: 'white',
+                  fontWeight: 600,
+                  fontSize: isMobile ? '1rem' : '0.875rem',
+                  flexShrink: 0
+                }}>
+                  {(employee.displayName?.charAt(0) || 'U').toUpperCase()}
                 </div>
-                <div style={{ flex: '1' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ 
-                    fontWeight: '600', 
-                    color: '#333',
-                    fontSize: '1.1rem',
-                    marginBottom: '0.25rem'
+                    fontWeight: 600, 
+                    color: 'var(--text-color)',
+                    fontSize: isMobile ? '0.9375rem' : '1.1rem',
+                    marginBottom: '0.25rem',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
                   }}>
                     {employee.displayName || 'Ukjent navn'}
                   </h3>
-                  <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                  <p style={{ 
+                    color: 'var(--gray-500)', 
+                    fontSize: isMobile ? '0.8125rem' : '0.875rem', 
+                    marginBottom: isMobile ? '0.5rem' : '0.5rem',
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap'
+                  }}>
                     {employee.email}
                   </p>
                 </div>
-                <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
-                  <MoreHorizontal style={{ width: '16px', height: '16px' }} />
-                </button>
+                {!isMobile && (
+                  <button className="btn btn-secondary" style={{ padding: '0.5rem', flexShrink: 0 }}>
+                    <MoreHorizontal style={{ width: '16px', height: '16px' }} />
+                  </button>
+                )}
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <User style={{ width: '14px', height: '14px', color: '#666' }} />
-                  <span style={{ fontSize: '0.875rem', color: '#666' }}>
+              <div style={{ marginBottom: isMobile ? '0.75rem' : '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: isMobile ? '0.375rem' : '0.5rem' }}>
+                  <User size={isMobile ? 16 : 14} style={{ color: 'var(--gray-500)', flexShrink: 0 }} />
+                  <span style={{ fontSize: isMobile ? '0.8125rem' : '0.875rem', color: 'var(--gray-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     <strong>Stilling:</strong> {employee.position || 'Ingen stilling'}
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <Building style={{ width: '14px', height: '14px', color: '#666' }} />
-                  <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: isMobile ? '0.375rem' : '0.5rem' }}>
+                  <Building size={isMobile ? 16 : 14} style={{ color: 'var(--gray-500)', flexShrink: 0 }} />
+                  <span style={{ fontSize: isMobile ? '0.8125rem' : '0.875rem', color: 'var(--gray-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                     <strong>Avdeling:</strong> {getDepartmentName(employee.departmentId)}
                   </span>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
-                  <MapPin style={{ width: '14px', height: '14px', color: '#666' }} />
-                  <span style={{ fontSize: '0.875rem', color: '#666' }}>
-                    {employee.phone || 'Ingen telefon'}
-                  </span>
-                </div>
+                {employee.phone && (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: isMobile ? '0.375rem' : '0.5rem' }}>
+                    <MapPin size={isMobile ? 16 : 14} style={{ color: 'var(--gray-500)', flexShrink: 0 }} />
+                    <span style={{ fontSize: isMobile ? '0.8125rem' : '0.875rem', color: 'var(--gray-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {employee.phone}
+                    </span>
+                  </div>
+                )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                  <CheckCircle style={{ width: '14px', height: '14px', color: '#666' }} />
-                  <span style={{ fontSize: '0.875rem', color: '#666' }}>
+                  <CheckCircle size={isMobile ? 16 : 14} style={{ color: employee.status === 'active' ? '#22c55e' : employee.status === 'inactive' ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />
+                  <span style={{ fontSize: isMobile ? '0.8125rem' : '0.875rem', color: 'var(--gray-600)' }}>
                     <strong>Status:</strong> {employee.status === 'active' ? 'Aktiv' : 
                      employee.status === 'inactive' ? 'Inaktiv' : 'Permisjon'}
                   </span>
                 </div>
               </div>
 
-              <div style={{ marginBottom: '1rem' }}>
-                <div style={{ fontSize: '0.75rem', color: '#666' }}>
-                  Ansattnr: {employee.employeeNumber || 'Ingen nummer'}
+              {employee.employeeNumber && (
+                <div style={{ marginBottom: isMobile ? '0.75rem' : '1rem', paddingTop: isMobile ? '0.75rem' : 0, borderTop: isMobile ? '1px solid var(--border-color)' : 'none' }}>
+                  <div style={{ fontSize: isMobile ? '0.75rem' : '0.75rem', color: 'var(--gray-500)' }}>
+                    Ansattnr: {employee.employeeNumber}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+              <div style={{ 
+                display: 'flex', 
+                gap: isMobile ? '0.375rem' : '0.5rem', 
+                flexWrap: 'wrap',
+                flexDirection: isMobile ? 'column' : 'row'
+              }}>
                 <button 
                   className="btn btn-secondary" 
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                  style={{ 
+                    fontSize: isMobile ? '0.875rem' : '0.75rem', 
+                    padding: isMobile ? '0.75rem' : '0.25rem 0.75rem',
+                    width: isMobile ? '100%' : undefined,
+                    minHeight: isMobile ? '44px' : undefined,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
                   onClick={() => handleViewEmployee(employee)}
                 >
-                  <Eye style={{ width: '14px', height: '14px' }} />
+                  <Eye size={isMobile ? 18 : 14} />
                   Se
                 </button>
                 <button 
                   className="btn btn-secondary" 
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                  style={{ 
+                    fontSize: isMobile ? '0.875rem' : '0.75rem', 
+                    padding: isMobile ? '0.75rem' : '0.25rem 0.75rem',
+                    width: isMobile ? '100%' : undefined,
+                    minHeight: isMobile ? '44px' : undefined,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    gap: '0.5rem'
+                  }}
                   onClick={() => {
                     setSelectedEmployee(employee);
                     setShowEditModal(true);
                   }}
                 >
-                  <Edit style={{ width: '14px', height: '14px' }} />
+                  <Edit size={isMobile ? 18 : 14} />
                   Rediger
                 </button>
-                <button 
-                  className="btn btn-secondary" 
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
-                  onClick={() => handleEmployeeSettings(employee)}
-                >
-                  <Settings style={{ width: '14px', height: '14px' }} />
-                  Innstillinger
-                </button>
-                <button 
-                  className="btn btn-danger" 
-                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', opacity: deletingEmployeeId === employee.id ? 0.5 : 1 }}
-                  onClick={() => handleDeleteEmployee(employee.id)}
-                  disabled={deletingEmployeeId === employee.id}
-                >
-                  {deletingEmployeeId === employee.id ? (
-                    <>
-                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block mr-1"></div>
-                      Sletter...
-                    </>
-                  ) : (
-                    <>
-                      <Trash2 style={{ width: '14px', height: '14px' }} />
-                      Slett
-                    </>
-                  )}
-                </button>
+                {!isMobile && (
+                  <>
+                    <button 
+                      className="btn btn-secondary" 
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                      onClick={() => handleEmployeeSettings(employee)}
+                    >
+                      <Settings style={{ width: '14px', height: '14px' }} />
+                      Innstillinger
+                    </button>
+                    <button 
+                      className="btn btn-danger" 
+                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', opacity: deletingEmployeeId === employee.id ? 0.5 : 1 }}
+                      onClick={() => handleDeleteEmployee(employee.id)}
+                      disabled={deletingEmployeeId === employee.id}
+                    >
+                      {deletingEmployeeId === employee.id ? (
+                        <>
+                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block mr-1"></div>
+                          Sletter...
+                        </>
+                      ) : (
+                        <>
+                          <Trash2 style={{ width: '14px', height: '14px' }} />
+                          Slett
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           );
