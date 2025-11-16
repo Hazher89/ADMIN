@@ -40,6 +40,7 @@ interface Contact {
 }
 
 export default function SMSLogsPage() {
+  const [isMobile, setIsMobile] = useState(false);
   const [smsLogs, setSmsLogs] = useState<SMSLog[]>([]);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [activeTab, setActiveTab] = useState<'logs' | 'phonebook' | 'send'>('logs');
@@ -66,6 +67,13 @@ export default function SMSLogsPage() {
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'sent' | 'delivered' | 'failed'>('all');
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     loadSMSLogs();
@@ -238,20 +246,47 @@ export default function SMSLogsPage() {
   };
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header" style={{ padding: '1rem' }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-          <div className="card-icon">
-            <Phone style={{ width: '24px', height: '24px', color: 'var(--primary)' }} />
-          </div>
-          <div>
-            <h1 className="page-title">📱 SMS Logg & Telefonbok</h1>
-            <p className="page-subtitle">
-              Administrer SMS-utskrifter, kontakter og send meldinger
-            </p>
-          </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            SMS Logg
+          </h1>
         </div>
+      )}
+
+      {/* Desktop Page Header */}
+      {!isMobile && (
+        <div className="page-header" style={{ padding: '1rem' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+            <div className="card-icon">
+              <Phone style={{ width: '24px', height: '24px', color: 'var(--primary)' }} />
+            </div>
+            <div>
+              <h1 className="page-title">📱 SMS Logg & Telefonbok</h1>
+              <p className="page-subtitle">
+                Administrer SMS-utskrifter, kontakter og send meldinger
+              </p>
+            </div>
+          </div>
 
         {/* Tab Navigation */}
         <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>

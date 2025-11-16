@@ -31,6 +31,7 @@ import {
 
 export default function MyCompanyPage() {
   const { userProfile } = useAuth();
+  const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState('protocols');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -427,16 +428,43 @@ export default function MyCompanyPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: '#f9fafb' }}>
-      {/* Header */}
-      <div style={{ background: '#ffffff', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', borderBottom: '1px solid #e5e7eb', padding: '1.5rem 2rem' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: '#111827' }}>Min Bedrift</h1>
-            <p style={{ color: '#6b7280', marginTop: '0.25rem' }}>
-              Enterprise Management Platform
-            </p>
-          </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Min Bedrift
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div style={{ background: '#ffffff', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', borderBottom: '1px solid #e5e7eb', padding: '1.5rem 2rem' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: '#111827' }}>Min Bedrift</h1>
+              <p style={{ color: '#6b7280', marginTop: '0.25rem' }}>
+                Enterprise Management Platform
+              </p>
+            </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
               style={{ 

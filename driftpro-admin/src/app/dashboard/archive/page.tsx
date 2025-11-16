@@ -51,6 +51,7 @@ interface SearchResult {
 }
 
 export default function ArchivePage() {
+  const [isMobile, setIsMobile] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [activeAccount, setActiveAccount] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(false);
@@ -68,6 +69,13 @@ export default function ArchivePage() {
     pdfOnly: false
   });
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     const checkLoginStatus = async () => {
