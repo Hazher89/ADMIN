@@ -318,18 +318,73 @@ export default function DocumentsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: isMobile ? '1rem' : '1.5rem 2rem' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: isMobile ? 'var(--font-size-xl)' : 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--text-color)' }}>Dokumenter</h1>
-            <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem', fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)' }}>
-              {documents.length} dokumenter • {formatFileSize(documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0))} total størrelse
-            </p>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                margin: '0 0 0.125rem 0',
+                lineHeight: '1.3'
+              }}>
+                Dokumenter
+              </h1>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--gray-500)',
+                margin: 0
+              }}>
+                {documents.length} dokumenter
+              </p>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              style={{
+                padding: '0.625rem',
+                borderRadius: '0.625rem',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
+            >
+              <Plus size={20} />
+            </button>
           </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: isMobile ? '0.5rem' : '1rem' }}>
-            {!isMobile && (
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 2rem' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--text-color)' }}>Dokumenter</h1>
+              <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem', fontSize: 'var(--font-size-base)' }}>
+                {documents.length} dokumenter • {formatFileSize(documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0))} total størrelse
+              </p>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <button
                 onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
                 style={{ 
@@ -346,26 +401,31 @@ export default function DocumentsPage() {
               >
                 {viewMode === 'grid' ? <List style={{ width: '16px', height: '16px' }} /> : <Grid style={{ width: '16px', height: '16px' }} />}
               </button>
-            )}
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="btn btn-primary"
-              style={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: '0.5rem',
-                fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)',
-                padding: isMobile ? '0.5rem 0.75rem' : '0.75rem 1rem'
-              }}
-            >
-              <Plus style={{ width: isMobile ? '14px' : '16px', height: isMobile ? '14px' : '16px' }} />
-              {isMobile ? 'Last opp' : 'Last opp dokument'}
-            </button>
+              <button
+                onClick={() => setShowAddModal(true)}
+                className="btn btn-primary"
+                style={{ 
+                  display: 'flex', 
+                  alignItems: 'center', 
+                  gap: '0.5rem',
+                  fontSize: 'var(--font-size-base)',
+                  padding: '0.75rem 1rem'
+                }}
+              >
+                <Plus style={{ width: '16px', height: '16px' }} />
+                Last opp dokument
+              </button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '1rem' : '2rem 1rem' }}>
+      <div style={{ 
+        maxWidth: '1280px', 
+        margin: '0 auto', 
+        padding: isMobile ? '0.5rem 0.75rem' : '2rem 1rem',
+        width: '100%'
+      }}>
         {/* Success/Error Messages */}
         {success && (
           <div style={{ 
