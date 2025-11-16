@@ -28,6 +28,7 @@ export default function DepartmentsPage() {
   const { userProfile } = useAuth();
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [showAddModal, setShowAddModal] = useState(false);
   const [newDepartment, setNewDepartment] = useState({
@@ -38,6 +39,13 @@ export default function DepartmentsPage() {
     managerId: ''
   });
   const [employees, setEmployees] = useState<Employee[]>([]);
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (userProfile?.companyId) {
@@ -137,104 +145,259 @@ export default function DepartmentsPage() {
   };
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card-icon">
-            <Building />
-          </div>
-          <div>
-            <h1 className="page-title">🏢 Avdelinger</h1>
-            <p className="page-subtitle">
-              Administrer bedriftens avdelinger og organisasjonsstruktur
-            </p>
+    <div style={{ 
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{
+                fontSize: '1.125rem',
+                fontWeight: 600,
+                color: 'var(--text-color)',
+                margin: '0 0 0.125rem 0',
+                lineHeight: '1.3'
+              }}>
+                🏢 Avdelinger
+              </h1>
+              <p style={{
+                fontSize: '0.8125rem',
+                color: 'var(--gray-500)',
+                margin: 0
+              }}>
+                {departments.length} avdelinger
+              </p>
+            </div>
+            <button 
+              onClick={() => setShowAddModal(true)}
+              style={{
+                padding: '0.625rem',
+                borderRadius: '0.625rem',
+                background: 'var(--primary)',
+                color: 'white',
+                border: 'none',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: '44px',
+                minHeight: '44px'
+              }}
+            >
+              <Plus size={20} />
+            </button>
           </div>
         </div>
-        
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-          <span className="badge badge-primary">
-            {departments.length} avdelinger
-          </span>
-          <span className="badge badge-secondary">
-            {getTotalEmployees()} ansatte
-          </span>
-          <button 
-            className="btn btn-primary"
-            onClick={() => setShowAddModal(true)}
-          >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Opprett avdeling
-          </button>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="card-icon">
+              <Building />
+            </div>
+            <div>
+              <h1 className="page-title">🏢 Avdelinger</h1>
+              <p className="page-subtitle">
+                Administrer bedriftens avdelinger og organisasjonsstruktur
+              </p>
+            </div>
+          </div>
+          
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+            <span className="badge badge-primary">
+              {departments.length} avdelinger
+            </span>
+            <span className="badge badge-secondary">
+              {getTotalEmployees()} ansatte
+            </span>
+            <button 
+              className="btn btn-primary"
+              onClick={() => setShowAddModal(true)}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              Opprett avdeling
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Stats Grid */}
-      <div className="stats-grid">
-        <div className="stat-card">
-          <div className="stat-number">{departments.length}</div>
-          <div className="stat-label">Totalt avdelinger</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">{getTotalEmployees()}</div>
-          <div className="stat-label">Totalt ansatte</div>
-        </div>
-        <div className="stat-card">
-          <div className="stat-number">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? 'repeat(2, 1fr)' : 'repeat(4, 1fr)',
+        gap: isMobile ? '0.625rem' : '1rem',
+        marginBottom: isMobile ? '0.75rem' : '2rem',
+        padding: isMobile ? '0 0.75rem' : undefined
+      }}>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
             {departments.length}
           </div>
-          <div className="stat-label">Aktive avdelinger</div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Totalt avdelinger
+          </div>
         </div>
-        <div className="stat-card">
-          <div className="stat-number">
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+            {getTotalEmployees()}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Totalt ansatte
+          </div>
+        </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+            {departments.length}
+          </div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Aktive avdelinger
+          </div>
+        </div>
+        <div style={{
+          borderRadius: '0.875rem',
+          padding: isMobile ? '0.875rem' : '1rem',
+          background: 'var(--card-background)',
+          border: '1px solid var(--border-color)',
+          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+          textAlign: 'center'
+        }}>
+          <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
             {getTotalBudget().toLocaleString()} kr
           </div>
-          <div className="stat-label">Total budsjett</div>
+          <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
+            Total budsjett
+          </div>
         </div>
       </div>
 
       {/* Search and Filters */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div className="search-container" style={{ flex: '1', minWidth: '300px' }}>
-            <Search className="search-icon" />
-            <input
-              type="text"
-              placeholder="Søk i avdelinger..."
-              className="search-input"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-            />
-          </div>
-          
-
+      <div style={{
+        borderRadius: '0.875rem',
+        padding: isMobile ? '0.75rem' : '1rem',
+        background: 'var(--card-background)',
+        border: '1px solid var(--border-color)',
+        boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
+        marginBottom: isMobile ? '0.75rem' : '2rem',
+        margin: isMobile ? '0 0.75rem 0.75rem' : '0 2rem 2rem'
+      }}>
+        <div style={{ position: 'relative' }}>
+          <Search style={{
+            position: 'absolute',
+            left: isMobile ? '0.875rem' : '12px',
+            top: '50%',
+            transform: 'translateY(-50%)',
+            color: 'var(--gray-400)',
+            width: isMobile ? '18px' : '16px',
+            height: isMobile ? '18px' : '16px'
+          }} />
+          <input
+            type="text"
+            placeholder="Søk i avdelinger..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            style={{
+              width: '100%',
+              padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              outline: 'none',
+              fontSize: isMobile ? '16px' : undefined,
+              background: 'var(--card-background)'
+            }}
+          />
         </div>
       </div>
 
       {/* Departments Grid */}
-      <div className="grid grid-cols-3">
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(3, 1fr)',
+        gap: isMobile ? '0.625rem' : '1rem',
+        padding: isMobile ? '0 0.75rem' : '0 2rem 2rem'
+      }}>
         {filteredDepartments.map((department) => (
-          <div key={department.id} className="card">
-            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1rem', marginBottom: '1rem' }}>
-              <div className="card-icon">
-                <Building />
+          <div key={department.id} style={{
+            borderRadius: '0.875rem',
+            padding: isMobile ? '1rem' : '1.25rem',
+            background: 'var(--card-background)',
+            border: '1px solid var(--border-color)',
+            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: isMobile ? '0.75rem' : '1rem', marginBottom: isMobile ? '0.75rem' : '1rem' }}>
+              <div style={{
+                width: isMobile ? '40px' : '48px',
+                height: isMobile ? '40px' : '48px',
+                borderRadius: '0.625rem',
+                background: 'rgba(59, 130, 246, 0.1)',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flexShrink: 0
+              }}>
+                <Building size={isMobile ? 20 : 24} style={{ color: '#3b82f6' }} />
               </div>
-              <div style={{ flex: '1' }}>
+              <div style={{ flex: 1, minWidth: 0 }}>
                 <h3 style={{ 
-                  fontWeight: '600', 
-                  color: '#333',
-                  fontSize: '1.1rem',
-                  marginBottom: '0.25rem'
+                  fontWeight: 600, 
+                  color: 'var(--text-color)',
+                  fontSize: isMobile ? '0.9375rem' : '1.1rem',
+                  marginBottom: '0.25rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  whiteSpace: 'nowrap'
                 }}>
                   {department.name}
                 </h3>
-                <p style={{ color: '#666', fontSize: '0.875rem', marginBottom: '0.5rem' }}>
+                <p style={{ 
+                  color: 'var(--gray-500)', 
+                  fontSize: isMobile ? '0.8125rem' : '0.875rem', 
+                  marginBottom: isMobile ? '0.5rem' : '0.5rem',
+                  overflow: 'hidden',
+                  textOverflow: 'ellipsis',
+                  display: '-webkit-box',
+                  WebkitLineClamp: 2,
+                  WebkitBoxOrient: 'vertical'
+                }}>
                   {department.description}
                 </p>
               </div>
-              <button className="btn btn-secondary" style={{ padding: '0.5rem' }}>
-                <MoreHorizontal style={{ width: '16px', height: '16px' }} />
-              </button>
+              {!isMobile && (
+                <button className="btn btn-secondary" style={{ padding: '0.5rem', flexShrink: 0 }}>
+                  <MoreHorizontal style={{ width: '16px', height: '16px' }} />
+                </button>
+              )}
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
