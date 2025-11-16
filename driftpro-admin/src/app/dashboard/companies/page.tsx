@@ -43,6 +43,7 @@ import AddCompanyModal from '@/components/AddCompanyModal';
 
 export default function CompaniesPage() {
   const { userProfile } = useAuth();
+  const [isMobile, setIsMobile] = useState(false);
   const [companies, setCompanies] = useState<Company[]>([]);
   const [filteredCompanies, setFilteredCompanies] = useState<Company[]>([]);
   const [loading, setLoading] = useState(true);
@@ -917,20 +918,47 @@ export default function CompaniesPage() {
   }
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card-icon">
-            <Building />
-          </div>
-          <div>
-            <h1 className="page-title">🏢 Bedrifter</h1>
-            <p className="page-subtitle">
-              Administrer og oversikt over alle bedrifter
-            </p>
-          </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Bedrifter
+          </h1>
         </div>
+      )}
+
+      {/* Desktop Page Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="card-icon">
+              <Building />
+            </div>
+            <div>
+              <h1 className="page-title">🏢 Bedrifter</h1>
+              <p className="page-subtitle">
+                Administrer og oversikt over alle bedrifter
+              </p>
+            </div>
+          </div>
         
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <span className="badge badge-primary">
