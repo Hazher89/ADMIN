@@ -488,7 +488,8 @@ export default function MyCompanyPage() {
             </button>
           </div>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* Main Content */}
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem' }}>

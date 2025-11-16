@@ -377,7 +377,8 @@ export default function SMSLogsPage() {
             {contacts.length} KONTAKTER
           </button>
         </div>
-      </div>
+        </div>
+      )}
 
       {/* SMS Logs Tab */}
       {activeTab === 'logs' && (

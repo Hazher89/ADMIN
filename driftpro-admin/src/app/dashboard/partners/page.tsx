@@ -57,6 +57,7 @@ import {
 
 export default function PartnersPage() {
   const { userProfile } = useAuth();
+  const [isMobile, setIsMobile] = useState(false);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [filteredPartners, setFilteredPartners] = useState<Partner[]>([]);
   const [loading, setLoading] = useState(true);
@@ -227,6 +228,13 @@ export default function PartnersPage() {
     recommendations: '',
     nextAuditDate: ''
   });
+
+  useEffect(() => {
+    const checkMobile = () => setIsMobile(window.innerWidth < 768);
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
 
   useEffect(() => {
     if (userProfile?.companyId) {
@@ -1167,9 +1175,36 @@ export default function PartnersPage() {
   }
 
   return (
-    <div>
-      {/* Page Header */}
-      <div className="page-header">
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Samarbeidspartnere
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Page Header */}
+      {!isMobile && (
+        <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
           <div className="card-icon">
             <Building2 />
@@ -1327,6 +1362,7 @@ export default function PartnersPage() {
             </div>
         </div>
       </div>
+      )}
 
       {/* Search and Filters */}
       {activeView === 'partners' && (

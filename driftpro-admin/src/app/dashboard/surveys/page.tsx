@@ -198,28 +198,78 @@ export default function SurveysPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--gray-50)' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
-        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <div>
-            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Undersøkelser</h1>
-            <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem' }}>Administrer og analyser bedriftsundersøkelser</p>
-          </div>
+    <div style={{ 
+      minHeight: '100vh', 
+      background: 'var(--background-color)',
+      width: '100%',
+      overflowX: 'hidden',
+      padding: isMobile ? '0' : undefined
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{
+          padding: '0.625rem 0.75rem 0.5rem',
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between'
+        }}>
+          <h1 style={{
+            fontSize: '1.125rem',
+            fontWeight: 600,
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3'
+          }}>
+            Undersøkelser
+          </h1>
           <button
             onClick={() => setShowAddModal(true)}
             className="btn btn-primary"
-            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            style={{
+              minHeight: '44px',
+              minWidth: '44px',
+              padding: '0.5rem',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
           >
-            <Plus style={{ width: '16px', height: '16px' }} />
-            Ny undersøkelse
+            <Plus size={20} />
           </button>
         </div>
-      </div>
+      )}
 
-      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
+          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+            <div>
+              <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Undersøkelser</h1>
+              <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem' }}>Administrer og analyser bedriftsundersøkelser</p>
+            </div>
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Plus style={{ width: '16px', height: '16px' }} />
+              Ny undersøkelse
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '0.75rem' : '2rem 1rem' }}>
         {/* Stats Overview */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(200px, 1fr))', 
+          gap: isMobile ? '0.75rem' : '1rem', 
+          marginBottom: isMobile ? '1rem' : '2rem' 
+        }}>
           <div className="card">
             <div style={{ display: 'flex', alignItems: 'center' }}>
               <div style={{ padding: '0.75rem', background: 'var(--blue-100)', borderRadius: 'var(--radius-lg)' }}>
@@ -318,7 +368,7 @@ export default function SurveysPage() {
         {/* Surveys List */}
         <div className="card">
           {filteredSurveys.length === 0 ? (
-            <div style={{ padding: '3rem', textAlign: 'center' }}>
+            <div style={{ padding: isMobile ? '2rem 1rem' : '3rem', textAlign: 'center' }}>
               <ClipboardList style={{ width: '48px', height: '48px', color: 'var(--gray-400)', margin: '0 auto 1rem' }} />
               <h3 style={{ fontSize: 'var(--font-size-lg)', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '0.5rem' }}>
                 Ingen undersøkelser
@@ -326,6 +376,110 @@ export default function SurveysPage() {
               <p style={{ color: 'var(--gray-600)' }}>
                 Det er ingen undersøkelser som matcher søkekriteriene dine.
               </p>
+            </div>
+          ) : isMobile ? (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+              {filteredSurveys.map((survey) => (
+                <div key={survey.id} style={{
+                  padding: '1rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '0.875rem',
+                  background: 'var(--card-background)'
+                }}>
+                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: '0.75rem' }}>
+                    <div style={{ flex: 1 }}>
+                      <h3 style={{ fontSize: '1rem', fontWeight: 600, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
+                        {survey.title}
+                      </h3>
+                      {survey.description && (
+                        <p style={{ fontSize: '0.875rem', color: 'var(--gray-600)', marginTop: '0.25rem' }}>
+                          {survey.description}
+                        </p>
+                      )}
+                    </div>
+                    <div style={{ 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      gap: '0.5rem',
+                      padding: '0.25rem 0.75rem',
+                      borderRadius: 'var(--radius-full)',
+                      background: 'var(--gray-100)',
+                      marginLeft: '0.5rem'
+                    }}>
+                      {getStatusIcon(survey.status)}
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        fontWeight: '500', 
+                        color: getStatusColor(survey.status) 
+                      }}>
+                        {survey.status === 'draft' ? 'Kladd' : 
+                         survey.status === 'active' ? 'Aktiv' : 
+                         survey.status === 'completed' ? 'Fullført' : 
+                         survey.status === 'archived' ? 'Arkivert' : survey.status}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', marginBottom: '0.75rem', fontSize: '0.875rem', color: 'var(--gray-600)' }}>
+                    <div>Målgruppe: {survey.targetAudience}</div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <Users style={{ width: '14px', height: '14px' }} />
+                      <span>{survey.responses} svar</span>
+                    </div>
+                    <div>
+                      Fra: {formatDate(survey.startDate)} - Til: {formatDate(survey.endDate)}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      style={{ 
+                        flex: 1,
+                        padding: '0.5rem', 
+                        borderRadius: 'var(--radius-md)', 
+                        border: '1px solid var(--gray-300)',
+                        background: 'var(--white)',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        minHeight: '44px'
+                      }}
+                      title="Se detaljer"
+                    >
+                      <Eye style={{ width: '16px', height: '16px', color: 'var(--gray-600)', marginRight: '0.25rem' }} />
+                      Se
+                    </button>
+                    <button
+                      style={{ 
+                        flex: 1,
+                        padding: '0.5rem', 
+                        borderRadius: 'var(--radius-md)', 
+                        border: '1px solid var(--blue-300)',
+                        background: 'var(--white)',
+                        cursor: 'pointer',
+                        fontSize: '0.875rem',
+                        minHeight: '44px'
+                      }}
+                      title="Send ut"
+                    >
+                      <Send style={{ width: '16px', height: '16px', color: 'var(--blue-600)', marginRight: '0.25rem' }} />
+                      Send
+                    </button>
+                    <button
+                      onClick={() => handleDeleteSurvey(survey.id)}
+                      style={{ 
+                        padding: '0.5rem', 
+                        borderRadius: 'var(--radius-md)', 
+                        border: '1px solid var(--red-300)',
+                        background: 'var(--white)',
+                        cursor: 'pointer',
+                        minHeight: '44px',
+                        minWidth: '44px'
+                      }}
+                      title="Slett"
+                    >
+                      <Trash2 style={{ width: '16px', height: '16px', color: 'var(--red-600)' }} />
+                    </button>
+                  </div>
+                </div>
+              ))}
             </div>
           ) : (
             <div style={{ overflowX: 'auto' }}>

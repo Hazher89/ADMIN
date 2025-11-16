@@ -237,9 +237,6 @@ export default function PartnerAssignmentsPage() {
         </div>
       )}
 
-      {!isMobile && (
-        <div className="container mx-auto px-4">
-
       {/* Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
         <div className="bg-white rounded-lg shadow-md p-6 border border-gray-200">

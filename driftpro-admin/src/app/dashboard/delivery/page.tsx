@@ -224,11 +224,11 @@ export default function DeliverySystemPage() {
                 <option value="all">Alle status</option>
                 <option value="assigned">Tildelt</option>
                 <option value="in_transit">Under transport</option>
-            <option value="delivered">Levert</option>
-            <option value="failed">Feilet</option>
-          </select>
-        </div>
-        <button 
+                <option value="delivered">Levert</option>
+                <option value="failed">Feilet</option>
+              </select>
+            </div>
+            <button
           onClick={scanQRCode}
           className="btn btn-primary"
         >
@@ -240,16 +240,91 @@ export default function DeliverySystemPage() {
           className="btn btn-secondary"
         >
           <MapPin className="w-4 h-4" />
-          {showMap ? 'Liste' : 'Kart'}
-        </button>
-        <button 
-          onClick={() => window.location.reload()}
-          className="btn btn-warning"
-        >
-          <RefreshCw className="w-4 h-4" />
-          Oppdater
-        </button>
-      </div>
+              {showMap ? 'Liste' : 'Kart'}
+            </button>
+            <button 
+              onClick={() => window.location.reload()}
+              className="btn btn-warning"
+            >
+              <RefreshCw className="w-4 h-4" />
+              Oppdater
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile Search and Filters */}
+      {isMobile && (
+        <div style={{
+          padding: '0 0.75rem 0.75rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.5rem'
+        }}>
+          <div style={{
+            display: 'flex',
+            gap: '0.5rem',
+            alignItems: 'center'
+          }}>
+            <div style={{
+              flex: 1,
+              position: 'relative',
+              display: 'flex',
+              alignItems: 'center'
+            }}>
+              <Search size={18} style={{ position: 'absolute', left: '0.75rem', color: 'var(--gray-500)' }} />
+              <input
+                type="text"
+                placeholder="Søk leveringer..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.75rem 0.75rem 0.75rem 2.5rem',
+                  border: '1px solid var(--border-color)',
+                  borderRadius: '0.5rem',
+                  fontSize: '16px',
+                  background: 'var(--card-background)',
+                  color: 'var(--text-color)'
+                }}
+              />
+            </div>
+            <button
+              onClick={scanQRCode}
+              className="btn btn-primary"
+              style={{
+                minHeight: '44px',
+                minWidth: '44px',
+                padding: '0.75rem',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+            >
+              <QrCode size={20} />
+            </button>
+          </div>
+          <select 
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            style={{
+              width: '100%',
+              padding: '0.75rem',
+              border: '1px solid var(--border-color)',
+              borderRadius: '0.5rem',
+              fontSize: '16px',
+              background: 'var(--card-background)',
+              color: 'var(--text-color)'
+            }}
+          >
+            <option value="all">Alle status</option>
+            <option value="assigned">Tildelt</option>
+            <option value="in_transit">Under transport</option>
+            <option value="delivered">Levert</option>
+            <option value="failed">Feilet</option>
+          </select>
+        </div>
+      )}
 
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-6 mt-6">
