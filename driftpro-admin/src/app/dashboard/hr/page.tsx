@@ -987,90 +987,256 @@ export default function HRPage() {
   }
 
   return (
-    <div style={{ background: 'var(--background-color)', minHeight: '100vh', padding: 'var(--space-6)' }}>
-      {/* Header */}
-      <div className="page-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-          <div className="card-icon">
-            <Users />
-          </div>
-          <div>
-            <h1 className="page-title">HR & Personal</h1>
-            <p className="page-subtitle">Administrer ansatte, vakter, fravær, ferie og avdelinger</p>
+    <div style={{ 
+      background: 'var(--background-color)', 
+      minHeight: '100vh', 
+      padding: isMobile ? '0' : 'var(--space-6)',
+      width: '100%',
+      overflowX: 'hidden'
+    }}>
+      {/* Mobile Header */}
+      {isMobile && (
+        <div style={{ 
+          padding: '0.625rem 0.75rem 0.5rem', 
+          marginBottom: '0.5rem',
+          borderBottom: '0.5px solid var(--border-color)',
+          background: 'var(--card-background)'
+        }}>
+          <h1 style={{ 
+            fontSize: '1.125rem', 
+            fontWeight: 600, 
+            color: 'var(--text-color)',
+            margin: 0,
+            lineHeight: '1.3',
+            letterSpacing: '-0.01em'
+          }}>
+            HR & Personal
+          </h1>
+        </div>
+      )}
+
+      {/* Desktop Header */}
+      {!isMobile && (
+        <div className="page-header">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+            <div className="card-icon">
+              <Users />
+            </div>
+            <div>
+              <h1 className="page-title">HR & Personal</h1>
+              <p className="page-subtitle">Administrer ansatte, vakter, fravær, ferie og avdelinger</p>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       {/* Quick Stats */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(250px, 1fr))', gap: 'var(--space-4)', marginBottom: 'var(--space-6)' }}>
-        <div className="card">
+      <div style={{ 
+        display: 'grid', 
+        gridTemplateColumns: isMobile ? '1fr' : 'repeat(auto-fit, minmax(250px, 1fr))', 
+        gap: isMobile ? '0.625rem' : 'var(--space-4)', 
+        marginBottom: isMobile ? '0.75rem' : 'var(--space-6)',
+        padding: isMobile ? '0 0.75rem' : '0'
+      }}>
+        <div style={{
+          borderRadius: isMobile ? '0.875rem' : undefined,
+          padding: isMobile ? '1rem' : undefined,
+          boxShadow: isMobile ? '0 1px 3px rgba(0, 0, 0, 0.1)' : undefined,
+          background: isMobile ? 'var(--card-background)' : undefined,
+          border: isMobile ? '1px solid var(--border-color)' : undefined
+        }} className={!isMobile ? "card" : ""}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)', marginBottom: '0.5rem' }}>Totalt Ansatte</p>
-              <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--blue-600)' }}>{stats.totalEmployees}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem' }}>
-                <TrendingUp className="w-4 h-4 text-green-600" />
-                <span style={{ color: 'var(--green-600)', fontSize: 'var(--font-size-sm)' }}>{stats.activeEmployees} aktive</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ 
+                color: 'var(--gray-500)', 
+                fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)', 
+                marginBottom: isMobile ? '0.375rem' : '0.5rem',
+                fontWeight: 500
+              }}>Totalt Ansatte</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.625rem' : 'var(--font-size-2xl)', 
+                fontWeight: '700', 
+                color: 'var(--blue-600)',
+                lineHeight: '1.2',
+                margin: 0
+              }}>{stats.totalEmployees}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: isMobile ? '0.5rem' : '0.5rem' }}>
+                <TrendingUp className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: '#10b981' }} />
+                <span style={{ 
+                  color: '#10b981', 
+                  fontSize: isMobile ? '0.6875rem' : 'var(--font-size-sm)',
+                  fontWeight: 500
+                }}>{stats.activeEmployees} aktive</span>
               </div>
             </div>
-            <div className="card-icon" style={{ background: 'var(--blue-100)' }}>
-              <Users className="w-6 h-6 text-blue-600" />
+            <div style={{
+              padding: isMobile ? '0.75rem' : undefined,
+              background: isMobile ? 'rgba(59, 130, 246, 0.1)' : 'var(--blue-100)',
+              borderRadius: isMobile ? '0.625rem' : undefined,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }} className={!isMobile ? "card-icon" : ""}>
+              <Users className={isMobile ? "w-5 h-5" : "w-6 h-6"} style={{ color: '#3b82f6' }} />
             </div>
           </div>
         </div>
 
-        <div className="card">
+        <div style={{
+          borderRadius: isMobile ? '0.875rem' : undefined,
+          padding: isMobile ? '1rem' : undefined,
+          boxShadow: isMobile ? '0 1px 3px rgba(0, 0, 0, 0.1)' : undefined,
+          background: isMobile ? 'var(--card-background)' : undefined,
+          border: isMobile ? '1px solid var(--border-color)' : undefined
+        }} className={!isMobile ? "card" : ""}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)', marginBottom: '0.5rem' }}>Aktive Vakter</p>
-              <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--green-600)' }}>{stats.activeShifts}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem' }}>
-                <Clock className="w-4 h-4 text-green-600" />
-                <span style={{ color: 'var(--green-600)', fontSize: 'var(--font-size-sm)' }}>Pågående</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ 
+                color: 'var(--gray-500)', 
+                fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)', 
+                marginBottom: isMobile ? '0.375rem' : '0.5rem',
+                fontWeight: 500
+              }}>Aktive Vakter</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.625rem' : 'var(--font-size-2xl)', 
+                fontWeight: '700', 
+                color: '#22c55e',
+                lineHeight: '1.2',
+                margin: 0
+              }}>{stats.activeShifts}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: isMobile ? '0.5rem' : '0.5rem' }}>
+                <Clock className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: '#22c55e' }} />
+                <span style={{ 
+                  color: '#22c55e', 
+                  fontSize: isMobile ? '0.6875rem' : 'var(--font-size-sm)',
+                  fontWeight: 500
+                }}>Pågående</span>
               </div>
             </div>
-            <div className="card-icon" style={{ background: 'var(--green-100)' }}>
-              <Clock className="w-6 h-6 text-green-600" />
+            <div style={{
+              padding: isMobile ? '0.75rem' : undefined,
+              background: isMobile ? 'rgba(34, 197, 94, 0.1)' : 'var(--green-100)',
+              borderRadius: isMobile ? '0.625rem' : undefined,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }} className={!isMobile ? "card-icon" : ""}>
+              <Clock className={isMobile ? "w-5 h-5" : "w-6 h-6"} style={{ color: '#22c55e' }} />
             </div>
           </div>
         </div>
 
-        <div className="card">
+        <div style={{
+          borderRadius: isMobile ? '0.875rem' : undefined,
+          padding: isMobile ? '1rem' : undefined,
+          boxShadow: isMobile ? '0 1px 3px rgba(0, 0, 0, 0.1)' : undefined,
+          background: isMobile ? 'var(--card-background)' : undefined,
+          border: isMobile ? '1px solid var(--border-color)' : undefined
+        }} className={!isMobile ? "card" : ""}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)', marginBottom: '0.5rem' }}>Aktive Stemplinger</p>
-              <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--purple-600)' }}>{stats.activeTimeEntries}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem' }}>
-                <Clock className="w-4 h-4 text-purple-600" />
-                <span style={{ color: 'var(--purple-600)', fontSize: 'var(--font-size-sm)' }}>Innstemplte</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ 
+                color: 'var(--gray-500)', 
+                fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)', 
+                marginBottom: isMobile ? '0.375rem' : '0.5rem',
+                fontWeight: 500
+              }}>Aktive Stemplinger</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.625rem' : 'var(--font-size-2xl)', 
+                fontWeight: '700', 
+                color: '#a855f7',
+                lineHeight: '1.2',
+                margin: 0
+              }}>{stats.activeTimeEntries}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: isMobile ? '0.5rem' : '0.5rem' }}>
+                <Clock className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: '#a855f7' }} />
+                <span style={{ 
+                  color: '#a855f7', 
+                  fontSize: isMobile ? '0.6875rem' : 'var(--font-size-sm)',
+                  fontWeight: 500
+                }}>Innstemplte</span>
               </div>
             </div>
-            <div className="card-icon" style={{ background: 'var(--purple-100)' }}>
-              <Clock className="w-6 h-6 text-purple-600" />
+            <div style={{
+              padding: isMobile ? '0.75rem' : undefined,
+              background: isMobile ? 'rgba(168, 85, 247, 0.1)' : 'var(--purple-100)',
+              borderRadius: isMobile ? '0.625rem' : undefined,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }} className={!isMobile ? "card-icon" : ""}>
+              <Clock className={isMobile ? "w-5 h-5" : "w-6 h-6"} style={{ color: '#a855f7' }} />
             </div>
           </div>
         </div>
 
-        <div className="card">
+        <div style={{
+          borderRadius: isMobile ? '0.875rem' : undefined,
+          padding: isMobile ? '1rem' : undefined,
+          boxShadow: isMobile ? '0 1px 3px rgba(0, 0, 0, 0.1)' : undefined,
+          background: isMobile ? 'var(--card-background)' : undefined,
+          border: isMobile ? '1px solid var(--border-color)' : undefined
+        }} className={!isMobile ? "card" : ""}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <p style={{ color: 'var(--gray-600)', fontSize: 'var(--font-size-sm)', marginBottom: '0.5rem' }}>Ventende Forespørsler</p>
-              <p style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '600', color: 'var(--orange-600)' }}>{stats.pendingAbsences + stats.pendingVacations}</p>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: '0.5rem' }}>
-                <AlertTriangle className="w-4 h-4 text-orange-600" />
-                <span style={{ color: 'var(--orange-600)', fontSize: 'var(--font-size-sm)' }}>Krever handling</span>
+            <div style={{ flex: 1 }}>
+              <p style={{ 
+                color: 'var(--gray-500)', 
+                fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)', 
+                marginBottom: isMobile ? '0.375rem' : '0.5rem',
+                fontWeight: 500
+              }}>Ventende Forespørsler</p>
+              <p style={{ 
+                fontSize: isMobile ? '1.625rem' : 'var(--font-size-2xl)', 
+                fontWeight: '700', 
+                color: '#f59e0b',
+                lineHeight: '1.2',
+                margin: 0
+              }}>{stats.pendingAbsences + stats.pendingVacations}</p>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', marginTop: isMobile ? '0.5rem' : '0.5rem' }}>
+                <AlertTriangle className={isMobile ? "w-3 h-3" : "w-4 h-4"} style={{ color: '#f59e0b' }} />
+                <span style={{ 
+                  color: '#f59e0b', 
+                  fontSize: isMobile ? '0.6875rem' : 'var(--font-size-sm)',
+                  fontWeight: 500
+                }}>Krever handling</span>
               </div>
             </div>
-            <div className="card-icon" style={{ background: 'var(--orange-100)' }}>
-              <Calendar className="w-6 h-6 text-orange-600" />
+            <div style={{
+              padding: isMobile ? '0.75rem' : undefined,
+              background: isMobile ? 'rgba(245, 158, 11, 0.1)' : 'var(--orange-100)',
+              borderRadius: isMobile ? '0.625rem' : undefined,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexShrink: 0
+            }} className={!isMobile ? "card-icon" : ""}>
+              <Calendar className={isMobile ? "w-5 h-5" : "w-6 h-6"} style={{ color: '#f59e0b' }} />
             </div>
           </div>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--gray-200)', overflowX: 'auto' }}>
+      <div style={{
+        borderRadius: isMobile ? '0.875rem' : undefined,
+        padding: isMobile ? '0' : undefined,
+        boxShadow: isMobile ? '0 1px 3px rgba(0, 0, 0, 0.1)' : undefined,
+        background: isMobile ? 'var(--card-background)' : undefined,
+        border: isMobile ? '1px solid var(--border-color)' : undefined,
+        marginBottom: isMobile ? '0.75rem' : '2rem',
+        margin: isMobile ? '0 0.75rem 0.75rem' : undefined
+      }} className={!isMobile ? "card" : ""}>
+        <div style={{ 
+          display: 'flex', 
+          borderBottom: '1px solid var(--border-color)', 
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          scrollbarWidth: 'none',
+          msOverflowStyle: 'none'
+        }}>
           {[
             { id: 'employees', name: 'Ansatte', icon: Users },
             { id: 'shifts', name: 'Vakter', icon: Calendar },
@@ -1084,12 +1250,15 @@ export default function HRPage() {
               className={`btn ${activeTab === tab.id ? 'btn-primary' : 'btn-secondary'}`}
               style={{ 
                 borderRadius: 0, 
-                borderBottom: activeTab === tab.id ? '2px solid var(--blue-600)' : '2px solid transparent',
+                borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
                 whiteSpace: 'nowrap',
-                minWidth: isMobile ? '120px' : '150px'
+                minWidth: isMobile ? '100px' : '150px',
+                padding: isMobile ? '0.75rem 0.5rem' : undefined,
+                fontSize: isMobile ? '0.875rem' : undefined,
+                flexShrink: 0
               }}
             >
-              <tab.icon size={16} />
+              <tab.icon size={isMobile ? 18 : 16} />
               {tab.name}
             </button>
           ))}
@@ -1097,18 +1266,31 @@ export default function HRPage() {
 
         {/* Search and Filters - Hidden for vacations and absence tabs */}
         {activeTab !== 'vacations' && activeTab !== 'absence' && (
-        <div style={{ padding: 'var(--space-4)', borderBottom: '1px solid var(--gray-200)' }}>
-          <div style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', alignItems: 'center' }}>
-            <div style={{ flex: '1', minWidth: '200px' }}>
+        <div style={{ 
+          padding: isMobile ? '0.75rem' : 'var(--space-4)', 
+          borderBottom: '1px solid var(--border-color)' 
+        }}>
+          <div style={{ 
+            display: 'flex', 
+            gap: isMobile ? '0.5rem' : 'var(--space-3)', 
+            flexWrap: 'wrap', 
+            alignItems: 'center',
+            flexDirection: isMobile ? 'column' : 'row'
+          }}>
+            <div style={{ 
+              flex: isMobile ? 'none' : '1', 
+              width: isMobile ? '100%' : undefined,
+              minWidth: isMobile ? '100%' : '200px' 
+            }}>
               <div style={{ position: 'relative' }}>
                 <Search style={{ 
                   position: 'absolute', 
-                  left: '12px', 
+                  left: isMobile ? '0.875rem' : '12px', 
                   top: '50%', 
                   transform: 'translateY(-50%)', 
                   color: 'var(--gray-400)', 
-                  width: '16px', 
-                  height: '16px' 
+                  width: isMobile ? '18px' : '16px', 
+                  height: isMobile ? '18px' : '16px' 
                 }} />
                 <input
                   type="text"
@@ -1117,10 +1299,12 @@ export default function HRPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{ 
                     width: '100%', 
-                    padding: '0.75rem 0.75rem 0.75rem 2.5rem', 
-                    border: '1px solid var(--gray-300)', 
-                    borderRadius: 'var(--radius-lg)', 
-                    outline: 'none'
+                    padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)', 
+                    outline: 'none',
+                    fontSize: isMobile ? '16px' : undefined,
+                    background: 'var(--card-background)'
                   }}
                 />
               </div>
@@ -1129,11 +1313,14 @@ export default function HRPage() {
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value)}
               style={{ 
-                padding: '0.75rem', 
-                border: '1px solid var(--gray-300)', 
-                borderRadius: 'var(--radius-lg)', 
+                width: isMobile ? '100%' : undefined,
+                padding: isMobile ? '0.875rem' : '0.75rem', 
+                border: '1px solid var(--border-color)', 
+                borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)', 
                 outline: 'none',
-                minWidth: '150px'
+                minWidth: isMobile ? '100%' : '150px',
+                fontSize: isMobile ? '16px' : undefined,
+                background: 'var(--card-background)'
               }}
             >
               <option value="all">Alle statuser</option>
@@ -1164,11 +1351,14 @@ export default function HRPage() {
                   value={selectedDepartmentFilter}
                   onChange={(e) => setSelectedDepartmentFilter(e.target.value)}
                 style={{ 
-                  padding: '0.75rem', 
-                  border: '1px solid var(--gray-300)', 
-                  borderRadius: 'var(--radius-lg)', 
+                  width: isMobile ? '100%' : undefined,
+                  padding: isMobile ? '0.875rem' : '0.75rem', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)', 
                   outline: 'none',
-                  minWidth: '150px'
+                  minWidth: isMobile ? '100%' : '150px',
+                  fontSize: isMobile ? '16px' : undefined,
+                  background: 'var(--card-background)'
                 }}
               >
                 <option value="all">Alle avdelinger</option>
@@ -1180,9 +1370,17 @@ export default function HRPage() {
             <button 
               onClick={() => setShowAddModal(true)}
               className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
+                width: isMobile ? '100%' : undefined,
+                justifyContent: isMobile ? 'center' : undefined,
+                padding: isMobile ? '0.75rem 1rem' : undefined,
+                fontSize: isMobile ? '0.9375rem' : undefined
+              }}
             >
-              <Plus size={16} />
+              <Plus size={isMobile ? 18 : 16} />
               Legg til {activeTab === 'employees' ? 'ansatt' : 
                        activeTab === 'shifts' ? 'vakt' : 
                        activeTab === 'absence-vacation' ? 'registrering' : 
