@@ -128,62 +128,107 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
-    // Only run on client side and if Firebase is available
-    if (typeof window === 'undefined' || !auth) {
+    // Set a timeout to ensure loading is set to false after max 10 seconds
+    const timeoutId = setTimeout(() => {
+      console.warn('⚠️ Auth loading timeout - setting loading to false');
+      setLoading(false);
+    }, 10000);
+
+    // Only run on client side
+    if (typeof window === 'undefined') {
+      clearTimeout(timeoutId);
       setLoading(false);
       return;
     }
 
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setUser(user);
-      
-      if (user && db) {
-        // Fetch user profile from Firestore
-        try {
-          const userDoc = await getDoc(doc(db, 'users', user.uid));
-          if (userDoc.exists()) {
-            const data = userDoc.data();
-            const userProfile: UserProfile = {
-              id: user.uid,
-              displayName: data.displayName || user.displayName || 'Ny bruker',
-              email: data.email || user.email || '',
-              phone: data.phone || undefined,
-              departmentId: data.departmentId || undefined,
-              position: data.position || undefined,
-              role: data.role || 'employee',
-              avatar: data.avatar || undefined,
-              createdAt: data.createdAt || new Date().toISOString(),
-              bio: data.bio || undefined,
-              address: data.address || undefined,
-              emergencyContact: data.emergencyContact || undefined,
-              companyName: data.companyName || undefined, // Add company information
-              companyId: data.companyId || undefined,
-              passwordSet: data.passwordSet || false,
-              permissions: data.permissions || undefined,
-              vacationAccess: data.vacationAccess || undefined
-            };
-            setUserProfile(userProfile);
+    let unsubscribe: (() => void) | null = null;
+    let initTimeout: NodeJS.Timeout | null = null;
+    let checkTimeout: NodeJS.Timeout | null = null;
+
+    // Wait a bit for Firebase to initialize
+    initTimeout = setTimeout(() => {
+      if (!auth) {
+        console.error('⚠️ Firebase auth not initialized');
+        clearTimeout(timeoutId);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        unsubscribe = onAuthStateChanged(auth, async (user) => {
+          clearTimeout(timeoutId);
+          if (checkTimeout) clearTimeout(checkTimeout);
+          setUser(user);
+          
+          if (user && db) {
+            // Fetch user profile from Firestore
+            try {
+              const userDoc = await getDoc(doc(db, 'users', user.uid));
+              if (userDoc.exists()) {
+                const data = userDoc.data();
+                const userProfile: UserProfile = {
+                  id: user.uid,
+                  displayName: data.displayName || user.displayName || 'Ny bruker',
+                  email: data.email || user.email || '',
+                  phone: data.phone || undefined,
+                  departmentId: data.departmentId || undefined,
+                  position: data.position || undefined,
+                  role: data.role || 'employee',
+                  avatar: data.avatar || undefined,
+                  createdAt: data.createdAt || new Date().toISOString(),
+                  bio: data.bio || undefined,
+                  address: data.address || undefined,
+                  emergencyContact: data.emergencyContact || undefined,
+                  companyName: data.companyName || undefined, // Add company information
+                  companyId: data.companyId || undefined,
+                  passwordSet: data.passwordSet || false,
+                  permissions: data.permissions || undefined,
+                  vacationAccess: data.vacationAccess || undefined
+                };
+                setUserProfile(userProfile);
+              } else {
+                // Don't create a default profile without companyId
+                // This should not happen for properly created employees
+                console.error('🚨 User profile not found in Firestore:', user.uid);
+                console.log('This usually means the employee was not properly created in the system');
+                setUserProfile(null);
+              }
+            } catch (error) {
+              console.error('Error fetching user profile:', error);
+              // Don't create a fallback profile without companyId
+              console.error('🚨 Failed to load user profile, setting to null');
+              setUserProfile(null);
+            }
           } else {
-            // Don't create a default profile without companyId
-            // This should not happen for properly created employees
-            console.error('🚨 User profile not found in Firestore:', user.uid);
-            console.log('This usually means the employee was not properly created in the system');
             setUserProfile(null);
           }
-        } catch (error) {
-          console.error('Error fetching user profile:', error);
-          // Don't create a fallback profile without companyId
-          console.error('🚨 Failed to load user profile, setting to null');
-          setUserProfile(null);
-        }
-      } else {
-        setUserProfile(null);
-      }
-      
-      setLoading(false);
-    });
+          
+          setLoading(false);
+        });
 
-    return unsubscribe;
+        // Also handle the case where auth state changes immediately
+        // If no user is logged in, set loading to false after a short delay
+        if (!auth.currentUser) {
+          checkTimeout = setTimeout(() => {
+            if (!auth?.currentUser) {
+              clearTimeout(timeoutId);
+              setLoading(false);
+            }
+          }, 1000);
+        }
+      } catch (error) {
+        console.error('Error setting up auth state listener:', error);
+        clearTimeout(timeoutId);
+        setLoading(false);
+      }
+    }, 100);
+
+    return () => {
+      clearTimeout(timeoutId);
+      if (initTimeout) clearTimeout(initTimeout);
+      if (checkTimeout) clearTimeout(checkTimeout);
+      if (unsubscribe) unsubscribe();
+    };
   }, []);
 
   const login = async (email: string, password: string) => {
