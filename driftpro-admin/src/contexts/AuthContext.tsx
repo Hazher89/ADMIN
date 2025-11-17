@@ -128,11 +128,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
-    // Set a timeout to ensure loading is set to false after max 10 seconds
+    // Set a timeout to ensure loading is set to false after max 5 seconds
     const timeoutId = setTimeout(() => {
       console.warn('⚠️ Auth loading timeout - setting loading to false');
       setLoading(false);
-    }, 10000);
+    }, 5000);
 
     // Only run on client side
     if (typeof window === 'undefined') {
@@ -142,11 +142,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
 
     let unsubscribe: (() => void) | null = null;
-    let initTimeout: NodeJS.Timeout | null = null;
-    let checkTimeout: NodeJS.Timeout | null = null;
+    let hasSetLoading = false;
 
-    // Wait a bit for Firebase to initialize
-    initTimeout = setTimeout(() => {
+    const initializeAuth = () => {
+      // Check if Firebase is available
       if (!auth) {
         console.error('⚠️ Firebase auth not initialized');
         clearTimeout(timeoutId);
@@ -155,9 +154,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
 
       try {
+        // Set up auth state listener
         unsubscribe = onAuthStateChanged(auth, async (user) => {
+          if (hasSetLoading) return; // Prevent multiple calls
+          
           clearTimeout(timeoutId);
-          if (checkTimeout) clearTimeout(checkTimeout);
+          hasSetLoading = true;
           setUser(user);
           
           if (user && db) {
@@ -206,12 +208,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setLoading(false);
         });
 
-        // Also handle the case where auth state changes immediately
         // If no user is logged in, set loading to false after a short delay
+        // This handles the case where onAuthStateChanged doesn't fire immediately
         if (!auth.currentUser) {
-          checkTimeout = setTimeout(() => {
-            if (!auth?.currentUser) {
+          setTimeout(() => {
+            if (!hasSetLoading && !auth?.currentUser) {
+              console.log('No user logged in, setting loading to false');
               clearTimeout(timeoutId);
+              hasSetLoading = true;
               setLoading(false);
             }
           }, 1000);
@@ -221,12 +225,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         clearTimeout(timeoutId);
         setLoading(false);
       }
-    }, 100);
+    };
+
+    // Try to initialize immediately
+    if (auth) {
+      initializeAuth();
+    } else {
+      // Wait a bit for Firebase to initialize, but not too long
+      const initTimeout = setTimeout(() => {
+        initializeAuth();
+      }, 200);
+      
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(initTimeout);
+        if (unsubscribe) unsubscribe();
+      };
+    }
 
     return () => {
       clearTimeout(timeoutId);
-      if (initTimeout) clearTimeout(initTimeout);
-      if (checkTimeout) clearTimeout(checkTimeout);
       if (unsubscribe) unsubscribe();
     };
   }, []);
