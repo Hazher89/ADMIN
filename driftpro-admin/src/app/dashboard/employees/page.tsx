@@ -2233,6 +2233,178 @@ export default function EmployeesPage() {
                 </div>
               </div>
             </div>
+
+            {/* Password Management Section */}
+            <div style={{ 
+              marginTop: '2rem', 
+              padding: '1.5rem', 
+              background: 'var(--gray-50)', 
+              borderRadius: 'var(--radius-lg)',
+              border: '1px solid var(--border-color)'
+            }}>
+              <h3 style={{ 
+                fontSize: '1rem', 
+                fontWeight: '600', 
+                marginBottom: '1rem',
+                color: 'var(--text-color)',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}>
+                <Key style={{ width: '18px', height: '18px' }} />
+                Passordhåndtering
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Option 1: Set password directly */}
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-700)',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Sett nytt passord direkte
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="password"
+                      id="newPasswordInput"
+                      placeholder="Skriv inn nytt passord (min. 6 tegn)"
+                      className="form-input"
+                      style={{ flex: 1 }}
+                      minLength={6}
+                    />
+                    <button
+                      onClick={async () => {
+                        const passwordInput = document.getElementById('newPasswordInput') as HTMLInputElement;
+                        const newPassword = passwordInput?.value;
+                        
+                        if (!newPassword || newPassword.length < 6) {
+                          alert('Passordet må være minst 6 tegn langt');
+                          return;
+                        }
+
+                        if (!selectedEmployee?.id) {
+                          alert('Ingen ansatt valgt');
+                          return;
+                        }
+
+                        try {
+                          const response = await fetch('/api/admin/update-employee-password', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              employeeId: selectedEmployee.id,
+                              newPassword: newPassword,
+                            }),
+                          });
+
+                          const data = await response.json();
+
+                          if (response.ok) {
+                            if (data.message && data.message.includes('link sent')) {
+                              alert('✅ Passordoppsett-link sendt på e-post! Ansatt kan bruke linken for å sette passordet.');
+                            } else {
+                              alert('✅ Passord oppdatert! Ansatt kan nå logge inn med det nye passordet.');
+                            }
+                            if (passwordInput) passwordInput.value = '';
+                          } else {
+                            alert(`❌ Feil: ${data.error || 'Kunne ikke oppdatere passord'}`);
+                          }
+                        } catch (error) {
+                          console.error('Error updating password:', error);
+                          alert('❌ Feil ved oppdatering av passord');
+                        }
+                      }}
+                      className="btn btn-primary"
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      Sett passord
+                    </button>
+                  </div>
+                  <small style={{ 
+                    display: 'block', 
+                    color: 'var(--gray-500)', 
+                    fontSize: '0.75rem', 
+                    marginTop: '0.25rem' 
+                  }}>
+                    {selectedEmployee?.uid 
+                      ? 'Ansatt får en e-post med link for å sette passordet (brukeren har allerede en konto)'
+                      : 'Ansatt kan logge inn med dette passordet med en gang'}
+                  </small>
+                </div>
+
+                {/* Option 2: Send password setup link */}
+                <div style={{ 
+                  paddingTop: '1rem', 
+                  borderTop: '1px solid var(--border-color)' 
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-700)',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Send link for passordoppsett
+                  </label>
+                  <button
+                    onClick={async () => {
+                      if (!selectedEmployee?.id || !selectedEmployee?.email) {
+                        alert('Ansatt mangler ID eller e-post');
+                        return;
+                      }
+
+                      if (!confirm(`Send passordoppsett-link til ${selectedEmployee.email}?`)) {
+                        return;
+                      }
+
+                      try {
+                        const response = await fetch('/api/send-password-setup', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            employeeId: selectedEmployee.id,
+                            employeeEmail: selectedEmployee.email,
+                          }),
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                          alert('✅ Passordoppsett-link sendt på e-post!');
+                        } else {
+                          alert(`❌ Feil: ${data.error || 'Kunne ikke sende e-post'}`);
+                        }
+                      } catch (error) {
+                        console.error('Error sending password setup email:', error);
+                        alert('❌ Feil ved sending av e-post');
+                      }
+                    }}
+                    className="btn btn-secondary"
+                    style={{ width: '100%' }}
+                  >
+                    <Key style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                    Send passordoppsett-link på e-post
+                  </button>
+                  <small style={{ 
+                    display: 'block', 
+                    color: 'var(--gray-500)', 
+                    fontSize: '0.75rem', 
+                    marginTop: '0.25rem' 
+                  }}>
+                    Ansatt får en e-post med unikt passord som de kan endre selv
+                  </small>
+                </div>
+              </div>
+            </div>
+
             <div className="modal-footer">
               <button
                 onClick={() => setShowEditModal(false)}

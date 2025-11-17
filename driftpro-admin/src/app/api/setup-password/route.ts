@@ -160,11 +160,15 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data();
 
     try {
+      // If token has temporaryPassword (set by admin), use it if no password provided
+      // Otherwise use the provided password
+      const passwordToUse = tokenData.temporaryPassword || password;
+      
       // Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(
         auth,
         tokenData.email,
-        password
+        passwordToUse
       );
 
       const firebaseUser = userCredential.user;
@@ -174,8 +178,9 @@ export async function POST(request: NextRequest) {
         displayName: userData.displayName || userData.name || 'Ny bruker'
       });
 
-      // Update user document with password setup status
+      // Update user document with password setup status and UID
       await updateDoc(userDoc.ref, {
+        uid: firebaseUser.uid,
         status: 'active',
         passwordSet: true,
         passwordSetAt: new Date().toISOString(),
