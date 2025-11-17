@@ -143,6 +143,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     let unsubscribe: (() => void) | null = null;
     let hasSetLoading = false;
+    let checkTimeout: NodeJS.Timeout | null = null;
 
     const initializeAuth = () => {
       // Check if Firebase is available
@@ -159,6 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (hasSetLoading) return; // Prevent multiple calls
           
           clearTimeout(timeoutId);
+          if (checkTimeout) clearTimeout(checkTimeout);
           hasSetLoading = true;
           setUser(user);
           
@@ -211,7 +213,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If no user is logged in, set loading to false after a short delay
         // This handles the case where onAuthStateChanged doesn't fire immediately
         if (!auth.currentUser) {
-          setTimeout(() => {
+          checkTimeout = setTimeout(() => {
             if (!hasSetLoading && !auth?.currentUser) {
               console.log('No user logged in, setting loading to false');
               clearTimeout(timeoutId);
@@ -245,6 +247,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     return () => {
       clearTimeout(timeoutId);
+      if (checkTimeout) clearTimeout(checkTimeout);
       if (unsubscribe) unsubscribe();
     };
   }, []);
