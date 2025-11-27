@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, deleteDoc, doc, getDoc } from 'firebase/firestore';
 import { getAuth, deleteUser } from 'firebase/auth';
+import * as admin from 'firebase-admin';
 
 // Firebase config
 const firebaseConfig = {
@@ -17,6 +18,28 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// Initialize Firebase Admin SDK if not already initialized
+let adminApp: admin.app.App | null = null;
+try {
+  if (admin.apps.length === 0) {
+    // Try to initialize with service account or use default credentials
+    try {
+      adminApp = admin.initializeApp({
+        credential: admin.credential.applicationDefault(),
+        projectId: firebaseConfig.projectId,
+      });
+      console.log('Firebase Admin SDK initialized successfully');
+    } catch (adminError) {
+      console.log('Firebase Admin SDK initialization failed (may need service account key):', adminError);
+      // Will fall back to client SDK only
+    }
+  } else {
+    adminApp = admin.apps[0] as admin.app.App;
+  }
+} catch (error) {
+  console.log('Firebase Admin SDK not available:', error);
+}
 
 // POST /api/cleanup-firebase - Clean up Firebase data
 export async function POST(request: NextRequest) {
@@ -227,18 +250,48 @@ async function deleteUserCompletely(email?: string, userId?: string) {
     await deleteDoc(userDoc.ref);
     console.log(`🗑️ Deleted user from Firestore: ${userData.email}`);
     
-    // Note: We can't delete Firebase Auth users from client side
-    // This would require Firebase Admin SDK
+    // Try to delete from Firebase Auth using Admin SDK
+    let authDeleted = false;
+    let authError = null;
+    
+    if (adminApp && userData.uid) {
+      try {
+        await admin.auth().deleteUser(userData.uid);
+        authDeleted = true;
+        console.log(`🗑️ Deleted user from Firebase Auth: ${userData.email} (UID: ${userData.uid})`);
+      } catch (error: any) {
+        authError = error.message;
+        console.error('Error deleting user from Firebase Auth:', error);
+        // Continue even if Auth deletion fails
+      }
+    } else if (userData.uid) {
+      // Try to find user by email using Admin SDK
+      try {
+        if (adminApp) {
+          const userRecord = await admin.auth().getUserByEmail(userData.email);
+          await admin.auth().deleteUser(userRecord.uid);
+          authDeleted = true;
+          console.log(`🗑️ Deleted user from Firebase Auth by email: ${userData.email}`);
+        }
+      } catch (error: any) {
+        authError = error.message;
+        console.error('Error deleting user from Firebase Auth by email:', error);
+      }
+    }
     
     return NextResponse.json({
       success: true,
-      message: 'User deleted from Firestore',
+      message: authDeleted 
+        ? 'User deleted from both Firestore and Firebase Auth' 
+        : 'User deleted from Firestore',
       deletedUser: {
         email: userData.email,
         displayName: userData.displayName,
-        companyId: userData.companyId
+        companyId: userData.companyId,
+        uid: userData.uid
       },
-      note: 'Firebase Auth user deletion requires Admin SDK'
+      authDeleted,
+      authError: authError || undefined
     });
 
   } catch (error) {

@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
@@ -98,77 +98,20 @@ export default function DashboardLayout({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // GDPR Compliance: Ensure user has a valid companyId
+  // Ensure user profile is loaded
   useEffect(() => {
-    if (user && userProfile) {
-      // Give some time for userProfile to load completely
-      const checkProfile = () => {
-        if (!userProfile.companyId) {
-          console.error('🚨 Security breach: User missing companyId:', userProfile);
-          console.log('User profile data:', JSON.stringify(userProfile, null, 2));
-          console.log('User auth data:', user);
-          
-          // Check if this is a new employee who hasn't set up their password yet
-          // But only if they're not already authenticated
-          if (userProfile.email && !userProfile.passwordSet && userProfile.role === 'employee') {
-            console.log('🔍 New employee detected, but they need to complete password setup first');
-            // Don't redirect here, let them complete the setup process
-            return;
-          }
-          
-          alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
-          logout();
-          router.push('/login');
-          return;
-        }
-        
-        // Additional check: ensure userProfile is properly loaded
-        if (!userProfile.id || !userProfile.email) {
-          console.error('🚨 Security breach: Incomplete user profile:', userProfile);
-          alert('Ufullstendig brukerprofil oppdaget. Du blir logget ut.');
-          logout();
-          router.push('/login');
-          return;
-        }
-      };
-
-      // Delay the check to allow profile to load
-      const timeoutId = setTimeout(checkProfile, 1000);
-      
-      return () => clearTimeout(timeoutId);
-    } else if (user && !userProfile && !loading) {
+    if (user && !userProfile && !loading) {
       // User is authenticated but no profile found - this is a problem
-      // Only show error if we're not still loading
       console.error('🚨 User authenticated but no profile found:', user.uid);
       console.log('This usually means the employee was not properly created in the system');
       alert('Brukerprofil ikke funnet. Kontakt administrator.');
       logout();
       router.push('/login');
     }
-  }, [user, userProfile, logout, router]);
+  }, [user, userProfile, loading, logout, router]);
 
-  // Check if user is DriftPro admin
-  const isDriftProAdmin = userProfile?.companyId === 'driftpro_main';
-  
-  // Get company permissions for non-DriftPro users
-  const [companyPermissions, setCompanyPermissions] = useState<string[]>([]);
-  
-  useEffect(() => {
-    if (userProfile?.companyId && !isDriftProAdmin) {
-      // Load company permissions
-      const loadCompanyPermissions = async () => {
-        try {
-          const company = await firebaseService.getCompany(userProfile.companyId!);
-          if (company?.permissions) {
-            setCompanyPermissions(company.permissions.map(p => p.id));
-          }
-        } catch (error) {
-          console.error('Error loading company permissions:', error);
-        }
-      };
-      loadCompanyPermissions();
-    }
-  }, [userProfile?.companyId, isDriftProAdmin]);
+  // MAVI Logistikk AS - Single company system
+  // No need for multi-company logic or permissions
 
   // Icon style helper to prevent large icons before CSS loads
   const iconStyle = { width: '20px', height: '20px', flexShrink: 0, display: 'block' };
@@ -249,30 +192,19 @@ export default function DashboardLayout({
       id: 'partners'
     },
     
-    // Partner Portal (only for single users, not companies)
+    // Partner Portal (only for employees)
     ...(userProfile?.role === 'employee' ? [{
       name: 'Partner Portal',
       href: '/partner-login',
       icon: <Globe size={20} style={iconStyle} />,
       category: 'management',
       id: 'partner-portal'
-    }] : []),
-    
-    
-    // Admin-only pages (only visible for DriftPro AS)
-    ...(isDriftProAdmin ? [
-
-    ] : [])
+    }] : [])
   ];
 
-  // Filter sidebar items based on permissions
-  const sidebarItems = isDriftProAdmin 
-    ? allSidebarItems 
-    : allSidebarItems.filter(item => 
-        item.isAdmin || 
-        (item.id && companyPermissions.includes(item.id)) ||
-        item.id === 'dashboard'
-      );
+  // Single company system - show all sidebar items
+  // No need for permission filtering since this is only for MAVI Logistikk AS
+  const sidebarItems = allSidebarItems;
 
 
   const groupedItems = sidebarItems.reduce((acc, item) => {

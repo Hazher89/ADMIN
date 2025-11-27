@@ -1,22 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, updateDoc, collection, addDoc } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword } from 'firebase/auth';
-import { db } from '@/lib/firebase';
+import { initializeApp, getApps } from 'firebase/app';
+import { getFirestore, doc, getDoc, updateDoc, collection, addDoc, query, where, getDocs } from 'firebase/firestore';
 import { globalEmailService } from '@/lib/global-email-service';
 
 // Generate random token
 function generateToken(): string {
-  const array = new Uint8Array(32);
-  if (typeof window === 'undefined' && typeof crypto !== 'undefined') {
-    // Node.js environment
-    const nodeCrypto = require('crypto');
-    return nodeCrypto.randomBytes(32).toString('hex');
-  } else {
-    // Browser environment
-    crypto.getRandomValues(array);
-    return Array.from(array, byte => byte.toString(16).padStart(2, '0')).join('');
-  }
+  const nodeCrypto = require('crypto');
+  return nodeCrypto.randomBytes(32).toString('hex');
 }
 
 // Firebase config
@@ -29,9 +19,38 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
+// Initialize Firebase for server-side
+function getDb() {
+  try {
+    let apps = getApps();
+    
+    if (apps.length === 0) {
+      console.log('Initializing Firebase...');
+      try {
+        initializeApp(firebaseConfig);
+        console.log('Firebase initialized successfully');
+      } catch (initError) {
+        console.error('Error initializing Firebase:', initError);
+        apps = getApps();
+        if (apps.length === 0) {
+          throw new Error('Failed to initialize Firebase and no existing apps found');
+        }
+      }
+    }
+    
+    const firestoreDb = getFirestore();
+    if (!firestoreDb) {
+      throw new Error('Failed to get Firestore instance');
+    }
+    
+    console.log('Firestore instance obtained successfully');
+    return firestoreDb;
+  } catch (error) {
+    console.error('Error getting Firestore instance:', error);
+    throw new Error('Firebase database not available. Please check Firebase configuration.');
+  }
+}
+
 
 export async function POST(request: NextRequest) {
   try {
@@ -51,17 +70,39 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Get employee document
-    const employeeDoc = await getDoc(doc(db, 'users', employeeId));
-    if (!employeeDoc.exists()) {
-      return NextResponse.json(
-        { error: 'Employee not found' },
-        { status: 404 }
-      );
-    }
+    // Initialize Firebase services
+    const db = getDb();
 
-    const employeeData = employeeDoc.data();
+    // Get employee document - try by ID first
+    let employeeDoc = await getDoc(doc(db, 'users', employeeId));
+    let employeeData;
+    
+    if (!employeeDoc.exists()) {
+      // If not found by ID, try to find by email (in case employeeId is actually an email)
+      console.log('Employee not found by ID, trying to find by email...');
+      const employeesQuery = query(
+        collection(db, 'users'),
+        where('email', '==', employeeId)
+      );
+      const snapshot = await getDocs(employeesQuery);
+      
+      if (!snapshot.empty) {
+        employeeDoc = snapshot.docs[0];
+        console.log('Found employee by email:', employeeDoc.id);
+      } else {
+        return NextResponse.json(
+          { 
+            error: 'Employee not found',
+            details: `No employee found with ID or email: ${employeeId}`
+          },
+          { status: 404 }
+        );
+      }
+    }
+    
+    employeeData = employeeDoc.data();
     const employeeEmail = employeeData.email;
+    const actualEmployeeId = employeeDoc.id; // Use the actual document ID
 
     if (!employeeEmail) {
       return NextResponse.json(
@@ -70,89 +111,63 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let firebaseUid = employeeData.uid;
+    // Since Firebase Auth client SDK doesn't work on server-side,
+    // we always create a password setup token that the user can use
+    // to set their password via the setup-password page
+    
+    // Generate a secure token
+    const token = generateToken();
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + 24); // Token valid for 24 hours
 
-    // If user doesn't have a Firebase UID, create a new Firebase user
-    if (!firebaseUid) {
-      try {
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          employeeEmail,
-          newPassword
-        );
-        firebaseUid = userCredential.user.uid;
+    // Store token in database with the new password
+    await addDoc(collection(db, 'setupTokens'), {
+      token,
+      userId: actualEmployeeId, // Use the actual document ID
+      email: employeeEmail,
+      expiresAt: expiresAt.toISOString(),
+      used: false,
+      createdAt: new Date().toISOString(),
+      type: 'admin_password_set',
+      temporaryPassword: newPassword, // Store temporarily (will be used when token is redeemed)
+    });
 
-        // Update employee document with new UID
-        await updateDoc(doc(db, 'users', employeeId), {
-          uid: firebaseUid,
-          passwordUpdatedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        });
-
-        return NextResponse.json({
-          success: true,
-          message: 'Password set successfully - new account created',
-        });
-      } catch (createError: any) {
-        if (createError.code === 'auth/email-already-in-use') {
-          // User exists but no UID in database - this shouldn't happen, but handle it
-          return NextResponse.json(
-            { error: 'User account exists but is not properly linked. Please contact administrator.' },
-            { status: 400 }
-          );
-        }
-        throw createError;
-      }
-    } else {
-      // User has UID - create a password reset token with the new password
-      // The token will be used in setup-password route to set the password
-      
-      // Generate a secure token
-      const token = generateToken();
-      const expiresAt = new Date();
-      expiresAt.setHours(expiresAt.getHours() + 24); // Token valid for 24 hours
-
-      // Store token in database with the new password
-      await addDoc(collection(db, 'setupTokens'), {
-        token,
-        userId: employeeId,
-        email: employeeEmail,
-        expiresAt: expiresAt.toISOString(),
-        used: false,
-        createdAt: new Date().toISOString(),
-        type: 'admin_password_set',
-        temporaryPassword: newPassword, // Store temporarily (will be used when token is redeemed)
-      });
-
-      // Send email with setup link
-      const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${token}`;
-      
-      try {
-        await globalEmailService.sendPasswordResetEmail(
-          employeeEmail,
-          setupUrl,
-          employeeData.displayName || 'Employee'
-        );
-      } catch (emailError) {
-        console.error('Error sending email:', emailError);
-        // Continue even if email fails - token is still created
-      }
-
-      // Update employee document
-      await updateDoc(doc(db, 'users', employeeId), {
-        passwordUpdatedAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString(),
-      });
-
-      return NextResponse.json({
-        success: true,
-        message: 'Password setup link sent to employee email. They can use it to set their password.',
-      });
+    // Send email with setup link
+    const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/setup-password?token=${token}`;
+    
+    try {
+      await globalEmailService.sendPasswordResetEmail(
+        employeeEmail,
+        setupUrl,
+        employeeData.displayName || 'Employee'
+      );
+    } catch (emailError) {
+      console.error('Error sending email:', emailError);
+      // Continue even if email fails - token is still created
     }
-  } catch (error) {
+
+    // Update employee document
+    await updateDoc(doc(db, 'users', actualEmployeeId), {
+      passwordUpdatedAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    });
+
+    return NextResponse.json({
+      success: true,
+      message: 'Password setup link sent to employee email. They can use it to set their password.',
+    });
+  } catch (error: any) {
     console.error('Error updating employee password:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorCode = error?.code || 'unknown';
+    console.error('Error details:', { errorMessage, errorCode, stack: error?.stack });
+    
     return NextResponse.json(
-      { error: error instanceof Error ? error.message : 'Unknown error' },
+      { 
+        error: errorMessage,
+        code: errorCode,
+        details: process.env.NODE_ENV === 'development' ? error?.stack : undefined
+      },
       { status: 500 }
     );
   }

@@ -13,6 +13,9 @@ import {
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
+// MAVI Logistikk AS - Single company system
+const MAVI_COMPANY_ID = 'mavi_logistikk_as';
+
 interface UserProfile {
   id: string;
   displayName: string;
@@ -128,11 +131,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
-    // Set a timeout to ensure loading is set to false after max 5 seconds
+    // Set a timeout to ensure loading is set to false after max 3 seconds
     const timeoutId = setTimeout(() => {
       console.warn('⚠️ Auth loading timeout - setting loading to false');
       setLoading(false);
-    }, 5000);
+    }, 3000);
 
     // Only run on client side
     if (typeof window === 'undefined') {
@@ -144,13 +147,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsubscribe: (() => void) | null = null;
     let hasSetLoading = false;
     let checkTimeout: NodeJS.Timeout | null = null;
+    let initTimeout: NodeJS.Timeout | null = null;
+
+    const setLoadingFalse = () => {
+      if (!hasSetLoading) {
+        hasSetLoading = true;
+        clearTimeout(timeoutId);
+        if (checkTimeout) clearTimeout(checkTimeout);
+        setLoading(false);
+      }
+    };
 
     const initializeAuth = () => {
       // Check if Firebase is available
       if (!auth) {
-        console.error('⚠️ Firebase auth not initialized');
-        clearTimeout(timeoutId);
-        setLoading(false);
+        console.error('⚠️ Firebase auth not initialized - setting loading to false');
+        setLoadingFalse();
         return;
       }
 
@@ -216,16 +228,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           checkTimeout = setTimeout(() => {
             if (!hasSetLoading && !auth?.currentUser) {
               console.log('No user logged in, setting loading to false');
-              clearTimeout(timeoutId);
-              hasSetLoading = true;
-              setLoading(false);
+              setLoadingFalse();
             }
-          }, 1000);
+          }, 500);
         }
       } catch (error) {
         console.error('Error setting up auth state listener:', error);
-        clearTimeout(timeoutId);
-        setLoading(false);
+        setLoadingFalse();
       }
     };
 
@@ -234,20 +243,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       initializeAuth();
     } else {
       // Wait a bit for Firebase to initialize, but not too long
-      const initTimeout = setTimeout(() => {
-        initializeAuth();
-      }, 200);
+      initTimeout = setTimeout(() => {
+        if (!hasSetLoading) {
+          initializeAuth();
+        }
+      }, 100);
       
-      return () => {
-        clearTimeout(timeoutId);
-        clearTimeout(initTimeout);
-        if (unsubscribe) unsubscribe();
-      };
+      // Also set a fallback timeout
+      setTimeout(() => {
+        if (!hasSetLoading) {
+          console.log('Firebase initialization timeout - setting loading to false');
+          setLoadingFalse();
+        }
+      }, 2000);
     }
 
     return () => {
       clearTimeout(timeoutId);
       if (checkTimeout) clearTimeout(checkTimeout);
+      if (initTimeout) clearTimeout(initTimeout);
       if (unsubscribe) unsubscribe();
     };
   }, []);
@@ -268,30 +282,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userDocSnap = await getDoc(userRef);
           
           if (!userDocSnap.exists()) {
-            // Create DriftPro main company if it doesn't exist
-            const companyRef = doc(db, 'companies', 'driftpro_main');
+            // Create MAVI Logistikk AS company if it doesn't exist
+            const companyRef = doc(db, 'companies', MAVI_COMPANY_ID);
             const companyDoc = await getDoc(companyRef);
             
             if (!companyDoc.exists()) {
               await setDoc(companyRef, {
-                id: 'driftpro_main',
-                name: 'DriftPro Administrasjon',
-                industry: 'Software',
+                id: MAVI_COMPANY_ID,
+                name: 'MAVI Logistikk AS',
+                industry: 'Logistikk',
                 employees: 1,
                 location: 'Norge',
                 phone: '+47 12345678',
-                email: 'admin@driftpro.no',
-                website: 'https://admin.driftpro.no',
+                email: 'admin@mavi.no',
+                website: 'https://mavi.no',
                 status: 'active',
                 joinedDate: new Date().toISOString(),
                 revenue: 'N/A',
-                description: 'Hovedadministrasjon for DriftPro systemet',
+                description: 'MAVI Logistikk AS - Logistikkselskap',
                 adminUserId: user.uid,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 orgNumber: '123456789',
                 address: {
-                  street: 'DriftPro Gate 1',
+                  street: 'MAVI Gate 1',
                   city: 'Oslo',
                   postalCode: '0001',
                   country: 'Norge'
@@ -312,7 +326,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               displayName: 'Super Administrator',
               email: email,
               role: 'super_admin',
-              companyId: 'driftpro_main',
+              companyId: MAVI_COMPANY_ID,
               status: 'active',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -369,9 +383,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       // Check if user has been set up with Firebase Authentication
       if (!userData.uid) {
-        // For DriftPro admin, we'll create the Firebase user if it doesn't exist
-        if (userData.companyId === 'driftpro_main' && userData.role === 'admin') {
-          console.log('Creating Firebase user for DriftPro admin');
+        // For admin users, we'll create the Firebase user if it doesn't exist
+        if (userData.companyId === MAVI_COMPANY_ID && userData.role === 'admin') {
+          console.log('Creating Firebase user for admin');
           // Update the user document with the Firebase UID after authentication
           const userCredential = await signInWithEmailAndPassword(auth, email, password);
           await updateDoc(doc(db, 'users', userDoc.id), {

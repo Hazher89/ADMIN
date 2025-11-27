@@ -40,7 +40,6 @@ const PAGE_MAPPINGS: Array<{
   { name: 'Internrevisjon', href: '/dashboard/audit', keywords: ['audit', 'internrevisjon', 'revisjon', 'kontroll'], icon: <Activity size={16} />, category: 'side' },
   { name: 'Innstillinger', href: '/dashboard/settings', keywords: ['innstillinger', 'settings', 'konfigurasjon', 'oppsett'], icon: <Settings size={16} />, category: 'side' },
   { name: 'Partnere', href: '/dashboard/partners', keywords: ['partner', 'partnere', 'leverandør', 'leverandører', 'kunde', 'kunder'], icon: <Building size={16} />, category: 'side' },
-  { name: 'Bedrifter', href: '/dashboard/companies', keywords: ['bedrift', 'bedrifter', 'selskap', 'virksomhet'], icon: <Building size={16} />, category: 'side' },
 ];
 
 // Fuzzy match function - checks if query matches any part of text
@@ -154,7 +153,7 @@ export default function GlobalSearch() {
   }, []);
 
   const performSearch = useCallback(async (searchQuery: string) => {
-    if (!searchQuery.trim() || !userProfile?.companyId) {
+    if (!searchQuery.trim()) {
       setResults([]);
       return;
     }
@@ -163,10 +162,28 @@ export default function GlobalSearch() {
     const searchResults: SearchResult[] = [];
     const lowerQuery = searchQuery.toLowerCase();
 
-    // Always search pages first (instant results)
+    // Always search pages first (instant results, no auth required)
     const pageResults = searchPages(searchQuery);
     searchResults.push(...pageResults);
+    
+    // Show page results immediately (don't wait for companyId or other data)
+    if (pageResults.length > 0) {
+      setResults([...pageResults]);
+      setLoading(false);
+    }
+    
+    // Only search data (employees, etc.) if we have companyId
+    if (!userProfile?.companyId) {
+      // If no page results and no companyId, show empty
+      if (pageResults.length === 0) {
+        setResults([]);
+        setLoading(false);
+      }
+      return;
+    }
 
+    // Continue searching data - update results as we go
+    setLoading(true);
     try {
       // Get all employees for reference
       const employees = await firebaseService.getEmployees(userProfile.companyId);
@@ -403,35 +420,6 @@ export default function GlobalSearch() {
         }
       }
 
-      // Search companies (only for super_admin or admin)
-      if (userProfile?.role === 'super_admin' || userProfile?.role === 'admin') {
-        try {
-          const companies = await firebaseService.getCompanies();
-          companies.forEach((comp) => {
-            const searchFields = [
-              comp.name,
-              comp.industry,
-              comp.orgNumber,
-              'bedrift',
-              'selskap',
-            ].filter(Boolean).join(' ');
-            
-            if (fuzzyMatch(searchQuery, searchFields)) {
-              const relevance = calculateRelevance(searchQuery, comp.name || '');
-              searchResults.push({
-                id: `comp-${comp.id}`,
-                type: 'company',
-                title: comp.name || 'Ukjent',
-                subtitle: `${comp.industry || ''} • ${comp.employees || 0} ansatte`,
-                href: `/dashboard/companies`,
-                relevance,
-              });
-            }
-          });
-        } catch (error) {
-          console.error('Error searching companies:', error);
-        }
-      }
     } catch (error) {
       console.error('Search error:', error);
     }
@@ -441,6 +429,7 @@ export default function GlobalSearch() {
       .sort((a, b) => b.relevance - a.relevance)
       .slice(0, 20);
     
+    // Update results with all found items (pages + data)
     setResults(sortedResults);
     setLoading(false);
   }, [userProfile, searchPages]);
