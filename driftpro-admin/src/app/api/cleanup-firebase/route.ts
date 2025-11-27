@@ -23,22 +23,35 @@ const auth = getAuth(app);
 let adminApp: admin.app.App | null = null;
 try {
   if (admin.apps.length === 0) {
-    // Try to initialize with service account or use default credentials
+    // Try to initialize with service account credentials first
     try {
-      adminApp = admin.initializeApp({
-        credential: admin.credential.applicationDefault(),
-        projectId: firebaseConfig.projectId,
-      });
-      console.log('Firebase Admin SDK initialized successfully');
+      if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
+        adminApp = admin.initializeApp({
+          credential: admin.credential.cert({
+            projectId: process.env.FIREBASE_PROJECT_ID || firebaseConfig.projectId,
+            clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+            privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
+          }),
+        });
+        console.log('✅ Firebase Admin SDK initialized with service account');
+      } else {
+        // Try default credentials
+        adminApp = admin.initializeApp({
+          credential: admin.credential.applicationDefault(),
+          projectId: firebaseConfig.projectId,
+        });
+        console.log('✅ Firebase Admin SDK initialized with default credentials');
+      }
     } catch (adminError) {
-      console.log('Firebase Admin SDK initialization failed (may need service account key):', adminError);
+      console.log('⚠️ Firebase Admin SDK initialization failed (may need service account key):', adminError);
       // Will fall back to client SDK only
     }
   } else {
     adminApp = admin.apps[0] as admin.app.App;
+    console.log('✅ Using existing Firebase Admin SDK instance');
   }
 } catch (error) {
-  console.log('Firebase Admin SDK not available:', error);
+  console.log('⚠️ Firebase Admin SDK not available:', error);
 }
 
 // POST /api/cleanup-firebase - Clean up Firebase data
@@ -83,6 +96,9 @@ export async function POST(request: NextRequest) {
           );
         }
         return await cleanupCompanyData(companyId);
+      
+      case 'delete_all_users_except_superadmin':
+        return await deleteAllUsersExceptSuperAdmin();
       
       default:
         return NextResponse.json(
@@ -254,28 +270,60 @@ async function deleteUserCompletely(email?: string, userId?: string) {
     let authDeleted = false;
     let authError = null;
     
-    if (adminApp && userData.uid) {
-      try {
-        await admin.auth().deleteUser(userData.uid);
-        authDeleted = true;
-        console.log(`🗑️ Deleted user from Firebase Auth: ${userData.email} (UID: ${userData.uid})`);
-      } catch (error: any) {
-        authError = error.message;
-        console.error('Error deleting user from Firebase Auth:', error);
-        // Continue even if Auth deletion fails
-      }
-    } else if (userData.uid) {
-      // Try to find user by email using Admin SDK
-      try {
-        if (adminApp) {
-          const userRecord = await admin.auth().getUserByEmail(userData.email);
-          await admin.auth().deleteUser(userRecord.uid);
+    if (!adminApp) {
+      console.warn('⚠️ Firebase Admin SDK not available, cannot delete from Firebase Auth');
+      authError = 'Admin SDK not configured';
+    } else {
+      const adminAuth = admin.auth();
+      
+      // Try by UID first
+      if (userData.uid) {
+        try {
+          await adminAuth.deleteUser(userData.uid);
+          authDeleted = true;
+          console.log(`🗑️ Deleted user from Firebase Auth: ${userData.email} (UID: ${userData.uid})`);
+        } catch (error: any) {
+          if (error.code === 'auth/user-not-found') {
+            console.log(`ℹ️ User ${userData.email} not found in Firebase Auth (already deleted)`);
+            authDeleted = true; // Consider it deleted if not found
+          } else {
+            authError = error.message;
+            console.error('Error deleting user from Firebase Auth by UID:', error);
+            // Try by email as fallback
+            try {
+              const userRecord = await adminAuth.getUserByEmail(userData.email);
+              await adminAuth.deleteUser(userRecord.uid);
+              authDeleted = true;
+              console.log(`🗑️ Deleted user from Firebase Auth by email: ${userData.email}`);
+              authError = null; // Clear error if email method worked
+            } catch (emailError: any) {
+              if (emailError.code === 'auth/user-not-found') {
+                console.log(`ℹ️ User ${userData.email} not found in Firebase Auth (already deleted)`);
+                authDeleted = true;
+                authError = null;
+              } else {
+                authError = emailError.message;
+                console.error('Error deleting user from Firebase Auth by email:', emailError);
+              }
+            }
+          }
+        }
+      } else {
+        // No UID, try by email
+        try {
+          const userRecord = await adminAuth.getUserByEmail(userData.email);
+          await adminAuth.deleteUser(userRecord.uid);
           authDeleted = true;
           console.log(`🗑️ Deleted user from Firebase Auth by email: ${userData.email}`);
+        } catch (error: any) {
+          if (error.code === 'auth/user-not-found') {
+            console.log(`ℹ️ User ${userData.email} not found in Firebase Auth (already deleted)`);
+            authDeleted = true;
+          } else {
+            authError = error.message;
+            console.error('Error deleting user from Firebase Auth by email:', error);
+          }
         }
-      } catch (error: any) {
-        authError = error.message;
-        console.error('Error deleting user from Firebase Auth by email:', error);
       }
     }
     
@@ -297,6 +345,142 @@ async function deleteUserCompletely(email?: string, userId?: string) {
   } catch (error) {
     console.error('Error deleting user completely:', error);
     throw error;
+  }
+}
+
+// Delete all users except super admin
+async function deleteAllUsersExceptSuperAdmin() {
+  try {
+    const SUPER_ADMIN_EMAIL = 'baxigshti@hotmail.de';
+    console.log('🗑️ Deleting all users except super admin:', SUPER_ADMIN_EMAIL);
+    
+    if (!adminApp) {
+      return NextResponse.json(
+        { 
+          error: 'Firebase Admin SDK not available. Cannot delete users from Firebase Auth.',
+          details: 'Please configure FIREBASE_PRIVATE_KEY environment variable.'
+        },
+        { status: 500 }
+      );
+    }
+    
+    const adminAuth = admin.auth();
+    const deletedUsers: string[] = [];
+    const errors: string[] = [];
+    
+    // Get all users from Firestore
+    const usersSnapshot = await getDocs(collection(db, 'users'));
+    console.log(`📊 Found ${usersSnapshot.docs.length} users in Firestore`);
+    
+    // Delete from Firestore and Firebase Auth
+    for (const userDoc of usersSnapshot.docs) {
+      const userData = userDoc.data();
+      const userEmail = userData.email;
+      
+      // Skip super admin
+      if (userEmail === SUPER_ADMIN_EMAIL) {
+        console.log(`⏭️ Skipping super admin: ${userEmail}`);
+        continue;
+      }
+      
+      try {
+        // Delete from Firestore
+        await deleteDoc(userDoc.ref);
+        console.log(`🗑️ Deleted from Firestore: ${userEmail}`);
+        
+        // Delete from Firebase Auth
+        if (userData.uid) {
+          try {
+            await adminAuth.deleteUser(userData.uid);
+            console.log(`🗑️ Deleted from Firebase Auth (by UID): ${userEmail}`);
+            deletedUsers.push(userEmail);
+          } catch (authError: any) {
+            // Try by email if UID fails
+            try {
+              const userRecord = await adminAuth.getUserByEmail(userEmail);
+              await adminAuth.deleteUser(userRecord.uid);
+              console.log(`🗑️ Deleted from Firebase Auth (by email): ${userEmail}`);
+              deletedUsers.push(userEmail);
+            } catch (emailError: any) {
+              if (emailError.code === 'auth/user-not-found') {
+                console.log(`ℹ️ User ${userEmail} not found in Firebase Auth (already deleted)`);
+                deletedUsers.push(userEmail);
+              } else {
+                console.error(`❌ Error deleting ${userEmail} from Auth:`, emailError);
+                errors.push(`${userEmail}: ${emailError.message}`);
+              }
+            }
+          }
+        } else {
+          // Try to find by email
+          try {
+            const userRecord = await adminAuth.getUserByEmail(userEmail);
+            await adminAuth.deleteUser(userRecord.uid);
+            console.log(`🗑️ Deleted from Firebase Auth (by email, no UID): ${userEmail}`);
+            deletedUsers.push(userEmail);
+          } catch (emailError: any) {
+            if (emailError.code === 'auth/user-not-found') {
+              console.log(`ℹ️ User ${userEmail} not found in Firebase Auth (already deleted or never existed)`);
+              deletedUsers.push(userEmail);
+            } else {
+              console.error(`❌ Error deleting ${userEmail} from Auth:`, emailError);
+              errors.push(`${userEmail}: ${emailError.message}`);
+            }
+          }
+        }
+      } catch (error: any) {
+        console.error(`❌ Error deleting ${userEmail}:`, error);
+        errors.push(`${userEmail}: ${error.message}`);
+      }
+    }
+    
+    // Also check Firebase Auth for any users not in Firestore
+    try {
+      let listUsersResult = await adminAuth.listUsers(1000);
+      for (const userRecord of listUsersResult.users) {
+        if (userRecord.email === SUPER_ADMIN_EMAIL) {
+          continue;
+        }
+        
+        // Check if user exists in Firestore
+        const usersQuery = query(collection(db, 'users'), where('email', '==', userRecord.email));
+        const usersSnapshot = await getDocs(usersQuery);
+        
+        if (usersSnapshot.empty) {
+          // User exists in Auth but not in Firestore - delete from Auth
+          try {
+            await adminAuth.deleteUser(userRecord.uid);
+            console.log(`🗑️ Deleted orphaned Auth user: ${userRecord.email}`);
+            deletedUsers.push(userRecord.email || userRecord.uid);
+          } catch (error: any) {
+            console.error(`❌ Error deleting orphaned Auth user ${userRecord.email}:`, error);
+            errors.push(`${userRecord.email}: ${error.message}`);
+          }
+        }
+      }
+    } catch (listError: any) {
+      console.error('❌ Error listing Auth users:', listError);
+      errors.push(`List users error: ${listError.message}`);
+    }
+    
+    return NextResponse.json({
+      success: true,
+      message: `Deleted ${deletedUsers.length} users. ${errors.length} errors.`,
+      deletedCount: deletedUsers.length,
+      deletedUsers: deletedUsers.slice(0, 50), // Limit to first 50 for response size
+      errors: errors.length > 0 ? errors : undefined,
+      superAdminPreserved: SUPER_ADMIN_EMAIL
+    });
+    
+  } catch (error) {
+    console.error('❌ Error deleting all users:', error);
+    return NextResponse.json(
+      { 
+        error: 'Failed to delete all users',
+        details: error instanceof Error ? error.message : 'Unknown error'
+      },
+      { status: 500 }
+    );
   }
 }
 
