@@ -342,7 +342,9 @@ function SetupPasswordContent() {
       paddingTop: isMobile ? '2rem' : '1rem',
       paddingBottom: isMobile ? '2rem' : '1rem',
       overflowY: 'auto',
-      WebkitOverflowScrolling: 'touch'
+      WebkitOverflowScrolling: 'touch',
+      position: 'relative',
+      zIndex: 0
     }}>
       <div style={{
         maxWidth: '500px',
@@ -350,7 +352,9 @@ function SetupPasswordContent() {
         background: 'var(--white)',
         borderRadius: isMobile ? 'var(--radius-lg)' : 'var(--radius-lg)',
         padding: isMobile ? '1.5rem 1rem' : '3rem',
-        boxShadow: 'var(--shadow-lg)'
+        boxShadow: 'var(--shadow-lg)',
+        position: 'relative',
+        zIndex: 0
       }}>
         {/* Header */}
         <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
@@ -434,8 +438,8 @@ function SetupPasswordContent() {
         )}
 
         {/* Password Setup Form */}
-        <form onSubmit={handleSubmit} style={{ width: '100%', pointerEvents: 'auto' }}>
-          <div style={{ marginBottom: isMobile ? '1.25rem' : '1.5rem', width: '100%' }}>
+        <form onSubmit={handleSubmit} style={{ width: '100%', position: 'relative', zIndex: 0 }}>
+          <div style={{ marginBottom: isMobile ? '1.25rem' : '1.5rem', width: '100%', position: 'relative', zIndex: 0 }}>
             <label 
               htmlFor="password-input"
               style={{
@@ -444,7 +448,9 @@ function SetupPasswordContent() {
                 fontWeight: '500',
                 color: 'var(--gray-700)',
                 fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
-                pointerEvents: 'none'
+                pointerEvents: 'none',
+                position: 'relative',
+                zIndex: 0
               }}
             >
               Nytt passord *
@@ -453,15 +459,24 @@ function SetupPasswordContent() {
               position: 'relative', 
               width: '100%', 
               display: 'block',
-              pointerEvents: 'auto'
+              zIndex: 1
             }}>
               <input
                 id="password-input"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onFocus={(e) => e.target.focus()}
-                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => {
+                  e.target.focus();
+                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.currentTarget.focus();
+                }}
                 style={{
                   width: '100%',
                   padding: isMobile ? '1rem' : '0.75rem',
@@ -481,7 +496,8 @@ function SetupPasswordContent() {
                   WebkitTapHighlightColor: 'transparent',
                   pointerEvents: 'auto',
                   cursor: 'text',
-                  zIndex: 1
+                  position: 'relative',
+                  zIndex: 2
                 }}
                 placeholder="Minst 8 tegn"
                 required
@@ -538,7 +554,7 @@ function SetupPasswordContent() {
             </p>
           </div>
 
-          <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem', width: '100%' }}>
+          <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem', width: '100%', position: 'relative', zIndex: 0 }}>
             <label 
               htmlFor="confirm-password-input"
               style={{
@@ -547,7 +563,9 @@ function SetupPasswordContent() {
                 fontWeight: '500',
                 color: 'var(--gray-700)',
                 fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
-                pointerEvents: 'none'
+                pointerEvents: 'none',
+                position: 'relative',
+                zIndex: 0
               }}
             >
               Bekreft passord *
@@ -556,15 +574,24 @@ function SetupPasswordContent() {
               position: 'relative', 
               width: '100%', 
               display: 'block',
-              pointerEvents: 'auto'
+              zIndex: 1
             }}>
               <input
                 id="confirm-password-input"
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                onFocus={(e) => e.target.focus()}
-                onClick={(e) => e.stopPropagation()}
+                onFocus={(e) => {
+                  e.target.focus();
+                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  e.currentTarget.focus();
+                }}
                 style={{
                   width: '100%',
                   padding: isMobile ? '1rem' : '0.75rem',
@@ -584,7 +611,8 @@ function SetupPasswordContent() {
                   WebkitTapHighlightColor: 'transparent',
                   pointerEvents: 'auto',
                   cursor: 'text',
-                  zIndex: 1
+                  position: 'relative',
+                  zIndex: 2
                 }}
                 placeholder="Skriv passordet igjen"
                 required

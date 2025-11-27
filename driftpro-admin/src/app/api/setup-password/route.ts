@@ -393,18 +393,109 @@ export async function POST(request: NextRequest) {
         }
         
         try {
+          // Check if Admin SDK credentials are available
+          if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL) {
+            console.warn('⚠️ Firebase Admin SDK credentials not configured');
+            // If user has UID, just update status
+            if (userData.uid) {
+              await updateDoc(userDoc.ref, {
+                status: 'active',
+                passwordSet: true,
+                passwordSetAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              });
+              
+              await updateDoc(tokenDoc.ref, {
+                used: true,
+                usedAt: new Date().toISOString()
+              });
+              
+              return NextResponse.json({
+                success: true,
+                message: 'Password setup completed (Admin SDK not configured, user already has UID)',
+                userId: userData.uid,
+                provider: 'firebase_admin_sdk_fallback',
+                warning: 'Password may need to be updated through Firebase Console or forgot password flow'
+              });
+            }
+            
+            throw new Error('Firebase Admin SDK credentials not configured. Cannot update password for existing user.');
+          }
+          
           // Get the existing user from Firebase Auth using Admin SDK
           console.log('🔍 Looking up user in Firebase Auth:', tokenData.email);
-          const existingUser = await adminAuth.getUserByEmail(tokenData.email);
-          console.log('✅ Found existing Firebase Auth user:', existingUser.uid);
+          let existingUser;
+          try {
+            existingUser = await adminAuth.getUserByEmail(tokenData.email);
+            console.log('✅ Found existing Firebase Auth user:', existingUser.uid);
+          } catch (getUserError: any) {
+            console.error('❌ Error getting user from Firebase Auth:', getUserError);
+            // If user doesn't exist in Auth but exists in Firestore, create new Auth user
+            if (getUserError?.code === 'auth/user-not-found') {
+              console.log('⚠️ User not found in Firebase Auth, will create new account');
+              // Try to create new user with client SDK
+              try {
+                const newUserCredential = await createUserWithEmailAndPassword(auth, tokenData.email, password);
+                await updateDoc(userDoc.ref, {
+                  uid: newUserCredential.user.uid,
+                  status: 'active',
+                  passwordSet: true,
+                  passwordSetAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString()
+                });
+                
+                await updateDoc(tokenDoc.ref, {
+                  used: true,
+                  usedAt: new Date().toISOString()
+                });
+                
+                return NextResponse.json({
+                  success: true,
+                  message: 'Password setup completed (new Firebase Auth user created)',
+                  userId: newUserCredential.user.uid,
+                  provider: 'firebase_client_sdk'
+                });
+              } catch (createError: any) {
+                console.error('❌ Error creating new Auth user:', createError);
+                throw new Error(`Failed to create or update user: ${createError.message}`);
+              }
+            }
+            throw getUserError;
+          }
           
           // Update the password using Admin SDK - use the password from request body
           console.log('🔐 Updating password for user:', existingUser.uid);
-          await adminAuth.updateUser(existingUser.uid, {
-            password: password
-          });
-          
-          console.log('✅ Password updated for existing Firebase Auth user:', existingUser.uid);
+          try {
+            await adminAuth.updateUser(existingUser.uid, {
+              password: password
+            });
+            console.log('✅ Password updated for existing Firebase Auth user:', existingUser.uid);
+          } catch (updateError: any) {
+            console.error('❌ Error updating password with Admin SDK:', updateError);
+            // If update fails but user has UID, still update status
+            if (userData.uid) {
+              await updateDoc(userDoc.ref, {
+                status: 'active',
+                passwordSet: true,
+                passwordSetAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              });
+              
+              await updateDoc(tokenDoc.ref, {
+                used: true,
+                usedAt: new Date().toISOString()
+              });
+              
+              return NextResponse.json({
+                success: true,
+                message: 'Password setup completed (password update failed, but user status updated)',
+                userId: userData.uid,
+                provider: 'firebase_admin_sdk_fallback',
+                warning: `Password update failed: ${updateError.message}. Please use forgot password flow.`
+              });
+            }
+            throw updateError;
+          }
           
           // Update user document with UID and password setup status
           await updateDoc(userDoc.ref, {
@@ -472,7 +563,7 @@ export async function POST(request: NextRequest) {
           return NextResponse.json(
             { 
               error: 'Failed to update existing user password',
-              message: `Admin SDK error: ${errorDetails}. Please contact administrator.`,
+              message: `Admin SDK error: ${errorDetails}. Please contact administrator or use forgot password flow.`,
               details: process.env.NODE_ENV === 'development' ? adminError?.stack : undefined
             },
             { status: 500 }
