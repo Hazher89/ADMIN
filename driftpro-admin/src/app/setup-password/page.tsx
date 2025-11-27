@@ -146,9 +146,25 @@ function SetupPasswordContent() {
       console.log('Response data:', data);
 
       if (response.ok && data.success) {
-        // Check if there's a warning (e.g., password update failed but user can use forgot password)
-        if (data.warning || data.requiresForgotPassword) {
-          setError(`⚠️ ${data.warning || data.message || 'Passordet kunne ikke oppdateres automatisk. Vennligst bruk "Glemt passord" på innloggingssiden for å sette ditt passord.'}`);
+        // Check if password reset email was sent
+        if (data.emailSent) {
+          setSuccess(true);
+          setError(''); // Clear any errors
+          // Show success message with info about email
+          setTimeout(() => {
+            router.push('/login');
+          }, 5000); // Give user time to read message
+        } else if (data.warning || data.requiresForgotPassword) {
+          // Check if warning mentions email was sent
+          if (data.message && data.message.includes('Password reset email sent')) {
+            setSuccess(true);
+            setError(''); // Clear any errors
+            setTimeout(() => {
+              router.push('/login');
+            }, 5000);
+          } else {
+            setError(`⚠️ ${data.warning || data.message || 'Passordet kunne ikke oppdateres automatisk. Vennligst bruk "Glemt passord" på innloggingssiden for å sette ditt passord.'}`);
+          }
         } else {
           setSuccess(true);
           setTimeout(() => {
@@ -310,7 +326,7 @@ function SetupPasswordContent() {
             color: 'var(--gray-900)',
             marginBottom: '1rem'
           }}>
-            Passord satt opp!
+            {tokenData?.email && error.includes('Password reset email sent') ? 'E-post sendt!' : 'Passord satt opp!'}
           </h1>
           <p style={{
             color: 'var(--gray-600)',
@@ -318,7 +334,9 @@ function SetupPasswordContent() {
             marginBottom: isMobile ? '1.5rem' : '2rem',
             lineHeight: '1.6'
           }}>
-            Ditt passord er nå satt opp. Du vil bli omdirigert til innloggingssiden om noen sekunder.
+            {tokenData?.email && error.includes('Password reset email sent') 
+              ? 'Vi har sendt deg en e-post med lenke for å sette opp passordet. Sjekk innboksen din og følg lenken i e-posten.'
+              : 'Ditt passord er nå satt opp. Du vil bli omdirigert til innloggingssiden om noen sekunder.'}
           </p>
           <div style={{
             background: 'var(--success)',
@@ -328,7 +346,9 @@ function SetupPasswordContent() {
             marginBottom: isMobile ? '1.5rem' : '2rem'
           }}>
             <p style={{ margin: 0, fontWeight: '500', fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)' }}>
-              Du kan nå logge inn med din e-postadresse og det nye passordet.
+              {tokenData?.email && error.includes('Password reset email sent')
+                ? 'Sjekk e-posten din for lenke til passord-oppsett.'
+                : 'Du kan nå logge inn med din e-postadresse og det nye passordet.'}
             </p>
           </div>
         </div>
