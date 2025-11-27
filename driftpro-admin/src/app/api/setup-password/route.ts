@@ -273,22 +273,35 @@ export async function POST(request: NextRequest) {
       
       // Validate password length
       if (!passwordToUse || passwordToUse.length < 6) {
+        console.error('❌ Password validation failed: too short');
         return NextResponse.json(
           { error: 'Password must be at least 6 characters long' },
           { status: 400 }
         );
       }
       
-      console.log('🔐 Attempting to create Firebase Auth user...');
+      console.log('🔐 Attempting to create Firebase Auth user...', {
+        email: tokenData.email,
+        passwordLength: passwordToUse.length
+      });
       
       // Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        tokenData.email,
-        passwordToUse
-      );
-      
-      console.log('✅ Firebase Auth user created:', userCredential.user.uid);
+      let userCredential;
+      try {
+        userCredential = await createUserWithEmailAndPassword(
+          auth,
+          tokenData.email,
+          passwordToUse
+        );
+        console.log('✅ Firebase Auth user created:', userCredential.user.uid);
+      } catch (createError: any) {
+        console.error('❌ Error creating Firebase Auth user:', {
+          code: createError?.code,
+          message: createError?.message,
+          error: createError
+        });
+        throw createError; // Re-throw to be caught by outer catch
+      }
 
       const firebaseUser = userCredential.user;
 
@@ -411,18 +424,36 @@ export async function POST(request: NextRequest) {
     console.error('❌ Error in setup-password API:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
+    const errorCode = (error as any)?.code || 'unknown';
     
     // Log full error details for debugging
     console.error('Full error details:', {
       message: errorMessage,
+      code: errorCode,
       stack: errorStack,
-      error: error
+      error: error,
+      errorType: error?.constructor?.name
     });
+    
+    // Return more specific error messages
+    let userFriendlyError = 'Internal server error';
+    if (errorCode === 'auth/email-already-in-use') {
+      userFriendlyError = 'E-postadressen er allerede i bruk. Vennligst kontakt administrator.';
+    } else if (errorCode === 'auth/invalid-email') {
+      userFriendlyError = 'Ugyldig e-postadresse.';
+    } else if (errorCode === 'auth/weak-password') {
+      userFriendlyError = 'Passordet er for svakt. Vennligst velg et sterkere passord.';
+    } else if (errorMessage.includes('Firebase')) {
+      userFriendlyError = 'Feil ved oppkobling til server. Vennligst prøv igjen.';
+    } else if (errorMessage) {
+      userFriendlyError = errorMessage;
+    }
     
     return NextResponse.json(
       { 
-        error: 'Internal server error',
+        error: userFriendlyError,
         message: errorMessage,
+        code: errorCode,
         details: process.env.NODE_ENV === 'development' ? errorStack : undefined,
         provider: 'microsoft_graph'
       },

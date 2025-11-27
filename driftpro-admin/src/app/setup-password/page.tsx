@@ -434,10 +434,18 @@ function SetupPasswordContent() {
         )}
 
         {/* Password Setup Form */}
-        <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: isMobile ? '1.25rem' : '1.5rem' }}>
+        <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+          <div style={{ marginBottom: isMobile ? '1.25rem' : '1.5rem', width: '100%' }}>
             <label 
               htmlFor="password-input"
+              onClick={(e) => {
+                // Focus input when label is clicked
+                const input = document.getElementById('password-input');
+                if (input) {
+                  input.focus();
+                  e.preventDefault();
+                }
+              }}
               style={{
                 display: 'block',
                 marginBottom: isMobile ? '0.625rem' : '0.5rem',
@@ -445,17 +453,27 @@ function SetupPasswordContent() {
                 color: 'var(--gray-700)',
                 fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
                 cursor: 'text',
-                pointerEvents: 'none'
+                userSelect: 'none',
+                WebkitUserSelect: 'none'
               }}
             >
               Nytt passord *
             </label>
-            <div style={{ position: 'relative', width: '100%', display: 'block' }}>
+            <div style={{ 
+              position: 'relative', 
+              width: '100%', 
+              display: 'block',
+              isolation: 'isolate'
+            }}>
               <input
                 id="password-input"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={(e) => {
+                  e.target.focus();
+                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                }}
                 style={{
                   width: '100%',
                   padding: isMobile ? '0.875rem' : '0.75rem',
@@ -470,7 +488,10 @@ function SetupPasswordContent() {
                   boxSizing: 'border-box',
                   backgroundColor: 'var(--white)',
                   color: 'var(--gray-900)',
-                  cursor: 'text'
+                  cursor: 'text',
+                  outline: 'none',
+                  position: 'relative',
+                  zIndex: 1
                 }}
                 placeholder="Minst 8 tegn"
                 required
@@ -482,6 +503,9 @@ function SetupPasswordContent() {
                   e.preventDefault();
                   e.stopPropagation();
                   setShowPassword(!showPassword);
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
                 }}
                 style={{
                   position: 'absolute',
@@ -498,7 +522,8 @@ function SetupPasswordContent() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 10
+                  zIndex: 2,
+                  touchAction: 'manipulation'
                 }}
                 aria-label={showPassword ? 'Skjul passord' : 'Vis passord'}
               >
@@ -515,9 +540,17 @@ function SetupPasswordContent() {
             </p>
           </div>
 
-          <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem' }}>
+          <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem', width: '100%' }}>
             <label 
               htmlFor="confirm-password-input"
+              onClick={(e) => {
+                // Focus input when label is clicked
+                const input = document.getElementById('confirm-password-input');
+                if (input) {
+                  input.focus();
+                  e.preventDefault();
+                }
+              }}
               style={{
                 display: 'block',
                 marginBottom: isMobile ? '0.625rem' : '0.5rem',
@@ -525,17 +558,27 @@ function SetupPasswordContent() {
                 color: 'var(--gray-700)',
                 fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
                 cursor: 'text',
-                pointerEvents: 'none'
+                userSelect: 'none',
+                WebkitUserSelect: 'none'
               }}
             >
               Bekreft passord *
             </label>
-            <div style={{ position: 'relative', width: '100%', display: 'block' }}>
+            <div style={{ 
+              position: 'relative', 
+              width: '100%', 
+              display: 'block',
+              isolation: 'isolate'
+            }}>
               <input
                 id="confirm-password-input"
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onFocus={(e) => {
+                  e.target.focus();
+                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
+                }}
                 style={{
                   width: '100%',
                   padding: isMobile ? '0.875rem' : '0.75rem',
@@ -550,7 +593,10 @@ function SetupPasswordContent() {
                   boxSizing: 'border-box',
                   backgroundColor: 'var(--white)',
                   color: 'var(--gray-900)',
-                  cursor: 'text'
+                  cursor: 'text',
+                  outline: 'none',
+                  position: 'relative',
+                  zIndex: 1
                 }}
                 placeholder="Skriv passordet igjen"
                 required
@@ -562,6 +608,9 @@ function SetupPasswordContent() {
                   e.preventDefault();
                   e.stopPropagation();
                   setShowConfirmPassword(!showConfirmPassword);
+                }}
+                onTouchStart={(e) => {
+                  e.stopPropagation();
                 }}
                 style={{
                   position: 'absolute',
@@ -578,7 +627,8 @@ function SetupPasswordContent() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 10
+                  zIndex: 2,
+                  touchAction: 'manipulation'
                 }}
                 aria-label={showConfirmPassword ? 'Skjul passord' : 'Vis passord'}
               >
