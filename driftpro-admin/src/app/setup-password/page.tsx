@@ -418,7 +418,7 @@ function SetupPasswordContent() {
             }}>
               Nytt passord *
             </label>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', width: '100%' }}>
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={password}
@@ -434,17 +434,26 @@ function SetupPasswordContent() {
                   WebkitAppearance: 'none',
                   appearance: 'none',
                   minHeight: isMobile ? '48px' : 'auto',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  position: 'relative',
+                  zIndex: 1,
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation'
                 }}
                 placeholder="Minst 8 tegn"
                 required
               />
               <button
                 type="button"
-                onClick={() => setShowPassword(!showPassword)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowPassword(!showPassword);
+                }}
+                onMouseDown={(e) => e.preventDefault()}
                 style={{
                   position: 'absolute',
-                  right: isMobile ? '0.625rem' : '0.75rem',
+                  right: isMobile ? '0.5rem' : '0.625rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'transparent',
@@ -457,11 +466,13 @@ function SetupPasswordContent() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 10
+                  zIndex: 2,
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation'
                 }}
                 aria-label={showPassword ? 'Skjul passord' : 'Vis passord'}
               >
-                {showPassword ? <EyeOff style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px' }} /> : <Eye style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px' }} />}
+                {showPassword ? <EyeOff style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px', pointerEvents: 'none' }} /> : <Eye style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px', pointerEvents: 'none' }} />}
               </button>
             </div>
             <p style={{
@@ -484,7 +495,7 @@ function SetupPasswordContent() {
             }}>
               Bekreft passord *
             </label>
-            <div style={{ position: 'relative' }}>
+            <div style={{ position: 'relative', width: '100%' }}>
               <input
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
@@ -500,17 +511,26 @@ function SetupPasswordContent() {
                   WebkitAppearance: 'none',
                   appearance: 'none',
                   minHeight: isMobile ? '48px' : 'auto',
-                  boxSizing: 'border-box'
+                  boxSizing: 'border-box',
+                  position: 'relative',
+                  zIndex: 1,
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation'
                 }}
                 placeholder="Skriv passordet igjen"
                 required
               />
               <button
                 type="button"
-                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowConfirmPassword(!showConfirmPassword);
+                }}
+                onMouseDown={(e) => e.preventDefault()}
                 style={{
                   position: 'absolute',
-                  right: isMobile ? '0.625rem' : '0.75rem',
+                  right: isMobile ? '0.5rem' : '0.625rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'transparent',
@@ -523,11 +543,13 @@ function SetupPasswordContent() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 10
+                  zIndex: 2,
+                  pointerEvents: 'auto',
+                  touchAction: 'manipulation'
                 }}
                 aria-label={showConfirmPassword ? 'Skjul passord' : 'Vis passord'}
               >
-                {showConfirmPassword ? <EyeOff style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px' }} /> : <Eye style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px' }} />}
+                {showConfirmPassword ? <EyeOff style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px', pointerEvents: 'none' }} /> : <Eye style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px', pointerEvents: 'none' }} />}
               </button>
             </div>
           </div>

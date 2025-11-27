@@ -223,18 +223,38 @@ export async function POST(request: NextRequest) {
     const usersSnapshot = await getDocs(usersQuery);
 
     if (usersSnapshot.empty) {
+      console.error('❌ User not found in Firestore:', tokenData.email);
       return NextResponse.json(
-        { error: 'User not found' },
+        { 
+          error: 'User not found',
+          message: `No user found with email: ${tokenData.email}. Please contact administrator.`
+        },
         { status: 404 }
       );
     }
 
     const userDoc = usersSnapshot.docs[0];
     const userData = userDoc.data();
+    
+    console.log('✅ User found in Firestore:', {
+      userId: userDoc.id,
+      email: tokenData.email,
+      hasUid: !!userData.uid
+    });
 
     try {
       // Always use the provided password (user sets it themselves)
       const passwordToUse = password;
+      
+      // Validate password length
+      if (!passwordToUse || passwordToUse.length < 6) {
+        return NextResponse.json(
+          { error: 'Password must be at least 6 characters long' },
+          { status: 400 }
+        );
+      }
+      
+      console.log('🔐 Attempting to create Firebase Auth user...');
       
       // Create Firebase Auth user
       const userCredential = await createUserWithEmailAndPassword(
@@ -242,6 +262,8 @@ export async function POST(request: NextRequest) {
         tokenData.email,
         passwordToUse
       );
+      
+      console.log('✅ Firebase Auth user created:', userCredential.user.uid);
 
       const firebaseUser = userCredential.user;
 
