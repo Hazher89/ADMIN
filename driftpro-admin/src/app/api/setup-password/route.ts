@@ -14,31 +14,31 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
 };
 
-// Initialize Firebase (only if not already initialized)
-let app;
-let db;
-let auth;
-
-try {
-  const apps = getApps();
-  if (apps.length === 0) {
-    app = initializeApp(firebaseConfig);
-    console.log('✅ Firebase initialized for setup-password');
-  } else {
-    app = apps[0];
-    console.log('✅ Using existing Firebase app for setup-password');
+// Initialize Firebase helper function
+function initializeFirebase() {
+  try {
+    const apps = getApps();
+    let app;
+    if (apps.length === 0) {
+      app = initializeApp(firebaseConfig);
+      console.log('✅ Firebase initialized for setup-password');
+    } else {
+      app = apps[0];
+      console.log('✅ Using existing Firebase app for setup-password');
+    }
+    const db = getFirestore(app);
+    if (!db) {
+      throw new Error('Failed to get Firestore instance');
+    }
+    const auth = getAuth(app);
+    if (!auth) {
+      throw new Error('Failed to get Auth instance');
+    }
+    return { app, db, auth };
+  } catch (error) {
+    console.error('❌ Error initializing Firebase:', error);
+    throw error;
   }
-  db = getFirestore(app);
-  if (!db) {
-    throw new Error('Failed to get Firestore instance');
-  }
-  auth = getAuth(app);
-  if (!auth) {
-    throw new Error('Failed to get Auth instance');
-  }
-} catch (error) {
-  console.error('❌ Error initializing Firebase:', error);
-  // Don't throw - let the API handle it gracefully
 }
 
 // Initialize Firebase Admin SDK if not already initialized
@@ -68,6 +68,9 @@ try {
 // GET /api/setup-password - Validate token
 export async function GET(request: NextRequest) {
   try {
+    // Initialize Firebase for this request
+    const { db } = initializeFirebase();
+    
     const { searchParams } = new URL(request.url);
     const token = searchParams.get('token');
 
@@ -161,17 +164,8 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if Firebase is initialized
-    if (!db || !auth) {
-      console.error('❌ Firebase not initialized');
-      return NextResponse.json(
-        { 
-          error: 'Server configuration error',
-          message: 'Firebase is not properly initialized. Please contact administrator.'
-        },
-        { status: 500 }
-      );
-    }
+    // Initialize Firebase for this request
+    const { db, auth } = initializeFirebase();
     
     const body = await request.json();
     const { token, password } = body;

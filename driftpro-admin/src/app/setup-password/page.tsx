@@ -438,23 +438,13 @@ function SetupPasswordContent() {
           <div style={{ marginBottom: isMobile ? '1.25rem' : '1.5rem', width: '100%' }}>
             <label 
               htmlFor="password-input"
-              onClick={(e) => {
-                // Focus input when label is clicked
-                const input = document.getElementById('password-input');
-                if (input) {
-                  input.focus();
-                  e.preventDefault();
-                }
-              }}
               style={{
                 display: 'block',
                 marginBottom: isMobile ? '0.625rem' : '0.5rem',
                 fontWeight: '500',
                 color: 'var(--gray-700)',
                 fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
-                cursor: 'text',
-                userSelect: 'none',
-                WebkitUserSelect: 'none'
+                pointerEvents: 'none'
               }}
             >
               Nytt passord *
@@ -462,36 +452,30 @@ function SetupPasswordContent() {
             <div style={{ 
               position: 'relative', 
               width: '100%', 
-              display: 'block',
-              isolation: 'isolate'
+              display: 'block'
             }}>
               <input
                 id="password-input"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                onFocus={(e) => {
-                  e.target.focus();
-                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                }}
                 style={{
                   width: '100%',
-                  padding: isMobile ? '0.875rem' : '0.75rem',
-                  paddingRight: isMobile ? '3.5rem' : '3rem',
-                  paddingLeft: isMobile ? '0.875rem' : '0.75rem',
+                  padding: isMobile ? '1rem' : '0.75rem',
+                  paddingRight: isMobile ? '4rem' : '3rem',
+                  paddingLeft: isMobile ? '1rem' : '0.75rem',
                   border: '1px solid var(--gray-300)',
                   borderRadius: isMobile ? 'var(--radius-md)' : 'var(--radius-md)',
                   fontSize: isMobile ? '16px' : 'var(--font-size-base)',
                   WebkitAppearance: 'none',
                   appearance: 'none',
-                  minHeight: isMobile ? '48px' : 'auto',
+                  minHeight: isMobile ? '52px' : 'auto',
                   boxSizing: 'border-box',
                   backgroundColor: 'var(--white)',
                   color: 'var(--gray-900)',
-                  cursor: 'text',
                   outline: 'none',
-                  position: 'relative',
-                  zIndex: 1
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
                 placeholder="Minst 8 tegn"
                 required
@@ -504,30 +488,37 @@ function SetupPasswordContent() {
                   e.stopPropagation();
                   setShowPassword(!showPassword);
                 }}
-                onTouchStart={(e) => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowPassword(!showPassword);
                 }}
                 style={{
                   position: 'absolute',
-                  right: isMobile ? '0.5rem' : '0.625rem',
+                  right: isMobile ? '0.75rem' : '0.625rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   color: 'var(--gray-400)',
-                  padding: isMobile ? '0.5rem' : '0.375rem',
-                  minWidth: isMobile ? '44px' : 'auto',
-                  minHeight: isMobile ? '44px' : 'auto',
+                  padding: isMobile ? '0.625rem' : '0.375rem',
+                  minWidth: isMobile ? '40px' : 'auto',
+                  minHeight: isMobile ? '40px' : 'auto',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 2,
-                  touchAction: 'manipulation'
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  zIndex: 10
                 }}
                 aria-label={showPassword ? 'Skjul passord' : 'Vis passord'}
               >
-                {showPassword ? <EyeOff size={isMobile ? 22 : 20} /> : <Eye size={isMobile ? 22 : 20} />}
+                {showPassword ? <EyeOff size={isMobile ? 20 : 20} /> : <Eye size={isMobile ? 20 : 20} />}
               </button>
             </div>
             <p style={{
@@ -543,23 +534,13 @@ function SetupPasswordContent() {
           <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem', width: '100%' }}>
             <label 
               htmlFor="confirm-password-input"
-              onClick={(e) => {
-                // Focus input when label is clicked
-                const input = document.getElementById('confirm-password-input');
-                if (input) {
-                  input.focus();
-                  e.preventDefault();
-                }
-              }}
               style={{
                 display: 'block',
                 marginBottom: isMobile ? '0.625rem' : '0.5rem',
                 fontWeight: '500',
                 color: 'var(--gray-700)',
                 fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
-                cursor: 'text',
-                userSelect: 'none',
-                WebkitUserSelect: 'none'
+                pointerEvents: 'none'
               }}
             >
               Bekreft passord *
@@ -567,36 +548,30 @@ function SetupPasswordContent() {
             <div style={{ 
               position: 'relative', 
               width: '100%', 
-              display: 'block',
-              isolation: 'isolate'
+              display: 'block'
             }}>
               <input
                 id="confirm-password-input"
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                onFocus={(e) => {
-                  e.target.focus();
-                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                }}
                 style={{
                   width: '100%',
-                  padding: isMobile ? '0.875rem' : '0.75rem',
-                  paddingRight: isMobile ? '3.5rem' : '3rem',
-                  paddingLeft: isMobile ? '0.875rem' : '0.75rem',
+                  padding: isMobile ? '1rem' : '0.75rem',
+                  paddingRight: isMobile ? '4rem' : '3rem',
+                  paddingLeft: isMobile ? '1rem' : '0.75rem',
                   border: '1px solid var(--gray-300)',
                   borderRadius: isMobile ? 'var(--radius-md)' : 'var(--radius-md)',
                   fontSize: isMobile ? '16px' : 'var(--font-size-base)',
                   WebkitAppearance: 'none',
                   appearance: 'none',
-                  minHeight: isMobile ? '48px' : 'auto',
+                  minHeight: isMobile ? '52px' : 'auto',
                   boxSizing: 'border-box',
                   backgroundColor: 'var(--white)',
                   color: 'var(--gray-900)',
-                  cursor: 'text',
                   outline: 'none',
-                  position: 'relative',
-                  zIndex: 1
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent'
                 }}
                 placeholder="Skriv passordet igjen"
                 required
@@ -609,30 +584,37 @@ function SetupPasswordContent() {
                   e.stopPropagation();
                   setShowConfirmPassword(!showConfirmPassword);
                 }}
-                onTouchStart={(e) => {
+                onMouseDown={(e) => {
+                  e.preventDefault();
                   e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setShowConfirmPassword(!showConfirmPassword);
                 }}
                 style={{
                   position: 'absolute',
-                  right: isMobile ? '0.5rem' : '0.625rem',
+                  right: isMobile ? '0.75rem' : '0.625rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   color: 'var(--gray-400)',
-                  padding: isMobile ? '0.5rem' : '0.375rem',
-                  minWidth: isMobile ? '44px' : 'auto',
-                  minHeight: isMobile ? '44px' : 'auto',
+                  padding: isMobile ? '0.625rem' : '0.375rem',
+                  minWidth: isMobile ? '40px' : 'auto',
+                  minHeight: isMobile ? '40px' : 'auto',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 2,
-                  touchAction: 'manipulation'
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'transparent',
+                  zIndex: 10
                 }}
                 aria-label={showConfirmPassword ? 'Skjul passord' : 'Vis passord'}
               >
-                {showConfirmPassword ? <EyeOff size={isMobile ? 22 : 20} /> : <Eye size={isMobile ? 22 : 20} />}
+                {showConfirmPassword ? <EyeOff size={isMobile ? 20 : 20} /> : <Eye size={isMobile ? 20 : 20} />}
               </button>
             </div>
           </div>
