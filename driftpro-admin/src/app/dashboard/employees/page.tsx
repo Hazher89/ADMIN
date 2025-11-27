@@ -461,11 +461,11 @@ export default function EmployeesPage() {
           }
         }
 
-        // Fallback to globalEmailService if Microsoft Graph failed or not available
+        // Fallback: Try to send via send-password-setup API if Microsoft Graph failed
         if (!emailSent) {
           try {
-            // Use send-password-setup API which creates token and sends email
-            const response = await fetch('/api/send-password-setup', {
+            // First, create the setup token via API
+            const tokenResponse = await fetch('/api/send-password-setup', {
               method: 'POST',
               headers: {
                 'Content-Type': 'application/json',
@@ -476,17 +476,131 @@ export default function EmployeesPage() {
               })
             });
 
-            if (response.ok) {
-              emailSent = true;
-              console.log('✅ Welcome email sent successfully via globalEmailService to:', newEmployee.email);
+            if (tokenResponse.ok) {
+              // Token created successfully, now try to send email directly from client
+              // (same method as test email)
+              const tokenData = await tokenResponse.json();
+              
+              try {
+                await microsoftGraphService.initializeMSAL();
+                const account = microsoftGraphService.getCurrentAccount();
+                
+                if (account) {
+                  const fallbackToken = await microsoftGraphService.getAccessToken();
+                  const fallbackFromEmail = account.username;
+                  
+                  // Create welcome email HTML
+                  const welcomeEmailHtml = `
+                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+                        <h1 style="color: white; margin: 0; font-size: 28px; text-align: center;">🎉 Velkommen til MAVI Logistikk AS!</h1>
+                      </div>
+                      <div style="background: #f8fafc; padding: 25px; border-radius: 8px; margin-bottom: 20px;">
+                        <h2 style="color: #2d3748; margin-top: 0;">Hei ${tokenData.employeeName || newEmployee.displayName}! 👋</h2>
+                        <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
+                          Vi er glade for å ha deg med på laget! Din konto er nå opprettet i DriftPro-systemet.
+                        </p>
+                        <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
+                          <strong>Din e-postadresse:</strong> ${newEmployee.email}<br>
+                          <strong>Din stilling:</strong> ${tokenData.employeePosition || newEmployee.position || 'Ansatt'}
+                        </p>
+                      </div>
+                      <div style="background: #e6fffa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #38b2ac;">
+                        <h3 style="color: #234e52; margin-top: 0;">🔐 Sett opp ditt passord</h3>
+                        <p style="color: #2c7a7b; font-size: 16px; line-height: 1.6;">
+                          For å komme i gang må du først sette opp et passord for din konto. Klikk på knappen under for å fortsette:
+                        </p>
+                        <div style="text-align: center; margin: 25px 0;">
+                          <a href="${tokenData.setupUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+                            🚀 Sett opp passord
+                          </a>
+                        </div>
+                        <p style="color: #2c7a7b; font-size: 14px; margin-bottom: 0;">
+                          <strong>Viktig:</strong> Denne lenken er gyldig i 7 dager. Hvis lenken ikke fungerer, kontakt din administrator.
+                        </p>
+                      </div>
+                      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+                        <h3 style="color: #2d3748; margin-top: 0;">📱 Hva kan du gjøre i DriftPro?</h3>
+                        <ul style="color: #4a5568; font-size: 15px; line-height: 1.6;">
+                          <li>Se din personlige profil og arbeidsinformasjon</li>
+                          <li>Be om ferie og fravær</li>
+                          <li>Se bedriftsnyheter og varsler</li>
+                          <li>Kommunisere med kollegaer</li>
+                          <li>Se arbeidsplaner og oppgaver</li>
+                        </ul>
+                      </div>
+                      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+                        <p style="color: #718096; font-size: 14px; margin: 0;">
+                          Med vennlig hilsen,<br>
+                          <strong>MAVI Logistikk AS-teamet</strong>
+                        </p>
+                        <p style="color: #a0aec0; font-size: 12px; margin: 10px 0 0 0;">
+                          Denne e-posten ble sendt automatisk fra DriftPro-systemet
+                        </p>
+                      </div>
+                    </div>
+                  `;
+                  
+                  // Send via Microsoft Graph API directly (same as test email)
+                  const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+                    method: 'POST',
+                    headers: {
+                      'Authorization': `Bearer ${fallbackToken}`,
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      message: {
+                        subject: '🎉 Velkommen til MAVI Logistikk AS! Sett opp ditt passord',
+                        body: {
+                          contentType: 'HTML',
+                          content: welcomeEmailHtml
+                        },
+                        toRecipients: [
+                          {
+                            emailAddress: {
+                              address: newEmployee.email
+                            }
+                          }
+                        ],
+                        from: {
+                          emailAddress: {
+                            address: fallbackFromEmail
+                          }
+                        }
+                      },
+                      saveToSentItems: true
+                    })
+                  });
+
+                  if (graphResponse.ok) {
+                    emailSent = true;
+                    console.log('✅ Welcome email sent successfully via Microsoft Graph API (fallback)');
+                  } else {
+                    const errorData = await graphResponse.json().catch(() => ({}));
+                    emailError = `Microsoft Graph feil: ${errorData.error?.message || 'Ukjent feil'}`;
+                    console.error('❌ Failed to send via Microsoft Graph API (fallback):', errorData);
+                  }
+                } else {
+                  emailError = 'Microsoft Graph autentisering påkrevd. Logg inn med Microsoft 365 i E-post System først.';
+                }
+              } catch (fallbackError) {
+                console.error('❌ Error in fallback email sending:', fallbackError);
+                emailError = 'Kunne ikke sende e-post. Sjekk at du er logget inn med Microsoft 365 i E-post System.';
+              }
             } else {
-              const errorResult = await response.json();
+              const errorResult = await tokenResponse.json();
               emailError = errorResult.error || 'Unknown error';
-              console.error('❌ Failed to send welcome email via globalEmailService:', errorResult);
+              
+              // Check if it requires authentication
+              if (errorResult.requiresAuth) {
+                emailError = 'Microsoft Graph autentisering påkrevd. Logg inn med Microsoft 365 i E-post System først.';
+              }
+              
+              console.error('❌ Failed to create setup token:', errorResult);
             }
           } catch (emailServiceError) {
-            console.error('❌ Error sending via globalEmailService:', emailServiceError);
-            emailError = 'Kunne ikke sende e-post. Kontakt IT-avdelingen.';
+            console.error('❌ Error in fallback email sending:', emailServiceError);
+            emailError = 'Kunne ikke sende e-post. Sjekk at du er logget inn med Microsoft 365 i E-post System.';
           }
         }
       } catch (emailError) {
