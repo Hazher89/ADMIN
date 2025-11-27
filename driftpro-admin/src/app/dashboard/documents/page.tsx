@@ -377,13 +377,13 @@ export default function DocumentsPage() {
       {/* Desktop Header */}
       {!isMobile && (
         <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 2rem' }}>
-          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
               <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--text-color)' }}>Dokumenter</h1>
               <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem', fontSize: 'var(--font-size-base)' }}>
-                {documents.length} dokumenter • {formatFileSize(documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0))} total størrelse
-              </p>
-            </div>
+              {documents.length} dokumenter • {formatFileSize(documents.reduce((sum, doc) => sum + (doc.fileSize || 0), 0))} total størrelse
+            </p>
+          </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <button
                 onClick={() => setViewMode(viewMode === 'grid' ? 'list' : 'grid')}
@@ -401,23 +401,23 @@ export default function DocumentsPage() {
               >
                 {viewMode === 'grid' ? <List style={{ width: '16px', height: '16px' }} /> : <Grid style={{ width: '16px', height: '16px' }} />}
               </button>
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="btn btn-primary"
-                style={{ 
-                  display: 'flex', 
-                  alignItems: 'center', 
-                  gap: '0.5rem',
+            <button
+              onClick={() => setShowAddModal(true)}
+              className="btn btn-primary"
+              style={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: '0.5rem',
                   fontSize: 'var(--font-size-base)',
                   padding: '0.75rem 1rem'
-                }}
-              >
+              }}
+            >
                 <Plus style={{ width: '16px', height: '16px' }} />
                 Last opp dokument
-              </button>
-            </div>
+            </button>
           </div>
         </div>
+      </div>
       )}
 
       <div style={{ 

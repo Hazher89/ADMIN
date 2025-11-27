@@ -216,11 +216,11 @@ export default function TimeclockPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <h1 className="page-title">⏰ Stempleklokke</h1>
-          <p className="page-subtitle">
-            Oversikt over inn- og utstemplinger for alle ansatte
-          </p>
+      <div className="page-header">
+        <h1 className="page-title">⏰ Stempleklokke</h1>
+        <p className="page-subtitle">
+          Oversikt over inn- og utstemplinger for alle ansatte
+        </p>
         </div>
       )}
 
@@ -320,11 +320,11 @@ export default function TimeclockPage() {
               width: isMobile ? '18px' : '20px',
               height: isMobile ? '18px' : '20px'
             }} />
-            <input
-              type="text"
-              placeholder="Søk i stempleoppføringer..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+          <input
+            type="text"
+            placeholder="Søk i stempleoppføringer..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 width: '100%',
                 padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
@@ -334,8 +334,8 @@ export default function TimeclockPage() {
                 fontSize: isMobile ? '16px' : undefined,
                 background: 'var(--card-background)'
               }}
-            />
-          </div>
+          />
+        </div>
 
           <select
             value={selectedStatus}
@@ -380,7 +380,7 @@ export default function TimeclockPage() {
 
           {!isMobile && (
             <button className="btn btn-primary" style={{ whiteSpace: 'nowrap' }}>
-              <Plus style={{ width: '16px', height: '16px' }} />
+            <Plus style={{ width: '16px', height: '16px' }} />
               Ny stempleoppføring
             </button>
           )}

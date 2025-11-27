@@ -457,14 +457,14 @@ export default function MyCompanyPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div style={{ background: '#ffffff', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', borderBottom: '1px solid #e5e7eb', padding: '1.5rem 2rem' }}>
-          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: '#111827' }}>Min Bedrift</h1>
-              <p style={{ color: '#6b7280', marginTop: '0.25rem' }}>
-                Enterprise Management Platform
-              </p>
-            </div>
+      <div style={{ background: '#ffffff', boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)', borderBottom: '1px solid #e5e7eb', padding: '1.5rem 2rem' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1 style={{ fontSize: '1.875rem', fontWeight: '700', color: '#111827' }}>Min Bedrift</h1>
+            <p style={{ color: '#6b7280', marginTop: '0.25rem' }}>
+              Enterprise Management Platform
+            </p>
+          </div>
           <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
             <button
               style={{ 
@@ -488,7 +488,7 @@ export default function MyCompanyPage() {
             </button>
           </div>
         </div>
-        </div>
+      </div>
       )}
 
       {/* Main Content */}

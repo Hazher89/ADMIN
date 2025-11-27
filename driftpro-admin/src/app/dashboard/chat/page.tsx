@@ -791,22 +791,22 @@ export default function ChatPage() {
               </div>
               <div style={{ display: 'flex', gap: isMobile ? '0.375rem' : '0.5rem', flexShrink: 0 }}>
                 {!isMobile && (
-                  <button
-                    onClick={() => setShowSearchMessages(!showSearchMessages)}
-                    style={{
-                      padding: '0.5rem',
-                      background: 'var(--gray-100)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    title="Søk i meldinger"
-                  >
-                    <Search size={18} style={{ color: 'var(--text-color)' }} />
-                  </button>
+                <button
+                  onClick={() => setShowSearchMessages(!showSearchMessages)}
+                  style={{
+                    padding: '0.5rem',
+                    background: 'var(--gray-100)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Søk i meldinger"
+                >
+                  <Search size={18} style={{ color: 'var(--text-color)' }} />
+                </button>
                 )}
                 {selectedChat.type === 'group' && !isMobile && (
                   <button
@@ -827,22 +827,22 @@ export default function ChatPage() {
                   </button>
                 )}
                 {!isMobile && (
-                  <button
-                    onClick={() => setShowChatSettings(true)}
-                    style={{
-                      padding: '0.5rem',
-                      background: 'var(--gray-100)',
-                      border: 'none',
-                      borderRadius: '8px',
-                      cursor: 'pointer',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center'
-                    }}
-                    title="Chat-innstillinger"
-                  >
-                    <MoreHorizontal size={18} style={{ color: 'var(--text-color)' }} />
-                  </button>
+                <button
+                  onClick={() => setShowChatSettings(true)}
+                  style={{
+                    padding: '0.5rem',
+                    background: 'var(--gray-100)',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                  title="Chat-innstillinger"
+                >
+                  <MoreHorizontal size={18} style={{ color: 'var(--text-color)' }} />
+                </button>
                 )}
               </div>
             </div>

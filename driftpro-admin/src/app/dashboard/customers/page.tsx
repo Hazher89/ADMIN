@@ -289,11 +289,11 @@ export default function CustomersPage() {
               width: isMobile ? '18px' : '16px',
               height: isMobile ? '18px' : '16px'
             }} />
-            <input
-              type="text"
-              placeholder="Søk etter navn, e-post eller kontaktperson..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+          <input
+            type="text"
+            placeholder="Søk etter navn, e-post eller kontaktperson..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 width: '100%',
                 padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
@@ -303,8 +303,8 @@ export default function CustomersPage() {
                 fontSize: isMobile ? '16px' : undefined,
                 background: 'var(--card-background)'
               }}
-            />
-          </div>
+          />
+        </div>
           <select
             value={filterType}
             onChange={(e) => setFilterType(e.target.value)}
@@ -341,15 +341,15 @@ export default function CustomersPage() {
             <option value="prospect">Potensiell</option>
           </select>
           {!isMobile && (
-            <button
-              onClick={loadCustomers}
-              disabled={loading}
+        <button
+          onClick={loadCustomers}
+          disabled={loading}
               className="btn btn-secondary"
               style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', whiteSpace: 'nowrap' }}
-            >
-              <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
-              <span>Oppdater</span>
-            </button>
+        >
+          <RefreshCw className={`w-4 h-4 ${loading ? 'animate-spin' : ''}`} />
+          <span>Oppdater</span>
+        </button>
           )}
         </div>
         {isMobile && (

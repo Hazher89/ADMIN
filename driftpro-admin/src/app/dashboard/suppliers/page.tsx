@@ -78,50 +78,50 @@ export default function SuppliersPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <div className="flex items-center space-x-3">
-            <div className="card-icon">
-              <Truck className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="page-title">Leverandører</h1>
-              <p className="page-subtitle">Administrer leverandører og samarbeidspartnere</p>
-            </div>
-          </div>
+    <div className="page-header">
+      <div className="flex items-center space-x-3">
+        <div className="card-icon">
+          <Truck className="w-6 h-6" />
+        </div>
+        <div>
+          <h1 className="page-title">Leverandører</h1>
+          <p className="page-subtitle">Administrer leverandører og samarbeidspartnere</p>
+        </div>
+      </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Search className="w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Søk leverandører..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <select 
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Alle kategorier</option>
-                <option value="Elektronikk">Elektronikk</option>
-                <option value="Råvarer">Råvarer</option>
-                <option value="IT-utstyr">IT-utstyr</option>
-                <option value="Tjenester">Tjenester</option>
-              </select>
-            </div>
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="btn btn-primary"
-            >
-              <Plus className="w-4 h-4" />
-              Ny leverandør
-            </button>
-          </div>
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Search className="w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Søk leverandører..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <select 
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Alle kategorier</option>
+            <option value="Elektronikk">Elektronikk</option>
+            <option value="Råvarer">Råvarer</option>
+            <option value="IT-utstyr">IT-utstyr</option>
+            <option value="Tjenester">Tjenester</option>
+          </select>
+        </div>
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="btn btn-primary"
+        >
+          <Plus className="w-4 h-4" />
+          Ny leverandør
+        </button>
+      </div>
         </div>
       )}
 

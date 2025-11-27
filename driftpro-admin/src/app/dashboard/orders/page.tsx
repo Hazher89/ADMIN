@@ -443,17 +443,17 @@ export default function OrdersPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="card-icon">
-              <ShoppingCart />
-            </div>
-            <div>
-              <h1 className="page-title">Ordre</h1>
-              <p className="page-subtitle">Administrer ordre som skal planlegges for levering</p>
-            </div>
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card-icon">
+            <ShoppingCart />
+          </div>
+          <div>
+            <h1 className="page-title">Ordre</h1>
+            <p className="page-subtitle">Administrer ordre som skal planlegges for levering</p>
           </div>
         </div>
+      </div>
       )}
 
       {/* Quick Stats */}

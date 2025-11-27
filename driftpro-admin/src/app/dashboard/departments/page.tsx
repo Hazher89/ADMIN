@@ -159,7 +159,7 @@ export default function DepartmentsPage() {
           background: 'var(--card-background)'
         }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
+    <div>
               <h1 style={{
                 fontSize: '1.125rem',
                 fontWeight: 600,
@@ -201,35 +201,35 @@ export default function DepartmentsPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="card-icon">
-              <Building />
-            </div>
-            <div>
-              <h1 className="page-title">🏢 Avdelinger</h1>
-              <p className="page-subtitle">
-                Administrer bedriftens avdelinger og organisasjonsstruktur
-              </p>
-            </div>
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card-icon">
+            <Building />
           </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <span className="badge badge-primary">
-              {departments.length} avdelinger
-            </span>
-            <span className="badge badge-secondary">
-              {getTotalEmployees()} ansatte
-            </span>
-            <button 
-              className="btn btn-primary"
-              onClick={() => setShowAddModal(true)}
-            >
-              <Plus style={{ width: '16px', height: '16px' }} />
-              Opprett avdeling
-            </button>
+          <div>
+            <h1 className="page-title">🏢 Avdelinger</h1>
+            <p className="page-subtitle">
+              Administrer bedriftens avdelinger og organisasjonsstruktur
+            </p>
           </div>
         </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <span className="badge badge-primary">
+            {departments.length} avdelinger
+          </span>
+          <span className="badge badge-secondary">
+            {getTotalEmployees()} ansatte
+          </span>
+          <button 
+            className="btn btn-primary"
+            onClick={() => setShowAddModal(true)}
+          >
+            <Plus style={{ width: '16px', height: '16px' }} />
+            Opprett avdeling
+          </button>
+        </div>
+      </div>
       )}
 
       {/* Stats Grid */}
@@ -322,11 +322,11 @@ export default function DepartmentsPage() {
             width: isMobile ? '18px' : '16px',
             height: isMobile ? '18px' : '16px'
           }} />
-          <input
-            type="text"
-            placeholder="Søk i avdelinger..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
+            <input
+              type="text"
+              placeholder="Søk i avdelinger..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
             style={{
               width: '100%',
               padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
@@ -395,8 +395,8 @@ export default function DepartmentsPage() {
               </div>
               {!isMobile && (
                 <button className="btn btn-secondary" style={{ padding: '0.5rem', flexShrink: 0 }}>
-                  <MoreHorizontal style={{ width: '16px', height: '16px' }} />
-                </button>
+                <MoreHorizontal style={{ width: '16px', height: '16px' }} />
+              </button>
               )}
             </div>
 

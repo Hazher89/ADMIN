@@ -1204,7 +1204,7 @@ export default function PartnersPage() {
 
       {/* Desktop Page Header */}
       {!isMobile && (
-        <div className="page-header">
+      <div className="page-header">
         <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
           <div className="card-icon">
             <Building2 />

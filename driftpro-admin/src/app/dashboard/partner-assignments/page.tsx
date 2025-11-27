@@ -199,20 +199,20 @@ export default function PartnerAssignmentsPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="container mx-auto px-4 py-8">
-          <div className="flex justify-between items-center mb-8">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900">Partner Oppdrag</h1>
-              <p className="text-gray-600 mt-2">Administrer og tildel oppdrag til partnere</p>
-            </div>
-            <button
-              onClick={() => setShowCreateModal(true)}
-              className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
-            >
-              <Plus className="w-5 h-5" />
-              Nytt Oppdrag
-            </button>
-          </div>
+    <div className="container mx-auto px-4 py-8">
+      <div className="flex justify-between items-center mb-8">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Partner Oppdrag</h1>
+          <p className="text-gray-600 mt-2">Administrer og tildel oppdrag til partnere</p>
+        </div>
+        <button
+          onClick={() => setShowCreateModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-lg flex items-center gap-2"
+        >
+          <Plus className="w-5 h-5" />
+          Nytt Oppdrag
+        </button>
+      </div>
         </div>
       )}
 

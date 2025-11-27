@@ -392,13 +392,13 @@ export default function EmployeesPage() {
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
-      // Send welcome email to the new employee
+      // Send welcome email to the new employee with password setup link
       let emailSent = false;
       let emailError = null;
       try {
         const departmentName = getDepartmentName(newEmployee.departmentId);
         const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName = userProfile?.companyId || 'Bedrift';
+        const companyName = 'MAVI Logistikk AS';
 
         console.log('📧 Sending welcome email to new employee:', {
           email: newEmployee.email,
@@ -409,7 +409,7 @@ export default function EmployeesPage() {
           position: newEmployee.position || 'Ansatt'
         });
 
-        // Get Microsoft Graph access token for email sending
+        // Try to send via Microsoft Graph first, fallback to globalEmailService
         let accessToken = null;
         let fromEmail = null;
         
@@ -420,50 +420,79 @@ export default function EmployeesPage() {
             accessToken = await microsoftGraphService.getAccessToken();
             fromEmail = account.username;
             console.log('✅ Microsoft Graph token obtained for welcome email');
-          } else {
-            console.log('⚠️ No Microsoft Graph account found, skipping welcome email');
-            emailSent = false;
-            emailError = 'Microsoft Graph authentication required for sending emails';
           }
         } catch (tokenError) {
-          console.error('❌ Failed to get Microsoft Graph token:', tokenError);
-          emailSent = false;
-          emailError = 'Failed to get Microsoft Graph authentication token';
+          console.log('⚠️ Microsoft Graph not available, will use globalEmailService');
         }
 
-        // Send welcome email if we have authentication
+        // Send welcome email
         if (accessToken && fromEmail) {
-          const response = await fetch('/api/send-welcome-email', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: newEmployee.email,
-              displayName: newEmployee.displayName,
-              adminName,
-              companyName,
-              departmentName,
-              position: newEmployee.position || 'Ansatt',
-              accessToken,
-              fromEmail
-            })
-          });
+          // Use Microsoft Graph API
+          try {
+            const response = await fetch('/api/send-welcome-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: newEmployee.email,
+                displayName: newEmployee.displayName,
+                adminName,
+                companyName,
+                departmentName,
+                position: newEmployee.position || 'Ansatt',
+                accessToken,
+                fromEmail
+              })
+            });
 
-          if (response.ok) {
-            const result = await response.json();
-            emailSent = true;
-            console.log('✅ Welcome email sent successfully to:', newEmployee.email);
-          } else {
-            const errorResult = await response.json();
-            emailError = errorResult.error || 'Unknown error';
-            emailSent = false;
-            console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
+            if (response.ok) {
+              emailSent = true;
+              console.log('✅ Welcome email sent successfully via Microsoft Graph to:', newEmployee.email);
+            } else {
+              const errorResult = await response.json();
+              emailError = errorResult.error || 'Unknown error';
+              console.error('❌ Failed to send welcome email via Microsoft Graph:', errorResult);
+              // Fall through to try globalEmailService
+            }
+          } catch (graphError) {
+            console.error('❌ Error sending via Microsoft Graph, trying globalEmailService:', graphError);
+            // Fall through to try globalEmailService
+          }
+        }
+
+        // Fallback to globalEmailService if Microsoft Graph failed or not available
+        if (!emailSent) {
+          try {
+            // Use send-password-setup API which creates token and sends email
+            const response = await fetch('/api/send-password-setup', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                employeeId: employeeId,
+                employeeEmail: newEmployee.email
+              })
+            });
+
+            if (response.ok) {
+              emailSent = true;
+              console.log('✅ Welcome email sent successfully via globalEmailService to:', newEmployee.email);
+            } else {
+              const errorResult = await response.json();
+              emailError = errorResult.error || 'Unknown error';
+              console.error('❌ Failed to send welcome email via globalEmailService:', errorResult);
+            }
+          } catch (emailServiceError) {
+            console.error('❌ Error sending via globalEmailService:', emailServiceError);
+            emailError = 'Kunne ikke sende e-post. Kontakt IT-avdelingen.';
           }
         }
       } catch (emailError) {
         console.error('❌ Error sending welcome email:', emailError);
         emailSent = false;
+        emailError = emailError instanceof Error ? emailError.message : 'Ukjent feil';
         // Don't fail the employee creation if email fails
       }
 
@@ -927,10 +956,10 @@ export default function EmployeesPage() {
         }}>
           <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
             {stats.total}
-          </div>
+        </div>
           <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
             Totalt
-          </div>
+        </div>
         </div>
         <div style={{
           borderRadius: '0.875rem',
@@ -1079,8 +1108,8 @@ export default function EmployeesPage() {
                   fontSize: isMobile ? '1rem' : '0.875rem',
                   flexShrink: 0
                 }}>
-                  {(employee.displayName?.charAt(0) || 'U').toUpperCase()}
-                </div>
+                    {(employee.displayName?.charAt(0) || 'U').toUpperCase()}
+                  </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <h3 style={{ 
                     fontWeight: 600, 
@@ -1106,8 +1135,8 @@ export default function EmployeesPage() {
                 </div>
                 {!isMobile && (
                   <button className="btn btn-secondary" style={{ padding: '0.5rem', flexShrink: 0 }}>
-                    <MoreHorizontal style={{ width: '16px', height: '16px' }} />
-                  </button>
+                  <MoreHorizontal style={{ width: '16px', height: '16px' }} />
+                </button>
                 )}
               </div>
 
@@ -1129,8 +1158,8 @@ export default function EmployeesPage() {
                     <MapPin size={isMobile ? 16 : 14} style={{ color: 'var(--gray-500)', flexShrink: 0 }} />
                     <span style={{ fontSize: isMobile ? '0.8125rem' : '0.875rem', color: 'var(--gray-600)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {employee.phone}
-                    </span>
-                  </div>
+                  </span>
+                </div>
                 )}
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                   <CheckCircle size={isMobile ? 16 : 14} style={{ color: employee.status === 'active' ? '#22c55e' : employee.status === 'inactive' ? '#ef4444' : '#f59e0b', flexShrink: 0 }} />
@@ -1145,8 +1174,8 @@ export default function EmployeesPage() {
                 <div style={{ marginBottom: isMobile ? '0.75rem' : '1rem', paddingTop: isMobile ? '0.75rem' : 0, borderTop: isMobile ? '1px solid var(--border-color)' : 'none' }}>
                   <div style={{ fontSize: isMobile ? '0.75rem' : '0.75rem', color: 'var(--gray-500)' }}>
                     Ansattnr: {employee.employeeNumber}
-                  </div>
                 </div>
+              </div>
               )}
 
               <div style={{ 
@@ -1194,32 +1223,32 @@ export default function EmployeesPage() {
                 </button>
                 {!isMobile && (
                   <>
-                    <button 
-                      className="btn btn-secondary" 
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
-                      onClick={() => handleEmployeeSettings(employee)}
-                    >
-                      <Settings style={{ width: '14px', height: '14px' }} />
-                      Innstillinger
-                    </button>
-                    <button 
-                      className="btn btn-danger" 
-                      style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', opacity: deletingEmployeeId === employee.id ? 0.5 : 1 }}
-                      onClick={() => handleDeleteEmployee(employee.id)}
-                      disabled={deletingEmployeeId === employee.id}
-                    >
-                      {deletingEmployeeId === employee.id ? (
-                        <>
-                          <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block mr-1"></div>
-                          Sletter...
-                        </>
-                      ) : (
-                        <>
-                          <Trash2 style={{ width: '14px', height: '14px' }} />
-                          Slett
-                        </>
-                      )}
-                    </button>
+                <button 
+                  className="btn btn-secondary" 
+                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem' }}
+                  onClick={() => handleEmployeeSettings(employee)}
+                >
+                  <Settings style={{ width: '14px', height: '14px' }} />
+                  Innstillinger
+                </button>
+                <button 
+                  className="btn btn-danger" 
+                  style={{ fontSize: '0.75rem', padding: '0.25rem 0.75rem', opacity: deletingEmployeeId === employee.id ? 0.5 : 1 }}
+                  onClick={() => handleDeleteEmployee(employee.id)}
+                  disabled={deletingEmployeeId === employee.id}
+                >
+                  {deletingEmployeeId === employee.id ? (
+                    <>
+                      <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white inline-block mr-1"></div>
+                      Sletter...
+                    </>
+                  ) : (
+                    <>
+                      <Trash2 style={{ width: '14px', height: '14px' }} />
+                      Slett
+                    </>
+                  )}
+                </button>
                   </>
                 )}
               </div>
@@ -1526,6 +1555,287 @@ export default function EmployeesPage() {
                     placeholder="Relevant arbeidserfaring"
                     rows={3}
                   />
+                </div>
+              </div>
+
+              {/* Tilgangskontroll-seksjon */}
+              <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--card-background)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem', color: 'var(--text-color)' }}>
+                  🔐 Tilgangskontroll og rettigheter
+                </h3>
+                
+                {/* Kategoriserte side-tilganger */}
+                {[
+                  {
+                    category: 'Hovedside',
+                    icon: '🏠',
+                    permissions: [
+                      { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
+                    ]
+                  },
+                  {
+                    category: 'Internkontroll og Samsvar',
+                    icon: '📋',
+                    permissions: [
+                      { key: 'internrevisjon', label: 'Internrevisjon', icon: '📊' },
+                      { key: 'avvik', label: 'Avvik', icon: '⚠️' },
+                      { key: 'risikovurdering', label: 'Risikovurdering', icon: '🛡️' },
+                      { key: 'oppfølgingstiltak', label: 'Oppfølgingstiltak', icon: '✅' },
+                      { key: 'kontrollpunkter', label: 'Kontrollpunkter', icon: '✓' },
+                      { key: 'internkontrollRapporter', label: 'Rapporter', icon: '📈' },
+                    ]
+                  },
+                  {
+                    category: 'HR & Personal - Faner',
+                    icon: '👥',
+                    permissions: [
+                      { key: 'hrAnsatte', label: 'Ansatte', icon: '👤' },
+                      { key: 'hrVakter', label: 'Vakter', icon: '📅' },
+                      { key: 'hrFravær', label: 'Fravær', icon: '🤒' },
+                      { key: 'hrFerie', label: 'Ferie', icon: '🏖️' },
+                      { key: 'hrAvdelinger', label: 'Avdelinger', icon: '🏢' },
+                    ]
+                  },
+                  {
+                    category: 'Logistikk System - Faner',
+                    icon: '🚚',
+                    permissions: [
+                      { key: 'logistikkBudPriser', label: 'BUD Priser', icon: '💰' },
+                      { key: 'logistikkLevering', label: 'Levering', icon: '🚛' },
+                      { key: 'logistikkPlanlegging', label: 'Planlegging', icon: '🗺️' },
+                      { key: 'logistikkKunder', label: 'Kunder', icon: '👥' },
+                      { key: 'logistikkLeverandorer', label: 'Leverandører', icon: '📦' },
+                      { key: 'logistikkProdukter', label: 'Produkter', icon: '🛍️' },
+                      { key: 'logistikkLager', label: 'Lager', icon: '📦' },
+                      { key: 'logistikkFakturering', label: 'Fakturering', icon: '🧾' },
+                      { key: 'logistikkFinans', label: 'Finans', icon: '💵' },
+                    ]
+                  },
+                  {
+                    category: 'Kommunikasjon',
+                    icon: '💬',
+                    permissions: [
+                      { key: 'chat', label: 'Chat', icon: '💬' },
+                      { key: 'emailSystem', label: 'E-post System', icon: '📧' },
+                      { key: 'smsLogs', label: 'SMS Logg & Telefonbok', icon: '📱' },
+                    ]
+                  },
+                  {
+                    category: 'Samarbeid og dokumenter',
+                    icon: '🤝',
+                    permissions: [
+                      { key: 'partners', label: 'Samarbeidspartnere', icon: '🤝' },
+                      { key: 'documents', label: 'Dokumenter', icon: '📄' },
+                    ]
+                  },
+                  {
+                    category: 'Kjernefunksjoner',
+                    icon: '⚙️',
+                    permissions: [
+                      { key: 'employees', label: 'Ansatte', icon: '👥' },
+                      { key: 'departments', label: 'Avdelinger', icon: '🏢' },
+                      { key: 'calendar', label: 'Kalender', icon: '📅' },
+                      { key: 'notifications', label: 'Varsler', icon: '🔔' },
+                    ]
+                  },
+                  {
+                    category: 'Prosjekt og oppgaver',
+                    icon: '📋',
+                    permissions: [
+                      { key: 'projects', label: 'Prosjekter', icon: '📋' },
+                      { key: 'tasks', label: 'Oppgaver', icon: '✅' },
+                    ]
+                  },
+                  {
+                    category: 'Økonomi og finans',
+                    icon: '💰',
+                    permissions: [
+                      { key: 'finance', label: 'Økonomi', icon: '💰' },
+                      { key: 'invoicing', label: 'Fakturering', icon: '🧾' },
+                      { key: 'payments', label: 'Betalinger', icon: '💳' },
+                      { key: 'procurement', label: 'Innkjøp', icon: '🛒' },
+                    ]
+                  },
+                  {
+                    category: 'Lager og logistikk',
+                    icon: '📦',
+                    permissions: [
+                      { key: 'inventory', label: 'Lager', icon: '📦' },
+                      { key: 'suppliers', label: 'Leverandører', icon: '🚚' },
+                      { key: 'logistics', label: 'Logistikk', icon: '📦' },
+                      { key: 'delivery', label: 'Levering', icon: '🚛' },
+                    ]
+                  },
+                  {
+                    category: 'HR og personal',
+                    icon: '👤',
+                    permissions: [
+                      { key: 'hr', label: 'HR', icon: '👤' },
+                      { key: 'training', label: 'Opplæring', icon: '🎓' },
+                    ]
+                  },
+                  {
+                    category: 'Salg og markedsføring',
+                    icon: '💼',
+                    permissions: [
+                      { key: 'crm', label: 'CRM', icon: '🤝' },
+                      { key: 'sales', label: 'Salg', icon: '💼' },
+                      { key: 'marketing', label: 'Markedsføring', icon: '📢' },
+                      { key: 'customerService', label: 'Kundeservice', icon: '🎧' },
+                    ]
+                  },
+                  {
+                    category: 'Produksjon og kvalitet',
+                    icon: '🏭',
+                    permissions: [
+                      { key: 'production', label: 'Produksjon', icon: '🏭' },
+                      { key: 'quality', label: 'Kvalitet', icon: '⭐' },
+                      { key: 'maintenance', label: 'Vedlikehold', icon: '🔧' },
+                    ]
+                  },
+                  {
+                    category: 'Sikkerhet og compliance',
+                    icon: '🛡️',
+                    permissions: [
+                      { key: 'safety', label: 'Sikkerhet', icon: '🛡️' },
+                      { key: 'compliance', label: 'Compliance', icon: '⚖️' },
+                      { key: 'legal', label: 'Juridisk', icon: '⚖️' },
+                      { key: 'audit', label: 'Revisjon', icon: '🔍' },
+                    ]
+                  },
+                  {
+                    category: 'IT og dokumenter',
+                    icon: '💻',
+                    permissions: [
+                      { key: 'it', label: 'IT', icon: '💻' },
+                      { key: 'mail', label: 'E-post', icon: '📧' },
+                    ]
+                  },
+                  {
+                    category: 'Rapporter og analyser',
+                    icon: '📊',
+                    permissions: [
+                      { key: 'reports', label: 'Rapporter', icon: '📊' },
+                      { key: 'analytics', label: 'Analyser', icon: '📈' },
+                    ]
+                  },
+                  {
+                    category: 'System',
+                    icon: '⚙️',
+                    permissions: [
+                      { key: 'settings', label: 'Innstillinger', icon: '⚙️' },
+                    ]
+                  },
+                ].map((category) => {
+                  const currentPermissions = newEmployee.permissions || {};
+                  return (
+                    <div key={category.category} style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--background-color)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
+                      <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                        <span>{category.icon}</span>
+                        {category.category}
+                      </h4>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
+                        {category.permissions.map(({ key, label, icon }) => {
+                          const isChecked = currentPermissions[key as keyof typeof currentPermissions] || false;
+                          return (
+                            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '0.375rem', transition: 'background 0.2s', background: isChecked ? 'rgba(56, 189, 248, 0.15)' : 'transparent' }}>
+                              <input
+                                type="checkbox"
+                                checked={isChecked}
+                                onChange={(e) => setNewEmployee({
+                                  ...newEmployee,
+                                  permissions: {
+                                    ...currentPermissions,
+                                    [key]: e.target.checked
+                                  }
+                                })}
+                                style={{ margin: 0, width: '16px', height: '16px', cursor: 'pointer' }}
+                              />
+                              <span style={{ color: isChecked ? 'var(--primary)' : 'var(--text-color)' }}>
+                                {icon} {label}
+                              </span>
+                            </label>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  );
+                })}
+
+                {/* Ferie og fravær-tilgang */}
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                    🏖️ Ferie og fravær-tilgang
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={newEmployee.vacationAccess?.canRequestVacation ?? true}
+                          onChange={(e) => setNewEmployee({
+                            ...newEmployee,
+                            vacationAccess: {
+                              ...newEmployee.vacationAccess,
+                              canRequestVacation: e.target.checked
+                            }
+                          })}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Kan be om ferie</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                        <input
+                          type="checkbox"
+                          checked={newEmployee.vacationAccess?.canApproveVacation ?? false}
+                          onChange={(e) => setNewEmployee({
+                            ...newEmployee,
+                            vacationAccess: {
+                              ...newEmployee.vacationAccess,
+                              canApproveVacation: e.target.checked
+                            }
+                          })}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Kan godkjenne ferie</span>
+                      </label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+                        <input
+                          type="checkbox"
+                          checked={newEmployee.vacationAccess?.canViewAllVacations ?? false}
+                          onChange={(e) => setNewEmployee({
+                            ...newEmployee,
+                            vacationAccess: {
+                              ...newEmployee.vacationAccess,
+                              canViewAllVacations: e.target.checked
+                            }
+                          })}
+                          style={{ margin: 0 }}
+                        />
+                        <span>Kan se alle ferier</span>
+                      </label>
+                    </div>
+                    <div>
+                      <label className="form-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
+                        Feriedager per år
+                      </label>
+                      <input
+                        type="number"
+                        value={newEmployee.vacationAccess?.vacationDaysPerYear || 25}
+                        onChange={(e) => setNewEmployee({
+                          ...newEmployee,
+                          vacationAccess: {
+                            ...newEmployee.vacationAccess,
+                            vacationDaysPerYear: parseInt(e.target.value) || 25
+                          }
+                        })}
+                        className="form-input"
+                        style={{ width: '100%' }}
+                        min="0"
+                        max="365"
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

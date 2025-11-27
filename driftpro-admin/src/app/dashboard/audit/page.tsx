@@ -1408,149 +1408,149 @@ export default function AuditPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div style={{ 
-          marginBottom: '2rem',
-          display: 'flex',
+      <div style={{ 
+        marginBottom: '2rem',
+        display: 'flex',
           flexDirection: 'row',
           alignItems: 'center',
-          justifyContent: 'space-between',
-          gap: '1rem'
-        }}>
-          <div>
-            <h1 style={{ 
-              fontSize: '2rem', 
-              fontWeight: '700', 
+        justifyContent: 'space-between',
+        gap: '1rem'
+      }}>
+        <div>
+          <h1 style={{ 
+            fontSize: '2rem', 
+            fontWeight: '700', 
               color: 'var(--text-color)',
-              margin: 0,
-              marginBottom: '0.5rem'
-            }}>
-              Internkontroll og Samsvar
-            </h1>
-            <p style={{ 
-              color: 'var(--gray-500)', 
-              fontSize: '1rem',
-              margin: 0
-            }}>
-              Administrer internkontroll, avvik, risikovurderinger og oppfølgingstiltak
-            </p>
-          </div>
-        
-          {activeTab === 'audits' && (userProfile?.permissions?.internrevisjon || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setShowAddModal(true)}
-              style={{
-                background: 'var(--primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-              }}
-            >
-              <Plus size={20} />
-              Ny revisjon
-            </button>
-          )}
-          {activeTab === 'deviations' && (userProfile?.permissions?.avvik || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setShowAddDeviationModal(true)}
-              style={{
-                background: 'var(--primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-              }}
-            >
-              <Plus size={20} />
-              Rapporter avvik
-            </button>
-          )}
-          {activeTab === 'risk-assessment' && (userProfile?.permissions?.risikovurdering || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setShowAddRiskModal(true)}
-              style={{
-                background: 'var(--primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-              }}
-            >
-              <Plus size={20} />
-              Ny risikovurdering
-            </button>
-          )}
-          {activeTab === 'follow-up' && (userProfile?.permissions?.oppfølgingstiltak || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setShowAddFollowUpModal(true)}
-              style={{
-                background: 'var(--primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-              }}
-            >
-              <Plus size={20} />
-              Nytt oppfølgingstiltak
-            </button>
-          )}
-          {activeTab === 'checkpoints' && (userProfile?.permissions?.kontrollpunkter || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
-            <button
-              onClick={() => setShowAddCheckpointModal(true)}
-              style={{
-                background: 'var(--primary)',
-                color: 'white',
-                border: 'none',
-                borderRadius: '8px',
-                padding: '0.75rem 1.5rem',
-                fontSize: '0.875rem',
-                fontWeight: '600',
-                cursor: 'pointer',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem',
-                transition: 'all 0.2s',
-                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
-              }}
-            >
-              <Plus size={20} />
-              Nytt kontrollpunkt
-            </button>
-          )}
+            margin: 0,
+            marginBottom: '0.5rem'
+          }}>
+            Internkontroll og Samsvar
+          </h1>
+          <p style={{ 
+            color: 'var(--gray-500)', 
+            fontSize: '1rem',
+            margin: 0
+          }}>
+            Administrer internkontroll, avvik, risikovurderinger og oppfølgingstiltak
+          </p>
         </div>
+        
+        {activeTab === 'audits' && (userProfile?.permissions?.internrevisjon || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
+          <button
+            onClick={() => setShowAddModal(true)}
+            style={{
+              background: 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <Plus size={20} />
+            Ny revisjon
+          </button>
+        )}
+        {activeTab === 'deviations' && (userProfile?.permissions?.avvik || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
+          <button
+            onClick={() => setShowAddDeviationModal(true)}
+            style={{
+              background: 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <Plus size={20} />
+            Rapporter avvik
+          </button>
+        )}
+        {activeTab === 'risk-assessment' && (userProfile?.permissions?.risikovurdering || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
+          <button
+            onClick={() => setShowAddRiskModal(true)}
+            style={{
+              background: 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <Plus size={20} />
+            Ny risikovurdering
+          </button>
+        )}
+        {activeTab === 'follow-up' && (userProfile?.permissions?.oppfølgingstiltak || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
+          <button
+            onClick={() => setShowAddFollowUpModal(true)}
+            style={{
+              background: 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <Plus size={20} />
+            Nytt oppfølgingstiltak
+          </button>
+        )}
+        {activeTab === 'checkpoints' && (userProfile?.permissions?.kontrollpunkter || userProfile?.permissions?.internkontrollOgSamsvar || userProfile?.role === 'admin' || userProfile?.role === 'super_admin') && (
+          <button
+            onClick={() => setShowAddCheckpointModal(true)}
+            style={{
+              background: 'var(--primary)',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              padding: '0.75rem 1.5rem',
+              fontSize: '0.875rem',
+              fontWeight: '600',
+              cursor: 'pointer',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem',
+              transition: 'all 0.2s',
+              boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+            }}
+          >
+            <Plus size={20} />
+            Nytt kontrollpunkt
+          </button>
+        )}
+      </div>
       )}
 
       {/* Mobile Action Button */}

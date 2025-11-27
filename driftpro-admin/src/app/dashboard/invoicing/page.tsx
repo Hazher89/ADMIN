@@ -171,50 +171,50 @@ export default function InvoicingPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <div className="flex items-center space-x-3">
-            <div className="card-icon">
-              <FileText className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="page-title">Fakturering</h1>
-              <p className="page-subtitle">Administrer fakturaer og betalinger</p>
-            </div>
-          </div>
+    <div className="page-header">
+      <div className="flex items-center space-x-3">
+        <div className="card-icon">
+          <FileText className="w-6 h-6" />
+        </div>
+        <div>
+          <h1 className="page-title">Fakturering</h1>
+          <p className="page-subtitle">Administrer fakturaer og betalinger</p>
+        </div>
+      </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Search className="w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Søk fakturaer..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <select 
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Alle status</option>
-                <option value="draft">Kladd</option>
-                <option value="sent">Sendt</option>
-                <option value="paid">Betalt</option>
-                <option value="overdue">Forfalt</option>
-              </select>
-            </div>
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="btn btn-primary"
-            >
-              <Plus className="w-4 h-4" />
-              Ny faktura
-            </button>
-          </div>
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Search className="w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Søk fakturaer..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <select 
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Alle status</option>
+            <option value="draft">Kladd</option>
+            <option value="sent">Sendt</option>
+            <option value="paid">Betalt</option>
+            <option value="overdue">Forfalt</option>
+          </select>
+        </div>
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="btn btn-primary"
+        >
+          <Plus className="w-4 h-4" />
+          Ny faktura
+        </button>
+      </div>
         </div>
       )}
 

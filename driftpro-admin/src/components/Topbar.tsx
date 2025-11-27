@@ -238,27 +238,27 @@ export default function Topbar() {
 				</div>
 				
 					{!isMobile && (
-						<a className="logo" href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', marginLeft: '-0.25rem' }}>
-							<span style={{
-								background: 'linear-gradient(135deg, #22d3ee 0%, #0ea5e9 40%, #06b6d4 100%)',
-								WebkitBackgroundClip: 'text',
-								WebkitTextFillColor: 'transparent',
-								backgroundClip: 'text',
-								filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.4))',
-								animation: 'text-glow 3s ease-in-out infinite',
+					<a className="logo" href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', marginLeft: '-0.25rem' }}>
+						<span style={{
+							background: 'linear-gradient(135deg, #22d3ee 0%, #0ea5e9 40%, #06b6d4 100%)',
+							WebkitBackgroundClip: 'text',
+							WebkitTextFillColor: 'transparent',
+							backgroundClip: 'text',
+							filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.4))',
+							animation: 'text-glow 3s ease-in-out infinite',
 								position: 'relative',
 								fontSize: '1.125rem',
 								fontWeight: '600'
-							}}>DriftPro</span>
-						</a>
+						}}>DriftPro</span>
+				</a>
 					)}
 				</div>
 
 				{/* Center - Search (Hidden on mobile) */}
 				{!isMobile && (
-					<div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '600px', margin: '0 auto' }}>
-						<GlobalSearch />
-					</div>
+				<div style={{ flex: 1, display: 'flex', justifyContent: 'center', maxWidth: '600px', margin: '0 auto' }}>
+				<GlobalSearch />
+				</div>
 				)}
 
 				{/* Right Section - Notifications and User */}
@@ -267,75 +267,75 @@ export default function Topbar() {
 					<div style={{ position: 'relative' }} ref={menuRef}>
 						<div 
 							style={{
-								display: 'flex',
-								alignItems: 'center',
+						display: 'flex',
+						alignItems: 'center',
 								gap: isMobile ? '0.375rem' : '0.5rem',
 								padding: isMobile ? '0.25rem 0.5rem' : '0.375rem 0.75rem',
 								background: showUserMenu ? 'var(--gray-100)' : 'var(--card-background)',
-								border: '1px solid var(--border-color)',
-								borderRadius: 'var(--radius-full)',
-								cursor: 'pointer',
-								transition: 'all var(--transition-normal)'
-							}}
+						border: '1px solid var(--border-color)',
+						borderRadius: 'var(--radius-full)',
+						cursor: 'pointer',
+						transition: 'all var(--transition-normal)'
+					}}
 							onClick={() => setShowUserMenu(!showUserMenu)}
-							onMouseEnter={(e) => {
+					onMouseEnter={(e) => {
 								if (!showUserMenu && !isMobile) {
-									e.currentTarget.style.background = 'var(--gray-100)';
+						e.currentTarget.style.background = 'var(--gray-100)';
 								}
-							}}
-							onMouseLeave={(e) => {
+					}}
+					onMouseLeave={(e) => {
 								if (!showUserMenu && !isMobile) {
-									e.currentTarget.style.background = 'var(--card-background)';
+						e.currentTarget.style.background = 'var(--card-background)';
 								}
 							}}
 						>
-							<div style={{
+						<div style={{
 								width: isMobile ? '32px' : '28px',
 								height: isMobile ? '32px' : '28px',
-								borderRadius: '50%',
-								background: 'var(--gradient-primary)',
-								display: 'flex',
-								alignItems: 'center',
-								justifyContent: 'center',
-								color: 'white',
+							borderRadius: '50%',
+							background: 'var(--gradient-primary)',
+							display: 'flex',
+							alignItems: 'center',
+							justifyContent: 'center',
+							color: 'white',
 								fontSize: isMobile ? '0.875rem' : '0.75rem',
-								fontWeight: '600',
-								flexShrink: 0
-							}}>
-								{userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
-							</div>
+							fontWeight: '600',
+							flexShrink: 0
+						}}>
+							{userProfile?.displayName?.charAt(0) || user?.email?.charAt(0) || 'U'}
+						</div>
 							{!isMobile && (
-								<div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
-									<div style={{
-										fontSize: '0.8125rem',
-										fontWeight: '500',
-										color: 'var(--text-color)',
-										whiteSpace: 'nowrap',
-										overflow: 'hidden',
-										textOverflow: 'ellipsis'
-									}}>
-										{userProfile?.displayName || 'Bruker'}
-									</div>
-									<div style={{
-										fontSize: '0.6875rem',
-										color: 'var(--gray-500)',
-										whiteSpace: 'nowrap',
-										overflow: 'hidden',
-										textOverflow: 'ellipsis'
-									}}>
-										{userProfile?.role || 'Bruker'}
-									</div>
-								</div>
+						<div style={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+							<div style={{
+								fontSize: '0.8125rem',
+								fontWeight: '500',
+								color: 'var(--text-color)',
+								whiteSpace: 'nowrap',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}>
+								{userProfile?.displayName || 'Bruker'}
+							</div>
+							<div style={{
+								fontSize: '0.6875rem',
+								color: 'var(--gray-500)',
+								whiteSpace: 'nowrap',
+								overflow: 'hidden',
+								textOverflow: 'ellipsis'
+							}}>
+								{userProfile?.role || 'Bruker'}
+							</div>
+						</div>
 							)}
 							{!isMobile && (
-								<ChevronDown 
-									size={16} 
-									style={{ 
-										color: 'var(--gray-500)',
-										transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)',
-										transition: 'transform 0.2s'
-									}} 
-								/>
+							<ChevronDown 
+								size={16} 
+								style={{ 
+									color: 'var(--gray-500)',
+									transform: showUserMenu ? 'rotate(180deg)' : 'rotate(0deg)',
+									transition: 'transform 0.2s'
+								}} 
+							/>
 							)}
 						</div>
 
@@ -561,7 +561,7 @@ export default function Topbar() {
 									}}
 									onMouseEnter={(e) => {
 										if (!isMobile) {
-											e.currentTarget.style.background = 'var(--gray-100)';
+										e.currentTarget.style.background = 'var(--gray-100)';
 										}
 									}}
 									onMouseLeave={(e) => {
@@ -602,7 +602,7 @@ export default function Topbar() {
 									}}
 									onMouseEnter={(e) => {
 										if (!isMobile) {
-											e.currentTarget.style.background = '#dc2626';
+										e.currentTarget.style.background = '#dc2626';
 										}
 									}}
 									onMouseLeave={(e) => {

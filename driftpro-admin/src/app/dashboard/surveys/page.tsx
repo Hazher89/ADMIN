@@ -244,22 +244,22 @@ export default function SurveysPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
-          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Undersøkelser</h1>
-              <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem' }}>Administrer og analyser bedriftsundersøkelser</p>
-            </div>
-            <button
-              onClick={() => setShowAddModal(true)}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-            >
-              <Plus style={{ width: '16px', height: '16px' }} />
-              Ny undersøkelse
-            </button>
+      <div style={{ background: 'var(--white)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--gray-200)', padding: '1.5rem 2rem' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: '700', color: 'var(--gray-900)' }}>Undersøkelser</h1>
+            <p style={{ color: 'var(--gray-600)', marginTop: '0.25rem' }}>Administrer og analyser bedriftsundersøkelser</p>
           </div>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Plus style={{ width: '16px', height: '16px' }} />
+            Ny undersøkelse
+          </button>
         </div>
+      </div>
       )}
 
       <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '0.75rem' : '2rem 1rem' }}>

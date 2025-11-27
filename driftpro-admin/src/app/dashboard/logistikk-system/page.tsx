@@ -752,23 +752,23 @@ export default function LogistikkSystemPage() {
 
       {/* Desktop Page Header */}
       {!isMobile && (
-        <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{
+      <div style={{ marginBottom: '2rem' }}>
+        <h1 style={{
             fontSize: 'var(--font-size-3xl)',
-            fontWeight: '700',
-            color: 'var(--gray-900)',
-            marginBottom: '0.5rem'
-          }}>
-            Logistikk System
-          </h1>
-          <p style={{
-            fontSize: 'var(--font-size-lg)',
-            color: 'var(--gray-600)',
-            maxWidth: '600px'
-          }}>
-            Administrer levering, planlegging, kunder, leverandører, produkter, lager, fakturering og finans
-          </p>
-        </div>
+          fontWeight: '700',
+          color: 'var(--gray-900)',
+          marginBottom: '0.5rem'
+        }}>
+          Logistikk System
+        </h1>
+        <p style={{
+          fontSize: 'var(--font-size-lg)',
+          color: 'var(--gray-600)',
+          maxWidth: '600px'
+        }}>
+          Administrer levering, planlegging, kunder, leverandører, produkter, lager, fakturering og finans
+        </p>
+      </div>
       )}
 
       {/* Statistics Cards */}

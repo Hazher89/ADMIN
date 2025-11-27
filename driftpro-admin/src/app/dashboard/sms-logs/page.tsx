@@ -275,18 +275,18 @@ export default function SMSLogsPage() {
 
       {/* Desktop Page Header */}
       {!isMobile && (
-        <div className="page-header" style={{ padding: '1rem' }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-            <div className="card-icon">
-              <Phone style={{ width: '24px', height: '24px', color: 'var(--primary)' }} />
-            </div>
-            <div>
-              <h1 className="page-title">📱 SMS Logg & Telefonbok</h1>
-              <p className="page-subtitle">
-                Administrer SMS-utskrifter, kontakter og send meldinger
-              </p>
-            </div>
+      <div className="page-header" style={{ padding: '1rem' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div className="card-icon">
+            <Phone style={{ width: '24px', height: '24px', color: 'var(--primary)' }} />
           </div>
+          <div>
+            <h1 className="page-title">📱 SMS Logg & Telefonbok</h1>
+            <p className="page-subtitle">
+              Administrer SMS-utskrifter, kontakter og send meldinger
+            </p>
+          </div>
+        </div>
 
         {/* Tab Navigation */}
         <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
@@ -377,7 +377,7 @@ export default function SMSLogsPage() {
             {contacts.length} KONTAKTER
           </button>
         </div>
-        </div>
+      </div>
       )}
 
       {/* SMS Logs Tab */}

@@ -191,61 +191,61 @@ export default function ProductsPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <div className="flex items-center space-x-3">
-            <div className="card-icon">
-              <Box className="w-6 h-6" />
-            </div>
-            <div>
-              <h1 className="page-title">Produkter</h1>
-              <p className="page-subtitle">Administrer produktkatalog og lagerbeholdning</p>
-            </div>
-          </div>
+    <div className="page-header">
+      <div className="flex items-center space-x-3">
+        <div className="card-icon">
+          <Box className="w-6 h-6" />
+        </div>
+        <div>
+          <h1 className="page-title">Produkter</h1>
+          <p className="page-subtitle">Administrer produktkatalog og lagerbeholdning</p>
+        </div>
+      </div>
 
-          <div className="flex items-center space-x-4">
-            <div className="flex items-center space-x-2">
-              <Search className="w-4 h-4 text-gray-500" />
-              <input
-                type="text"
-                placeholder="Søk produkter..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              />
-            </div>
-            <div className="flex items-center space-x-2">
-              <Filter className="w-4 h-4 text-gray-500" />
-              <select 
-                value={filterCategory}
-                onChange={(e) => setFilterCategory(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Alle kategorier</option>
-                <option value="Elektronikk">Elektronikk</option>
-                <option value="Møbler">Møbler</option>
-                <option value="Kontorartikler">Kontorartikler</option>
-                <option value="Annet">Annet</option>
-              </select>
-              <select 
-                value={filterStatus}
-                onChange={(e) => setFilterStatus(e.target.value)}
-                className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
-              >
-                <option value="all">Alle status</option>
-                <option value="active">Aktiv</option>
-                <option value="low_stock">Lavt lager</option>
-                <option value="out_of_stock">Utsolgt</option>
-                <option value="inactive">Inaktiv</option>
-              </select>
-            </div>
-            <button 
-              onClick={() => setShowAddModal(true)}
-              className="btn btn-primary"
-            >
-              <Plus className="w-4 h-4" />
-              Nytt produkt
-            </button>
-          </div>
+      <div className="flex items-center space-x-4">
+        <div className="flex items-center space-x-2">
+          <Search className="w-4 h-4 text-gray-500" />
+          <input
+            type="text"
+            placeholder="Søk produkter..."
+            value={searchTerm}
+            onChange={(e) => setSearchTerm(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          />
+        </div>
+        <div className="flex items-center space-x-2">
+          <Filter className="w-4 h-4 text-gray-500" />
+          <select 
+            value={filterCategory}
+            onChange={(e) => setFilterCategory(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Alle kategorier</option>
+            <option value="Elektronikk">Elektronikk</option>
+            <option value="Møbler">Møbler</option>
+            <option value="Kontorartikler">Kontorartikler</option>
+            <option value="Annet">Annet</option>
+          </select>
+          <select 
+            value={filterStatus}
+            onChange={(e) => setFilterStatus(e.target.value)}
+            className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
+          >
+            <option value="all">Alle status</option>
+            <option value="active">Aktiv</option>
+            <option value="low_stock">Lavt lager</option>
+            <option value="out_of_stock">Utsolgt</option>
+            <option value="inactive">Inaktiv</option>
+          </select>
+        </div>
+        <button 
+          onClick={() => setShowAddModal(true)}
+          className="btn btn-primary"
+        >
+          <Plus className="w-4 h-4" />
+          Nytt produkt
+        </button>
+      </div>
         </div>
       )}
 
@@ -352,7 +352,7 @@ export default function ProductsPage() {
             flexShrink: 0
           }}>
             <Package size={isMobile ? 20 : 24} style={{ color: '#3b82f6' }} />
-          </div>
+            </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ 
               fontSize: isMobile ? '0.75rem' : '0.875rem', 
@@ -386,7 +386,7 @@ export default function ProductsPage() {
             flexShrink: 0
           }}>
             <Check size={isMobile ? 20 : 24} style={{ color: '#22c55e' }} />
-          </div>
+            </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ 
               fontSize: isMobile ? '0.75rem' : '0.875rem', 
@@ -420,7 +420,7 @@ export default function ProductsPage() {
             flexShrink: 0
           }}>
             <AlertTriangle size={isMobile ? 20 : 24} style={{ color: '#f59e0b' }} />
-          </div>
+            </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ 
               fontSize: isMobile ? '0.75rem' : '0.875rem', 
@@ -454,7 +454,7 @@ export default function ProductsPage() {
             flexShrink: 0
           }}>
             <AlertTriangle size={isMobile ? 20 : 24} style={{ color: '#ef4444' }} />
-          </div>
+            </div>
           <div style={{ flex: 1, minWidth: 0 }}>
             <p style={{ 
               fontSize: isMobile ? '0.75rem' : '0.875rem', 
@@ -574,9 +574,9 @@ export default function ProductsPage() {
           ))}
         </div>
       ) : (
-        <div className="card mt-6">
-          <div className="overflow-x-auto">
-            <table className="w-full">
+      <div className="card mt-6">
+        <div className="overflow-x-auto">
+          <table className="w-full">
             <thead>
               <tr className="border-b border-gray-200">
                 <th className="text-left py-3 px-4 font-medium text-gray-900">Produkt</th>

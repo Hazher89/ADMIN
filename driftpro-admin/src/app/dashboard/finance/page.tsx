@@ -70,17 +70,17 @@ export default function FinancePage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="card-icon">
-              <DollarSign />
-            </div>
-            <div>
-              <h1 className="page-title">Finans & Regnskap</h1>
-              <p className="page-subtitle">Administrer alle finansielle operasjoner</p>
-            </div>
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card-icon">
+            <DollarSign />
+          </div>
+          <div>
+            <h1 className="page-title">Finans & Regnskap</h1>
+            <p className="page-subtitle">Administrer alle finansielle operasjoner</p>
           </div>
         </div>
+      </div>
       )}
 
       {/* Quick Stats */}

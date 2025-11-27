@@ -72,17 +72,17 @@ export default function InventoryPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div className="page-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
-            <div className="card-icon">
-              <Package />
-            </div>
-            <div>
-              <h1 className="page-title">Lager & Inventar</h1>
-              <p className="page-subtitle">Administrer produkter, lager og leverandører</p>
-            </div>
+      <div className="page-header">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem' }}>
+          <div className="card-icon">
+            <Package />
+          </div>
+          <div>
+            <h1 className="page-title">Lager & Inventar</h1>
+            <p className="page-subtitle">Administrer produkter, lager og leverandører</p>
           </div>
         </div>
+      </div>
       )}
 
       {/* Quick Stats */}

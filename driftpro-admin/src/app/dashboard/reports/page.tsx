@@ -397,107 +397,107 @@ export default function ReportsPage() {
       {/* Desktop Header */}
       {!isMobile && (
         <div className="page-header">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
-            <div className="card-icon">
-              <BarChart3 />
-            </div>
-            <div>
-              <h1 className="page-title">📊 Rapporter</h1>
-              <p className="page-subtitle">
-                Generer og administrer rapporter og analyser
-              </p>
-            </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginBottom: '1rem', flexWrap: 'wrap' }}>
+          <div className="card-icon">
+            <BarChart3 />
           </div>
+          <div>
+            <h1 className="page-title">📊 Rapporter</h1>
+            <p className="page-subtitle">
+              Generer og administrer rapporter og analyser
+            </p>
+          </div>
+        </div>
 
-          {/* Tab Navigation */}
-          <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
+        {/* Tab Navigation */}
+        <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
             <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0' }}>
-              <button
-                onClick={() => setActiveTab('overview')}
-                style={{
+            <button
+              onClick={() => setActiveTab('overview')}
+              style={{
                   padding: '1rem 2rem',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'overview' ? '2px solid var(--primary)' : '2px solid transparent',
-                  color: activeTab === 'overview' ? 'var(--primary)' : 'var(--gray-600)',
-                  fontWeight: activeTab === 'overview' ? '600' : '500',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'overview' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'overview' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'overview' ? '600' : '500',
                   fontSize: 'var(--font-size-base)'
-                }}
-              >
-                <BarChart3 style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
-                Oversikt
-              </button>
-              <button
-                onClick={() => setActiveTab('reports')}
-                style={{
-                  padding: '1rem 2rem',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'reports' ? '2px solid var(--primary)' : '2px solid transparent',
-                  color: activeTab === 'reports' ? 'var(--primary)' : 'var(--gray-600)',
-                  fontWeight: activeTab === 'reports' ? '600' : '500',
-                  fontSize: 'var(--font-size-base)'
-                }}
-              >
-                <FileText style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
-                Rapporter
-              </button>
-              <button
-                onClick={() => setActiveTab('templates')}
-                style={{
-                  padding: '1rem 2rem',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'templates' ? '2px solid var(--primary)' : '2px solid transparent',
-                  color: activeTab === 'templates' ? 'var(--primary)' : 'var(--gray-600)',
-                  fontWeight: activeTab === 'templates' ? '600' : '500',
-                  fontSize: 'var(--font-size-base)'
-                }}
-              >
-                <Settings style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
-                Maler
-              </button>
-              <button
-                onClick={() => setActiveTab('scheduled')}
-                style={{
-                  padding: '1rem 2rem',
-                  border: 'none',
-                  background: 'transparent',
-                  cursor: 'pointer',
-                  borderBottom: activeTab === 'scheduled' ? '2px solid var(--primary)' : '2px solid transparent',
-                  color: activeTab === 'scheduled' ? 'var(--primary)' : 'var(--gray-600)',
-                  fontWeight: activeTab === 'scheduled' ? '600' : '500',
-                  fontSize: 'var(--font-size-base)'
-                }}
-              >
-                <Calendar style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
-                Planlagte
-              </button>
-            </div>
-          </div>
-          
-          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
-            <button 
-              onClick={() => setShowCreateModal(true)}
-              className="btn btn-primary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              }}
             >
-              <Plus style={{ width: '16px', height: '16px' }} />
-              Ny rapport
+              <BarChart3 style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              Oversikt
             </button>
-            <button 
-              onClick={loadData}
-              className="btn btn-secondary"
-              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            <button
+              onClick={() => setActiveTab('reports')}
+              style={{
+                  padding: '1rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'reports' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'reports' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'reports' ? '600' : '500',
+                  fontSize: 'var(--font-size-base)'
+              }}
             >
-              <RefreshCw style={{ width: '16px', height: '16px' }} />
-              Oppdater
+              <FileText style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              Rapporter
+            </button>
+            <button
+              onClick={() => setActiveTab('templates')}
+              style={{
+                  padding: '1rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'templates' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'templates' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'templates' ? '600' : '500',
+                  fontSize: 'var(--font-size-base)'
+              }}
+            >
+              <Settings style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              Maler
+            </button>
+            <button
+              onClick={() => setActiveTab('scheduled')}
+              style={{
+                  padding: '1rem 2rem',
+                border: 'none',
+                background: 'transparent',
+                cursor: 'pointer',
+                borderBottom: activeTab === 'scheduled' ? '2px solid var(--primary)' : '2px solid transparent',
+                color: activeTab === 'scheduled' ? 'var(--primary)' : 'var(--gray-600)',
+                fontWeight: activeTab === 'scheduled' ? '600' : '500',
+                  fontSize: 'var(--font-size-base)'
+              }}
+            >
+              <Calendar style={{ width: '16px', height: '16px', marginRight: '0.5rem', display: 'inline' }} />
+              Planlagte
             </button>
           </div>
         </div>
+        
+        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <button 
+            onClick={() => setShowCreateModal(true)}
+            className="btn btn-primary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <Plus style={{ width: '16px', height: '16px' }} />
+            Ny rapport
+          </button>
+          <button 
+            onClick={loadData}
+            className="btn btn-secondary"
+            style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <RefreshCw style={{ width: '16px', height: '16px' }} />
+            Oppdater
+          </button>
+        </div>
+      </div>
       )}
 
       {/* Mobile Tab Navigation */}
@@ -700,10 +700,10 @@ export default function ReportsPage() {
             }}>
               <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
                 {stats.totalEmployees}
-              </div>
+            </div>
               <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
                 Totalt ansatte
-              </div>
+            </div>
             </div>
             <div style={{
               borderRadius: '0.875rem',
@@ -715,10 +715,10 @@ export default function ReportsPage() {
             }}>
               <div style={{ fontSize: isMobile ? '1.5rem' : '1.75rem', fontWeight: 700, color: 'var(--text-color)', marginBottom: '0.25rem' }}>
                 {stats.totalDepartments}
-              </div>
+            </div>
               <div style={{ fontSize: isMobile ? '0.75rem' : '0.875rem', color: 'var(--gray-500)', fontWeight: 500 }}>
                 Avdelinger
-              </div>
+            </div>
             </div>
             <div style={{
               borderRadius: '0.875rem',

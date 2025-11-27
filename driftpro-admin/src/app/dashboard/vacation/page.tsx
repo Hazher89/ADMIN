@@ -210,32 +210,32 @@ export default function VacationPage() {
 
       {/* Desktop Header */}
       {!isMobile && (
-        <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 2rem' }}>
-          <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-            <div>
-              <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--text-color)' }}>Ferie</h1>
-              <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>Full oversikt over alle ferieforespørsler og feriedager</p>
-            </div>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              <div style={{ display: 'inline-flex', border: '1px solid var(--gray-200)', borderRadius: '10px', overflow: 'hidden' }}>
-                <button
-                  onClick={() => setShowCalendar(true)}
-                  className="btn"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRight: '1px solid var(--gray-200)', background: 'white' }}
-                >
-                  <Calendar style={{ width: 16, height: 16 }} /> Kalender
-                </button>
-                <button
-                  onClick={() => setShowManage(true)}
-                  className="btn btn-secondary"
-                  style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
-                >
-                  <SettingsIcon style={{ width: 16, height: 16 }} /> Administrer
-                </button>
-              </div>
+      <div style={{ background: 'var(--card-background)', boxShadow: 'var(--shadow-sm)', borderBottom: '1px solid var(--border-color)', padding: '1.5rem 2rem' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <div>
+            <h1 style={{ fontSize: 'var(--font-size-2xl)', fontWeight: 700, color: 'var(--text-color)' }}>Ferie</h1>
+            <p style={{ color: 'var(--gray-500)', marginTop: '0.25rem' }}>Full oversikt over alle ferieforespørsler og feriedager</p>
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <div style={{ display: 'inline-flex', border: '1px solid var(--gray-200)', borderRadius: '10px', overflow: 'hidden' }}>
+              <button
+                onClick={() => setShowCalendar(true)}
+                className="btn"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', borderRight: '1px solid var(--gray-200)', background: 'white' }}
+              >
+                <Calendar style={{ width: 16, height: 16 }} /> Kalender
+              </button>
+              <button
+                onClick={() => setShowManage(true)}
+                className="btn btn-secondary"
+                style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+              >
+                <SettingsIcon style={{ width: 16, height: 16 }} /> Administrer
+              </button>
             </div>
           </div>
         </div>
+      </div>
       )}
 
       {/* Mobile Action Buttons */}

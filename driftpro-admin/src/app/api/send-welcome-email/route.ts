@@ -19,7 +19,7 @@ const db = getFirestore(app);
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, displayName, adminName, companyName, departmentName, position, accessToken, fromEmail } = body;
+    const { email, displayName, adminName, companyName, departmentName, position, accessToken, fromEmail, setupUrl } = body;
 
     if (!email || !displayName) {
       return NextResponse.json(
@@ -45,19 +45,23 @@ export async function POST(request: NextRequest) {
       provider: 'microsoft_graph'
     });
 
-    // Generate setup token for password setup
-    const setupToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const setupUrl = `https://admin.driftpro.no/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
+    // Use provided setupUrl or generate new token
+    let finalSetupUrl = setupUrl;
+    if (!finalSetupUrl) {
+      // Generate setup token for password setup
+      const setupToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      finalSetupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
 
-    // Store setup token in Firestore
-    await addDoc(collection(db, 'setupTokens'), {
-      email: email,
-      token: setupToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      createdAt: serverTimestamp(),
-      used: false,
-      type: 'employee_welcome'
-    });
+      // Store setup token in Firestore
+      await addDoc(collection(db, 'setupTokens'), {
+        email: email,
+        token: setupToken,
+        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+        createdAt: serverTimestamp(),
+        used: false,
+        type: 'employee_welcome'
+      });
+    }
 
     console.log('📧 Sending welcome email via Microsoft Graph');
 
@@ -86,7 +90,7 @@ export async function POST(request: NextRequest) {
             For å komme i gang må du først sette opp et passord for din konto. Klikk på knappen under for å fortsette:
           </p>
           <div style="text-align: center; margin: 25px 0;">
-            <a href="${setupUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
+            <a href="${finalSetupUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
               🚀 Sett opp passord
             </a>
           </div>
@@ -142,7 +146,7 @@ Din informasjon:
 For å komme i gang må du først sette opp et passord for din konto.
 
 Klikk på denne lenken for å sette opp passordet:
-${setupUrl}
+${finalSetupUrl}
 
 Viktig: Denne lenken er gyldig i 7 dager. Hvis lenken ikke fungerer, kontakt din administrator.
 
