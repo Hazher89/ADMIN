@@ -479,36 +479,42 @@ export async function POST(request: NextRequest) {
           
           // Update the password using Admin SDK - use the password from request body
           console.log('🔐 Updating password for user:', existingUser.uid);
+          let passwordUpdated = false;
           try {
             await adminAuth.updateUser(existingUser.uid, {
               password: password
             });
             console.log('✅ Password updated for existing Firebase Auth user:', existingUser.uid);
+            passwordUpdated = true;
           } catch (updateError: any) {
-            console.error('❌ Error updating password with Admin SDK:', updateError);
-            // If update fails but user has UID, still update status
-            if (userData.uid) {
-              await updateDoc(userDoc.ref, {
-                status: 'active',
-                passwordSet: true,
-                passwordSetAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString()
-              });
-              
-              await updateDoc(tokenDoc.ref, {
-                used: true,
-                usedAt: new Date().toISOString()
-              });
-              
-              return NextResponse.json({
-                success: true,
-                message: 'Password setup completed (password update failed, but user status updated)',
-                userId: userData.uid,
-                provider: 'firebase_admin_sdk_fallback',
-                warning: `Password update failed: ${updateError.message}. Please use forgot password flow.`
-              });
-            }
-            throw updateError;
+            console.error('❌ Error updating password with Admin SDK:', {
+              code: updateError?.code,
+              message: updateError?.message,
+              error: updateError
+            });
+            
+            // Even if password update fails, update Firestore status so user can use forgot password
+            await updateDoc(userDoc.ref, {
+              uid: existingUser.uid, // Ensure UID is set
+              status: 'active',
+              passwordSet: false, // Mark as not set since update failed
+              updatedAt: new Date().toISOString()
+            });
+            
+            await updateDoc(tokenDoc.ref, {
+              used: true,
+              usedAt: new Date().toISOString()
+            });
+            
+            // Return success but with warning - user can use forgot password
+            return NextResponse.json({
+              success: true,
+              message: 'Password setup link processed. Please use "Forgot Password" to set your password.',
+              userId: existingUser.uid,
+              provider: 'firebase_admin_sdk_fallback',
+              warning: `Password update failed: ${updateError?.message || 'Unknown error'}. Please use the "Forgot Password" feature to set your password.`,
+              requiresForgotPassword: true
+            });
           }
           
           // Update user document with UID and password setup status
@@ -547,8 +553,7 @@ export async function POST(request: NextRequest) {
             // User document already has UID, just update password status
             await updateDoc(userDoc.ref, {
               status: 'active',
-              passwordSet: true,
-              passwordSetAt: new Date().toISOString(),
+              passwordSet: false, // Mark as not set since we couldn't update
               updatedAt: new Date().toISOString()
             });
             
@@ -559,14 +564,27 @@ export async function POST(request: NextRequest) {
             
             return NextResponse.json({
               success: true,
-              message: 'Password setup completed (user already had UID)',
+              message: 'Password setup link processed. Please use "Forgot Password" to set your password.',
               userId: userData.uid,
               provider: 'firebase_admin_sdk_fallback',
-              warning: adminError?.message || 'Password update may need to be done through Firebase Console'
+              warning: 'Password could not be updated automatically. Please use the "Forgot Password" feature to set your password.',
+              requiresForgotPassword: true
             });
           }
           
-          // Provide detailed error message
+          // Last resort: Update Firestore status even without UID
+          await updateDoc(userDoc.ref, {
+            status: 'active',
+            passwordSet: false,
+            updatedAt: new Date().toISOString()
+          });
+          
+          await updateDoc(tokenDoc.ref, {
+            used: true,
+            usedAt: new Date().toISOString()
+          });
+          
+          // Provide helpful error message
           const errorDetails = adminError?.code || adminError?.message || 'Unknown error';
           console.error('❌ Complete Admin SDK error details:', {
             code: adminError?.code,
@@ -574,14 +592,13 @@ export async function POST(request: NextRequest) {
             error: adminError
           });
           
-          return NextResponse.json(
-            { 
-              error: 'Failed to update existing user password',
-              message: `Admin SDK error: ${errorDetails}. Please contact administrator or use forgot password flow.`,
-              details: process.env.NODE_ENV === 'development' ? adminError?.stack : undefined
-            },
-            { status: 500 }
-          );
+          return NextResponse.json({
+            success: true,
+            message: 'Password setup link processed. Please use "Forgot Password" to set your password.',
+            provider: 'firebase_admin_sdk_fallback',
+            warning: `Password could not be updated automatically (${errorDetails}). Please use the "Forgot Password" feature on the login page to set your password.`,
+            requiresForgotPassword: true
+          });
         }
       }
 

@@ -145,11 +145,16 @@ function SetupPasswordContent() {
       console.log('Response status:', response.status);
       console.log('Response data:', data);
 
-      if (response.ok) {
-        setSuccess(true);
-        setTimeout(() => {
-          router.push('/login');
-        }, 3000);
+      if (response.ok && data.success) {
+        // Check if there's a warning (e.g., password update failed but user can use forgot password)
+        if (data.warning || data.requiresForgotPassword) {
+          setError(`⚠️ ${data.warning || data.message || 'Passordet kunne ikke oppdateres automatisk. Vennligst bruk "Glemt passord" på innloggingssiden for å sette ditt passord.'}`);
+        } else {
+          setSuccess(true);
+          setTimeout(() => {
+            router.push('/login');
+          }, 3000);
+        }
       } else {
         // Show detailed error message
         const errorMsg = data.error || data.message || 'Feil ved oppsett av passord';
@@ -421,7 +426,7 @@ function SetupPasswordContent() {
         {/* Error Message */}
         {error && (
           <div style={{
-            background: 'var(--danger)',
+            background: error.includes('⚠️') || error.includes('warning') ? 'var(--warning)' : 'var(--danger)',
             color: 'var(--white)',
             padding: isMobile ? '0.875rem' : '1rem',
             borderRadius: 'var(--radius-md)',
@@ -433,7 +438,23 @@ function SetupPasswordContent() {
             lineHeight: '1.5'
           }}>
             <AlertCircle style={{ width: isMobile ? '18px' : '20px', height: isMobile ? '18px' : '20px', flexShrink: 0, marginTop: '2px' }} />
-            <span style={{ flex: 1 }}>{error}</span>
+            <div style={{ flex: 1 }}>
+              <span>{error}</span>
+              {error.includes('Glemt passord') && (
+                <div style={{ marginTop: '0.75rem' }}>
+                  <a 
+                    href="/forgot-password" 
+                    style={{ 
+                      color: 'var(--white)', 
+                      textDecoration: 'underline',
+                      fontWeight: '600'
+                    }}
+                  >
+                    Gå til "Glemt passord" →
+                  </a>
+                </div>
+              )}
+            </div>
           </div>
         )}
 
