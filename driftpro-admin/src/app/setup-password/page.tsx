@@ -434,7 +434,7 @@ function SetupPasswordContent() {
         )}
 
         {/* Password Setup Form */}
-        <form onSubmit={handleSubmit} style={{ width: '100%' }}>
+        <form onSubmit={handleSubmit} style={{ width: '100%', pointerEvents: 'auto' }}>
           <div style={{ marginBottom: isMobile ? '1.25rem' : '1.5rem', width: '100%' }}>
             <label 
               htmlFor="password-input"
@@ -452,17 +452,20 @@ function SetupPasswordContent() {
             <div style={{ 
               position: 'relative', 
               width: '100%', 
-              display: 'block'
+              display: 'block',
+              pointerEvents: 'auto'
             }}>
               <input
                 id="password-input"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                onFocus={(e) => e.target.focus()}
+                onClick={(e) => e.stopPropagation()}
                 style={{
                   width: '100%',
                   padding: isMobile ? '1rem' : '0.75rem',
-                  paddingRight: isMobile ? '4rem' : '3rem',
+                  paddingRight: isMobile ? '4.5rem' : '3rem',
                   paddingLeft: isMobile ? '1rem' : '0.75rem',
                   border: '1px solid var(--gray-300)',
                   borderRadius: isMobile ? 'var(--radius-md)' : 'var(--radius-md)',
@@ -475,7 +478,10 @@ function SetupPasswordContent() {
                   color: 'var(--gray-900)',
                   outline: 'none',
                   touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent'
+                  WebkitTapHighlightColor: 'transparent',
+                  pointerEvents: 'auto',
+                  cursor: 'text',
+                  zIndex: 1
                 }}
                 placeholder="Minst 8 tegn"
                 required
@@ -499,26 +505,27 @@ function SetupPasswordContent() {
                 }}
                 style={{
                   position: 'absolute',
-                  right: isMobile ? '0.75rem' : '0.625rem',
+                  right: isMobile ? '0.5rem' : '0.625rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   color: 'var(--gray-400)',
-                  padding: isMobile ? '0.625rem' : '0.375rem',
-                  minWidth: isMobile ? '40px' : 'auto',
-                  minHeight: isMobile ? '40px' : 'auto',
+                  padding: isMobile ? '0.5rem' : '0.375rem',
+                  minWidth: isMobile ? '36px' : 'auto',
+                  minHeight: isMobile ? '36px' : 'auto',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   touchAction: 'manipulation',
                   WebkitTapHighlightColor: 'transparent',
-                  zIndex: 10
+                  zIndex: 2,
+                  pointerEvents: 'auto'
                 }}
                 aria-label={showPassword ? 'Skjul passord' : 'Vis passord'}
               >
-                {showPassword ? <EyeOff size={isMobile ? 20 : 20} /> : <Eye size={isMobile ? 20 : 20} />}
+                {showPassword ? <EyeOff size={isMobile ? 18 : 20} /> : <Eye size={isMobile ? 18 : 20} />}
               </button>
             </div>
             <p style={{
@@ -548,17 +555,20 @@ function SetupPasswordContent() {
             <div style={{ 
               position: 'relative', 
               width: '100%', 
-              display: 'block'
+              display: 'block',
+              pointerEvents: 'auto'
             }}>
               <input
                 id="confirm-password-input"
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                onFocus={(e) => e.target.focus()}
+                onClick={(e) => e.stopPropagation()}
                 style={{
                   width: '100%',
                   padding: isMobile ? '1rem' : '0.75rem',
-                  paddingRight: isMobile ? '4rem' : '3rem',
+                  paddingRight: isMobile ? '4.5rem' : '3rem',
                   paddingLeft: isMobile ? '1rem' : '0.75rem',
                   border: '1px solid var(--gray-300)',
                   borderRadius: isMobile ? 'var(--radius-md)' : 'var(--radius-md)',
@@ -571,7 +581,10 @@ function SetupPasswordContent() {
                   color: 'var(--gray-900)',
                   outline: 'none',
                   touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent'
+                  WebkitTapHighlightColor: 'transparent',
+                  pointerEvents: 'auto',
+                  cursor: 'text',
+                  zIndex: 1
                 }}
                 placeholder="Skriv passordet igjen"
                 required
@@ -595,26 +608,27 @@ function SetupPasswordContent() {
                 }}
                 style={{
                   position: 'absolute',
-                  right: isMobile ? '0.75rem' : '0.625rem',
+                  right: isMobile ? '0.5rem' : '0.625rem',
                   top: '50%',
                   transform: 'translateY(-50%)',
                   background: 'transparent',
                   border: 'none',
                   cursor: 'pointer',
                   color: 'var(--gray-400)',
-                  padding: isMobile ? '0.625rem' : '0.375rem',
-                  minWidth: isMobile ? '40px' : 'auto',
-                  minHeight: isMobile ? '40px' : 'auto',
+                  padding: isMobile ? '0.5rem' : '0.375rem',
+                  minWidth: isMobile ? '36px' : 'auto',
+                  minHeight: isMobile ? '36px' : 'auto',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
                   touchAction: 'manipulation',
                   WebkitTapHighlightColor: 'transparent',
-                  zIndex: 10
+                  zIndex: 2,
+                  pointerEvents: 'auto'
                 }}
                 aria-label={showConfirmPassword ? 'Skjul passord' : 'Vis passord'}
               >
-                {showConfirmPassword ? <EyeOff size={isMobile ? 20 : 20} /> : <Eye size={isMobile ? 20 : 20} />}
+                {showConfirmPassword ? <EyeOff size={isMobile ? 18 : 20} /> : <Eye size={isMobile ? 18 : 20} />}
               </button>
             </div>
           </div>

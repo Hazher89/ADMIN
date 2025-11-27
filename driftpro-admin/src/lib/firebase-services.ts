@@ -1196,9 +1196,30 @@ class FirebaseService {
       
       console.log(`✅ Employee deleted from Firestore: ${employeeData.displayName} (${employeeData.email})`);
       
-      // Note: Firebase Auth user deletion requires Admin SDK
-      // For now, we'll log this information
-      console.log(`⚠️ Firebase Auth user for ${employeeData.email} should be deleted manually or via Admin SDK`);
+      // Delete from Firebase Auth using cleanup API
+      try {
+        const cleanupResponse = await fetch('/api/cleanup-firebase', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            action: 'delete_user',
+            email: employeeData.email,
+            userId: id
+          }),
+        });
+        
+        if (cleanupResponse.ok) {
+          const cleanupResult = await cleanupResponse.json();
+          console.log(`✅ Employee deleted from Firebase Auth: ${employeeData.email}`, cleanupResult);
+        } else {
+          console.warn(`⚠️ Failed to delete from Firebase Auth (non-critical): ${employeeData.email}`);
+        }
+      } catch (cleanupError) {
+        // Non-critical: Firestore deletion succeeded, Auth deletion is optional
+        console.warn(`⚠️ Error deleting from Firebase Auth (non-critical):`, cleanupError);
+      }
       
     } catch (error) {
       console.error('Error deleting employee:', error);

@@ -334,19 +334,72 @@ export async function POST(request: NextRequest) {
       if (authError instanceof Error && (authError.message.includes('email-already-in-use') || (authError as any).code === 'auth/email-already-in-use')) {
         console.log('⚠️ Firebase Auth user already exists, updating password and user document');
         
+        // Try to initialize Admin SDK if not available
         if (!adminAuth) {
-          console.error('❌ Firebase Admin SDK not available');
+          console.log('⚠️ Admin SDK not initialized, attempting to initialize...');
+          try {
+            if (admin.apps.length === 0) {
+              admin.initializeApp({
+                credential: admin.credential.cert({
+                  projectId: process.env.FIREBASE_PROJECT_ID || 'driftpro-40ccd',
+                  clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+                  privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+                }),
+              });
+              console.log('✅ Firebase Admin SDK initialized in error handler');
+            }
+            if (admin.apps.length > 0) {
+              adminAuth = admin.auth();
+              console.log('✅ Firebase Admin SDK obtained in error handler');
+            }
+          } catch (initError) {
+            console.error('❌ Failed to initialize Admin SDK in error handler:', initError);
+          }
+        }
+        
+        if (!adminAuth) {
+          console.error('❌ Firebase Admin SDK not available after retry');
+          // If user already has UID in Firestore, we can still mark password as set
+          if (userData.uid) {
+            console.log('⚠️ User has UID in Firestore, updating password status without Admin SDK');
+            await updateDoc(userDoc.ref, {
+              status: 'active',
+              passwordSet: true,
+              passwordSetAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+            
+            await updateDoc(tokenDoc.ref, {
+              used: true,
+              usedAt: new Date().toISOString()
+            });
+            
+            return NextResponse.json({
+              success: true,
+              message: 'Password setup completed (user already had UID, password update requires Admin SDK)',
+              userId: userData.uid,
+              provider: 'firebase_admin_sdk_fallback',
+              warning: 'Password may need to be reset through Firebase Console'
+            });
+          }
+          
           return NextResponse.json(
-            { error: 'Firebase Admin SDK not available. Cannot update existing user password. Please contact administrator.' },
+            { 
+              error: 'Firebase Admin SDK not available. Cannot update existing user password. Please contact administrator.',
+              details: 'The user exists in Firebase Auth but Admin SDK is not configured. Please set FIREBASE_PRIVATE_KEY environment variable.'
+            },
             { status: 500 }
           );
         }
         
         try {
           // Get the existing user from Firebase Auth using Admin SDK
+          console.log('🔍 Looking up user in Firebase Auth:', tokenData.email);
           const existingUser = await adminAuth.getUserByEmail(tokenData.email);
+          console.log('✅ Found existing Firebase Auth user:', existingUser.uid);
           
           // Update the password using Admin SDK - use the password from request body
+          console.log('🔐 Updating password for user:', existingUser.uid);
           await adminAuth.updateUser(existingUser.uid, {
             password: password
           });
@@ -375,10 +428,17 @@ export async function POST(request: NextRequest) {
             userId: existingUser.uid,
             provider: 'firebase_admin_sdk'
           });
-        } catch (adminError) {
-          console.error('❌ Error updating existing user with Admin SDK:', adminError);
+        } catch (adminError: any) {
+          console.error('❌ Error updating existing user with Admin SDK:', {
+            error: adminError,
+            code: adminError?.code,
+            message: adminError?.message,
+            stack: adminError?.stack
+          });
+          
           // Fallback: try to get UID from Firestore if it exists
           if (userData.uid) {
+            console.log('⚠️ Using fallback: User has UID in Firestore, updating password status');
             // User document already has UID, just update password status
             await updateDoc(userDoc.ref, {
               status: 'active',
@@ -396,11 +456,27 @@ export async function POST(request: NextRequest) {
               success: true,
               message: 'Password setup completed (user already had UID)',
               userId: userData.uid,
-              provider: 'firebase_admin_sdk_fallback'
+              provider: 'firebase_admin_sdk_fallback',
+              warning: adminError?.message || 'Password update may need to be done through Firebase Console'
             });
           }
           
-          throw new Error('Failed to update existing user. Please contact administrator.');
+          // Provide detailed error message
+          const errorDetails = adminError?.code || adminError?.message || 'Unknown error';
+          console.error('❌ Complete Admin SDK error details:', {
+            code: adminError?.code,
+            message: adminError?.message,
+            error: adminError
+          });
+          
+          return NextResponse.json(
+            { 
+              error: 'Failed to update existing user password',
+              message: `Admin SDK error: ${errorDetails}. Please contact administrator.`,
+              details: process.env.NODE_ENV === 'development' ? adminError?.stack : undefined
+            },
+            { status: 500 }
+          );
         }
       }
 
