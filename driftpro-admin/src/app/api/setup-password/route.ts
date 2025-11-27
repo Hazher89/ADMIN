@@ -29,10 +29,16 @@ try {
     console.log('✅ Using existing Firebase app for setup-password');
   }
   db = getFirestore(app);
+  if (!db) {
+    throw new Error('Failed to get Firestore instance');
+  }
   auth = getAuth(app);
+  if (!auth) {
+    throw new Error('Failed to get Auth instance');
+  }
 } catch (error) {
   console.error('❌ Error initializing Firebase:', error);
-  throw error;
+  // Don't throw - let the API handle it gracefully
 }
 
 // Initialize Firebase Admin SDK if not already initialized
@@ -155,12 +161,31 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firebase is initialized
+    if (!db || !auth) {
+      console.error('❌ Firebase not initialized');
+      return NextResponse.json(
+        { 
+          error: 'Server configuration error',
+          message: 'Firebase is not properly initialized. Please contact administrator.'
+        },
+        { status: 500 }
+      );
+    }
+    
     const body = await request.json();
     const { token, password } = body;
 
     if (!token || !password) {
       return NextResponse.json(
         { error: 'Token and password are required' },
+        { status: 400 }
+      );
+    }
+    
+    if (typeof token !== 'string' || typeof password !== 'string') {
+      return NextResponse.json(
+        { error: 'Token and password must be strings' },
         { status: 400 }
       );
     }

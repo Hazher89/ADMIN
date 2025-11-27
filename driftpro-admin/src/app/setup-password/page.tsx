@@ -109,6 +109,16 @@ function SetupPasswordContent() {
 
     try {
       setLoading(true);
+      setError('');
+      
+      if (!token) {
+        setError('Token mangler. Vennligst bruk lenken fra e-posten din.');
+        setLoading(false);
+        return;
+      }
+      
+      console.log('🔐 Submitting password setup request...');
+      
       const response = await fetch('/api/setup-password', {
         method: 'POST',
         headers: {
@@ -120,7 +130,20 @@ function SetupPasswordContent() {
         }),
       });
 
-      const data = await response.json();
+      let data;
+      try {
+        data = await response.json();
+      } catch (parseError) {
+        console.error('Error parsing response:', parseError);
+        const text = await response.text();
+        console.error('Response text:', text);
+        setError('Feil ved oppsett av passord. Serveren returnerte ugyldig svar.');
+        setLoading(false);
+        return;
+      }
+
+      console.log('Response status:', response.status);
+      console.log('Response data:', data);
 
       if (response.ok) {
         setSuccess(true);
@@ -130,14 +153,18 @@ function SetupPasswordContent() {
       } else {
         // Show detailed error message
         const errorMsg = data.error || data.message || 'Feil ved oppsett av passord';
-        const details = data.details ? `\n\nDetaljer: ${data.details}` : '';
+        const details = data.details && process.env.NODE_ENV === 'development' ? `\n\nDetaljer: ${data.details}` : '';
         setError(errorMsg + details);
-        console.error('Password setup error:', data);
+        console.error('❌ Password setup error:', {
+          status: response.status,
+          statusText: response.statusText,
+          data: data
+        });
       }
     } catch (error) {
-      console.error('Error setting up password:', error);
+      console.error('❌ Error setting up password:', error);
       const errorMsg = error instanceof Error ? error.message : 'Feil ved oppsett av passord';
-      setError(`Feil ved oppsett av passord: ${errorMsg}`);
+      setError(`Feil ved oppsett av passord: ${errorMsg}. Vennligst prøv igjen eller kontakt administrator.`);
     } finally {
       setLoading(false);
     }
@@ -409,17 +436,23 @@ function SetupPasswordContent() {
         {/* Password Setup Form */}
         <form onSubmit={handleSubmit}>
           <div style={{ marginBottom: isMobile ? '1.25rem' : '1.5rem' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: isMobile ? '0.625rem' : '0.5rem',
-              fontWeight: '500',
-              color: 'var(--gray-700)',
-              fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)'
-            }}>
+            <label 
+              htmlFor="password-input"
+              style={{
+                display: 'block',
+                marginBottom: isMobile ? '0.625rem' : '0.5rem',
+                fontWeight: '500',
+                color: 'var(--gray-700)',
+                fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
+                cursor: 'text',
+                pointerEvents: 'none'
+              }}
+            >
               Nytt passord *
             </label>
-            <div style={{ position: 'relative', width: '100%' }}>
+            <div style={{ position: 'relative', width: '100%', display: 'block' }}>
               <input
+                id="password-input"
                 type={showPassword ? 'text' : 'password'}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -435,13 +468,13 @@ function SetupPasswordContent() {
                   appearance: 'none',
                   minHeight: isMobile ? '48px' : 'auto',
                   boxSizing: 'border-box',
-                  position: 'relative',
-                  zIndex: 1,
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation'
+                  backgroundColor: 'var(--white)',
+                  color: 'var(--gray-900)',
+                  cursor: 'text'
                 }}
                 placeholder="Minst 8 tegn"
                 required
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -450,7 +483,6 @@ function SetupPasswordContent() {
                   e.stopPropagation();
                   setShowPassword(!showPassword);
                 }}
-                onMouseDown={(e) => e.preventDefault()}
                 style={{
                   position: 'absolute',
                   right: isMobile ? '0.5rem' : '0.625rem',
@@ -466,13 +498,11 @@ function SetupPasswordContent() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 2,
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation'
+                  zIndex: 10
                 }}
                 aria-label={showPassword ? 'Skjul passord' : 'Vis passord'}
               >
-                {showPassword ? <EyeOff style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px', pointerEvents: 'none' }} /> : <Eye style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px', pointerEvents: 'none' }} />}
+                {showPassword ? <EyeOff size={isMobile ? 22 : 20} /> : <Eye size={isMobile ? 22 : 20} />}
               </button>
             </div>
             <p style={{
@@ -486,17 +516,23 @@ function SetupPasswordContent() {
           </div>
 
           <div style={{ marginBottom: isMobile ? '1.5rem' : '2rem' }}>
-            <label style={{
-              display: 'block',
-              marginBottom: isMobile ? '0.625rem' : '0.5rem',
-              fontWeight: '500',
-              color: 'var(--gray-700)',
-              fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)'
-            }}>
+            <label 
+              htmlFor="confirm-password-input"
+              style={{
+                display: 'block',
+                marginBottom: isMobile ? '0.625rem' : '0.5rem',
+                fontWeight: '500',
+                color: 'var(--gray-700)',
+                fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)',
+                cursor: 'text',
+                pointerEvents: 'none'
+              }}
+            >
               Bekreft passord *
             </label>
-            <div style={{ position: 'relative', width: '100%' }}>
+            <div style={{ position: 'relative', width: '100%', display: 'block' }}>
               <input
+                id="confirm-password-input"
                 type={showConfirmPassword ? 'text' : 'password'}
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
@@ -512,13 +548,13 @@ function SetupPasswordContent() {
                   appearance: 'none',
                   minHeight: isMobile ? '48px' : 'auto',
                   boxSizing: 'border-box',
-                  position: 'relative',
-                  zIndex: 1,
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation'
+                  backgroundColor: 'var(--white)',
+                  color: 'var(--gray-900)',
+                  cursor: 'text'
                 }}
                 placeholder="Skriv passordet igjen"
                 required
+                autoComplete="new-password"
               />
               <button
                 type="button"
@@ -527,7 +563,6 @@ function SetupPasswordContent() {
                   e.stopPropagation();
                   setShowConfirmPassword(!showConfirmPassword);
                 }}
-                onMouseDown={(e) => e.preventDefault()}
                 style={{
                   position: 'absolute',
                   right: isMobile ? '0.5rem' : '0.625rem',
@@ -543,13 +578,11 @@ function SetupPasswordContent() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  zIndex: 2,
-                  pointerEvents: 'auto',
-                  touchAction: 'manipulation'
+                  zIndex: 10
                 }}
                 aria-label={showConfirmPassword ? 'Skjul passord' : 'Vis passord'}
               >
-                {showConfirmPassword ? <EyeOff style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px', pointerEvents: 'none' }} /> : <Eye style={{ width: isMobile ? '22px' : '20px', height: isMobile ? '22px' : '20px', pointerEvents: 'none' }} />}
+                {showConfirmPassword ? <EyeOff size={isMobile ? 22 : 20} /> : <Eye size={isMobile ? 22 : 20} />}
               </button>
             </div>
           </div>
