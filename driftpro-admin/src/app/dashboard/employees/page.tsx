@@ -589,11 +589,14 @@ export default function EmployeesPage() {
               }
             } else {
               const errorResult = await tokenResponse.json();
-              emailError = errorResult.error || 'Unknown error';
+              // Ensure we don't use error message as email address
+              const errorMessage = errorResult.error || 'Unknown error';
               
               // Check if it requires authentication
               if (errorResult.requiresAuth) {
                 emailError = 'Microsoft Graph autentisering påkrevd. Logg inn med Microsoft 365 i E-post System først.';
+              } else {
+                emailError = `Kunne ikke opprette passord-oppsett token: ${errorMessage}`;
               }
               
               console.error('❌ Failed to create setup token:', errorResult);
@@ -603,10 +606,13 @@ export default function EmployeesPage() {
             emailError = 'Kunne ikke sende e-post. Sjekk at du er logget inn med Microsoft 365 i E-post System.';
           }
         }
-      } catch (emailError) {
-        console.error('❌ Error sending welcome email:', emailError);
+      } catch (emailErrorCaught) {
+        console.error('❌ Error sending welcome email:', emailErrorCaught);
         emailSent = false;
-        emailError = emailError instanceof Error ? emailError.message : 'Ukjent feil';
+        // Ensure we don't overwrite emailError with the error object itself
+        if (!emailError) {
+          emailError = emailErrorCaught instanceof Error ? emailErrorCaught.message : 'Ukjent feil';
+        }
         // Don't fail the employee creation if email fails
       }
 
@@ -695,9 +701,11 @@ export default function EmployeesPage() {
         loadEmployees();
       }, 1000);
       
+      // Ensure we always use the actual email address, not error message
+      const employeeEmail = newEmployee.email || 'ukjent e-post';
       const message = emailSent 
-        ? `✅ Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}`
-        : `⚠️ Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email}${emailError ? ` - ${emailError}` : ' - sjekk e-postinnstillinger.'}`;
+        ? `✅ Ansatt ble lagt til! Velkomst-e-post sendt til ${employeeEmail}`
+        : `⚠️ Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${employeeEmail}${emailError ? ` - ${emailError}` : ' - sjekk e-postinnstillinger.'}`;
       alert(message);
     } catch (error) {
       console.error('Error adding employee:', error);
