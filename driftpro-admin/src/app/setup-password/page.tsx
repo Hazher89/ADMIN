@@ -455,95 +455,98 @@ function SetupPasswordContent() {
             >
               Nytt passord *
             </label>
-            <div style={{ 
-              position: 'relative', 
-              width: '100%', 
-              display: 'block',
-              zIndex: 1
-            }}>
-              <input
-                id="password-input"
-                type={showPassword ? 'text' : 'password'}
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                onFocus={(e) => {
-                  e.target.focus();
-                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.currentTarget.focus();
-                }}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '1rem' : '0.75rem',
-                  paddingRight: isMobile ? '4.5rem' : '3rem',
-                  paddingLeft: isMobile ? '1rem' : '0.75rem',
-                  border: '1px solid var(--gray-300)',
-                  borderRadius: isMobile ? 'var(--radius-md)' : 'var(--radius-md)',
-                  fontSize: isMobile ? '16px' : 'var(--font-size-base)',
-                  WebkitAppearance: 'none',
-                  appearance: 'none',
-                  minHeight: isMobile ? '52px' : 'auto',
-                  boxSizing: 'border-box',
-                  backgroundColor: 'var(--white)',
-                  color: 'var(--gray-900)',
-                  outline: 'none',
-                  touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent',
-                  pointerEvents: 'auto',
-                  cursor: 'text',
-                  position: 'relative',
-                  zIndex: 2
-                }}
-                placeholder="Minst 8 tegn"
-                required
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowPassword(!showPassword);
-                }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowPassword(!showPassword);
-                }}
-                style={{
-                  position: 'absolute',
-                  right: isMobile ? '0.5rem' : '0.625rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--gray-400)',
-                  padding: isMobile ? '0.5rem' : '0.375rem',
-                  minWidth: isMobile ? '36px' : 'auto',
-                  minHeight: isMobile ? '36px' : 'auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent',
-                  zIndex: 2,
-                  pointerEvents: 'auto'
-                }}
-                aria-label={showPassword ? 'Skjul passord' : 'Vis passord'}
-              >
-                {showPassword ? <EyeOff size={isMobile ? 18 : 20} /> : <Eye size={isMobile ? 18 : 20} />}
-              </button>
-            </div>
+            {isMobile ? (
+              // Mobile: Eye button OUTSIDE input field
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <input
+                  id="password-input"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '1rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '16px',
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
+                    minHeight: '52px',
+                    boxSizing: 'border-box',
+                    backgroundColor: 'var(--white)',
+                    color: 'var(--gray-900)',
+                    outline: 'none',
+                    touchAction: 'manipulation'
+                  }}
+                  placeholder="Minst 8 tegn"
+                  required
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    alignSelf: 'flex-end',
+                    background: 'transparent',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0.5rem 1rem',
+                    color: 'var(--gray-600)',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    touchAction: 'manipulation',
+                    minHeight: '44px'
+                  }}
+                >
+                  {showPassword ? 'Skjul passord' : 'Vis passord'}
+                </button>
+              </div>
+            ) : (
+              // Desktop: Eye button inside input field
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  id="password-input"
+                  type={showPassword ? 'text' : 'password'}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    paddingRight: '3rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)',
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
+                    boxSizing: 'border-box',
+                    backgroundColor: 'var(--white)',
+                    color: 'var(--gray-900)',
+                    outline: 'none'
+                  }}
+                  placeholder="Minst 8 tegn"
+                  required
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowPassword(!showPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.625rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--gray-400)',
+                    padding: '0.375rem'
+                  }}
+                  aria-label={showPassword ? 'Skjul passord' : 'Vis passord'}
+                >
+                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            )}
             <p style={{
               fontSize: isMobile ? '0.75rem' : 'var(--font-size-sm)',
               color: 'var(--gray-500)',
@@ -570,95 +573,98 @@ function SetupPasswordContent() {
             >
               Bekreft passord *
             </label>
-            <div style={{ 
-              position: 'relative', 
-              width: '100%', 
-              display: 'block',
-              zIndex: 1
-            }}>
-              <input
-                id="confirm-password-input"
-                type={showConfirmPassword ? 'text' : 'password'}
-                value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)}
-                onFocus={(e) => {
-                  e.target.focus();
-                  e.target.setSelectionRange(e.target.value.length, e.target.value.length);
-                }}
-                onTouchStart={(e) => {
-                  e.stopPropagation();
-                }}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  e.currentTarget.focus();
-                }}
-                style={{
-                  width: '100%',
-                  padding: isMobile ? '1rem' : '0.75rem',
-                  paddingRight: isMobile ? '4.5rem' : '3rem',
-                  paddingLeft: isMobile ? '1rem' : '0.75rem',
-                  border: '1px solid var(--gray-300)',
-                  borderRadius: isMobile ? 'var(--radius-md)' : 'var(--radius-md)',
-                  fontSize: isMobile ? '16px' : 'var(--font-size-base)',
-                  WebkitAppearance: 'none',
-                  appearance: 'none',
-                  minHeight: isMobile ? '52px' : 'auto',
-                  boxSizing: 'border-box',
-                  backgroundColor: 'var(--white)',
-                  color: 'var(--gray-900)',
-                  outline: 'none',
-                  touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent',
-                  pointerEvents: 'auto',
-                  cursor: 'text',
-                  position: 'relative',
-                  zIndex: 2
-                }}
-                placeholder="Skriv passordet igjen"
-                required
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowConfirmPassword(!showConfirmPassword);
-                }}
-                onMouseDown={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                }}
-                onTouchStart={(e) => {
-                  e.preventDefault();
-                  e.stopPropagation();
-                  setShowConfirmPassword(!showConfirmPassword);
-                }}
-                style={{
-                  position: 'absolute',
-                  right: isMobile ? '0.5rem' : '0.625rem',
-                  top: '50%',
-                  transform: 'translateY(-50%)',
-                  background: 'transparent',
-                  border: 'none',
-                  cursor: 'pointer',
-                  color: 'var(--gray-400)',
-                  padding: isMobile ? '0.5rem' : '0.375rem',
-                  minWidth: isMobile ? '36px' : 'auto',
-                  minHeight: isMobile ? '36px' : 'auto',
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  touchAction: 'manipulation',
-                  WebkitTapHighlightColor: 'transparent',
-                  zIndex: 2,
-                  pointerEvents: 'auto'
-                }}
-                aria-label={showConfirmPassword ? 'Skjul passord' : 'Vis passord'}
-              >
-                {showConfirmPassword ? <EyeOff size={isMobile ? 18 : 20} /> : <Eye size={isMobile ? 18 : 20} />}
-              </button>
-            </div>
+            {isMobile ? (
+              // Mobile: Eye button OUTSIDE input field
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <input
+                  id="confirm-password-input"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '1rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: '16px',
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
+                    minHeight: '52px',
+                    boxSizing: 'border-box',
+                    backgroundColor: 'var(--white)',
+                    color: 'var(--gray-900)',
+                    outline: 'none',
+                    touchAction: 'manipulation'
+                  }}
+                  placeholder="Skriv passordet igjen"
+                  required
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    alignSelf: 'flex-end',
+                    background: 'transparent',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '0.5rem 1rem',
+                    color: 'var(--gray-600)',
+                    fontSize: '0.875rem',
+                    cursor: 'pointer',
+                    touchAction: 'manipulation',
+                    minHeight: '44px'
+                  }}
+                >
+                  {showConfirmPassword ? 'Skjul passord' : 'Vis passord'}
+                </button>
+              </div>
+            ) : (
+              // Desktop: Eye button inside input field
+              <div style={{ position: 'relative', width: '100%' }}>
+                <input
+                  id="confirm-password-input"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    paddingRight: '3rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: 'var(--radius-md)',
+                    fontSize: 'var(--font-size-base)',
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
+                    boxSizing: 'border-box',
+                    backgroundColor: 'var(--white)',
+                    color: 'var(--gray-900)',
+                    outline: 'none'
+                  }}
+                  placeholder="Skriv passordet igjen"
+                  required
+                  autoComplete="new-password"
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  style={{
+                    position: 'absolute',
+                    right: '0.625rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    background: 'transparent',
+                    border: 'none',
+                    cursor: 'pointer',
+                    color: 'var(--gray-400)',
+                    padding: '0.375rem'
+                  }}
+                  aria-label={showConfirmPassword ? 'Skjul passord' : 'Vis passord'}
+                >
+                  {showConfirmPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                </button>
+              </div>
+            )}
           </div>
 
           <button

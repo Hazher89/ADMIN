@@ -279,8 +279,10 @@ export async function POST(request: NextRequest) {
         passwordLength: passwordToUse.length
       });
       
-      // Create Firebase Auth user
+      // ALWAYS try to create new user first - simpler approach
       let userCredential;
+      let userCreated = false;
+      
       try {
         userCredential = await createUserWithEmailAndPassword(
           auth,
@@ -288,45 +290,57 @@ export async function POST(request: NextRequest) {
           passwordToUse
         );
         console.log('✅ Firebase Auth user created:', userCredential.user.uid);
+        userCreated = true;
       } catch (createError: any) {
-        console.error('❌ Error creating Firebase Auth user:', {
-          code: createError?.code,
-          message: createError?.message,
-          error: createError
-        });
-        throw createError; // Re-throw to be caught by outer catch
+        // If user already exists, we'll handle it below
+        if (createError?.code === 'auth/email-already-in-use' || createError?.message?.includes('email-already-in-use')) {
+          console.log('⚠️ User already exists in Firebase Auth, will update password');
+          // Continue to email-already-in-use handler below
+        } else {
+          console.error('❌ Error creating Firebase Auth user:', {
+            code: createError?.code,
+            message: createError?.message,
+            error: createError
+          });
+          throw createError;
+        }
       }
+      
+      // If user was created successfully, update Firestore and return
+      if (userCreated && userCredential) {
+        const firebaseUser = userCredential.user;
 
-      const firebaseUser = userCredential.user;
+        // Update user profile
+        await updateProfile(firebaseUser, {
+          displayName: userData.displayName || userData.name || 'Ny bruker'
+        });
 
-      // Update user profile
-      await updateProfile(firebaseUser, {
-        displayName: userData.displayName || userData.name || 'Ny bruker'
-      });
+        // Update user document with password setup status and UID
+        await updateDoc(userDoc.ref, {
+          uid: firebaseUser.uid,
+          status: 'active',
+          passwordSet: true,
+          passwordSetAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
 
-      // Update user document with password setup status and UID
-      await updateDoc(userDoc.ref, {
-        uid: firebaseUser.uid,
-        status: 'active',
-        passwordSet: true,
-        passwordSetAt: new Date().toISOString(),
-        updatedAt: new Date().toISOString()
-      });
+        // Mark token as used
+        await updateDoc(tokenDoc.ref, {
+          used: true,
+          usedAt: new Date().toISOString()
+        });
 
-      // Mark token as used
-      await updateDoc(tokenDoc.ref, {
-        used: true,
-        usedAt: new Date().toISOString()
-      });
-
-      console.log('✅ Password setup completed successfully via Microsoft Graph');
-
-      return NextResponse.json({
-        success: true,
-        message: 'Password set up successfully via Microsoft Graph',
-        userId: firebaseUser.uid,
-        provider: 'microsoft_graph'
-      });
+        console.log('✅ Password setup completed successfully');
+        return NextResponse.json({
+          success: true,
+          message: 'Password set up successfully',
+          userId: firebaseUser.uid,
+          provider: 'firebase_client_sdk'
+        });
+      }
+      
+      // If we get here, user already exists - throw error to be caught below
+      throw new Error('auth/email-already-in-use');
 
     } catch (authError) {
       console.error('❌ Firebase Auth error:', authError);
