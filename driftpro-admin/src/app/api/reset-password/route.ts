@@ -1,23 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp } from 'firebase/app';
+import { initializeApp, getApps } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword, updatePassword } from 'firebase/auth';
 import * as admin from 'firebase-admin';
 
 // Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-  authDomain: "driftpro-40ccd.firebaseapp.com",
-  projectId: "driftpro-40ccd",
-  storageBucket: "driftpro-40ccd.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
 };
 
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Initialize Firebase (only if not already initialized)
+let app;
+let db;
+let auth;
+
+try {
+  const apps = getApps();
+  if (apps.length === 0) {
+    app = initializeApp(firebaseConfig);
+    console.log('✅ Firebase initialized for reset-password');
+  } else {
+    app = apps[0];
+    console.log('✅ Using existing Firebase app for reset-password');
+  }
+  db = getFirestore(app);
+  auth = getAuth(app);
+} catch (error) {
+  console.error('❌ Error initializing Firebase:', error);
+  throw error;
+}
 
 // Initialize Firebase Admin SDK if not already initialized
 let adminAuth: admin.auth.Auth | null = null;
@@ -75,7 +91,23 @@ export async function POST(request: NextRequest) {
     const tokenData = tokenDoc.data();
 
     // Check if token is expired
-    if (tokenData.expiresAt && new Date(tokenData.expiresAt.toDate()) < new Date()) {
+    let expiresAt: Date | null = null;
+    if (tokenData.expiresAt) {
+      try {
+        // Handle both Firestore Timestamp and ISO string
+        if (tokenData.expiresAt.toDate) {
+          expiresAt = tokenData.expiresAt.toDate();
+        } else if (typeof tokenData.expiresAt === 'string') {
+          expiresAt = new Date(tokenData.expiresAt);
+        } else {
+          expiresAt = new Date(tokenData.expiresAt);
+        }
+      } catch (e) {
+        console.error('Error parsing expiresAt:', e);
+      }
+    }
+    
+    if (expiresAt && expiresAt < new Date()) {
       // Delete expired token
       await deleteDoc(tokenDoc.ref);
       return NextResponse.json(
@@ -264,10 +296,21 @@ export async function POST(request: NextRequest) {
 
   } catch (error) {
     console.error('❌ Error in reset-password API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    const errorStack = error instanceof Error ? error.stack : undefined;
+    
+    // Log full error details for debugging
+    console.error('Full error details:', {
+      message: errorMessage,
+      stack: errorStack,
+      error: error
+    });
+    
     return NextResponse.json(
       { 
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
+        message: errorMessage,
+        details: process.env.NODE_ENV === 'development' ? errorStack : undefined,
         provider: 'firebase_client_sdk'
       },
       { status: 500 }

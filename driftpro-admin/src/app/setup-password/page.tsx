@@ -128,11 +128,16 @@ function SetupPasswordContent() {
           router.push('/login');
         }, 3000);
       } else {
-        setError(data.error || 'Feil ved oppsett av passord');
+        // Show detailed error message
+        const errorMsg = data.error || data.message || 'Feil ved oppsett av passord';
+        const details = data.details ? `\n\nDetaljer: ${data.details}` : '';
+        setError(errorMsg + details);
+        console.error('Password setup error:', data);
       }
     } catch (error) {
       console.error('Error setting up password:', error);
-      setError('Feil ved oppsett av passord');
+      const errorMsg = error instanceof Error ? error.message : 'Feil ved oppsett av passord';
+      setError(`Feil ved oppsett av passord: ${errorMsg}`);
     } finally {
       setLoading(false);
     }
