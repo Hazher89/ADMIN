@@ -375,41 +375,135 @@ export async function POST(request: NextRequest) {
         if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL || !adminAuth) {
             console.warn('⚠️ Firebase Admin SDK credentials not configured');
             
-            // If user has UID, send password reset email instead
+            // If user has UID, use forgot-password API instead (better error handling)
             if (userData.uid) {
-              console.log('📧 Admin SDK not available, sending password reset email instead');
+              console.log('📧 Admin SDK not available, using forgot-password API instead');
               
               try {
-                // Send password reset email (this works without Admin SDK)
-                await sendPasswordResetEmail(auth, tokenData.email, {
-                  url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/reset-password`,
-                  handleCodeInApp: false
+                // Use the forgot-password API which has better email handling
+                const forgotPasswordResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/api/forgot-password`, {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                  },
+                  body: JSON.stringify({
+                    email: tokenData.email
+                  })
                 });
                 
-                console.log('✅ Password reset email sent successfully');
-                
-                // Update Firestore status
-                await updateDoc(userDoc.ref, {
-                  status: 'active',
-                  passwordSet: false, // Not set yet, user needs to use reset link
-                  updatedAt: new Date().toISOString()
-                });
-                
-                await updateDoc(tokenDoc.ref, {
-                  used: true,
-                  usedAt: new Date().toISOString()
-                });
-                
-                return NextResponse.json({
-                  success: true,
-                  message: 'Password reset email sent. Please check your email to set your password.',
-                  userId: userData.uid,
-                  provider: 'firebase_password_reset_email',
-                  emailSent: true
-                });
+                if (forgotPasswordResponse.ok) {
+                  const forgotPasswordData = await forgotPasswordResponse.json();
+                  console.log('✅ Password reset email sent via forgot-password API');
+                  
+                  // Update Firestore status
+                  await updateDoc(userDoc.ref, {
+                    status: 'active',
+                    passwordSet: false, // Not set yet, user needs to use reset link
+                    updatedAt: new Date().toISOString()
+                  });
+                  
+                  await updateDoc(tokenDoc.ref, {
+                    used: true,
+                    usedAt: new Date().toISOString()
+                  });
+                  
+                  return NextResponse.json({
+                    success: true,
+                    message: 'Password reset email sent. Please check your email to set your password.',
+                    userId: userData.uid,
+                    provider: 'forgot_password_api',
+                    emailSent: true
+                  });
+                } else {
+                  const errorData = await forgotPasswordResponse.json().catch(() => ({}));
+                  console.error('❌ Forgot-password API error:', errorData);
+                  throw new Error(errorData.error || 'Failed to send password reset email');
+                }
               } catch (resetEmailError: any) {
-                console.error('❌ Error sending password reset email:', resetEmailError);
-                // Fall through to update status anyway
+                console.error('❌ Error sending password reset email via API:', resetEmailError);
+                
+                // Try direct Firebase sendPasswordResetEmail as fallback
+                // Note: This will fail if user doesn't exist in Firebase Auth yet
+                try {
+                  await sendPasswordResetEmail(auth, tokenData.email, {
+                    url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/reset-password`,
+                    handleCodeInApp: false
+                  });
+                  
+                  console.log('✅ Password reset email sent successfully (direct Firebase)');
+                  
+                  await updateDoc(userDoc.ref, {
+                    status: 'active',
+                    passwordSet: false,
+                    updatedAt: new Date().toISOString()
+                  });
+                  
+                  await updateDoc(tokenDoc.ref, {
+                    used: true,
+                    usedAt: new Date().toISOString()
+                  });
+                  
+                  return NextResponse.json({
+                    success: true,
+                    message: 'Password reset email sent. Please check your email to set your password.',
+                    userId: userData.uid,
+                    provider: 'firebase_password_reset_email',
+                    emailSent: true
+                  });
+                } catch (directEmailError: any) {
+                  console.error('❌ Error sending password reset email directly:', {
+                    code: directEmailError?.code,
+                    message: directEmailError?.message,
+                    error: directEmailError
+                  });
+                  
+                  // If user doesn't exist in Firebase Auth, we need to create them first
+                  if (directEmailError?.code === 'auth/user-not-found') {
+                    console.log('⚠️ User not found in Firebase Auth, attempting to create account with temporary password');
+                    
+                    // Generate a temporary password
+                    const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12) + 'A1!';
+                    
+                    try {
+                      // Create user in Firebase Auth with temporary password
+                      const newUserCredential = await createUserWithEmailAndPassword(auth, tokenData.email, tempPassword);
+                      console.log('✅ Created Firebase Auth user with temporary password:', newUserCredential.user.uid);
+                      
+                      // Now send password reset email
+                      await sendPasswordResetEmail(auth, tokenData.email, {
+                        url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/reset-password`,
+                        handleCodeInApp: false
+                      });
+                      
+                      console.log('✅ Password reset email sent after creating Auth user');
+                      
+                      // Update Firestore with UID
+                      await updateDoc(userDoc.ref, {
+                        uid: newUserCredential.user.uid,
+                        status: 'active',
+                        passwordSet: false,
+                        updatedAt: new Date().toISOString()
+                      });
+                      
+                      await updateDoc(tokenDoc.ref, {
+                        used: true,
+                        usedAt: new Date().toISOString()
+                      });
+                      
+                      return NextResponse.json({
+                        success: true,
+                        message: 'Password reset email sent. Please check your email to set your password.',
+                        userId: newUserCredential.user.uid,
+                        provider: 'firebase_password_reset_email_after_creation',
+                        emailSent: true
+                      });
+                    } catch (createError: any) {
+                      console.error('❌ Error creating Firebase Auth user:', createError);
+                      // Fall through to update status anyway
+                    }
+                  }
+                  // Fall through to update status anyway
+                }
               }
               
               // Update status even if email failed
@@ -434,55 +528,97 @@ export async function POST(request: NextRequest) {
               });
             }
             
-            // No UID, try to send password reset email anyway
-            console.log('📧 User has no UID, attempting to send password reset email');
+            // No UID, try to use forgot-password API
+            console.log('📧 User has no UID, using forgot-password API');
             try {
-              await sendPasswordResetEmail(auth, tokenData.email, {
-                url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/reset-password`,
-                handleCodeInApp: false
+              // Use the forgot-password API which has better email handling
+              const forgotPasswordResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/api/forgot-password`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  email: tokenData.email
+                })
               });
               
-              console.log('✅ Password reset email sent successfully (no UID)');
-              
-              await updateDoc(userDoc.ref, {
-                status: 'active',
-                passwordSet: false,
-                updatedAt: new Date().toISOString()
-              });
-              
-              await updateDoc(tokenDoc.ref, {
-                used: true,
-                usedAt: new Date().toISOString()
-              });
-              
-              return NextResponse.json({
-                success: true,
-                message: 'Password reset email sent. Please check your email to set your password.',
-                provider: 'firebase_password_reset_email',
-                emailSent: true
-              });
+              if (forgotPasswordResponse.ok) {
+                console.log('✅ Password reset email sent via forgot-password API (no UID)');
+                
+                await updateDoc(userDoc.ref, {
+                  status: 'active',
+                  passwordSet: false,
+                  updatedAt: new Date().toISOString()
+                });
+                
+                await updateDoc(tokenDoc.ref, {
+                  used: true,
+                  usedAt: new Date().toISOString()
+                });
+                
+                return NextResponse.json({
+                  success: true,
+                  message: 'Password reset email sent. Please check your email to set your password.',
+                  provider: 'forgot_password_api',
+                  emailSent: true
+                });
+              } else {
+                const errorData = await forgotPasswordResponse.json().catch(() => ({}));
+                console.error('❌ Forgot-password API error (no UID):', errorData);
+                throw new Error(errorData.error || 'Failed to send password reset email');
+              }
             } catch (resetEmailError: any) {
-              console.error('❌ Error sending password reset email (no UID):', resetEmailError);
+              console.error('❌ Error sending password reset email via API (no UID):', resetEmailError);
               
-              // Update status anyway
-              await updateDoc(userDoc.ref, {
-                status: 'active',
-                passwordSet: false,
-                updatedAt: new Date().toISOString()
-              });
-              
-              await updateDoc(tokenDoc.ref, {
-                used: true,
-                usedAt: new Date().toISOString()
-              });
-              
-              return NextResponse.json({
-                success: true,
-                message: 'Setup link processed. Please use "Forgot Password" on the login page to set your password.',
-                provider: 'firebase_admin_sdk_fallback',
-                warning: 'Password reset email could not be sent. Please use the "Forgot Password" feature on the login page to set your password.',
-                requiresForgotPassword: true
-              });
+              // Try direct Firebase sendPasswordResetEmail as fallback
+              try {
+                await sendPasswordResetEmail(auth, tokenData.email, {
+                  url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/reset-password`,
+                  handleCodeInApp: false
+                });
+                
+                console.log('✅ Password reset email sent successfully (direct Firebase, no UID)');
+                
+                await updateDoc(userDoc.ref, {
+                  status: 'active',
+                  passwordSet: false,
+                  updatedAt: new Date().toISOString()
+                });
+                
+                await updateDoc(tokenDoc.ref, {
+                  used: true,
+                  usedAt: new Date().toISOString()
+                });
+                
+                return NextResponse.json({
+                  success: true,
+                  message: 'Password reset email sent. Please check your email to set your password.',
+                  provider: 'firebase_password_reset_email',
+                  emailSent: true
+                });
+              } catch (directEmailError: any) {
+                console.error('❌ Error sending password reset email directly (no UID):', directEmailError);
+                
+                // Update status anyway
+                await updateDoc(userDoc.ref, {
+                  status: 'active',
+                  passwordSet: false,
+                  updatedAt: new Date().toISOString()
+                });
+                
+                await updateDoc(tokenDoc.ref, {
+                  used: true,
+                  usedAt: new Date().toISOString()
+                });
+                
+                return NextResponse.json({
+                  success: true,
+                  message: 'Setup link processed. Please use "Forgot Password" on the login page to set your password.',
+                  provider: 'firebase_admin_sdk_fallback',
+                  warning: 'Password reset email could not be sent. Please use the "Forgot Password" feature on the login page to set your password.',
+                  requiresForgotPassword: true
+                });
+              }
             }
           }
           
