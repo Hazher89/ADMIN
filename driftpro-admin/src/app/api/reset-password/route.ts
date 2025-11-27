@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword, updatePassword } from 'firebase/auth';
+import * as admin from 'firebase-admin';
 
 // Firebase config
 const firebaseConfig = {
@@ -17,6 +18,30 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 const auth = getAuth(app);
+
+// Initialize Firebase Admin SDK if not already initialized
+let adminAuth: admin.auth.Auth | null = null;
+try {
+  if (admin.apps.length === 0) {
+    try {
+      admin.initializeApp({
+        credential: admin.credential.cert({
+          projectId: process.env.FIREBASE_PROJECT_ID || 'driftpro-40ccd',
+          clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+          privateKey: process.env.FIREBASE_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        }),
+      });
+      console.log('✅ Firebase Admin SDK initialized for reset-password');
+    } catch (adminError) {
+      console.log('⚠️ Firebase Admin SDK initialization failed (may need service account key):', adminError);
+    }
+  }
+  if (admin.apps.length > 0) {
+    adminAuth = admin.auth();
+  }
+} catch (error) {
+  console.log('⚠️ Firebase Admin SDK not available:', error);
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -83,63 +108,144 @@ export async function POST(request: NextRequest) {
 
     try {
       // Check if user has a Firebase UID in the database
-      if (!userData.uid) {
-        return NextResponse.json(
-          { error: 'User account not properly set up. Please contact administrator.' },
-          { status: 400 }
-        );
-      }
-
-      // For password reset, we need to handle the case where user already exists
-      // We'll try to create a new account, and if it fails due to email already in use,
-      // we'll handle it appropriately
+      let firebaseUid = userData.uid;
       
-      try {
-        // Try to create new Firebase user with the new password
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          tokenData.email,
-          password
+      // If user doesn't have UID and Admin SDK is available, try to get it from Firebase Auth
+      if (!firebaseUid && adminAuth) {
+        try {
+          const existingUser = await adminAuth.getUserByEmail(tokenData.email);
+          firebaseUid = existingUser.uid;
+          console.log('✅ Found existing Firebase Auth user, UID:', firebaseUid);
+        } catch (adminError) {
+          console.log('⚠️ User not found in Firebase Auth, will create new account');
+        }
+      }
+      
+      // If we have a UID and Admin SDK is available, update the password using Admin SDK
+      if (firebaseUid && adminAuth) {
+        try {
+          // Update password using Admin SDK
+          await adminAuth.updateUser(firebaseUid, {
+            password: password
+          });
+          
+          console.log('✅ Password updated for existing Firebase Auth user:', firebaseUid);
+          
+          // Update user document
+          await updateDoc(userDoc.ref, {
+            uid: firebaseUid, // Ensure UID is set
+            passwordUpdatedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            passwordReset: true,
+            passwordSet: true
+          });
+
+          // Mark token as used
+          await updateDoc(tokenDoc.ref, {
+            used: true,
+            usedAt: new Date().toISOString()
+          });
+
+          console.log('✅ Password reset completed successfully for existing user');
+          return NextResponse.json({
+            success: true,
+            message: 'Password reset successfully',
+            userId: firebaseUid,
+            provider: 'firebase_admin_sdk'
+          });
+        } catch (updateError) {
+          console.error('❌ Error updating password with Admin SDK:', updateError);
+          throw updateError;
+        }
+      } else if (firebaseUid && !adminAuth) {
+        // User has UID but Admin SDK not available - can't update password
+        return NextResponse.json(
+          { error: 'Firebase Admin SDK not available. Cannot reset password. Please contact administrator.' },
+          { status: 500 }
         );
-
-        const firebaseUser = userCredential.user;
-
-        // Update user document with new UID
-        await updateDoc(userDoc.ref, {
-          uid: firebaseUser.uid,
-          passwordUpdatedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          passwordReset: true
-        });
-
-        // Mark token as used
-        await updateDoc(tokenDoc.ref, {
-          used: true,
-          usedAt: new Date().toISOString()
-        });
-
-        console.log('✅ Password reset completed successfully - new account created');
-
-        return NextResponse.json({
-          success: true,
-          message: 'Password reset successfully - new account created',
-          userId: firebaseUser.uid,
-          provider: 'firebase_client_sdk'
-        });
-
-      } catch (createError: any) {
-        if (createError.code === 'auth/email-already-in-use') {
-          // User already exists, we can't reset password this way
-          // Return a message asking user to contact admin
-          return NextResponse.json(
-            { 
-              error: 'Account already exists. Please contact your administrator to reset your password.',
-              code: 'email-already-in-use'
-            },
-            { status: 400 }
+      } else {
+        // No existing user, create new one
+        try {
+          const userCredential = await createUserWithEmailAndPassword(
+            auth,
+            tokenData.email,
+            password
           );
-        } else {
-          throw createError;
+
+          const firebaseUser = userCredential.user;
+
+          // Update user document with new UID
+          await updateDoc(userDoc.ref, {
+            uid: firebaseUser.uid,
+            passwordUpdatedAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+            passwordReset: true,
+            passwordSet: true
+          });
+
+          // Mark token as used
+          await updateDoc(tokenDoc.ref, {
+            used: true,
+            usedAt: new Date().toISOString()
+          });
+
+          console.log('✅ Password reset completed successfully - new account created');
+          return NextResponse.json({
+            success: true,
+            message: 'Password reset successfully - new account created',
+            userId: firebaseUser.uid,
+            provider: 'firebase_client_sdk'
+          });
+        } catch (createError: any) {
+          if (createError.code === 'auth/email-already-in-use') {
+            // User was created between our check and now, try to get UID and update password
+            if (adminAuth) {
+              try {
+                const existingUser = await adminAuth.getUserByEmail(tokenData.email);
+                await adminAuth.updateUser(existingUser.uid, {
+                  password: password
+                });
+                
+                await updateDoc(userDoc.ref, {
+                  uid: existingUser.uid,
+                  passwordUpdatedAt: new Date().toISOString(),
+                  updatedAt: new Date().toISOString(),
+                  passwordReset: true,
+                  passwordSet: true
+                });
+                
+                await updateDoc(tokenDoc.ref, {
+                  used: true,
+                  usedAt: new Date().toISOString()
+                });
+                
+                return NextResponse.json({
+                  success: true,
+                  message: 'Password reset successfully',
+                  userId: existingUser.uid,
+                  provider: 'firebase_admin_sdk_retry'
+                });
+              } catch (retryError) {
+                return NextResponse.json(
+                  { 
+                    error: 'Account already exists. Please contact your administrator to reset your password.',
+                    code: 'email-already-in-use'
+                  },
+                  { status: 400 }
+                );
+              }
+            } else {
+              return NextResponse.json(
+                { 
+                  error: 'Account already exists. Please contact your administrator to reset your password.',
+                  code: 'email-already-in-use'
+                },
+                { status: 400 }
+              );
+            }
+          } else {
+            throw createError;
+          }
         }
       }
 

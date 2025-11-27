@@ -29,10 +29,19 @@ export default function LoginPage() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
 
-  // Force dark mode on login page
+  // Force dark mode on login page and detect mobile
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
     setMounted(true);
+    
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Redirect if already authenticated
@@ -69,20 +78,20 @@ export default function LoginPage() {
   return (
     <div 
       style={{
-        position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
-        width: '100vw',
-        height: '100vh',
+        minHeight: '100vh',
+        width: '100%',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: isMobile ? 'flex-start' : 'center',
         justifyContent: 'center',
         background: 'var(--background-color)',
         color: 'var(--text-color)',
-        padding: '1rem',
-        overflow: 'hidden'
+        padding: isMobile ? '1rem 0.75rem' : '1rem',
+        paddingTop: isMobile ? '2rem' : '1rem',
+        paddingBottom: isMobile ? '2rem' : '1rem',
+        overflowY: 'auto',
+        overflowX: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        position: 'relative'
       }}
     >
       {/* Premium Animated Background */}
@@ -160,18 +169,18 @@ export default function LoginPage() {
         ></div>
       </div>
 
-      {/* Main Content - Perfectly Centered */}
+      {/* Main Content - Mobile Optimized */}
       <div 
         style={{
           position: 'relative',
           zIndex: 10,
           width: '100%',
-          maxWidth: '520px',
-          maxHeight: '100vh',
+          maxWidth: isMobile ? '100%' : '520px',
           margin: 'auto',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          alignItems: 'flex-start',
+          justifyContent: 'center',
+          paddingTop: isMobile ? '0' : '0'
         }}
       >
         <div 
@@ -181,13 +190,11 @@ export default function LoginPage() {
             background: 'var(--card-background)',
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-            borderRadius: 'var(--radius-2xl)',
-            padding: '2rem 2rem',
+            borderRadius: isMobile ? 'var(--radius-xl)' : 'var(--radius-2xl)',
+            padding: isMobile ? '1.5rem 1rem' : '2rem 2rem',
             boxShadow: 'var(--shadow-xl), 0 0 0 1px var(--border-color)',
             border: '1px solid var(--border-color)',
-            overflow: 'hidden',
-            maxHeight: '95vh',
-            overflowY: 'auto'
+            overflow: 'hidden'
           }}
         >
 
@@ -203,7 +210,7 @@ export default function LoginPage() {
           ></div>
 
           {/* Logo & Brand Section */}
-          <div style={{ textAlign: 'center', marginBottom: '1.5rem', position: 'relative', zIndex: 10 }}>
+          <div style={{ textAlign: 'center', marginBottom: isMobile ? '1rem' : '1.5rem', position: 'relative', zIndex: 10 }}>
             {/* Logo with advanced glow effects */}
             <div 
               style={{
@@ -264,7 +271,7 @@ export default function LoginPage() {
                   position: 'relative',
                   zIndex: 10,
                   padding: '0.25rem',
-                  borderRadius: 'var(--radius-xl)',
+                  borderRadius: isMobile ? 'var(--radius-lg)' : 'var(--radius-xl)',
                   background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%)',
                   border: '2px solid',
                   borderImage: 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(14, 165, 233, 0.3)) 1',
@@ -276,9 +283,10 @@ export default function LoginPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '220px',
-                  height: '220px',
-                  overflow: 'hidden'
+                  width: isMobile ? '140px' : '220px',
+                  height: isMobile ? '140px' : '220px',
+                  overflow: 'hidden',
+                  margin: '0 auto'
                 }}
               >
                 {/* Advanced Animated Icon */}
@@ -505,9 +513,9 @@ export default function LoginPage() {
             {/* Brand name */}
             <h1 
               style={{ 
-                fontSize: '2.5rem',
+                fontSize: isMobile ? '1.875rem' : '2.5rem',
                 fontWeight: 800,
-                marginBottom: '0.75rem',
+                marginBottom: isMobile ? '0.5rem' : '0.75rem',
                 letterSpacing: '-0.02em',
                 background: 'var(--gradient-primary)',
                 WebkitBackgroundClip: 'text',
@@ -550,10 +558,10 @@ export default function LoginPage() {
             </div>
             
             {/* Subtitle */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '0.375rem' : '0.5rem' }}>
               <p 
                 style={{ 
-                  fontSize: '0.7rem',
+                  fontSize: isMobile ? '0.625rem' : '0.7rem',
                   fontWeight: 600,
                   textTransform: 'uppercase',
                   letterSpacing: '0.2em',
@@ -564,19 +572,19 @@ export default function LoginPage() {
               </p>
               <p 
                 style={{ 
-                  fontSize: '0.7rem',
+                  fontSize: isMobile ? '0.625rem' : '0.7rem',
                   fontWeight: 300,
                   textTransform: 'uppercase',
                   letterSpacing: '0.25em',
                   color: 'var(--gray-500)',
-                  marginTop: '0.75rem'
+                  marginTop: isMobile ? '0.5rem' : '0.75rem'
                 }}
               >
                 Utviklet for
               </p>
               <p 
                 style={{ 
-                  fontSize: '1rem',
+                  fontSize: isMobile ? '0.875rem' : '1rem',
                   fontWeight: 700,
                   letterSpacing: '0.05em',
                   color: 'var(--text-color)',
@@ -655,12 +663,12 @@ export default function LoginPage() {
                     width: '100%',
                     paddingLeft: '3rem',
                     paddingRight: '1rem',
-                    paddingTop: '1rem',
-                    paddingBottom: '1rem',
-                    borderRadius: 'var(--radius-xl)',
+                    paddingTop: isMobile ? '0.875rem' : '1rem',
+                    paddingBottom: isMobile ? '0.875rem' : '1rem',
+                    borderRadius: isMobile ? 'var(--radius-lg)' : 'var(--radius-xl)',
                     transition: 'all 0.2s',
                     outline: 'none',
-                    fontSize: '0.9375rem',
+                    fontSize: isMobile ? '16px' : '0.9375rem',
                     background: 'var(--gray-200)',
                     border: `2px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}`,
                     color: 'var(--text-color)',
@@ -719,12 +727,12 @@ export default function LoginPage() {
                     width: '100%',
                     paddingLeft: '3rem',
                     paddingRight: '3rem',
-                    paddingTop: '1rem',
-                    paddingBottom: '1rem',
-                    borderRadius: 'var(--radius-xl)',
+                    paddingTop: isMobile ? '0.875rem' : '1rem',
+                    paddingBottom: isMobile ? '0.875rem' : '1rem',
+                    borderRadius: isMobile ? 'var(--radius-lg)' : 'var(--radius-xl)',
                     transition: 'all 0.2s',
                     outline: 'none',
-                    fontSize: '0.9375rem',
+                    fontSize: isMobile ? '16px' : '0.9375rem',
                     background: 'var(--gray-200)',
                     border: `2px solid ${focusedField === 'password' ? 'var(--primary)' : 'var(--border-color)'}`,
                     color: 'var(--text-color)',
@@ -793,11 +801,12 @@ export default function LoginPage() {
             disabled={loading}
             style={{
                 width: '100%',
-                paddingTop: '1.25rem',
-                paddingBottom: '1.25rem',
+                paddingTop: isMobile ? '1rem' : '1.25rem',
+                paddingBottom: isMobile ? '1rem' : '1.25rem',
                 paddingLeft: '1.25rem',
                 paddingRight: '1.25rem',
-                borderRadius: 'var(--radius-xl)',
+                borderRadius: isMobile ? 'var(--radius-lg)' : 'var(--radius-xl)',
+                minHeight: isMobile ? '48px' : 'auto',
                 color: '#ffffff',
                 fontWeight: 700,
                 fontSize: '1rem',
