@@ -365,26 +365,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return; // Superadmin login successful
       }
       
-      // For all other users, check if user exists and get their companyId
-      const usersQuery = query(collection(db, 'users'), where('email', '==', email));
-      const userSnapshot = await getDocs(usersQuery);
-      
-      if (userSnapshot.empty) {
-          throw new Error('Bruker ikke funnet. Kontakt administrator.');
-      }
-      
-      const userDoc = userSnapshot.docs[0];
-      const userData = userDoc.data();
-      
-      // Check if user has a companyId
-      if (!userData.companyId) {
-        throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
-      }
-      
-      if (userData.status !== 'active') {
-        throw new Error(`Brukeren er ikke aktivert (status: ${userData.status || 'unknown'}). Kontakt administrator for å få nytt passord.`);
-      }
-      
       // CRITICAL: Try to authenticate with Firebase FIRST
       // This way we can get the UID even if it's not in Firestore yet
       let userCredential;
@@ -405,12 +385,51 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         }
       }
       
-      // NOW: Check if UID is set in Firestore, and set it if missing
+      // NOW: Check if user exists in Firestore by email (case-insensitive search)
       const firebaseUid = userCredential.user.uid;
+      let userDoc;
+      let userData;
+      
+      // Try to find user by email (case-insensitive first, then case-sensitive)
+      const usersQueryLower = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
+      const userSnapshotLower = await getDocs(usersQueryLower);
+      
+      if (!userSnapshotLower.empty) {
+        userDoc = userSnapshotLower.docs[0];
+        userData = userDoc.data();
+      } else {
+        // Try case-sensitive search as fallback
+        const usersQueryCaseSensitive = query(collection(db, 'users'), where('email', '==', email));
+        const userSnapshotCaseSensitive = await getDocs(usersQueryCaseSensitive);
+        
+        if (userSnapshotCaseSensitive.empty) {
+          // User exists in Firebase Auth but not in Firestore - this is a problem
+          console.error('❌ User exists in Firebase Auth but not in Firestore:', {
+            email: email,
+            firebaseUid: firebaseUid
+          });
+          throw new Error('Brukeren finnes i systemet, men profil mangler. Kontakt administrator for å få hjelp.');
+        } else {
+          userDoc = userSnapshotCaseSensitive.docs[0];
+          userData = userSnapshotCaseSensitive.docs[0].data();
+        }
+      }
+      
+      // Check if user has a companyId
+      if (!userData.companyId) {
+        throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
+      }
+      
+      if (userData.status !== 'active') {
+        throw new Error(`Brukeren er ikke aktivert (status: ${userData.status || 'unknown'}). Kontakt administrator for å få nytt passord.`);
+      }
+      
+      // NOW: Update UID in Firestore if missing or incorrect
       if (!userData.uid || userData.uid !== firebaseUid) {
         console.log('⚠️ UID missing or mismatch in Firestore, updating...', {
           firestoreUid: userData.uid,
-          firebaseUid: firebaseUid
+          firebaseUid: firebaseUid,
+          userDocId: userDoc.id
         });
         
         // Update Firestore with the correct UID from Firebase Auth
