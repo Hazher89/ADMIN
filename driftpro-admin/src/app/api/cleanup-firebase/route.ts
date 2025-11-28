@@ -262,6 +262,27 @@ async function deleteUserCompletely(email?: string, userId?: string) {
     
     const userData = userDoc.data();
     
+    // Also delete related tokens (setup tokens, password reset tokens)
+    try {
+      // Delete setup tokens
+      const setupTokensQuery = query(collection(db, 'setupTokens'), where('email', '==', userData.email));
+      const setupTokensSnapshot = await getDocs(setupTokensQuery);
+      for (const tokenDoc of setupTokensSnapshot.docs) {
+        await deleteDoc(tokenDoc.ref);
+        console.log(`🗑️ Deleted setup token for: ${userData.email}`);
+      }
+      
+      // Delete password reset tokens
+      const resetTokensQuery = query(collection(db, 'passwordResetTokens'), where('email', '==', userData.email));
+      const resetTokensSnapshot = await getDocs(resetTokensQuery);
+      for (const tokenDoc of resetTokensSnapshot.docs) {
+        await deleteDoc(tokenDoc.ref);
+        console.log(`🗑️ Deleted password reset token for: ${userData.email}`);
+      }
+    } catch (tokenError) {
+      console.warn('⚠️ Error deleting tokens (non-critical):', tokenError);
+    }
+    
     // Delete from Firestore
     await deleteDoc(userDoc.ref);
     console.log(`🗑️ Deleted user from Firestore: ${userData.email}`);
