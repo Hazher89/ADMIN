@@ -770,9 +770,8 @@ export default function HRPage() {
       let emailSent = false;
       let emailError = null;
       
-      // Only send email if password was NOT set by admin
-      if (!passwordSet) {
-        try {
+      // Always send welcome email (different content if password is set)
+      try {
         const departmentName = departments.find(d => d.id === newEmployee.departmentId)?.name || 'Ikke tildelt';
         const adminName = userProfile?.displayName || 'System Administrator';
         const companyName = 'MAVI Logistikk AS';
@@ -783,7 +782,8 @@ export default function HRPage() {
           adminName,
           companyName,
           departmentName,
-          position: newEmployee.position || 'Ansatt'
+          position: newEmployee.position || 'Ansatt',
+          passwordSet: passwordSet
         });
 
         // Try to send via Microsoft Graph first, fallback to send-password-setup API
@@ -819,7 +819,9 @@ export default function HRPage() {
                 departmentName,
                 position: newEmployee.position || 'Ansatt',
                 accessToken,
-                fromEmail
+                fromEmail,
+                passwordSet: passwordSet,
+                password: passwordSet ? newEmployee.password : undefined
               })
             });
 
@@ -978,12 +980,11 @@ export default function HRPage() {
             emailError = 'Kunne ikke sende e-post. Sjekk at du er logget inn med Microsoft 365 i E-post System.';
           }
         }
-        } catch (emailErrorCaught) {
-          console.error('❌ Error sending welcome email:', emailErrorCaught);
-          emailSent = false;
-          if (!emailError) {
-            emailError = emailErrorCaught instanceof Error ? emailErrorCaught.message : 'Ukjent feil';
-          }
+      } catch (emailErrorCaught) {
+        console.error('❌ Error sending welcome email:', emailErrorCaught);
+        emailSent = false;
+        if (!emailError) {
+          emailError = emailErrorCaught instanceof Error ? emailErrorCaught.message : 'Ukjent feil';
         }
       }
 

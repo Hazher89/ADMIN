@@ -437,13 +437,11 @@ export default function EmployeesPage() {
         }
       }
 
-      // Send welcome email to the new employee with password setup link (only if password not set)
+      // Always send welcome email (different content if password is set)
       let emailSent = false;
       let emailError = null;
       
-      // Only send email if password was NOT set by admin
-      if (!passwordSet) {
-        try {
+      try {
         const departmentName = getDepartmentName(newEmployee.departmentId);
         const adminName = userProfile?.displayName || 'System Administrator';
         const companyName = 'MAVI Logistikk AS';
@@ -454,7 +452,8 @@ export default function EmployeesPage() {
           adminName,
           companyName,
           departmentName,
-          position: newEmployee.position || 'Ansatt'
+          position: newEmployee.position || 'Ansatt',
+          passwordSet: passwordSet
         });
 
         // Try to send via Microsoft Graph first, fallback to globalEmailService
@@ -490,7 +489,9 @@ export default function EmployeesPage() {
                 departmentName,
                 position: newEmployee.position || 'Ansatt',
                 accessToken,
-                fromEmail
+                fromEmail,
+                passwordSet: passwordSet,
+                password: passwordSet ? newEmployee.password : undefined
               })
             });
 
@@ -662,7 +663,6 @@ export default function EmployeesPage() {
           emailError = emailErrorCaught instanceof Error ? emailErrorCaught.message : 'Ukjent feil';
         }
         // Don't fail the employee creation if email fails
-        }
       }
 
       setShowAddModal(false);

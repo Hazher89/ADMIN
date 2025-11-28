@@ -19,7 +19,7 @@ const db = getFirestore(app);
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, displayName, adminName, companyName, departmentName, position, accessToken, fromEmail, setupUrl } = body;
+    const { email, displayName, adminName, companyName, departmentName, position, accessToken, fromEmail, setupUrl, password, passwordSet } = body;
 
     if (!email || !displayName) {
       return NextResponse.json(
@@ -42,31 +42,122 @@ export async function POST(request: NextRequest) {
       companyName,
       departmentName,
       position,
+      passwordSet: !!passwordSet,
       provider: 'microsoft_graph'
     });
 
-    // Use provided setupUrl or generate new token
-    let finalSetupUrl = setupUrl;
-    if (!finalSetupUrl) {
-      // Generate setup token for password setup
-      const setupToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      finalSetupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no';
+    const loginUrl = `${appUrl}/login`;
+    const forgotPasswordUrl = `${appUrl}/login?forgot=true`;
 
-      // Store setup token in Firestore
-      await addDoc(collection(db, 'setupTokens'), {
-        email: email,
-        token: setupToken,
-        expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-        createdAt: serverTimestamp(),
-        used: false,
-        type: 'employee_welcome'
-      });
-    }
+    let html = '';
+    let subject = '';
 
-    console.log('📧 Sending welcome email via Microsoft Graph');
+    // If password is set by admin, send different email
+    if (passwordSet && password) {
+      subject = `🎉 Velkommen til ${companyName || 'MAVI Logistikk AS'}! Din konto er klar`;
+      
+      html = `
+      <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+        <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; margin-bottom: 20px;">
+          <h1 style="color: white; margin: 0; font-size: 28px; text-align: center;">🎉 Velkommen til ${companyName || 'MAVI Logistikk AS'}!</h1>
+        </div>
+        
+        <div style="background: #f8fafc; padding: 25px; border-radius: 8px; margin-bottom: 20px;">
+          <h2 style="color: #2d3748; margin-top: 0;">Hei ${displayName}! 👋</h2>
+          <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
+            Vi er glade for å ha deg med på laget! Din konto er nå opprettet i DriftPro-systemet og er klar til bruk.
+          </p>
+          <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
+            <strong>Din e-postadresse:</strong> ${email}<br>
+            <strong>Din stilling:</strong> ${position || 'Ansatt'}<br>
+            <strong>Avdeling:</strong> ${departmentName || 'Ikke tildelt'}
+          </p>
+        </div>
 
-    // Create welcome email HTML with password setup link
-    const html = `
+        <div style="background: #e6fffa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #38b2ac;">
+          <h3 style="color: #234e52; margin-top: 0;">🔐 Ditt passord</h3>
+          <p style="color: #2c7a7b; font-size: 16px; line-height: 1.6; margin-bottom: 15px;">
+            Administrator har satt opp et passord for din konto. Du kan logge inn med følgende:
+          </p>
+          <div style="background: #ffffff; padding: 15px; border-radius: 6px; border: 2px solid #38b2ac; margin: 15px 0;">
+            <p style="margin: 0; color: #234e52; font-size: 14px; font-weight: 600; margin-bottom: 8px;">E-post:</p>
+            <p style="margin: 0; color: #2c7a7b; font-size: 16px; font-family: monospace;">${email}</p>
+            <p style="margin: 15px 0 0 0; color: #234e52; font-size: 14px; font-weight: 600; margin-bottom: 8px;">Passord:</p>
+            <p style="margin: 0; color: #2c7a7b; font-size: 16px; font-family: monospace; letter-spacing: 2px;">${password}</p>
+          </div>
+          <p style="color: #2c7a7b; font-size: 14px; margin-top: 15px; margin-bottom: 0;">
+            <strong>💡 Tips:</strong> Du kan endre passordet ditt når som helst ved å bruke "Glemt passord" på innloggingssiden.
+          </p>
+        </div>
+
+        <div style="background: #f0f9ff; padding: 25px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #3b82f6;">
+          <h3 style="color: #1e3a5f; margin-top: 0;">🚀 Kom i gang</h3>
+          <p style="color: #1e40af; font-size: 16px; line-height: 1.6; margin-bottom: 20px;">
+            Du kan nå logge inn på DriftPro-systemet med passordet over. Klikk på knappene under for å komme i gang:
+          </p>
+          <div style="text-align: center; margin: 25px 0;">
+            <a href="${loginUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4); margin-right: 10px; margin-bottom: 10px;">
+              🔑 Logg inn
+            </a>
+            <a href="${forgotPasswordUrl}" style="display: inline-block; background: #ffffff; color: #667eea; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; border: 2px solid #667eea; margin-bottom: 10px;">
+              🔄 Endre passord
+            </a>
+          </div>
+        </div>
+
+        <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
+          <h3 style="color: #2d3748; margin-top: 0;">📱 Hva kan du gjøre i DriftPro?</h3>
+          <ul style="color: #4a5568; font-size: 15px; line-height: 1.6;">
+            <li>Se din personlige profil og arbeidsinformasjon</li>
+            <li>Be om ferie og fravær</li>
+            <li>Se bedriftsnyheter og varsler</li>
+            <li>Kommunisere med kollegaer</li>
+            <li>Se arbeidsplaner og oppgaver</li>
+          </ul>
+        </div>
+
+        <div style="background: #fff5f5; padding: 20px; border-radius: 8px; border-left: 4px solid #fc8181;">
+          <h3 style="color: #742a2a; margin-top: 0;">❓ Trenger du hjelp?</h3>
+          <p style="color: #9b2c2c; font-size: 15px; line-height: 1.6; margin-bottom: 0;">
+            Hvis du har spørsmål eller trenger hjelp med å komme i gang, ikke nøl med å ta kontakt med din ${adminName || 'administrator'} eller IT-avdelingen.
+          </p>
+        </div>
+
+        <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
+          <p style="color: #718096; font-size: 14px; margin: 0;">
+            Med vennlig hilsen,<br>
+            <strong>${companyName || 'MAVI Logistikk AS'}-teamet</strong>
+          </p>
+          <p style="color: #a0aec0; font-size: 12px; margin: 10px 0 0 0;">
+            Denne e-posten ble sendt automatisk fra DriftPro-systemet
+          </p>
+        </div>
+      </div>
+    `;
+    } else {
+      // Password not set - send setup link email
+      subject = `🎉 Velkommen til ${companyName || 'MAVI Logistikk AS'}! Sett opp ditt passord`;
+      
+      // Use provided setupUrl or generate new token
+      let finalSetupUrl = setupUrl;
+      if (!finalSetupUrl) {
+        // Generate setup token for password setup
+        const setupToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        finalSetupUrl = `${appUrl}/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
+
+        // Store setup token in Firestore
+        await addDoc(collection(db, 'setupTokens'), {
+          email: email,
+          token: setupToken,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          createdAt: serverTimestamp(),
+          used: false,
+          type: 'employee_welcome'
+        });
+      }
+
+      html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; margin-bottom: 20px;">
           <h1 style="color: white; margin: 0; font-size: 28px; text-align: center;">🎉 Velkommen til ${companyName || 'Bedriften'}!</h1>
@@ -128,44 +219,9 @@ export async function POST(request: NextRequest) {
         </div>
       </div>
     `;
+    }
 
-    // Create text version of the email
-    const text = `
-🎉 Velkommen til ${companyName || 'Bedriften'}!
-
-Hei ${displayName}!
-
-Vi er glade for å ha deg med på laget! Din konto er nå opprettet i DriftPro-systemet.
-
-Din informasjon:
-- E-postadresse: ${email}
-- Stilling: ${position || 'Ansatt'}
-- Avdeling: ${departmentName || 'Ikke tildelt'}
-
-🔐 Sett opp ditt passord:
-For å komme i gang må du først sette opp et passord for din konto.
-
-Klikk på denne lenken for å sette opp passordet:
-${finalSetupUrl}
-
-Viktig: Denne lenken er gyldig i 7 dager. Hvis lenken ikke fungerer, kontakt din administrator.
-
-📱 Hva kan du gjøre i DriftPro?
-- Se din personlige profil og arbeidsinformasjon
-- Be om ferie og fravær
-- Se bedriftsnyheter og varsler
-- Kommunisere med kollegaer
-- Se arbeidsplaner og oppgaver
-
-❓ Trenger du hjelp?
-Hvis du har spørsmål eller trenger hjelp med å komme i gang, ikke nøl med å ta kontakt med din ${adminName || 'administrator'} eller IT-avdelingen.
-
-Med vennlig hilsen,
-${companyName || 'Bedriften'}-teamet
-
----
-Denne e-posten ble sendt automatisk fra DriftPro-systemet
-    `;
+    console.log('📧 Sending welcome email via Microsoft Graph');
 
     // Send email via Microsoft Graph API
     const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
@@ -176,7 +232,7 @@ Denne e-posten ble sendt automatisk fra DriftPro-systemet
       },
       body: JSON.stringify({
         message: {
-          subject: `🎉 Velkommen til ${companyName || 'Bedriften'}! Sett opp ditt passord`,
+          subject: subject,
           body: {
             contentType: 'HTML',
             content: html
