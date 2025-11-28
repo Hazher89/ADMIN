@@ -388,61 +388,119 @@ export async function POST(request: NextRequest) {
               console.log('⚠️ No UID in Firestore, user may not exist in Firebase Auth yet');
             }
             
-            // CRITICAL: Delete existing user from Firebase Auth if it exists
-            // Try multiple methods to ensure deletion
+            // CRITICAL: ALWAYS check if user exists in Firebase Auth FIRST, then delete if they do
+            // This ensures we don't try to create a user that already exists
+            let userExistsInAuth = false;
+            let existingAuthUid: string | null = null;
+            
+            // Step 1: Check if user exists in Firebase Auth
+            if (adminAuth) {
+              try {
+                const existingUser = await adminAuth.getUserByEmail(tokenData.email);
+                userExistsInAuth = true;
+                existingAuthUid = existingUser.uid;
+                console.log('⚠️ User EXISTS in Firebase Auth:', existingUser.uid);
+              } catch (checkError: any) {
+                if (checkError.code === 'auth/user-not-found') {
+                  userExistsInAuth = false;
+                  console.log('✅ User does NOT exist in Firebase Auth (good, can create new)');
+                } else {
+                  console.warn('⚠️ Error checking if user exists in Firebase Auth:', checkError);
+                  // Assume user might exist, try to delete anyway
+                  userExistsInAuth = true;
+                }
+              }
+            } else {
+              // No Admin SDK, try to check via cleanup API
+              console.log('⚠️ No Admin SDK available, will try cleanup API to check/delete user');
+              userExistsInAuth = true; // Assume user exists to be safe
+            }
+            
+            // Step 2: Delete user from Firebase Auth if they exist
             let userDeletedFromAuth = false;
             
-            // Method 1: Try via cleanup API (handles both Firestore and Auth)
-            try {
-              const deleteResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/api/cleanup-firebase`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  action: 'delete_user_completely',
-                  userId: userDoc.id,
-                  email: tokenData.email
-                }),
-              });
-              
-              if (deleteResponse.ok) {
-                const deleteData = await deleteResponse.json();
-                if (deleteData.authDeleted) {
+            if (userExistsInAuth) {
+              // Method 1: Try direct Admin SDK deletion (fastest and most reliable)
+              if (adminAuth && existingAuthUid) {
+                try {
+                  await adminAuth.deleteUser(existingAuthUid);
                   userDeletedFromAuth = true;
-                  console.log('✅ Deleted existing Firebase Auth user via cleanup API:', deleteData);
-                } else {
-                  console.warn('⚠️ Cleanup API did not delete from Firebase Auth:', deleteData.authError);
+                  console.log('✅ Deleted existing Firebase Auth user via Admin SDK (by UID):', existingAuthUid);
+                } catch (deleteError: any) {
+                  if (deleteError.code === 'auth/user-not-found') {
+                    userDeletedFromAuth = true; // Already deleted
+                    console.log('ℹ️ User already deleted from Firebase Auth');
+                  } else {
+                    console.warn('⚠️ Could not delete via Admin SDK (UID):', deleteError);
+                    // Try by email as fallback
+                    try {
+                      const userByEmail = await adminAuth.getUserByEmail(tokenData.email);
+                      await adminAuth.deleteUser(userByEmail.uid);
+                      userDeletedFromAuth = true;
+                      console.log('✅ Deleted existing Firebase Auth user via Admin SDK (by email):', userByEmail.uid);
+                    } catch (emailError: any) {
+                      console.warn('⚠️ Could not delete via Admin SDK (email):', emailError);
+                    }
+                  }
                 }
-              } else {
-                const errorData = await deleteResponse.json().catch(() => ({}));
-                console.warn('⚠️ Cleanup API failed:', errorData);
+              } else if (adminAuth) {
+                // Try by email if we don't have UID
+                try {
+                  const userByEmail = await adminAuth.getUserByEmail(tokenData.email);
+                  await adminAuth.deleteUser(userByEmail.uid);
+                  userDeletedFromAuth = true;
+                  console.log('✅ Deleted existing Firebase Auth user via Admin SDK (by email):', userByEmail.uid);
+                } catch (emailError: any) {
+                  if (emailError.code === 'auth/user-not-found') {
+                    userDeletedFromAuth = true; // Already deleted
+                    console.log('ℹ️ User already deleted from Firebase Auth');
+                  } else {
+                    console.warn('⚠️ Could not delete via Admin SDK (email):', emailError);
+                  }
+                }
               }
-            } catch (deleteError) {
-              console.warn('⚠️ Error calling cleanup API:', deleteError);
+              
+              // Method 2: Try via cleanup API as fallback
+              if (!userDeletedFromAuth) {
+                try {
+                  const deleteResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/api/cleanup-firebase`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      action: 'delete_user_completely',
+                      userId: userDoc.id,
+                      email: tokenData.email
+                    }),
+                  });
+                  
+                  if (deleteResponse.ok) {
+                    const deleteData = await deleteResponse.json();
+                    if (deleteData.authDeleted) {
+                      userDeletedFromAuth = true;
+                      console.log('✅ Deleted existing Firebase Auth user via cleanup API:', deleteData);
+                    } else {
+                      console.warn('⚠️ Cleanup API did not delete from Firebase Auth:', deleteData.authError);
+                    }
+                  } else {
+                    const errorData = await deleteResponse.json().catch(() => ({}));
+                    console.warn('⚠️ Cleanup API failed:', errorData);
+                  }
+                } catch (deleteError) {
+                  console.warn('⚠️ Error calling cleanup API:', deleteError);
+                }
+              }
+            } else {
+              // User doesn't exist in Firebase Auth, we're good to go
+              userDeletedFromAuth = true;
+              console.log('✅ User does not exist in Firebase Auth, can create new user');
             }
             
-            // Method 2: Try direct Admin SDK deletion if available
-            if (!userDeletedFromAuth && adminAuth) {
-              try {
-                // Try to get user by email first
-                const existingUser = await adminAuth.getUserByEmail(tokenData.email);
-                await adminAuth.deleteUser(existingUser.uid);
-                userDeletedFromAuth = true;
-                console.log('✅ Deleted existing Firebase Auth user via Admin SDK:', existingUser.uid);
-              } catch (adminError: any) {
-                if (adminError.code === 'auth/user-not-found') {
-                  userDeletedFromAuth = true; // User doesn't exist, consider it deleted
-                  console.log('ℹ️ User not found in Firebase Auth (already deleted)');
-                } else {
-                  console.warn('⚠️ Could not delete via Admin SDK:', adminError);
-                }
-              }
-            }
-            
-            // Wait a bit for Firebase to process the deletion
-            if (userDeletedFromAuth) {
-              await new Promise(resolve => setTimeout(resolve, 1000)); // Wait 1 second
+            // Step 3: Wait for Firebase to process the deletion (important!)
+            if (userExistsInAuth && userDeletedFromAuth) {
+              console.log('⏳ Waiting for Firebase to process deletion...');
+              await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2 seconds
             }
             
             // Now create new Firebase Auth user with the password they provided
@@ -483,56 +541,67 @@ export async function POST(request: NextRequest) {
                 error: createError
               });
               
-              // If still email-already-in-use, try one more time with Admin SDK
+              // If still email-already-in-use, try multiple retry attempts
               if (createError?.code === 'auth/email-already-in-use') {
-                console.log('⚠️ User still exists after deletion attempt. Trying Admin SDK deletion...');
+                console.log('⚠️ User still exists after deletion attempt. Trying aggressive deletion with retries...');
                 
                 if (adminAuth) {
-                  try {
-                    // Force delete via Admin SDK
-                    const existingUser = await adminAuth.getUserByEmail(tokenData.email);
-                    await adminAuth.deleteUser(existingUser.uid);
-                    console.log('✅ Force deleted user via Admin SDK:', existingUser.uid);
-                    
-                    // Wait a bit
-                    await new Promise(resolve => setTimeout(resolve, 1500));
-                    
-                    // Try creating again
-                    const retryCredential = await createUserWithEmailAndPassword(auth, tokenData.email, password);
-                    console.log('✅ Created Firebase Auth user after force deletion:', retryCredential.user.uid);
-                    
-                    // Update user profile
-                    await updateProfile(retryCredential.user, {
-                      displayName: userData.displayName || userData.name || 'Ny bruker'
-                    });
-                    
-                    // Update Firestore with UID and password status
-                    await updateDoc(userDoc.ref, {
-                      uid: retryCredential.user.uid,
-                      status: 'active',
-                      passwordSet: true,
-                      passwordSetAt: new Date().toISOString(),
-                      updatedAt: new Date().toISOString()
-                    });
-                    
-                    await updateDoc(tokenDoc.ref, {
-                      used: true,
-                      usedAt: new Date().toISOString()
-                    });
-                    
-                    return NextResponse.json({
-                      success: true,
-                      message: 'Password set up successfully',
-                      userId: retryCredential.user.uid,
-                      provider: 'firebase_client_sdk_force_delete_and_recreate'
-                    });
-                  } catch (retryError: any) {
-                    console.error('❌ Error after force deletion retry:', retryError);
-                    return NextResponse.json({
-                      error: 'Could not set password. User still exists in Firebase Auth. Please contact administrator.',
-                      details: 'The user account exists in Firebase Auth but could not be deleted. Please ensure the user is deleted from Firebase Auth manually.',
-                      requiresAdmin: true
-                    }, { status: 500 });
+                  // Try up to 3 times to delete and recreate
+                  for (let attempt = 1; attempt <= 3; attempt++) {
+                    try {
+                      console.log(`🔄 Deletion retry attempt ${attempt}/3...`);
+                      
+                      // Force delete via Admin SDK
+                      const existingUser = await adminAuth.getUserByEmail(tokenData.email);
+                      await adminAuth.deleteUser(existingUser.uid);
+                      console.log(`✅ Force deleted user via Admin SDK (attempt ${attempt}):`, existingUser.uid);
+                      
+                      // Wait longer between attempts
+                      await new Promise(resolve => setTimeout(resolve, 2000 + (attempt * 500))); // 2s, 2.5s, 3s
+                      
+                      // Try creating again
+                      const retryCredential = await createUserWithEmailAndPassword(auth, tokenData.email, password);
+                      console.log('✅ Created Firebase Auth user after force deletion:', retryCredential.user.uid);
+                      
+                      // Update user profile
+                      await updateProfile(retryCredential.user, {
+                        displayName: userData.displayName || userData.name || 'Ny bruker'
+                      });
+                      
+                      // Update Firestore with UID and password status
+                      await updateDoc(userDoc.ref, {
+                        uid: retryCredential.user.uid,
+                        status: 'active',
+                        passwordSet: true,
+                        passwordSetAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                      });
+                      
+                      await updateDoc(tokenDoc.ref, {
+                        used: true,
+                        usedAt: new Date().toISOString()
+                      });
+                      
+                      return NextResponse.json({
+                        success: true,
+                        message: 'Password set up successfully',
+                        userId: retryCredential.user.uid,
+                        provider: `firebase_client_sdk_force_delete_and_recreate_attempt_${attempt}`
+                      });
+                    } catch (retryError: any) {
+                      console.error(`❌ Error after force deletion retry attempt ${attempt}:`, retryError);
+                      
+                      if (attempt === 3) {
+                        // Last attempt failed
+                        return NextResponse.json({
+                          error: 'Could not set password. User still exists in Firebase Auth after multiple deletion attempts. Please contact administrator.',
+                          details: 'The user account exists in Firebase Auth but could not be deleted after 3 attempts. Please ensure the user is deleted from Firebase Auth manually.',
+                          requiresAdmin: true,
+                          attempts: 3
+                        }, { status: 500 });
+                      }
+                      // Continue to next attempt
+                    }
                   }
                 } else {
                   return NextResponse.json({
