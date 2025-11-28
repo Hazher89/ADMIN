@@ -345,115 +345,13 @@ export async function POST(request: NextRequest) {
       console.error('❌ Firebase Auth error:', authError);
       
       if (authError instanceof Error && (authError.message.includes('email-already-in-use') || (authError as any).code === 'auth/email-already-in-use')) {
-        console.log('⚠️ Firebase Auth user already exists, checking if password was previously set...');
+        console.log('⚠️ Firebase Auth user already exists - will update password (NO DELETION)');
         
-        // Check if user has already set password in Firestore
-        const passwordAlreadySet = userData.passwordSet === true;
+        // User already exists in Firebase Auth - we need Admin SDK to update password
+        // NO DELETION - just update the password directly
+        console.log('🔐 User exists in Firebase Auth - updating password with Admin SDK (no deletion)...');
         
-        if (!passwordAlreadySet) {
-          // User exists in Firebase Auth but hasn't set password yet - this is a fresh user
-          // We need Admin SDK to either delete and recreate, or update password
-          // If Admin SDK is not available, we MUST configure it
-          console.log('🔄 User exists in Firebase Auth but password not set - need Admin SDK to set password directly');
-          
-          // Try to initialize Admin SDK if not available
-          if (!adminAuth) {
-            console.log('⚠️ Admin SDK not initialized, attempting to initialize...');
-            try {
-              if (admin.apps.length === 0) {
-                if (process.env.FIREBASE_PRIVATE_KEY && process.env.FIREBASE_CLIENT_EMAIL) {
-                  admin.initializeApp({
-                    credential: admin.credential.cert({
-                      projectId: process.env.FIREBASE_PROJECT_ID || 'driftpro-40ccd',
-                      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
-                      privateKey: process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n'),
-                    }),
-                  });
-                  console.log('✅ Firebase Admin SDK initialized in error handler');
-                } else {
-                  console.warn('⚠️ Firebase Admin SDK credentials not found in environment variables');
-                }
-              }
-              if (admin.apps.length > 0) {
-                adminAuth = admin.auth();
-                console.log('✅ Firebase Admin SDK obtained in error handler');
-              }
-            } catch (initError) {
-              console.error('❌ Failed to initialize Admin SDK in error handler:', initError);
-            }
-          }
-          
-          // If Admin SDK is available, delete the existing user and create a new one
-          if (adminAuth) {
-            try {
-              const existingUser = await adminAuth.getUserByEmail(tokenData.email);
-              console.log('🗑️ Deleting existing Firebase Auth user to recreate with password:', existingUser.uid);
-              await adminAuth.deleteUser(existingUser.uid);
-              console.log('✅ Deleted existing Firebase Auth user');
-              
-              // Now create the user with the password
-              try {
-                const newUserCredential = await createUserWithEmailAndPassword(
-                  auth,
-                  tokenData.email,
-                  password
-                );
-                console.log('✅ Firebase Auth user created with password:', newUserCredential.user.uid);
-                
-                // Update user profile
-                await updateProfile(newUserCredential.user, {
-                  displayName: userData.displayName || userData.name || 'Ny bruker'
-                });
-                
-                // Update Firestore with UID and password status
-                await updateDoc(userDoc.ref, {
-                  uid: newUserCredential.user.uid,
-                  status: 'active',
-                  passwordSet: true,
-                  passwordSetAt: new Date().toISOString(),
-                  updatedAt: new Date().toISOString()
-                });
-                
-                // Mark token as used
-                await updateDoc(tokenDoc.ref, {
-                  used: true,
-                  usedAt: new Date().toISOString()
-                });
-                
-                return NextResponse.json({
-                  success: true,
-                  message: 'Password set up successfully',
-                  userId: newUserCredential.user.uid,
-                  provider: 'firebase_client_sdk_after_deletion'
-                });
-              } catch (createError: any) {
-                console.error('❌ Error creating user after deletion:', createError);
-                return NextResponse.json({
-                  error: 'Kunne ikke opprette bruker etter sletting. Prøv igjen.',
-                  details: createError?.message || 'Ukjent feil'
-                }, { status: 500 });
-              }
-            } catch (deleteError: any) {
-              console.error('❌ Error deleting existing user:', deleteError);
-              // If deletion fails, try to update password instead
-              console.log('⚠️ Deletion failed, trying to update password instead...');
-            }
-          } else {
-            // Admin SDK not available - cannot proceed
-            console.error('❌ Admin SDK not available - cannot set password for existing user');
-            return NextResponse.json({
-              error: 'Admin SDK er ikke konfigurert. Kontakt administrator.',
-              details: 'Brukeren eksisterer allerede i Firebase Auth, men Admin SDK er ikke konfigurert. Administrator må konfigurere Firebase Admin SDK for å sette passord direkte.',
-              requiresAdmin: true,
-              requiresConfiguration: true
-            }, { status: 500 });
-          }
-        }
-        
-        // If password was already set, or deletion failed, try to update password using Admin SDK
-        console.log('🔐 Attempting to update password for existing user with Admin SDK...');
-        
-        // CRITICAL: Try to initialize Admin SDK if not available (needed to update password)
+        // Try to initialize Admin SDK if not available
         if (!adminAuth) {
           console.log('⚠️ Admin SDK not initialized, attempting to initialize...');
           try {
@@ -479,6 +377,9 @@ export async function POST(request: NextRequest) {
             console.error('❌ Failed to initialize Admin SDK in error handler:', initError);
           }
         }
+        
+        // Try to update password using Admin SDK (NO DELETION - just update)
+        console.log('🔐 Attempting to update password for existing user with Admin SDK (no deletion)...');
         
         // Try to update password using Admin SDK
         if (adminAuth) {
