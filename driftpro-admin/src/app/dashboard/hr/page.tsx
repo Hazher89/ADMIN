@@ -100,6 +100,8 @@ export default function HRPage() {
     bankAccount: '',
     insuranceNumber: '',
     avatar: '',
+    password: '',
+    confirmPassword: '',
     permissions: {
       dashboard: true,
       employees: false,
@@ -620,6 +622,17 @@ export default function HRPage() {
       return;
     }
 
+    // Validate password if provided
+    if (newEmployee.password && newEmployee.password.length < 6) {
+      alert('Passord må være minst 6 tegn');
+      return;
+    }
+
+    if (newEmployee.password && newEmployee.password !== newEmployee.confirmPassword) {
+      alert('Passordene matcher ikke');
+      return;
+    }
+
     try {
       const employeeData: any = {
         displayName: newEmployee.displayName.trim(),
@@ -721,10 +734,45 @@ export default function HRPage() {
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
-      // Send welcome email to the new employee with password setup link
+      // If password is provided, create Firebase Auth user directly
+      let passwordSet = false;
+      if (newEmployee.password && newEmployee.password.trim()) {
+        try {
+          console.log('🔐 Creating Firebase Auth user with password...');
+          const passwordResponse = await fetch('/api/admin/create-employee-with-password', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: newEmployee.email.trim(),
+              password: newEmployee.password,
+              employeeId: employeeId,
+              displayName: newEmployee.displayName.trim()
+            }),
+          });
+
+          const passwordResult = await passwordResponse.json();
+          if (passwordResponse.ok && passwordResult.success) {
+            console.log('✅ Firebase Auth user created with password:', passwordResult.uid);
+            passwordSet = true;
+          } else {
+            console.error('❌ Failed to create Firebase Auth user:', passwordResult);
+            // Don't fail employee creation, just log the error
+          }
+        } catch (passwordError) {
+          console.error('❌ Error creating Firebase Auth user:', passwordError);
+          // Don't fail employee creation, just log the error
+        }
+      }
+
+      // Send welcome email to the new employee with password setup link (only if password not set)
       let emailSent = false;
       let emailError = null;
-      try {
+      
+      // Only send email if password was NOT set by admin
+      if (!passwordSet) {
+        try {
         const departmentName = departments.find(d => d.id === newEmployee.departmentId)?.name || 'Ikke tildelt';
         const adminName = userProfile?.displayName || 'System Administrator';
         const companyName = 'MAVI Logistikk AS';
@@ -930,10 +978,13 @@ export default function HRPage() {
             emailError = 'Kunne ikke sende e-post. Sjekk at du er logget inn med Microsoft 365 i E-post System.';
           }
         }
-      } catch (emailError) {
-        console.error('❌ Error sending welcome email:', emailError);
-        emailSent = false;
-        emailError = emailError instanceof Error ? emailError.message : 'Ukjent feil';
+        } catch (emailErrorCaught) {
+          console.error('❌ Error sending welcome email:', emailErrorCaught);
+          emailSent = false;
+          if (!emailError) {
+            emailError = emailErrorCaught instanceof Error ? emailErrorCaught.message : 'Ukjent feil';
+          }
+        }
       }
 
       setShowAddModal(false);
@@ -961,6 +1012,8 @@ export default function HRPage() {
         bankAccount: '',
         insuranceNumber: '',
         avatar: '',
+        password: '',
+        confirmPassword: '',
         permissions: {
           dashboard: true,
           employees: false,
@@ -1020,9 +1073,15 @@ export default function HRPage() {
         loadAllData();
       }, 1000);
       
-      const message = emailSent 
-        ? `✅ Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}`
-        : `⚠️ Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email}${emailError ? ` - ${emailError}` : ' - sjekk e-postinnstillinger.'}`;
+      const employeeEmail = newEmployee.email || 'ukjent e-post';
+      let message = '';
+      if (passwordSet) {
+        message = `✅ Ansatt ble lagt til! Passord er satt og brukeren kan logge inn med en gang.`;
+      } else if (emailSent) {
+        message = `✅ Ansatt ble lagt til! Velkomst-e-post med passord-link sendt til ${employeeEmail}`;
+      } else {
+        message = `⚠️ Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${employeeEmail}${emailError ? ` - ${emailError}` : ' - sjekk e-postinnstillinger.'}`;
+      }
       alert(message);
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -3202,6 +3261,31 @@ export default function HRPage() {
                       required
                     />
                   </div>
+                  <div className="form-group">
+                    <label className="form-label">Passord (valgfritt)</label>
+                    <input
+                      type="password"
+                      value={newEmployee.password}
+                      onChange={(e) => setNewEmployee({...newEmployee, password: e.target.value})}
+                      className="form-input"
+                      placeholder="La stå tomt for å sende passord-link på e-post"
+                    />
+                    <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
+                      Hvis du setter passord her, kan ansatt logge inn med en gang. Hvis tomt, får ansatt en link på e-post for å sette passord.
+                    </small>
+                  </div>
+                  {newEmployee.password && (
+                    <div className="form-group">
+                      <label className="form-label">Bekreft passord</label>
+                      <input
+                        type="password"
+                        value={newEmployee.confirmPassword}
+                        onChange={(e) => setNewEmployee({...newEmployee, confirmPassword: e.target.value})}
+                        className="form-input"
+                        placeholder="Bekreft passord"
+                      />
+                    </div>
+                  )}
                   <div className="form-group">
                     <label className="form-label">Telefon</label>
                     <input
