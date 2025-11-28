@@ -330,12 +330,12 @@ async function deleteUserCompletely(email?: string, userId?: string) {
           }
         }
       } else {
-        // No UID, try by email
+        // No UID, try by email - ALWAYS try to delete by email even if no UID
         try {
           const userRecord = await adminAuth.getUserByEmail(userData.email);
           await adminAuth.deleteUser(userRecord.uid);
           authDeleted = true;
-          console.log(`🗑️ Deleted user from Firebase Auth by email: ${userData.email}`);
+          console.log(`🗑️ Deleted user from Firebase Auth by email: ${userData.email} (UID: ${userRecord.uid})`);
         } catch (error: any) {
           if (error.code === 'auth/user-not-found') {
             console.log(`ℹ️ User ${userData.email} not found in Firebase Auth (already deleted)`);
@@ -343,6 +343,19 @@ async function deleteUserCompletely(email?: string, userId?: string) {
           } else {
             authError = error.message;
             console.error('Error deleting user from Firebase Auth by email:', error);
+            // Try to list all users and find by email as last resort
+            try {
+              const listUsersResult = await adminAuth.listUsers(1000);
+              const foundUser = listUsersResult.users.find(u => u.email === userData.email);
+              if (foundUser) {
+                await adminAuth.deleteUser(foundUser.uid);
+                authDeleted = true;
+                console.log(`🗑️ Deleted user from Firebase Auth via listUsers: ${userData.email} (UID: ${foundUser.uid})`);
+                authError = null;
+              }
+            } catch (listError) {
+              console.error('Error listing users for deletion:', listError);
+            }
           }
         }
       }
