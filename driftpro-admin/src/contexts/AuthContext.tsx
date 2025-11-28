@@ -405,6 +405,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // ONLY NOW: Proceed with Firebase authentication
       const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
+      // CRITICAL: Ensure UID is set in Firestore after successful login
+      // This handles cases where UID wasn't set during password setup
+      if (userCredential.user.uid && userData.uid !== userCredential.user.uid) {
+        console.log('⚠️ UID mismatch detected, updating Firestore with correct UID');
+        await updateDoc(doc(db, 'users', userDoc.id), {
+          uid: userCredential.user.uid,
+          updatedAt: new Date().toISOString()
+        });
+      }
+      
     } catch (error: unknown) {
       console.error('🚨 LOGIN ERROR:', error);
       throw new Error(error instanceof Error ? error.message : 'En feil oppstod');
