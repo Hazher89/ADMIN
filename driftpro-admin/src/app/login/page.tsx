@@ -28,6 +28,7 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
   // Force dark mode on login page and detect mobile
   useEffect(() => {
