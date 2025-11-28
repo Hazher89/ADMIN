@@ -375,163 +375,62 @@ export async function POST(request: NextRequest) {
         if (!process.env.FIREBASE_PRIVATE_KEY || !process.env.FIREBASE_CLIENT_EMAIL || !adminAuth) {
             console.warn('⚠️ Firebase Admin SDK credentials not configured');
             
-            // If user has UID, use forgot-password API instead (better error handling)
-            if (userData.uid) {
-              console.log('📧 Admin SDK not available, using forgot-password API instead');
-              
+            // CRITICAL: User is trying to SET their password via setup link, not reset it.
+            // We need to delete the existing Firebase Auth user and create a new one with the provided password.
+            // This is the only way to set password directly without Admin SDK.
+            
+            console.log('🔄 Admin SDK not available. Attempting to delete and recreate Firebase Auth user with new password...');
+            
+            // Try to delete existing user from Firebase Auth using cleanup API
+            let existingUid = userData.uid;
+            if (!existingUid) {
+              // Try to get UID from Firebase Auth if we can
+              console.log('⚠️ No UID in Firestore, user may not exist in Firebase Auth yet');
+            }
+            
+            // Delete existing user from Firebase Auth if it exists
+            if (existingUid) {
               try {
-                // Use the forgot-password API which has better email handling
-                const forgotPasswordResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/api/forgot-password`, {
+                const deleteResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/api/cleanup-firebase`, {
                   method: 'POST',
                   headers: {
                     'Content-Type': 'application/json',
                   },
                   body: JSON.stringify({
+                    action: 'delete_user_completely',
+                    userId: userDoc.id,
                     email: tokenData.email
-                  })
+                  }),
                 });
                 
-                if (forgotPasswordResponse.ok) {
-                  const forgotPasswordData = await forgotPasswordResponse.json();
-                  console.log('✅ Password reset email sent via forgot-password API');
-                  
-                  // Update Firestore status
-                  await updateDoc(userDoc.ref, {
-                    status: 'active',
-                    passwordSet: false, // Not set yet, user needs to use reset link
-                    updatedAt: new Date().toISOString()
-                  });
-                  
-                  await updateDoc(tokenDoc.ref, {
-                    used: true,
-                    usedAt: new Date().toISOString()
-                  });
-                  
-                  return NextResponse.json({
-                    success: true,
-                    message: 'Password reset email sent. Please check your email to set your password.',
-                    userId: userData.uid,
-                    provider: 'forgot_password_api',
-                    emailSent: true
-                  });
+                if (deleteResponse.ok) {
+                  const deleteData = await deleteResponse.json();
+                  console.log('✅ Deleted existing Firebase Auth user:', deleteData);
                 } else {
-                  const errorData = await forgotPasswordResponse.json().catch(() => ({}));
-                  console.error('❌ Forgot-password API error:', errorData);
-                  throw new Error(errorData.error || 'Failed to send password reset email');
+                  console.warn('⚠️ Could not delete existing user from Firebase Auth (may not exist)');
                 }
-              } catch (resetEmailError: any) {
-                console.error('❌ Error sending password reset email via API:', resetEmailError);
-                
-                // CRITICAL: Since user already exists in Firebase Auth but Admin SDK is not available,
-                // we need to try a different approach. The user is trying to SET their password via the setup link,
-                // not reset it. So we should try to create the user account again, which will fail, but then
-                // we can try to delete and recreate, OR we can use the password they provided to create a new account.
-                
-                // Actually, the best approach: Since the user already exists in Firebase Auth,
-                // and we can't update their password without Admin SDK, we MUST send them a password reset email.
-                // But first, let's try to use the password they provided to create a NEW account (which will fail),
-                // then we'll know for sure they exist, and we'll send reset email.
-                
-                // Try direct Firebase sendPasswordResetEmail
-                try {
-                  await sendPasswordResetEmail(auth, tokenData.email, {
-                    url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/reset-password`,
-                    handleCodeInApp: false
-                  });
-                  
-                  console.log('✅ Password reset email sent successfully (direct Firebase)');
-                  
-                  // Update Firestore with UID if we have it
-                  const updateData: any = {
-                    status: 'active',
-                    passwordSet: false,
-                    updatedAt: new Date().toISOString()
-                  };
-                  
-                  // If we have UID, keep it, otherwise try to get it from Firebase Auth
-                  if (!userData.uid) {
-                    // Try to get UID from Firebase Auth using Admin SDK if available
-                    if (adminAuth) {
-                      try {
-                        const existingUser = await adminAuth.getUserByEmail(tokenData.email);
-                        updateData.uid = existingUser.uid;
-                        console.log('✅ Got UID from Firebase Auth:', existingUser.uid);
-                      } catch (getUserError) {
-                        console.error('❌ Could not get UID from Firebase Auth:', getUserError);
-                      }
-                    }
-                  } else {
-                    updateData.uid = userData.uid;
-                  }
-                  
-                  await updateDoc(userDoc.ref, updateData);
-                  
-                  await updateDoc(tokenDoc.ref, {
-                    used: true,
-                    usedAt: new Date().toISOString()
-                  });
-                  
-                  return NextResponse.json({
-                    success: true,
-                    message: 'Password reset email sent. Please check your email to set your password.',
-                    userId: updateData.uid || userData.uid || 'unknown',
-                    provider: 'firebase_password_reset_email',
-                    emailSent: true
-                  });
-                } catch (directEmailError: any) {
-                  console.error('❌ Error sending password reset email directly:', {
-                    code: directEmailError?.code,
-                    message: directEmailError?.message,
-                    error: directEmailError
-                  });
-                  
-                  // If user doesn't exist in Firebase Auth, create them with the password they provided!
-                  if (directEmailError?.code === 'auth/user-not-found') {
-                    console.log('⚠️ User not found in Firebase Auth, creating account with provided password');
-                    
-                    try {
-                      // Create user in Firebase Auth with the password they provided
-                      const newUserCredential = await createUserWithEmailAndPassword(auth, tokenData.email, password);
-                      console.log('✅ Created Firebase Auth user with provided password:', newUserCredential.user.uid);
-                      
-                      // Update user profile
-                      await updateProfile(newUserCredential.user, {
-                        displayName: userData.displayName || userData.name || 'Ny bruker'
-                      });
-                      
-                      // Update Firestore with UID and password status
-                      await updateDoc(userDoc.ref, {
-                        uid: newUserCredential.user.uid,
-                        status: 'active',
-                        passwordSet: true,
-                        passwordSetAt: new Date().toISOString(),
-                        updatedAt: new Date().toISOString()
-                      });
-                      
-                      await updateDoc(tokenDoc.ref, {
-                        used: true,
-                        usedAt: new Date().toISOString()
-                      });
-                      
-                      return NextResponse.json({
-                        success: true,
-                        message: 'Password set up successfully',
-                        userId: newUserCredential.user.uid,
-                        provider: 'firebase_client_sdk_after_reset_failed'
-                      });
-                    } catch (createError: any) {
-                      console.error('❌ Error creating Firebase Auth user:', createError);
-                      // Fall through to update status anyway
-                    }
-                  }
-                  // Fall through to update status anyway
-                }
+              } catch (deleteError) {
+                console.warn('⚠️ Error deleting existing user (may not exist):', deleteError);
               }
+            }
+            
+            // Now create new Firebase Auth user with the password they provided
+            try {
+              console.log('🔐 Creating new Firebase Auth user with provided password...');
+              const newUserCredential = await createUserWithEmailAndPassword(auth, tokenData.email, password);
+              console.log('✅ Created Firebase Auth user with provided password:', newUserCredential.user.uid);
               
-              // Update status even if email failed
+              // Update user profile
+              await updateProfile(newUserCredential.user, {
+                displayName: userData.displayName || userData.name || 'Ny bruker'
+              });
+              
+              // Update Firestore with UID and password status
               await updateDoc(userDoc.ref, {
+                uid: newUserCredential.user.uid,
                 status: 'active',
-                passwordSet: false,
+                passwordSet: true,
+                passwordSetAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
               });
               
@@ -542,105 +441,63 @@ export async function POST(request: NextRequest) {
               
               return NextResponse.json({
                 success: true,
-                message: 'Setup link processed. Please use "Forgot Password" on the login page to set your password.',
-                userId: userData.uid,
-                provider: 'firebase_admin_sdk_fallback',
-                warning: 'Password reset email could not be sent. Please use the "Forgot Password" feature on the login page.',
-                requiresForgotPassword: true
+                message: 'Password set up successfully',
+                userId: newUserCredential.user.uid,
+                provider: 'firebase_client_sdk_delete_and_recreate'
               });
+            } catch (createError: any) {
+              console.error('❌ Error creating Firebase Auth user after deletion:', {
+                code: createError?.code,
+                message: createError?.message,
+                error: createError
+              });
+              
+              // If still email-already-in-use, the deletion didn't work or user was recreated
+              if (createError?.code === 'auth/email-already-in-use') {
+                return NextResponse.json({
+                  error: 'Could not set password. User still exists in Firebase Auth. Please contact administrator.',
+                  details: 'The user account exists in Firebase Auth but could not be updated. Admin SDK credentials may be required.',
+                  requiresAdmin: true
+                }, { status: 500 });
+              }
+              
+              throw createError;
             }
-            
-            // No UID, try to use forgot-password API
-            console.log('📧 User has no UID, using forgot-password API');
+          } else {
+            // No UID - user doesn't exist in Firebase Auth yet, create them
+            console.log('🔐 User has no UID, creating new Firebase Auth user with provided password...');
             try {
-              // Use the forgot-password API which has better email handling
-              const forgotPasswordResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/api/forgot-password`, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  email: tokenData.email
-                })
+              const newUserCredential = await createUserWithEmailAndPassword(auth, tokenData.email, password);
+              console.log('✅ Created Firebase Auth user with provided password:', newUserCredential.user.uid);
+              
+              // Update user profile
+              await updateProfile(newUserCredential.user, {
+                displayName: userData.displayName || userData.name || 'Ny bruker'
               });
               
-              if (forgotPasswordResponse.ok) {
-                console.log('✅ Password reset email sent via forgot-password API (no UID)');
-                
-                await updateDoc(userDoc.ref, {
-                  status: 'active',
-                  passwordSet: false,
-                  updatedAt: new Date().toISOString()
-                });
-                
-                await updateDoc(tokenDoc.ref, {
-                  used: true,
-                  usedAt: new Date().toISOString()
-                });
-                
-                return NextResponse.json({
-                  success: true,
-                  message: 'Password reset email sent. Please check your email to set your password.',
-                  provider: 'forgot_password_api',
-                  emailSent: true
-                });
-              } else {
-                const errorData = await forgotPasswordResponse.json().catch(() => ({}));
-                console.error('❌ Forgot-password API error (no UID):', errorData);
-                throw new Error(errorData.error || 'Failed to send password reset email');
-              }
-            } catch (resetEmailError: any) {
-              console.error('❌ Error sending password reset email via API (no UID):', resetEmailError);
+              // Update Firestore with UID and password status
+              await updateDoc(userDoc.ref, {
+                uid: newUserCredential.user.uid,
+                status: 'active',
+                passwordSet: true,
+                passwordSetAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString()
+              });
               
-              // Try direct Firebase sendPasswordResetEmail as fallback
-              try {
-                await sendPasswordResetEmail(auth, tokenData.email, {
-                  url: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/reset-password`,
-                  handleCodeInApp: false
-                });
-                
-                console.log('✅ Password reset email sent successfully (direct Firebase, no UID)');
-                
-                await updateDoc(userDoc.ref, {
-                  status: 'active',
-                  passwordSet: false,
-                  updatedAt: new Date().toISOString()
-                });
-                
-                await updateDoc(tokenDoc.ref, {
-                  used: true,
-                  usedAt: new Date().toISOString()
-                });
-                
-                return NextResponse.json({
-                  success: true,
-                  message: 'Password reset email sent. Please check your email to set your password.',
-                  provider: 'firebase_password_reset_email',
-                  emailSent: true
-                });
-              } catch (directEmailError: any) {
-                console.error('❌ Error sending password reset email directly (no UID):', directEmailError);
-                
-                // Update status anyway
-                await updateDoc(userDoc.ref, {
-                  status: 'active',
-                  passwordSet: false,
-                  updatedAt: new Date().toISOString()
-                });
-                
-                await updateDoc(tokenDoc.ref, {
-                  used: true,
-                  usedAt: new Date().toISOString()
-                });
-                
-                return NextResponse.json({
-                  success: true,
-                  message: 'Setup link processed. Please use "Forgot Password" on the login page to set your password.',
-                  provider: 'firebase_admin_sdk_fallback',
-                  warning: 'Password reset email could not be sent. Please use the "Forgot Password" feature on the login page to set your password.',
-                  requiresForgotPassword: true
-                });
-              }
+              await updateDoc(tokenDoc.ref, {
+                used: true,
+                usedAt: new Date().toISOString()
+              });
+              
+              return NextResponse.json({
+                success: true,
+                message: 'Password set up successfully',
+                userId: newUserCredential.user.uid,
+                provider: 'firebase_client_sdk_no_uid'
+              });
+            } catch (createError: any) {
+              console.error('❌ Error creating Firebase Auth user (no UID):', createError);
+              throw createError;
             }
           }
           
@@ -879,8 +736,7 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error in setup-password API:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
