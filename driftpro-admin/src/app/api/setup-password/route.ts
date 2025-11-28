@@ -415,95 +415,28 @@ export async function POST(request: NextRequest) {
               error: adminError
             });
             
-            // If Admin SDK update fails, try to send password reset email as fallback
-            console.log('⚠️ Admin SDK password update failed, trying password reset email as fallback...');
-            try {
-              await sendPasswordResetEmail(auth, tokenData.email);
-              console.log('✅ Password reset email sent as fallback');
-              
-              await updateDoc(userDoc.ref, {
-                status: 'active',
-                passwordSet: false,
-                updatedAt: new Date().toISOString()
-              });
-              
-              await updateDoc(tokenDoc.ref, {
-                used: true,
-                usedAt: new Date().toISOString()
-              });
-              
-              return NextResponse.json({
-                success: true,
-                message: 'Password reset email sent. Please check your email to set your password.',
-                provider: 'firebase_password_reset_email_fallback',
-                emailSent: true,
-                warning: 'Password could not be updated directly. A password reset email has been sent to your email address.'
-              });
-            } catch (emailError: any) {
-              console.error('❌ Error sending password reset email:', emailError);
-              return NextResponse.json({
-                error: 'Could not set password. User exists in Firebase Auth but password could not be updated.',
-                details: `Admin SDK failed: ${adminError?.message || 'Unknown error'}. Password reset email also failed. Please contact administrator or use the "Forgot Password" feature on the login page.`,
-                requiresAdmin: true,
-                suggestion: 'Use "Forgot Password" on the login page'
-              }, { status: 500 });
-            }
-          }
-        } else {
-          // No Admin SDK available - try to get UID from Firebase Auth and update Firestore
-          console.log('⚠️ Admin SDK not available, trying to get UID from Firebase Auth...');
-          try {
-            // Try to sign in with a temporary password to get the UID
-            // Actually, we can't do this without the password. Instead, try password reset email
-            // BUT FIRST: Try to get UID by attempting to look up the user
-            // Since we can't use Admin SDK, we'll send password reset email
-            // BUT we should still try to set the UID if we can find it
-            
-            // Try password reset email as fallback
-            await sendPasswordResetEmail(auth, tokenData.email);
-            console.log('✅ Password reset email sent');
-            
-            // CRITICAL: Try to get UID from Firebase Auth by attempting sign-in
-            // We can't do this without the password, so we'll need to rely on the user
-            // to complete the password reset and then the UID will be set during login
-            // OR: We can try to create a new user with the same email (will fail if exists)
-            // but that won't help us get the UID
-            
-            // For now, update Firestore status - UID will be set when user logs in
-            // But we should try to get it if possible
-            let firebaseUid: string | null = null;
-            
-            // Try to get UID by checking if user can sign in (but we don't have password)
-            // Actually, the best approach is to ensure UID is set when user completes password reset
-            // For now, we'll update status and let the login process handle UID setting
-            
-            await updateDoc(userDoc.ref, {
-              status: 'active',
-              passwordSet: false, // Will be set to true after password reset
-              updatedAt: new Date().toISOString()
-            });
-            
-            await updateDoc(tokenDoc.ref, {
-              used: true,
-              usedAt: new Date().toISOString()
-            });
-            
+            // If Admin SDK update fails, this is a critical error
+            // We cannot set the password without Admin SDK for existing users
+            // Return a clear error message
             return NextResponse.json({
-              success: true,
-              message: 'Password reset email sent. Please check your email to set your password.',
-              provider: 'firebase_password_reset_email',
-              emailSent: true,
-              warning: 'Admin SDK is not configured. A password reset email has been sent to your email address. After setting your password, you will be able to log in.'
-            });
-          } catch (emailError: any) {
-            console.error('❌ Error sending password reset email:', emailError);
-            return NextResponse.json({
-              error: 'Could not set password. User exists in Firebase Auth.',
-              details: 'The user account exists in Firebase Auth but Admin SDK is not available and password reset email failed. Please use the "Forgot Password" feature on the login page to set your password.',
-              requiresAdmin: false,
-              suggestion: 'Use "Forgot Password" on the login page'
+              error: 'Kunne ikke sette passord. Admin SDK feilet.',
+              details: `Admin SDK feil: ${adminError?.message || 'Ukjent feil'}. Passordet kunne ikke oppdateres. Vennligst kontakt administrator eller bruk "Glemt passord" på innloggingssiden.`,
+              requiresAdmin: true,
+              suggestion: 'Bruk "Glemt passord" på innloggingssiden for å sette et nytt passord.',
+              adminError: adminError?.code || 'unknown'
             }, { status: 500 });
           }
+        } else {
+          // No Admin SDK available - cannot update password for existing users
+          // This is a critical error - we need Admin SDK to update passwords
+          console.error('❌ Admin SDK not available - cannot update password for existing user');
+          return NextResponse.json({
+            error: 'Kunne ikke sette passord. Admin SDK er ikke tilgjengelig.',
+            details: 'Brukeren eksisterer allerede i Firebase Auth, men Admin SDK er ikke konfigurert. Passordet kan ikke oppdateres uten Admin SDK. Vennligst kontakt administrator eller bruk "Glemt passord" på innloggingssiden.',
+            requiresAdmin: true,
+            suggestion: 'Bruk "Glemt passord" på innloggingssiden for å sette et nytt passord.',
+            requiresForgotPassword: true
+          }, { status: 500 });
         }
       } else {
         // Other errors - rethrow

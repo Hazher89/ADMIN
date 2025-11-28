@@ -376,8 +376,22 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If authentication fails, check if it's because user doesn't exist in Firebase Auth
         if (authError?.code === 'auth/user-not-found') {
           throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase Auth konto). Kontakt administrator for å få nytt passord.');
-        } else if (authError?.code === 'auth/wrong-password') {
-          throw new Error('Feil passord. Prøv igjen eller bruk "Glemt passord".');
+        } else if (authError?.code === 'auth/wrong-password' || authError?.code === 'auth/invalid-credential') {
+          // Check if user exists in Firestore to give better error message
+          const usersQueryCheck = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
+          const userSnapshotCheck = await getDocs(usersQueryCheck);
+          
+          if (userSnapshotCheck.empty) {
+            const usersQueryCaseCheck = query(collection(db, 'users'), where('email', '==', email));
+            const userSnapshotCaseCheck = await getDocs(usersQueryCaseCheck);
+            
+            if (userSnapshotCaseCheck.empty) {
+              throw new Error('Bruker ikke funnet. Kontakt administrator.');
+            }
+          }
+          
+          // User exists in Firestore but password is wrong
+          throw new Error('Feil passord. Prøv igjen eller bruk "Glemt passord" for å sette et nytt passord.');
         } else if (authError?.code === 'auth/invalid-email') {
           throw new Error('Ugyldig e-postadresse.');
         } else {
