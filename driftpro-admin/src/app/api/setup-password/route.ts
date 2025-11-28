@@ -415,9 +415,7 @@ export async function POST(request: NextRequest) {
               console.error('❌ Error creating Firebase Auth user:', {
                 code: createError?.code,
                 message: createError?.message,
-                error: createError,
-                userExistsInAuth,
-                userDeletedFromAuth
+                error: createError
               });
               
               // If email-already-in-use, this means user exists in Firebase Auth
@@ -425,9 +423,64 @@ export async function POST(request: NextRequest) {
               if (createError?.code === 'auth/email-already-in-use') {
                 console.log('⚠️ User exists in Firebase Auth. Attempting to delete and recreate...');
                 
-                // Only try deletion if we haven't already tried (or if Admin SDK is now available)
-                if (!userExistsInAuth || !userDeletedFromAuth) {
-                  if (adminAuth) {
+                // Try deletion via cleanup API (works even without Admin SDK on server-side)
+                try {
+                  const deleteResponse = await fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/api/cleanup-firebase`, {
+                    method: 'POST',
+                    headers: {
+                      'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                      action: 'delete_user_completely',
+                      userId: userDoc.id,
+                      email: tokenData.email
+                    }),
+                  });
+                  
+                  if (deleteResponse.ok) {
+                    const deleteData = await deleteResponse.json();
+                    if (deleteData.authDeleted) {
+                      console.log('✅ Deleted existing Firebase Auth user via cleanup API:', deleteData);
+                      // Wait for Firebase to process
+                      await new Promise(resolve => setTimeout(resolve, 2000));
+                      
+                      // Try creating again
+                      const retryCredential = await createUserWithEmailAndPassword(auth, tokenData.email, password);
+                      console.log('✅ Created Firebase Auth user after deletion:', retryCredential.user.uid);
+                      
+                      // Update user profile
+                      await updateProfile(retryCredential.user, {
+                        displayName: userData.displayName || userData.name || 'Ny bruker'
+                      });
+                      
+                      // Update Firestore with UID and password status
+                      await updateDoc(userDoc.ref, {
+                        uid: retryCredential.user.uid,
+                        status: 'active',
+                        passwordSet: true,
+                        passwordSetAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
+                      });
+                      
+                      await updateDoc(tokenDoc.ref, {
+                        used: true,
+                        usedAt: new Date().toISOString()
+                      });
+                      
+                      return NextResponse.json({
+                        success: true,
+                        message: 'Password set up successfully',
+                        userId: retryCredential.user.uid,
+                        provider: 'firebase_client_sdk_delete_and_recreate'
+                      });
+                    }
+                  }
+                } catch (deleteError) {
+                  console.warn('⚠️ Error calling cleanup API:', deleteError);
+                }
+                
+                // If cleanup API didn't work, try Admin SDK if available
+                if (adminAuth) {
                     // Try up to 3 times to delete and recreate
                     for (let attempt = 1; attempt <= 3; attempt++) {
                       try {
@@ -678,40 +731,40 @@ export async function POST(request: NextRequest) {
               usedAt: new Date().toISOString()
             });
             
-              // Return success but with warning - user can use forgot password
-              return NextResponse.json({
-                success: true,
-                message: 'Password setup link processed. Please use "Forgot Password" to set your password.',
-                userId: existingUser.uid,
-                provider: 'firebase_admin_sdk_fallback',
-                warning: `Password update failed: ${updateError?.message || 'Unknown error'}. Please use the "Forgot Password" feature to set your password.`,
-                requiresForgotPassword: true
-              });
-            }
-            
-            // Update user document with UID and password setup status
-            await updateDoc(userDoc.ref, {
-              uid: existingUser.uid, // CRITICAL: Set the UID so user can log in
-              status: 'active',
-              passwordSet: true,
-              passwordSetAt: new Date().toISOString(),
-              updatedAt: new Date().toISOString()
-            });
-
-            // Mark token as used
-            await updateDoc(tokenDoc.ref, {
-              used: true,
-              usedAt: new Date().toISOString()
-            });
-
-            console.log('✅ Password setup completed for existing Firebase Auth user, UID set in Firestore');
+            // Return success but with warning - user can use forgot password
             return NextResponse.json({
               success: true,
-              message: 'Password setup completed for existing user',
+              message: 'Password setup link processed. Please use "Forgot Password" to set your password.',
               userId: existingUser.uid,
-              provider: 'firebase_admin_sdk'
+              provider: 'firebase_admin_sdk_fallback',
+              warning: `Password update failed: ${updateError?.message || 'Unknown error'}. Please use the "Forgot Password" feature to set your password.`,
+              requiresForgotPassword: true
             });
-          } catch (adminError: any) {
+          }
+          
+          // Update user document with UID and password setup status
+          await updateDoc(userDoc.ref, {
+            uid: existingUser.uid, // CRITICAL: Set the UID so user can log in
+            status: 'active',
+            passwordSet: true,
+            passwordSetAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+
+          // Mark token as used
+          await updateDoc(tokenDoc.ref, {
+            used: true,
+            usedAt: new Date().toISOString()
+          });
+
+          console.log('✅ Password setup completed for existing Firebase Auth user, UID set in Firestore');
+          return NextResponse.json({
+            success: true,
+            message: 'Password setup completed for existing user',
+            userId: existingUser.uid,
+            provider: 'firebase_admin_sdk'
+          });
+        } catch (adminError: any) {
           console.error('❌ Error updating existing user with Admin SDK:', {
             error: adminError,
             code: adminError?.code,
@@ -773,17 +826,7 @@ export async function POST(request: NextRequest) {
           });
         }
       }
-
-      return NextResponse.json(
-        { 
-          error: 'Failed to create user account',
-          details: authError instanceof Error ? authError.message : 'Unknown error',
-          provider: 'microsoft_graph'
-        },
-        { status: 500 }
-      );
-    }
-  } catch (error: any) {
+    } catch (error: any) {
     console.error('❌ Error in setup-password API:', error);
     const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     const errorStack = error instanceof Error ? error.stack : undefined;
