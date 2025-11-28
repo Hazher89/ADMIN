@@ -381,38 +381,48 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
       }
       
-      // Check if user has been set up with Firebase Authentication
-      if (!userData.uid) {
-        // For admin users, we'll create the Firebase user if it doesn't exist
-        if (userData.companyId === MAVI_COMPANY_ID && userData.role === 'admin') {
-          console.log('Creating Firebase user for admin');
-          // Update the user document with the Firebase UID after authentication
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-          await updateDoc(doc(db, 'users', userDoc.id), {
-            uid: userCredential.user.uid,
-            updatedAt: new Date().toISOString()
-          });
-          return;
-        } else {
-          throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
-        }
-      }
-      
       if (userData.status !== 'active') {
         throw new Error(`Brukeren er ikke aktivert (status: ${userData.status || 'unknown'}). Kontakt administrator for å få nytt passord.`);
       }
       
-      // ONLY NOW: Proceed with Firebase authentication
-      const userCredential = await signInWithEmailAndPassword(auth, email, password);
+      // CRITICAL: Try to authenticate with Firebase FIRST
+      // This way we can get the UID even if it's not in Firestore yet
+      let userCredential;
+      try {
+        userCredential = await signInWithEmailAndPassword(auth, email, password);
+        console.log('✅ Firebase authentication successful:', userCredential.user.uid);
+      } catch (authError: any) {
+        console.error('❌ Firebase authentication failed:', authError);
+        // If authentication fails, check if it's because user doesn't exist in Firebase Auth
+        if (authError?.code === 'auth/user-not-found') {
+          throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase Auth konto). Kontakt administrator for å få nytt passord.');
+        } else if (authError?.code === 'auth/wrong-password') {
+          throw new Error('Feil passord. Prøv igjen eller bruk "Glemt passord".');
+        } else if (authError?.code === 'auth/invalid-email') {
+          throw new Error('Ugyldig e-postadresse.');
+        } else {
+          throw new Error(authError?.message || 'Innlogging feilet. Prøv igjen.');
+        }
+      }
       
-      // CRITICAL: Ensure UID is set in Firestore after successful login
-      // This handles cases where UID wasn't set during password setup
-      if (userCredential.user.uid && userData.uid !== userCredential.user.uid) {
-        console.log('⚠️ UID mismatch detected, updating Firestore with correct UID');
+      // NOW: Check if UID is set in Firestore, and set it if missing
+      const firebaseUid = userCredential.user.uid;
+      if (!userData.uid || userData.uid !== firebaseUid) {
+        console.log('⚠️ UID missing or mismatch in Firestore, updating...', {
+          firestoreUid: userData.uid,
+          firebaseUid: firebaseUid
+        });
+        
+        // Update Firestore with the correct UID from Firebase Auth
         await updateDoc(doc(db, 'users', userDoc.id), {
-          uid: userCredential.user.uid,
+          uid: firebaseUid,
+          status: 'active', // Ensure status is active
+          passwordSet: true, // Mark password as set
+          passwordSetAt: new Date().toISOString(),
           updatedAt: new Date().toISOString()
         });
+        
+        console.log('✅ UID updated in Firestore:', firebaseUid);
       }
       
     } catch (error: unknown) {
