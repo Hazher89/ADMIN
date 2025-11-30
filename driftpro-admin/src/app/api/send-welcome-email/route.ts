@@ -19,7 +19,7 @@ const db = getFirestore(app);
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, displayName, adminName, companyName, departmentName, position, accessToken, fromEmail, setupUrl, password, passwordSet } = body;
+    const { email, displayName, adminName, companyName, departmentName, position, setupUrl, password, passwordSet } = body;
 
     if (!email || !displayName) {
       return NextResponse.json(
@@ -28,10 +28,16 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!accessToken || !fromEmail) {
+    // App-only sender configuration
+    const tenantId = process.env.GRAPH_TENANT_ID;
+    const clientId = process.env.GRAPH_CLIENT_ID;
+    const clientSecret = process.env.GRAPH_CLIENT_SECRET;
+    const senderUpn = process.env.GRAPH_SENDER_UPN || process.env.NEXT_PUBLIC_GRAPH_SENDER_EMAIL;
+
+    if (!tenantId || !clientId || !clientSecret || !senderUpn) {
       return NextResponse.json(
-        { error: 'Microsoft Graph authentication required. Please log in first.' },
-        { status: 400 }
+        { error: 'E-post avsender eller Graph app-only konfigurasjon mangler. Sett GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET og GRAPH_SENDER_UPN.' },
+        { status: 500 }
       );
     }
 
@@ -221,37 +227,50 @@ export async function POST(request: NextRequest) {
     `;
     }
 
-    console.log('📧 Sending welcome email via Microsoft Graph');
+    console.log('📧 Sender velkomst-epost via Microsoft Graph (app-only)');
 
-    // Send email via Microsoft Graph API
-    const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    // Get app-only access token
+    const tokenUrl = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+    const tokenBody = new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
+      scope: 'https://graph.microsoft.com/.default',
+    });
+
+    const tokenRes = await fetch(tokenUrl, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: tokenBody,
+    });
+    if (!tokenRes.ok) {
+      const errText = await tokenRes.text().catch(() => '');
+      throw new Error(`Kunne ikke hente Graph token: ${tokenRes.status} ${tokenRes.statusText} ${errText}`);
+    }
+    const tokenData = await tokenRes.json();
+    const accessToken = tokenData.access_token as string;
+
+    // Send email via Microsoft Graph API as fixed sender (users/{sender}/sendMail)
+    const graphUrl = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(senderUpn)}/sendMail`;
+    const response = await fetch(graphUrl, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
+        Authorization: `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
         message: {
-          subject: subject,
+          subject,
           body: {
             contentType: 'HTML',
-            content: html
+            content: html,
           },
           toRecipients: [
-            {
-              emailAddress: {
-                address: email
-              }
-            }
+            { emailAddress: { address: email } },
           ],
-          from: {
-            emailAddress: {
-              address: fromEmail
-            }
-          }
         },
-        saveToSentItems: true
-      })
+        saveToSentItems: true,
+      }),
     });
 
     if (!response.ok) {

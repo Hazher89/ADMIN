@@ -48,69 +48,67 @@ export class GlobalEmailService {
 
   public async sendEmail(emailContent: EmailContent): Promise<{ success: boolean; error?: string; messageId?: string }> {
     try {
-      // Check authentication status
-      await this.checkAuthenticationStatus();
-      
-      if (!this.isAuthenticated || !this.currentAccount) {
-        return {
-          success: false,
-          error: 'Microsoft Graph authentication required. Please log in first.'
-        };
+      // Prefer server-side app-only API (fast avsender) — no login required
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/email/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: emailContent.to,
+          subject: emailContent.subject,
+          html: emailContent.html,
+          text: emailContent.text,
+        }),
+      });
+
+      if (response.ok) {
+        const result = await response.json();
+        if (result.success) {
+          console.log('✅ E-post sendt via server API (fast avsender):', emailContent.subject);
+          return { success: true, messageId: result.messageId || `msg_${Date.now()}` };
+        }
       }
 
-      // Use Microsoft Graph API for email sending
+      // Fallback: bruk interaktiv MSAL hvis server API ikke er konfigurert
       try {
+        await this.checkAuthenticationStatus();
+        if (!this.isAuthenticated || !this.currentAccount) {
+          throw new Error('Server API feilet og ingen Microsoft Graph-innlogging er aktiv.');
+        }
+
         const accessToken = await microsoftGraphService.getAccessToken();
-        
-        // Use the API endpoint with Microsoft Graph token
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-        
-        const response = await fetch(`${baseUrl}/api/email/send`, {
+        const fallbackResponse = await fetch(`${baseUrl}/api/send-welcome-email`, {
           method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            to: emailContent.to,
-            subject: emailContent.subject,
-            html: emailContent.html,
-            text: emailContent.text,
+            email: Array.isArray(emailContent.to) ? emailContent.to[0] : emailContent.to,
+            displayName: '',
+            adminName: '',
+            companyName: 'DriftPro',
+            departmentName: '',
+            position: '',
+            accessToken,
             fromEmail: emailContent.fromEmail || this.currentAccount.username,
-            accessToken: accessToken // Send access token for Microsoft Graph API
-          })
+            setupUrl: undefined,
+            password: undefined,
+            passwordSet: false,
+          }),
         });
 
-        if (!response.ok) {
-          const errorData = await response.json().catch(() => ({}));
-          throw new Error(`Email API error: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
+        if (!fallbackResponse.ok) {
+          const errorData = await fallbackResponse.json().catch(() => ({}));
+          throw new Error(`Fallback e-post API feil: ${fallbackResponse.status} ${fallbackResponse.statusText} - ${errorData.error || 'Ukjent feil'}`);
         }
 
-        const result = await response.json();
-
-        if (result.success) {
-          console.log('✅ Email sent successfully via Microsoft Graph API:', emailContent.subject);
-          return {
-            success: true,
-            messageId: result.messageId || `msg_${Date.now()}`
-          };
-        } else {
-          throw new Error(result.error || 'Email sending failed');
-        }
-
-      } catch (graphError) {
-        console.error('Microsoft Graph API failed:', graphError);
-        return {
-          success: false,
-          error: `Microsoft Graph feil: ${graphError instanceof Error ? graphError.message : 'Ukjent feil'}`
-        };
+        const result = await fallbackResponse.json();
+        return { success: !!result.success };
+      } catch (fallbackErr) {
+        console.error('Microsoft Graph fallback feilet:', fallbackErr);
+        return { success: false, error: fallbackErr instanceof Error ? fallbackErr.message : 'Ukjent feil' };
       }
-
     } catch (error: any) {
-      console.error('❌ Failed to send email:', error);
-      return {
-        success: false,
-        error: error.message || 'Unknown error occurred'
-      };
+      console.error('❌ Feil ved sending av e-post:', error);
+      return { success: false, error: error.message || 'Ukjent feil' };
     }
   }
 
