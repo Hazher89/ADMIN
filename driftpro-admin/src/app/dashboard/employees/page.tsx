@@ -38,7 +38,7 @@ export default function EmployeesPage() {
     phone: '',
     departmentId: '',
     position: '',
-        role: 'employee' as 'admin' | 'department_leader' | 'employee',
+        role: 'employee' as 'admin' | 'super_admin' | 'department_leader' | 'employee',
         status: 'active' as 'active' | 'inactive' | 'on_leave',
     birthDate: '',
     employeeNumber: '',
@@ -300,7 +300,7 @@ export default function EmployeesPage() {
       const employeeData: any = {
         displayName: newEmployee.displayName.trim(),
         email: newEmployee.email.trim(),
-        role: newEmployee.role as 'admin' | 'department_leader' | 'employee',
+        role: newEmployee.role as 'admin' | 'super_admin' | 'department_leader' | 'employee',
         status: newEmployee.status as 'active' | 'inactive' | 'on_leave',
         companyId: userProfile.companyId,
         hireDate: newEmployee.hireDate || new Date().toISOString(),
@@ -444,7 +444,7 @@ export default function EmployeesPage() {
       try {
         const departmentName = getDepartmentName(newEmployee.departmentId);
         const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName = 'MAVI Logistikk AS';
+        const companyName = userProfile?.companyName || 'MAVI Logistikk AS';
 
         console.log('📧 Sending welcome email to new employee:', {
           email: newEmployee.email,
@@ -481,18 +481,18 @@ export default function EmployeesPage() {
               headers: {
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify({
-                email: newEmployee.email,
-                displayName: newEmployee.displayName,
-                adminName,
-                companyName,
-                departmentName,
-                position: newEmployee.position || 'Ansatt',
-                accessToken,
-                fromEmail,
-                passwordSet: passwordSet,
-                password: passwordSet ? newEmployee.password : undefined
-              })
+            body: JSON.stringify({
+              email: newEmployee.email,
+              displayName: newEmployee.displayName,
+              adminName,
+              companyName,
+              departmentName,
+              position: newEmployee.position || 'Ansatt',
+              accessToken,
+              fromEmail,
+              passwordSet: passwordSet,
+              password: passwordSet ? newEmployee.password : undefined
+            })
             });
 
             if (response.ok) {
@@ -728,6 +728,33 @@ export default function EmployeesPage() {
           legal: false,
           audit: false,
           internkontrollOgSamsvar: false,
+          internrevisjon: false,
+          avvik: false,
+          risikovurdering: false,
+          oppfølgingstiltak: false,
+          kontrollpunkter: false,
+          internkontrollRapporter: false,
+          // Sidebar sider
+          chat: false,
+          emailSystem: false,
+          smsLogs: false,
+          partners: false,
+          // Logistikk System faner
+          logistikkBudPriser: false,
+          logistikkLevering: false,
+          logistikkPlanlegging: false,
+          logistikkKunder: false,
+          logistikkLeverandorer: false,
+          logistikkProdukter: false,
+          logistikkLager: false,
+          logistikkFakturering: false,
+          logistikkFinans: false,
+          // HR faner
+          hrAnsatte: false,
+          hrVakter: false,
+          hrFravær: false,
+          hrFerie: false,
+          hrAvdelinger: false,
         },
         vacationAccess: {
           canRequestVacation: true,
@@ -2845,7 +2872,7 @@ export default function EmployeesPage() {
                     fontSize: '0.75rem', 
                     marginTop: '0.25rem' 
                   }}>
-                    {selectedEmployee?.uid 
+                    {selectedEmployee?.id 
                       ? 'Ansatt får en e-post med link for å sette passordet (brukeren har allerede en konto)'
                       : 'Ansatt kan logge inn med dette passordet med en gang'}
                   </small>
@@ -3669,4 +3696,4 @@ export default function EmployeesPage() {
       )}
     </div>
   );
-} 
+}
