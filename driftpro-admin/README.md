@@ -26,6 +26,25 @@ DriftPro Admin Panel er en omfattende bedriftsadministrasjonsplattform utviklet 
 - 🏢 **Bedriftsadministrasjon** - Multi-bedrift støtte
 - ⚙️ **Systeminnstillinger** - Konfigurasjon og vedlikehold
 
+## 🚚 Logistikk-system
+
+DriftPro inneholder et komplett logistikk-system som støtter sjåfører, partnere og administrasjon.
+
+- **Sjåfør**
+  - ` /driver-login ` – innlogging for sjåfører
+  - ` /driver-dashboard ` – oversikt over leveranser og oppdrag
+  - ` /driver-delivery ` – detaljvisning og oppfølging av aktive leveranser
+- **Partner**
+  - ` /partner-login ` – innlogging for partnere
+  - ` /partner-dashboard ` – oppdrag, status og kommunikasjon
+- **Administrasjon**
+  - ` /dashboard/shifts ` – vaktplanlegging for logistikk
+  - ` /dashboard/timeclock ` – stempling og tidsregistrering
+  - ` /dashboard/suppliers ` – leverandører og logistikkpartnere
+  - ` /dashboard/reports ` – KPI, rapporter og eksport
+
+Funksjonene inkluderer planlegging, oppdragstildeling, statusoppfølging, varsling på e‑post/SMS og full sporbarhet gjennom logger.
+
 ## 🛠️ Teknisk Stack
 
 ### Frontend
@@ -228,6 +247,14 @@ driftpro-admin/
 │   ├── app/
 │   │   ├── api/                 # API endepunkter
 │   │   ├── dashboard/           # Dashboard sider
+│   │   ├── driver-dashboard/    # Sjåfør-oversikt
+│   │   ├── driver-delivery/     # Sjåfør leveranser
+│   │   ├── driver-login/        # Sjåfør innlogging
+│   │   ├── partner-dashboard/   # Partner-oversikt
+│   │   ├── partner-login/       # Partner innlogging
+│   │   ├── reset-password/      # Tilbakestilling passord
+│   │   ├── forgot-password/     # Glemt passord
+│   │   ├── setup-password/      # Førstegangs passordoppsett
 │   │   ├── globals.css          # Global styling
 │   │   ├── layout.tsx           # Root layout
 │   │   └── page.tsx             # Landing page
@@ -239,6 +266,17 @@ driftpro-admin/
 ├── next.config.js              # Next.js konfigurasjon
 ├── tailwind.config.js          # Tailwind CSS konfigurasjon
 └── tsconfig.json               # TypeScript konfigurasjon
+
+### Sidekart (utvalg)
+
+- ` /driver-dashboard ` – sjåfør-oversikt og oppdrag
+- ` /driver-delivery ` – aktive leveranser
+- ` /partner-dashboard ` – partneroversikt og oppdrag
+- ` /dashboard/timeclock ` – stempling og tidsregistrering
+- ` /dashboard/shifts ` – vaktplaner
+- ` /dashboard/reports ` – rapporter og eksport
+- ` /setup-password ` – førstegangs oppsett av passord
+- ` /reset-password ` – tilbakestilling av passord
 ```
 
 ## 🧪 Testing

@@ -5,6 +5,29 @@ Alle viktige endringer i DriftPro Admin Panel dokumenteres i denne filen.
 Formatet er basert på [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 og prosjektet følger [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### 🚚 Logistikk-system
+- Lagt til og dokumentert sider for sjåfører og partnere:
+  - ` /driver-login `, ` /driver-dashboard `, ` /driver-delivery `
+  - ` /partner-login `, ` /partner-dashboard `
+- Administrasjonssider knyttet til logistikk:
+  - ` /dashboard/shifts ` (vaktplanlegging), ` /dashboard/timeclock ` (stempling)
+  - ` /dashboard/reports ` (rapporter/KPI), ` /dashboard/suppliers ` (leverandører)
+
+### 🔐 Autentisering og konto
+- Server-side fallback i `setup-password` API: hvis Admin SDK feiler/ikke er konfigurert, sendes automatisk en tilbakestillings‑epost (Client SDK) slik at brukeren kan sette nytt passord
+- UI-oppdatering på `setup-password` som viser tydelig suksessmelding når tilbakestillings‑epost er sendt via fallback
+
+### 📄 Dokumentasjon
+- Oppdatert `env.example` med Microsoft Graph app‑only variabler og Firebase Admin SDK variabler
+- Ny seksjon om app‑only avsender i `MICROSOFT_GRAPH_SETUP.md`
+- Oppdatert `PRODUCTION_SETUP.md` med Graph/Firebase Admin SDK og sikkerhetssjekkliste
+- Lagt til feilsøking i `PRODUCTION_SETUP.md` for "Admin SDK feilet" ved passordoppsett
+
+### 🛠 Diverse
+- Mindre forbedringer i brukeropplevelse og tydeligere tekster
+
 ## [1.1.0] - 2024-08-06
 
 ### 🚀 Lagt til
@@ -138,4 +161,4 @@ og prosjektet følger [Semantic Versioning](https://semver.org/spec/v2.0.0.html)
 
 ---
 
-**Merk**: Alle endringer dokumenteres i denne filen for å sikre fullstendig oversikt over systemets utvikling. 
+**Merk**: Alle endringer dokumenteres i denne filen for å sikre fullstendig oversikt over systemets utvikling.
