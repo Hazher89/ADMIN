@@ -118,16 +118,42 @@ service firebase.storage {
 
 ### 3. Email Configuration
 
-#### SMTP Setup
-Configure Gmail SMTP for noreply@driftpro.no:
+#### Microsoft Graph (anbefalt) – fast avsender uten innlogging
+Systemvarsler sendes fra en fast avsender via Microsoft Graph med app-only-tilgang.
 
-1. Enable 2-factor authentication
-2. Generate App Password
-3. Update SMTP settings in Firebase
+1. Opprett Azure App Registration og gi Application-permission `Mail.Send`
+2. Gi admin consent i organisasjonen
+3. Bruk en avsenderkonto (bruker eller delt postboks), f.eks. `noreply@driftpro.no`
+4. Sett disse miljøvariablene i produksjon:
+
+```bash
+# App-only Microsoft Graph
+GRAPH_TENANT_ID=your_tenant_id_here
+GRAPH_CLIENT_ID=your_app_only_client_id_here
+GRAPH_CLIENT_SECRET=your_app_only_client_secret_here
+GRAPH_SENDER_UPN=noreply@driftpro.no
+```
+
+Server-endepunktet `src/app/api/email/send/route.ts` sender e-post med app-only token, og `src/lib/global-email-service.ts` benytter dette automatisk når variablene er satt.
+
+#### Firebase Admin SDK – passordoppdatering for eksisterende brukere
+For å sette nytt passord når brukeren allerede finnes i Firebase Auth, kreves Admin SDK på server.
+
+Legg til disse miljøvariablene:
+
+```bash
+FIREBASE_PROJECT_ID=your_firebase_project_id
+FIREBASE_CLIENT_EMAIL=your_service_account_client_email
+FIREBASE_PRIVATE_KEY=-----BEGIN PRIVATE KEY-----\nMIIEv...\n-----END PRIVATE KEY-----\n
+```
+
+Private key må være multiline (noen miljøer krever at linjeskift erstattes med `\n`).
+
+#### SMTP (alternativ)
+Hvis Microsoft Graph ikke er tilgjengelig, kan SMTP fortsatt brukes. Sørg for korrekt SPF/DKIM/DMARC.
 
 #### Email Templates
-All email templates are configured in `src/lib/email-service.ts`
-
+Malene ligger i `src/lib/email-templates.ts` og sending håndteres av `src/lib/global-email-service.ts`
 ### 4. Domain Configuration
 
 #### DNS Records
@@ -191,6 +217,8 @@ npm start
 
 - [ ] HTTPS enabled
 - [ ] Environment variables secured
+  - [ ] Microsoft Graph app-only variabler satt
+  - [ ] Firebase Admin SDK variabler satt
 - [ ] Firebase security rules configured
 - [ ] CORS settings configured
 - [ ] Rate limiting implemented
@@ -295,4 +323,18 @@ For production support:
 - Phone: +47 XXX XX XXX
 - Documentation: https://docs.driftpro.no
 
-Last updated: 2024-08-02 
+Last updated: 2024-08-02
+### 12. Feilsøking
+
+#### "Kunne ikke sette passord. Admin SDK feilet."
+- Årsak: Serveren mangler gyldige Firebase Admin SDK service account-nøkler, eller nøkkelen er i feil format.
+- Løsning:
+  - Sett `FIREBASE_PROJECT_ID`, `FIREBASE_CLIENT_EMAIL`, `FIREBASE_PRIVATE_KEY` i produksjonsmiljøet
+  - Sørg for at `FIREBASE_PRIVATE_KEY` er multiline; ved behov bruk `\n` for linjeskift
+  - Deploy på nytt etter oppdatering
+  - Hvis bruker allerede eksisterer og Admin SDK fortsatt ikke er tilgjengelig, be bruker bruke "Glemt passord" på innloggingssiden
+
+#### App-only e-post sender ikke
+- Sjekk at `GRAPH_TENANT_ID`, `GRAPH_CLIENT_ID`, `GRAPH_CLIENT_SECRET`, `GRAPH_SENDER_UPN` er satt korrekt
+- Verifiser at App Registration har `Mail.Send` (Application) med admin consent
+- Sjekk domeneleveranse (SPF/DKIM/DMARC)

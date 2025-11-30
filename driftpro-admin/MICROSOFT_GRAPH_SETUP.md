@@ -79,3 +79,32 @@ npm run dev
 For production, update the redirect URI to your production domain and ensure all environment variables are properly configured in your hosting platform.
 
 
+## App-only sending with fixed sender (uten brukerinnlogging)
+
+For systemvarsler (velkomstmail, avvik, ferie, fravær, dokumenter) kan DriftPro sende e-post med en fast avsender uten at noen logger inn. Dette bruker Microsoft Graph med Application-permission `Mail.Send`.
+
+### Krav
+- Azure App Registration med Application-permission `Mail.Send` og Admin consent
+- En avsenderkonto i Microsoft 365 (bruker eller delt postboks), f.eks. `noreply@driftpro.no`
+
+### Miljøvariabler (server)
+Legg til følgende variabler i `.env.local` eller produksjonsmiljøet:
+
+```bash
+GRAPH_TENANT_ID=your_tenant_id_here
+GRAPH_CLIENT_ID=your_app_only_client_id_here
+GRAPH_CLIENT_SECRET=your_app_only_client_secret_here
+GRAPH_SENDER_UPN=noreply@driftpro.no
+```
+
+### Hvordan det fungerer
+- Server-endepunktet `src/app/api/email/send/route.ts` henter app-only token via klient-legitimasjon og sender e-post på vegne av `GRAPH_SENDER_UPN`.
+- `src/lib/global-email-service.ts` bruker dette endepunktet automatisk når variablene er satt.
+- Velkomstmail-endepunktet `src/app/api/send-welcome-email/route.ts` er allerede tilpasset app-only sending.
+
+### Beste praksis
+- Bruk delt postboks eller dedikert account; unngå personlige kontoer
+- Aktiver SPF, DKIM og DMARC for domenet for bedre leveranse
+- Overvåk `emailLogs` for leveringsfeil
+
+
