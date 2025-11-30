@@ -421,24 +421,51 @@ export async function POST(request: NextRequest) {
               message: adminError?.message,
               error: adminError
             });
-            
+            // Fallback: Send passord-reset e-post via Firebase Client SDK slik at bruker kan sette nytt passord
+            let resetEmailSent = false;
+            try {
+              console.log('📧 Fallback: Sender passord-reset e-post via Firebase Client SDK...');
+              await sendPasswordResetEmail(auth, tokenData.email);
+              resetEmailSent = true;
+              console.log('✅ Passord-reset e-post sendt til:', tokenData.email);
+            } catch (resetError) {
+              console.error('❌ Kunne ikke sende passord-reset e-post:', resetError);
+            }
+
             return NextResponse.json({
               error: 'Kunne ikke sette passord. Admin SDK feilet.',
-              details: `Admin SDK feil: ${adminError?.message || 'Ukjent feil'}. Passordet kunne ikke oppdateres. Vennligst kontakt administrator eller bruk "Glemt passord" på innloggingssiden.`,
-              requiresAdmin: true,
-              suggestion: 'Bruk "Glemt passord" på innloggingssiden for å sette et nytt passord.',
-              adminError: adminError?.code || 'unknown'
+              details: `Admin SDK feil: ${adminError?.message || 'Ukjent feil'}.` + (resetEmailSent ? ' Vi har sendt deg en e-post for å sette nytt passord.' : ' Vennligst kontakt administrator eller bruk "Glemt passord" på innloggingssiden.'),
+              requiresAdmin: !resetEmailSent,
+              suggestion: resetEmailSent ? 'Sjekk e-posten din og følg lenken for å sette nytt passord.' : 'Bruk "Glemt passord" på innloggingssiden for å sette et nytt passord.',
+              adminError: adminError?.code || 'unknown',
+              resetEmailSent,
+              provider: resetEmailSent ? 'firebase_client_sdk_reset' : 'firebase_admin_sdk_error'
             }, { status: 500 });
           }
         } else {
           // No Admin SDK available - cannot update password for existing users
           console.error('❌ Admin SDK not available - cannot update password for existing user');
+          // Fallback: Send passord-reset e-post via Firebase Client SDK slik at bruker kan sette nytt passord
+          let resetEmailSent = false;
+          try {
+            console.log('📧 Fallback: Sender passord-reset e-post via Firebase Client SDK...');
+            await sendPasswordResetEmail(auth, tokenData.email);
+            resetEmailSent = true;
+            console.log('✅ Passord-reset e-post sendt til:', tokenData.email);
+          } catch (resetError) {
+            console.error('❌ Kunne ikke sende passord-reset e-post:', resetError);
+          }
+
           return NextResponse.json({
             error: 'Kunne ikke sette passord. Admin SDK er ikke tilgjengelig.',
-            details: 'Brukeren eksisterer allerede i Firebase Auth, men Admin SDK er ikke konfigurert. Passordet kan ikke oppdateres uten Admin SDK. Vennligst kontakt administrator eller bruk "Glemt passord" på innloggingssiden.',
-            requiresAdmin: true,
-            suggestion: 'Bruk "Glemt passord" på innloggingssiden for å sette et nytt passord.',
-            requiresForgotPassword: true
+            details: resetEmailSent
+              ? 'Admin SDK er ikke konfigurert for passordoppdatering, men vi har sendt deg en e-post for å sette nytt passord.'
+              : 'Brukeren eksisterer allerede i Firebase Auth, men Admin SDK er ikke konfigurert. Passordet kan ikke oppdateres uten Admin SDK. Vennligst kontakt administrator eller bruk "Glemt passord" på innloggingssiden.',
+            requiresAdmin: !resetEmailSent,
+            suggestion: resetEmailSent ? 'Sjekk e-posten din og følg lenken for å sette nytt passord.' : 'Bruk "Glemt passord" på innloggingssiden for å sette et nytt passord.',
+            requiresForgotPassword: !resetEmailSent,
+            resetEmailSent,
+            provider: resetEmailSent ? 'firebase_client_sdk_reset' : 'firebase_admin_sdk_unavailable'
           }, { status: 500 });
         }
       } else {
@@ -486,4 +513,4 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-  } 
+  }
