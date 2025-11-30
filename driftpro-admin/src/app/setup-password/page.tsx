@@ -28,6 +28,7 @@ function SetupPasswordContent() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState(false);
+  const [resetEmailMode, setResetEmailMode] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -150,6 +151,7 @@ function SetupPasswordContent() {
         if (data.emailSent) {
           setSuccess(true);
           setError(''); // Clear any errors
+          setResetEmailMode(false);
           // Show success message with info about email
           setTimeout(() => {
             router.push('/login');
@@ -159,6 +161,7 @@ function SetupPasswordContent() {
           if (data.message && data.message.includes('Password reset email sent')) {
             setSuccess(true);
             setError(''); // Clear any errors
+            setResetEmailMode(true);
             setTimeout(() => {
               router.push('/login');
             }, 5000);
@@ -167,11 +170,22 @@ function SetupPasswordContent() {
           }
         } else {
           setSuccess(true);
+          setResetEmailMode(false);
           setTimeout(() => {
             router.push('/login');
           }, 3000);
         }
       } else {
+        // Fallback: if server attempted to send reset email, show success mode
+        if (data && data.resetEmailSent === true) {
+          setSuccess(true);
+          setResetEmailMode(true);
+          setError('');
+          setTimeout(() => {
+            router.push('/login');
+          }, 6000);
+          return;
+        }
         // Show detailed error message
         const errorMsg = data.error || data.message || 'Feil ved oppsett av passord';
         const details = data.details && process.env.NODE_ENV === 'development' ? `\n\nDetaljer: ${data.details}` : '';
@@ -326,7 +340,7 @@ function SetupPasswordContent() {
             color: 'var(--gray-900)',
             marginBottom: '1rem'
           }}>
-            {tokenData?.email && error.includes('Password reset email sent') ? 'E-post sendt!' : 'Passord satt opp!'}
+            {resetEmailMode ? 'E-post sendt!' : 'Passord satt opp!'}
           </h1>
           <p style={{
             color: 'var(--gray-600)',
@@ -334,7 +348,7 @@ function SetupPasswordContent() {
             marginBottom: isMobile ? '1.5rem' : '2rem',
             lineHeight: '1.6'
           }}>
-            {tokenData?.email && error.includes('Password reset email sent') 
+            {resetEmailMode
               ? 'Vi har sendt deg en e-post med lenke for å sette opp passordet. Sjekk innboksen din og følg lenken i e-posten.'
               : 'Ditt passord er nå satt opp. Du vil bli omdirigert til innloggingssiden om noen sekunder.'}
           </p>
@@ -346,7 +360,7 @@ function SetupPasswordContent() {
             marginBottom: isMobile ? '1.5rem' : '2rem'
           }}>
             <p style={{ margin: 0, fontWeight: '500', fontSize: isMobile ? '0.875rem' : 'var(--font-size-base)' }}>
-              {tokenData?.email && error.includes('Password reset email sent')
+              {resetEmailMode
                 ? 'Sjekk e-posten din for lenke til passord-oppsett.'
                 : 'Du kan nå logge inn med din e-postadresse og det nye passordet.'}
             </p>
@@ -794,4 +808,4 @@ export default function SetupPasswordPage() {
       <SetupPasswordContent />
     </Suspense>
   );
-} 
+}
