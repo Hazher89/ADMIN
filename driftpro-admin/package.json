@@ -45,10 +45,10 @@
     "grapesjs-tui-image-editor": "^1.0.2",
     "grapesjs-typed": "^2.0.1",
     "lucide-react": "^0.526.0",
-    "next": "15.4.4",
+    "next": "^16.0.9",
     "nodemailer": "^7.0.10",
-    "react": "19.1.0",
-    "react-dom": "19.1.0",
+    "react": "^19.2.2",
+    "react-dom": "^19.2.2",
     "react-hook-form": "^7.61.1",
     "react-hot-toast": "^2.5.2",
     "recharts": "^3.1.0",
@@ -62,7 +62,7 @@
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
-    "eslint-config-next": "15.4.4",
+    "eslint-config-next": "^16.0.9",
     "tailwindcss": "^4",
     "typescript": "^5"
   }
