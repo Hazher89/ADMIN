@@ -32,6 +32,14 @@ svg[size] {
   max-height: none !important;
 }
 
+/* DriftPro Logo - allow any size */
+svg.driftpro-logo-icon {
+  max-width: none !important;
+  max-height: none !important;
+  width: auto !important;
+  height: auto !important;
+}
+
 :root {
   /* Modern Color Palette */
   /* New fresh palette (Cyan/Teal) */

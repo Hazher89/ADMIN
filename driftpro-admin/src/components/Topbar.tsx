@@ -6,6 +6,7 @@ import NotificationBell from '@/components/NotificationBell';
 import GlobalSearch from './GlobalSearch';
 import { useAuth } from '@/contexts/AuthContext';
 import { Settings, Sun, Moon, ChevronDown, LogOut } from 'lucide-react';
+import DriftProLogo from '@/components/DriftProLogo';
 
 export default function Topbar() {
 	const { user, userProfile, logout } = useAuth();
@@ -76,166 +77,16 @@ export default function Topbar() {
 							width: isMobile ? '1.75rem' : '2.5rem',
 							height: isMobile ? '1.75rem' : '2.5rem',
 							flexShrink: 0,
-							marginRight: isMobile ? '-0.125rem' : '-0.25rem'
-						}}
-					>
-					<svg
-						viewBox="0 0 64 64"
-						fill="none"
-						xmlns="http://www.w3.org/2000/svg"
-						style={{
-							width: '100%',
-							height: '100%',
+							marginRight: isMobile ? '-0.125rem' : '-0.25rem',
 							filter: 'drop-shadow(0 0 8px rgba(6, 182, 212, 0.4))'
 						}}
 					>
-						<defs>
-							<linearGradient id="iconGradientTopbar" x1="0%" y1="0%" x2="100%" y2="100%">
-								<stop offset="0%" stopColor="#22d3ee" />
-								<stop offset="50%" stopColor="#0ea5e9" />
-								<stop offset="100%" stopColor="#06b6d4" />
-							</linearGradient>
-							<linearGradient id="innerGradientTopbar" x1="0%" y1="0%" x2="100%" y2="100%">
-								<stop offset="0%" stopColor="#06b6d4" />
-								<stop offset="100%" stopColor="#0891b2" />
-							</linearGradient>
-						</defs>
-						
-						{/* Outer rotating ring */}
-						<circle
-							cx="32"
-							cy="32"
-							r="28"
-							fill="none"
-							stroke="url(#iconGradientTopbar)"
-							strokeWidth="1.5"
-							strokeDasharray="4 4"
-							opacity="0.6"
-							style={{
-								animation: 'rotate-ring 8s linear infinite',
-								transformOrigin: '32px 32px'
-							}}
+						<DriftProLogo 
+							variant="icon" 
+							size={isMobile ? 28 : 40}
+							className=""
 						/>
-						
-						{/* Middle rotating ring - reverse */}
-						<circle
-							cx="32"
-							cy="32"
-							r="24"
-							fill="none"
-							stroke="url(#iconGradientTopbar)"
-							strokeWidth="1"
-							strokeDasharray="3 3"
-							opacity="0.4"
-							style={{
-								animation: 'rotate-ring-reverse 6s linear infinite',
-								transformOrigin: '32px 32px'
-							}}
-						/>
-						
-						{/* Rounded square background with pulse */}
-						<rect
-							x="8"
-							y="8"
-							width="48"
-							height="48"
-							rx="12"
-							ry="12"
-							fill="url(#iconGradientTopbar)"
-							opacity="0.95"
-							style={{
-								animation: 'pulse-icon 3s ease-in-out infinite'
-							}}
-						/>
-						
-						{/* Inner operations gear - rotating */}
-						<g style={{
-							animation: 'rotate-gear 10s linear infinite',
-							transformOrigin: '32px 32px'
-						}}>
-							<circle cx="32" cy="32" r="18" fill="white" opacity="0.95" />
-							<circle cx="32" cy="32" r="8" fill="url(#innerGradientTopbar)" />
-							
-							{/* Gear teeth - 8 directional points with animation */}
-							{[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
-								const rad = (angle * Math.PI) / 180;
-								const x1 = 32 + Math.cos(rad) * 14;
-								const y1 = 32 + Math.sin(rad) * 14;
-								const x2 = 32 + Math.cos(rad) * 18;
-								const y2 = 32 + Math.sin(rad) * 18;
-								
-								return (
-									<line
-										key={i}
-										x1={x1}
-										y1={y1}
-										x2={x2}
-										y2={y2}
-										stroke="url(#iconGradientTopbar)"
-										strokeWidth="2.5"
-										strokeLinecap="round"
-										style={{
-											animation: `pulse-tooth 2s ease-in-out infinite`,
-											animationDelay: `${i * 0.1}s`
-										}}
-									/>
-								);
-							})}
-						</g>
-						
-						{/* Operations flow lines - animated */}
-						<line
-							x1="4"
-							y1="32"
-							x2="20"
-							y2="32"
-							stroke="white"
-							strokeWidth="2"
-							strokeLinecap="round"
-							opacity="0.8"
-							style={{
-								animation: 'flow-line 2s ease-in-out infinite'
-							}}
-						/>
-						<line
-							x1="44"
-							y1="32"
-							x2="60"
-							y2="32"
-							stroke="white"
-							strokeWidth="2"
-							strokeLinecap="round"
-							opacity="0.8"
-							style={{
-								animation: 'flow-line 2s ease-in-out infinite',
-								animationDelay: '0.5s'
-							}}
-						/>
-						
-						{/* Floating particles */}
-						{[0, 60, 120, 180, 240, 300].map((angle, i) => {
-							const rad = (angle * Math.PI) / 180;
-							const radius = 26;
-							const x = 32 + Math.cos(rad) * radius;
-							const y = 32 + Math.sin(rad) * radius;
-							
-							return (
-								<circle
-									key={i}
-									cx={x}
-									cy={y}
-									r="1.5"
-									fill="url(#iconGradientTopbar)"
-									opacity="0.6"
-									style={{
-										animation: `float-particle 4s ease-in-out infinite`,
-										animationDelay: `${i * 0.3}s`
-									}}
-								/>
-							);
-						})}
-					</svg>
-				</div>
+					</div>
 				
 					{!isMobile && (
 					<a className="logo" href="/dashboard" style={{ textDecoration: 'none', display: 'flex', alignItems: 'center', marginLeft: '-0.25rem' }}>
@@ -624,76 +475,232 @@ export default function Topbar() {
 					</div>
 				</div>
 			)}
-			<style jsx>{`
-				@keyframes rotate-ring {
-					from {
-						transform: rotate(0deg);
-					}
-					to {
-						transform: rotate(360deg);
-					}
+			<style jsx global>{`
+				/* DriftPro Logo Animations for Topbar */
+				@keyframes dp-logo-rotate {
+					0% { transform: rotate(0deg) scale(1); }
+					25% { transform: rotate(90deg) scale(1.02); }
+					50% { transform: rotate(180deg) scale(1); }
+					75% { transform: rotate(270deg) scale(1.02); }
+					100% { transform: rotate(360deg) scale(1); }
 				}
-
-				@keyframes rotate-ring-reverse {
-					from {
-						transform: rotate(360deg);
-					}
-					to {
-						transform: rotate(0deg);
-					}
+				
+				@keyframes dp-bg-pulse {
+					0%, 100% { opacity: 0.1; transform: scale(1); }
+					50% { opacity: 0.2; transform: scale(1.05); }
 				}
-
-				@keyframes rotate-gear {
-					from {
-						transform: rotate(0deg);
-					}
-					to {
-						transform: rotate(360deg);
-					}
+				
+				@keyframes dp-ripple-expand {
+					0% { transform: scale(0.8); opacity: 0.3; stroke-width: 2; }
+					50% { transform: scale(1.2); opacity: 0.1; stroke-width: 1; }
+					100% { transform: scale(1.6); opacity: 0; stroke-width: 0.5; }
 				}
-
-				@keyframes pulse-icon {
-					0%, 100% {
-						opacity: 0.95;
-						transform: scale(1);
-					}
-					50% {
-						opacity: 1;
-						transform: scale(1.02);
-					}
+				
+				@keyframes dp-burst-spring {
+					0%, 100% { transform: scale(1); opacity: 0.3; }
+					25% { transform: scale(1.3); opacity: 0.6; }
+					50% { transform: scale(0.9); opacity: 0.4; }
+					75% { transform: scale(1.2); opacity: 0.7; }
 				}
-
-				@keyframes pulse-tooth {
-					0%, 100% {
-						opacity: 1;
-						stroke-width: 2.5;
-					}
-					50% {
-						opacity: 0.7;
-						stroke-width: 3;
-					}
+				
+				@keyframes dp-burst-dot-bounce {
+					0%, 100% { transform: scale(1); opacity: 0.8; }
+					50% { transform: scale(1.5); opacity: 1; }
 				}
-
-				@keyframes flow-line {
-					0%, 100% {
-						opacity: 0.6;
-						stroke-dasharray: 0 20;
-					}
-					50% {
-						opacity: 1;
-						stroke-dasharray: 20 0;
-					}
+				
+				@keyframes dp-ring-outer-rotate {
+					from { stroke-dashoffset: 0; transform: rotate(0deg); }
+					to { stroke-dashoffset: -14; transform: rotate(360deg); }
 				}
-
-				@keyframes float-particle {
-					0%, 100% {
-						transform: translate(0, 0) scale(1);
-						opacity: 0.6;
-					}
-					50% {
-						transform: translate(2px, -2px) scale(1.3);
-						opacity: 1;
-					}
+				
+				@keyframes dp-ring-middle-rotate {
+					from { stroke-dashoffset: 0; transform: rotate(0deg); }
+					to { stroke-dashoffset: -10; transform: rotate(-360deg); }
+				}
+				
+				@keyframes dp-core-outer-pulse {
+					0%, 100% { transform: scale(1); opacity: 0.95; filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4)); }
+					25% { transform: scale(1.08); opacity: 1; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6)); }
+					50% { transform: scale(1.12); opacity: 1; filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.8)); }
+					75% { transform: scale(1.05); opacity: 0.98; filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5)); }
+				}
+				
+				@keyframes dp-core-inner-pulse {
+					0%, 100% { transform: scale(1); opacity: 1; }
+					25% { transform: scale(1.12); opacity: 0.98; }
+					50% { transform: scale(1.18); opacity: 0.95; }
+					75% { transform: scale(1.08); opacity: 0.97; }
+				}
+				
+				@keyframes dp-core-pulse {
+					0%, 100% { transform: scale(1); opacity: 0.95; }
+					25% { transform: scale(1.3); opacity: 0.9; }
+					50% { transform: scale(1.5); opacity: 0.8; }
+					75% { transform: scale(1.2); opacity: 0.85; }
+				}
+				
+				@keyframes dp-element-float {
+					0%, 100% { transform: translateY(0px) translateX(0px) scale(1) rotate(0deg); opacity: 0.9; }
+					20% { transform: translateY(-4px) translateX(2px) scale(1.06) rotate(2deg); opacity: 1; }
+					40% { transform: translateY(-6px) translateX(0px) scale(1.1) rotate(0deg); opacity: 1; }
+					60% { transform: translateY(-3px) translateX(-2px) scale(1.05) rotate(-2deg); opacity: 0.95; }
+					80% { transform: translateY(-1px) translateX(1px) scale(1.02) rotate(1deg); opacity: 0.92; }
+				}
+				
+				@keyframes dp-element-glow-pulse {
+					0%, 100% { opacity: 0.2; transform: scale(1); }
+					33% { opacity: 0.35; transform: scale(1.15); }
+					66% { opacity: 0.45; transform: scale(1.25); }
+				}
+				
+				@keyframes dp-element-dot-pulse {
+					0%, 100% { transform: scale(1); opacity: 0.9; filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3)); }
+					25% { transform: scale(1.15); opacity: 1; filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5)); }
+					50% { transform: scale(1.25); opacity: 1; filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.7)); }
+					75% { transform: scale(1.1); opacity: 0.95; filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.6)); }
+				}
+				
+				@keyframes dp-element-core-pulse {
+					0%, 100% { transform: scale(1); opacity: 1; }
+					25% { transform: scale(1.4); opacity: 0.95; }
+					50% { transform: scale(1.6); opacity: 0.9; }
+					75% { transform: scale(1.3); opacity: 0.92; }
+				}
+				
+				@keyframes dp-element-indicator-orbit {
+					0% { transform: rotate(0deg) translateX(2.5px) rotate(0deg) scale(1); opacity: 0.7; }
+					25% { transform: rotate(90deg) translateX(2.5px) rotate(-90deg) scale(1.2); opacity: 1; }
+					50% { transform: rotate(180deg) translateX(2.5px) rotate(-180deg) scale(1); opacity: 0.9; }
+					75% { transform: rotate(270deg) translateX(2.5px) rotate(-270deg) scale(1.15); opacity: 1; }
+					100% { transform: rotate(360deg) translateX(2.5px) rotate(-360deg) scale(1); opacity: 0.7; }
+				}
+				
+				@keyframes dp-data-particle-move {
+					0% { transform: translate(0, 0) scale(0.8); opacity: 0.6; }
+					20% { transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -4px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -4px)) scale(1.1); opacity: 0.9; }
+					40% { transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -8px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -8px)) scale(1.3); opacity: 1; }
+					60% { transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -12px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -12px)) scale(1.2); opacity: 0.95; }
+					80% { transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -16px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -16px)) scale(1); opacity: 0.8; }
+					100% { transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -20px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -20px)) scale(0.7); opacity: 0.4; }
+				}
+				
+				@keyframes dp-element-connection-flow {
+					0% { stroke-dashoffset: 0; opacity: 0.15; }
+					50% { stroke-dashoffset: -6; opacity: 0.3; }
+					100% { stroke-dashoffset: -12; opacity: 0.15; }
+				}
+				
+				@keyframes dp-flow-path-pulse {
+					0%, 100% { stroke-opacity: 0.2; stroke-width: 0.6; }
+					33% { stroke-opacity: 0.35; stroke-width: 0.75; }
+					66% { stroke-opacity: 0.45; stroke-width: 0.9; }
+				}
+				
+				@keyframes dp-flow-particle-move {
+					0% { transform: translate(0, 0) scale(0.7); opacity: 0.5; }
+					20% { transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 3px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 3px)) scale(1); opacity: 0.9; }
+					40% { transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 6px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 6px)) scale(1.2); opacity: 1; }
+					60% { transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 9px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 9px)) scale(1.1); opacity: 0.95; }
+					80% { transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 12px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 12px)) scale(0.9); opacity: 0.7; }
+					100% { transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 16px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 16px)) scale(0.6); opacity: 0.3; }
+				}
+				
+				@keyframes dp-sparkle-orbit {
+					0% { transform: rotate(0deg) translateX(7px) rotate(0deg) scale(1); opacity: 0.7; }
+					25% { transform: rotate(90deg) translateX(7px) rotate(-90deg) scale(1.4); opacity: 1; }
+					50% { transform: rotate(180deg) translateX(7px) rotate(-180deg) scale(1); opacity: 0.9; }
+					75% { transform: rotate(270deg) translateX(7px) rotate(-270deg) scale(1.3); opacity: 1; }
+					100% { transform: rotate(360deg) translateX(7px) rotate(-360deg) scale(1); opacity: 0.7; }
+				}
+				
+				.dp-logo-container {
+					animation: dp-logo-rotate 20s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-bg {
+					animation: dp-bg-pulse 3s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-ring-outer {
+					animation: dp-ring-outer-rotate 8s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-ring-middle {
+					animation: dp-ring-middle-rotate 6s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-core-outer {
+					animation: dp-core-outer-pulse 2s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-core-inner {
+					animation: dp-core-inner-pulse 1.5s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-core-pulse {
+					animation: dp-core-pulse 1.2s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-floating-element {
+					animation: dp-element-float 2.5s ease-in-out infinite;
+				}
+				
+				.dp-element-glow {
+					animation: dp-element-glow-pulse 2s ease-in-out infinite;
+				}
+				
+				.dp-element-dot {
+					animation: dp-element-dot-pulse 1.8s ease-in-out infinite;
+				}
+				
+				.dp-element-core {
+					animation: dp-element-core-pulse 1.5s ease-in-out infinite;
+				}
+				
+				.dp-element-indicator {
+					animation: dp-element-indicator-orbit 3s linear infinite;
+				}
+				
+				.dp-data-particle {
+					animation: dp-data-particle-move 2s ease-in-out infinite;
+				}
+				
+				.dp-element-connection {
+					animation: dp-element-connection-flow 2s linear infinite;
+				}
+				
+				.dp-flow-path {
+					animation: dp-flow-path-pulse 2s ease-in-out infinite;
+				}
+				
+				.dp-flow-particle {
+					animation: dp-flow-particle-move 2.5s ease-in-out infinite;
+				}
+				
+				.dp-sparkle {
+					animation: dp-sparkle-orbit 4s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-ripple {
+					animation: dp-ripple-expand 2s ease-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-burst-line {
+					animation: dp-burst-spring 1.5s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.dp-burst-dot {
+					animation: dp-burst-dot-bounce 1.2s ease-in-out infinite;
 				}
 
 				@keyframes text-glow {

@@ -35,7 +35,8 @@ import {
   Grid,
   List,
   SortAsc,
-  SortDesc
+  SortDesc,
+  FolderPlus
 } from 'lucide-react';
 
 export default function DocumentsPage() {
@@ -55,13 +56,33 @@ export default function DocumentsPage() {
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [showFolderModal, setShowFolderModal] = useState(false);
+  const [uploadMode, setUploadMode] = useState<'single' | 'bulk'>('single');
+  const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
+  const [folders, setFolders] = useState<Array<{id: string, name: string, parentId?: string}>>([]);
+  const [currentFolder, setCurrentFolder] = useState<string | null>(null);
   const [newDocument, setNewDocument] = useState({
     title: '',
     description: '',
     category: 'other' as 'policy' | 'procedure' | 'form' | 'report' | 'other',
     isPublic: false,
     tags: '',
-    departmentId: ''
+    departmentId: '',
+    folderId: null as string | null,
+    expiryDate: '',
+    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+    version: '1.0',
+    author: '',
+    language: 'no',
+    requiresSignature: false,
+    notifyUsers: false,
+    notifyUserIds: [] as string[]
+  });
+  const [newFolder, setNewFolder] = useState({
+    name: '',
+    description: '',
+    parentId: null as string | null,
+    isPublic: false
   });
 
   useEffect(() => {
@@ -99,13 +120,32 @@ export default function DocumentsPage() {
     }
   };
 
-  const handleFileUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file || !userProfile?.companyId || !userProfile?.id) {
-      setError('Mangler brukerinformasjon. Vennligst logg inn på nytt.');
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (!files || files.length === 0) {
       return;
     }
 
+    if (uploadMode === 'single') {
+      setSelectedFiles([files[0]]);
+      // Auto-fill title from filename if empty
+      if (!newDocument.title.trim()) {
+        const fileName = files[0].name.replace(/\.[^/.]+$/, '');
+        setNewDocument({...newDocument, title: fileName});
+      }
+    } else {
+      // Bulk upload
+      setSelectedFiles(Array.from(files));
+    }
+  };
+
+  const handleSingleUpload = async () => {
+    if (selectedFiles.length === 0 || !userProfile?.companyId || !userProfile?.id) {
+      setError('Vennligst velg en fil');
+      return;
+    }
+
+    const file = selectedFiles[0];
     if (!newDocument.title.trim()) {
       setError('Tittel er påkrevd');
       return;
@@ -116,7 +156,6 @@ export default function DocumentsPage() {
       setUploadProgress(0);
       setError(null);
 
-      // Simulate upload progress
       const progressInterval = setInterval(() => {
         setUploadProgress(prev => {
           if (prev >= 90) {
@@ -131,7 +170,16 @@ export default function DocumentsPage() {
         ...newDocument,
         uploadedBy: userProfile.id,
         companyId: userProfile.companyId,
-        tags: newDocument.tags ? newDocument.tags.split(',').map(tag => tag.trim()) : []
+        tags: newDocument.tags ? newDocument.tags.split(',').map(tag => tag.trim()) : [],
+        folderId: newDocument.folderId || null,
+        expiryDate: newDocument.expiryDate || null,
+        priority: newDocument.priority,
+        version: newDocument.version,
+        author: newDocument.author || userProfile.displayName || userProfile.email || '',
+        language: newDocument.language,
+        requiresSignature: newDocument.requiresSignature,
+        notifyUsers: newDocument.notifyUsers,
+        notifyUserIds: newDocument.notifyUserIds
       };
 
       await firebaseService.uploadDocument(file, documentData);
@@ -141,14 +189,7 @@ export default function DocumentsPage() {
       
       setTimeout(() => {
         setShowAddModal(false);
-        setNewDocument({
-          title: '',
-          description: '',
-          category: 'other',
-          isPublic: false,
-          tags: '',
-          departmentId: ''
-        });
+        resetDocumentForm();
         setUploading(false);
         setUploadProgress(0);
         setSuccess('Dokument lastet opp vellykket!');
@@ -162,6 +203,126 @@ export default function DocumentsPage() {
       setUploading(false);
       setUploadProgress(0);
     }
+  };
+
+  const handleBulkUpload = async () => {
+    if (selectedFiles.length === 0 || !userProfile?.companyId || !userProfile?.id) {
+      setError('Ingen filer valgt');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      setUploadProgress(0);
+      setError(null);
+
+      let uploaded = 0;
+      const total = selectedFiles.length;
+
+      for (const file of selectedFiles) {
+        const documentData = {
+          title: file.name.replace(/\.[^/.]+$/, ''),
+          description: newDocument.description,
+          category: newDocument.category,
+          isPublic: newDocument.isPublic,
+          tags: newDocument.tags ? newDocument.tags.split(',').map(tag => tag.trim()) : [],
+          departmentId: newDocument.departmentId,
+          folderId: newDocument.folderId || null,
+          uploadedBy: userProfile.id,
+          companyId: userProfile.companyId,
+          priority: newDocument.priority,
+          version: '1.0',
+          author: newDocument.author || userProfile.displayName || userProfile.email || '',
+          language: newDocument.language
+        };
+
+        await firebaseService.uploadDocument(file, documentData);
+        uploaded++;
+        setUploadProgress(Math.round((uploaded / total) * 100));
+      }
+
+      setShowAddModal(false);
+      resetDocumentForm();
+      setSelectedFiles([]);
+      setUploading(false);
+      setUploadProgress(0);
+      setSuccess(`${uploaded} dokumenter lastet opp vellykket!`);
+      loadData();
+      
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error uploading documents:', error);
+      setError('Feil ved opplasting av dokumenter: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+      setUploading(false);
+      setUploadProgress(0);
+    }
+  };
+
+  const handleCreateFolder = async () => {
+    if (!newFolder.name.trim() || !userProfile?.companyId || !userProfile?.id) {
+      setError('Mappnavn er påkrevd');
+      return;
+    }
+
+    try {
+      setError(null);
+      // Create folder in Firestore
+      const folderData = {
+        name: newFolder.name,
+        description: newFolder.description,
+        parentId: newFolder.parentId,
+        isPublic: newFolder.isPublic,
+        companyId: userProfile.companyId,
+        createdBy: userProfile.id,
+        createdAt: new Date().toISOString()
+      };
+
+      // Add folder to Firestore (you'll need to implement this in firebaseService)
+      // await firebaseService.createFolder(folderData);
+      
+      // For now, add to local state
+      const newFolderItem = {
+        id: `folder-${Date.now()}`,
+        name: newFolder.name,
+        parentId: newFolder.parentId || undefined
+      };
+      setFolders([...folders, newFolderItem]);
+      
+      setShowFolderModal(false);
+      setNewFolder({
+        name: '',
+        description: '',
+        parentId: null,
+        isPublic: false
+      });
+      setSuccess('Mappe opprettet vellykket!');
+      setTimeout(() => setSuccess(null), 3000);
+    } catch (error) {
+      console.error('Error creating folder:', error);
+      setError('Feil ved opprettelse av mappe: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+    }
+  };
+
+  const resetDocumentForm = () => {
+    setNewDocument({
+      title: '',
+      description: '',
+      category: 'other',
+      isPublic: false,
+      tags: '',
+      departmentId: '',
+      folderId: null,
+      expiryDate: '',
+      priority: 'normal',
+      version: '1.0',
+      author: '',
+      language: 'no',
+      requiresSignature: false,
+      notifyUsers: false,
+      notifyUserIds: []
+    });
+    setSelectedFiles([]);
+    setUploadMode('single');
   };
 
   const handleDeleteDocument = async (doc: Document) => {
@@ -390,16 +551,17 @@ export default function DocumentsPage() {
                 style={{ 
                   padding: '0.5rem', 
                   borderRadius: 'var(--radius-md)', 
-                  border: '1px solid var(--gray-300)',
-                  background: 'var(--white)',
+                  border: '1px solid var(--border-color)',
+                  background: 'var(--card-background)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.25rem'
+                  gap: '0.25rem',
+                  color: 'var(--text-color)'
                 }}
                 title={viewMode === 'grid' ? 'Listevisning' : 'Rutenettvisning'}
               >
-                {viewMode === 'grid' ? <List style={{ width: '16px', height: '16px' }} /> : <Grid style={{ width: '16px', height: '16px' }} />}
+                {viewMode === 'grid' ? <List style={{ width: '16px', height: '16px', color: 'var(--text-color)' }} /> : <Grid style={{ width: '16px', height: '16px', color: 'var(--text-color)' }} />}
               </button>
             <button
               onClick={() => setShowAddModal(true)}
@@ -588,10 +750,12 @@ export default function DocumentsPage() {
                   style={{ 
                     width: '100%', 
                     padding: isMobile ? '0.5rem 0.5rem 0.5rem 2rem' : '0.75rem 0.75rem 0.75rem 2.5rem', 
-                    border: '1px solid var(--gray-300)', 
+                    border: '1px solid var(--border-color)', 
                     borderRadius: 'var(--radius-lg)', 
                     outline: 'none',
-                    fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)'
+                    fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)',
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)'
                   }}
                 />
               </div>
@@ -602,11 +766,13 @@ export default function DocumentsPage() {
                 onChange={(e) => setSelectedCategory(e.target.value)}
                 style={{ 
                   padding: isMobile ? '0.5rem' : '0.75rem', 
-                  border: '1px solid var(--gray-300)', 
+                  border: '1px solid var(--border-color)', 
                   borderRadius: 'var(--radius-lg)', 
                   outline: 'none',
                   minWidth: isMobile ? '120px' : '150px',
-                  fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)'
+                  fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)',
+                  background: 'var(--card-background)',
+                  color: 'var(--text-color)'
                 }}
               >
                 <option value="all">Alle kategorier</option>
@@ -621,11 +787,13 @@ export default function DocumentsPage() {
                 onChange={(e) => setSortBy(e.target.value as 'date' | 'name' | 'size' | 'category')}
                 style={{ 
                   padding: isMobile ? '0.5rem' : '0.75rem', 
-                  border: '1px solid var(--gray-300)', 
+                  border: '1px solid var(--border-color)', 
                   borderRadius: 'var(--radius-lg)', 
                   outline: 'none',
                   minWidth: isMobile ? '100px' : '120px',
-                  fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)'
+                  fontSize: isMobile ? 'var(--font-size-sm)' : 'var(--font-size-base)',
+                  background: 'var(--card-background)',
+                  color: 'var(--text-color)'
                 }}
               >
                 <option value="date">Dato</option>
@@ -637,17 +805,18 @@ export default function DocumentsPage() {
                 onClick={() => setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc')}
                 style={{ 
                   padding: isMobile ? '0.5rem' : '0.75rem', 
-                  border: '1px solid var(--gray-300)', 
+                  border: '1px solid var(--border-color)', 
                   borderRadius: 'var(--radius-lg)', 
-                  background: 'var(--white)',
+                  background: 'var(--card-background)',
                   cursor: 'pointer',
                   display: 'flex',
                   alignItems: 'center',
-                  gap: '0.25rem'
+                  gap: '0.25rem',
+                  color: 'var(--text-color)'
                 }}
                 title={sortOrder === 'asc' ? 'Synkende rekkefølge' : 'Stigende rekkefølge'}
               >
-                {sortOrder === 'asc' ? <SortDesc style={{ width: '16px', height: '16px' }} /> : <SortAsc style={{ width: '16px', height: '16px' }} />}
+                {sortOrder === 'asc' ? <SortDesc style={{ width: '16px', height: '16px', color: 'var(--text-color)' }} /> : <SortAsc style={{ width: '16px', height: '16px', color: 'var(--text-color)' }} />}
               </button>
             </div>
           </div>
@@ -692,6 +861,133 @@ export default function DocumentsPage() {
                 </button>
               )}
             </div>
+          ) : viewMode === 'grid' ? (
+            /* Grid View */
+            <div style={{ 
+              display: 'grid', 
+              gridTemplateColumns: isMobile ? 'repeat(auto-fill, minmax(150px, 1fr))' : 'repeat(auto-fill, minmax(200px, 1fr))', 
+              gap: isMobile ? '0.75rem' : '1rem' 
+            }}>
+              {filteredDocuments.map((doc) => (
+                <div
+                  key={doc.id}
+                  onClick={() => {
+                    setSelectedDocument(doc);
+                    setShowDetailModal(true);
+                  }}
+                  style={{
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-lg)',
+                    background: 'var(--card-background)',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: '0.75rem',
+                    transition: 'all 0.2s',
+                    minHeight: '180px'
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isMobile) {
+                      e.currentTarget.style.transform = 'translateY(-2px)';
+                      e.currentTarget.style.boxShadow = 'var(--shadow-md)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isMobile) {
+                      e.currentTarget.style.transform = 'translateY(0)';
+                      e.currentTarget.style.boxShadow = 'none';
+                    }
+                  }}
+                >
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)' }}>
+                    {getFileIcon(doc.fileType)}
+                  </div>
+                  <div style={{ flex: 1 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                      <p style={{
+                        fontWeight: '500',
+                        color: 'var(--text-color)',
+                        fontSize: 'var(--font-size-sm)',
+                        margin: 0,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        display: '-webkit-box',
+                        WebkitLineClamp: 2,
+                        WebkitBoxOrient: 'vertical',
+                        lineHeight: '1.4'
+                      }}>
+                        {doc.title}
+                      </p>
+                      {doc.isPublic && (
+                        <Shield style={{ width: '14px', height: '14px', color: 'var(--green-600)', flexShrink: 0 }} />
+                      )}
+                    </div>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', marginBottom: '0.5rem' }}>
+                      <span style={{
+                        padding: '0.125rem 0.5rem',
+                        borderRadius: 'var(--radius-full)',
+                        background: 'var(--gray-100)',
+                        fontSize: 'var(--font-size-xs)',
+                        fontWeight: '500',
+                        color: 'var(--gray-700)',
+                        textTransform: 'capitalize',
+                        width: 'fit-content'
+                      }}>
+                        {doc.category}
+                      </span>
+                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                        {formatFileSize(doc.fileSize)}
+                      </span>
+                      <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)' }}>
+                        {formatDate(doc.createdAt)}
+                      </span>
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', gap: '0.5rem', justifyContent: 'flex-end' }}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        downloadDocument(doc);
+                      }}
+                      style={{
+                        padding: '0.5rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--card-background)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Last ned"
+                    >
+                      <Download style={{ width: '16px', height: '16px', color: 'var(--text-color)' }} />
+                    </button>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setSelectedDocument(doc);
+                        setShowDetailModal(true);
+                      }}
+                      style={{
+                        padding: '0.5rem',
+                        borderRadius: 'var(--radius-md)',
+                        border: '1px solid var(--border-color)',
+                        background: 'var(--card-background)',
+                        cursor: 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center'
+                      }}
+                      title="Se detaljer"
+                    >
+                      <Eye style={{ width: '16px', height: '16px', color: 'var(--text-color)' }} />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : isMobile ? (
             /* Mobile Card View */
             <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
@@ -700,9 +996,9 @@ export default function DocumentsPage() {
                   key={doc.id} 
                   style={{ 
                     padding: '0.75rem', 
-                    border: '1px solid var(--gray-200)', 
+                    border: '1px solid var(--border-color)', 
                     borderRadius: 'var(--radius-lg)', 
-                    background: 'var(--white)',
+                    background: 'var(--card-background)',
                     cursor: 'pointer'
                   }}
                   onClick={() => {
@@ -810,8 +1106,8 @@ export default function DocumentsPage() {
                           style={{ 
                             padding: '0.375rem', 
                             borderRadius: 'var(--radius-md)', 
-                            border: '1px solid var(--gray-300)',
-                            background: 'var(--white)',
+                            border: '1px solid var(--border-color)',
+                            background: 'var(--card-background)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -819,8 +1115,8 @@ export default function DocumentsPage() {
                           }}
                           title="Last ned"
                         >
-                          <Download style={{ width: '12px', height: '12px', color: 'var(--gray-600)' }} />
-                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-600)' }}>Last ned</span>
+                          <Download style={{ width: '12px', height: '12px', color: 'var(--text-color)' }} />
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-color)' }}>Last ned</span>
                         </button>
                         <button
                           onClick={(e) => {
@@ -831,8 +1127,8 @@ export default function DocumentsPage() {
                           style={{ 
                             padding: '0.375rem', 
                             borderRadius: 'var(--radius-md)', 
-                            border: '1px solid var(--blue-300)',
-                            background: 'var(--white)',
+                            border: '1px solid var(--border-color)',
+                            background: 'var(--card-background)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -840,8 +1136,8 @@ export default function DocumentsPage() {
                           }}
                           title="Se detaljer"
                         >
-                          <Eye style={{ width: '12px', height: '12px', color: 'var(--blue-600)' }} />
-                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--blue-600)' }}>Se</span>
+                          <Eye style={{ width: '12px', height: '12px', color: 'var(--text-color)' }} />
+                          <span style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-color)' }}>Se</span>
                         </button>
                         <button
                           onClick={(e) => {
@@ -851,8 +1147,8 @@ export default function DocumentsPage() {
                           style={{ 
                             padding: '0.375rem', 
                             borderRadius: 'var(--radius-md)', 
-                            border: '1px solid var(--red-300)',
-                            background: 'var(--white)',
+                            border: '1px solid var(--border-color)',
+                            background: 'var(--card-background)',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
@@ -980,13 +1276,14 @@ export default function DocumentsPage() {
                             style={{ 
                               padding: '0.5rem', 
                               borderRadius: 'var(--radius-md)', 
-                              border: '1px solid var(--gray-300)',
-                              background: 'var(--white)',
-                              cursor: 'pointer'
+                              border: '1px solid var(--border-color)',
+                              background: 'var(--card-background)',
+                              cursor: 'pointer',
+                              color: 'var(--text-color)'
                             }}
                             title="Last ned"
                           >
-                            <Download style={{ width: '16px', height: '16px', color: 'var(--gray-600)' }} />
+                            <Download style={{ width: '16px', height: '16px', color: 'var(--text-color)' }} />
                           </button>
                           <button
                             onClick={(e) => {
@@ -997,13 +1294,14 @@ export default function DocumentsPage() {
                             style={{ 
                               padding: '0.5rem', 
                               borderRadius: 'var(--radius-md)', 
-                              border: '1px solid var(--blue-300)',
-                              background: 'var(--white)',
-                              cursor: 'pointer'
+                              border: '1px solid var(--border-color)',
+                              background: 'var(--card-background)',
+                              cursor: 'pointer',
+                              color: 'var(--text-color)'
                             }}
                             title="Se detaljer"
                           >
-                            <Eye style={{ width: '16px', height: '16px', color: 'var(--blue-600)' }} />
+                            <Eye style={{ width: '16px', height: '16px', color: 'var(--text-color)' }} />
                           </button>
                           <button
                             onClick={(e) => {
@@ -1013,9 +1311,10 @@ export default function DocumentsPage() {
                             style={{ 
                               padding: '0.5rem', 
                               borderRadius: 'var(--radius-md)', 
-                              border: '1px solid var(--red-300)',
-                              background: 'var(--white)',
-                              cursor: 'pointer'
+                              border: '1px solid var(--border-color)',
+                              background: 'var(--card-background)',
+                              cursor: 'pointer',
+                              color: 'var(--red-600)'
                             }}
                             title="Slett"
                           >
@@ -1032,7 +1331,7 @@ export default function DocumentsPage() {
         </div>
       </div>
 
-      {/* Add Modal */}
+      {/* Add Modal - Advanced Upload */}
       {showAddModal && (
         <div style={{ 
           position: 'fixed', 
@@ -1046,17 +1345,21 @@ export default function DocumentsPage() {
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div className="card" style={{ width: '90%', maxWidth: '600px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="card" style={{ width: '90%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--gray-900)' }}>Last opp dokument</h2>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)' }}>Last opp dokument</h2>
               <button
-                onClick={() => setShowAddModal(false)}
+                onClick={() => {
+                  setShowAddModal(false);
+                  resetDocumentForm();
+                }}
                 style={{ 
                   padding: '0.5rem', 
                   borderRadius: 'var(--radius-md)', 
                   border: 'none',
-                  background: 'var(--gray-100)',
-                  cursor: 'pointer'
+                  background: 'var(--card-background)',
+                  cursor: 'pointer',
+                  color: 'var(--text-color)'
                 }}
               >
                 ✕
@@ -1078,8 +1381,8 @@ export default function DocumentsPage() {
             {uploading && (
               <div style={{ marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>Laster opp...</span>
-                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-600)' }}>{uploadProgress}%</span>
+                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-color)' }}>Laster opp...</span>
+                  <span style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-color)' }}>{uploadProgress}%</span>
                 </div>
                 <div style={{ 
                   width: '100%', 
@@ -1097,150 +1400,617 @@ export default function DocumentsPage() {
                 </div>
               </div>
             )}
+
+            {/* Upload Mode Toggle */}
+            <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '1.5rem', padding: '0.5rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)' }}>
+              <button
+                onClick={() => setUploadMode('single')}
+                style={{
+                  flex: 1,
+                  padding: '0.5rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none',
+                  background: uploadMode === 'single' ? 'var(--primary)' : 'transparent',
+                  color: uploadMode === 'single' ? 'white' : 'var(--text-color)',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                Enkelt dokument
+              </button>
+              <button
+                onClick={() => setUploadMode('bulk')}
+                style={{
+                  flex: 1,
+                  padding: '0.5rem',
+                  borderRadius: 'var(--radius-md)',
+                  border: 'none',
+                  background: uploadMode === 'bulk' ? 'var(--primary)' : 'transparent',
+                  color: uploadMode === 'bulk' ? 'white' : 'var(--text-color)',
+                  cursor: 'pointer',
+                  fontWeight: '500'
+                }}
+              >
+                Flere dokumenter
+              </button>
+            </div>
             
             <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {/* File Upload */}
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Fil *
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                  {uploadMode === 'bulk' ? 'Filer *' : 'Fil *'}
                 </label>
                 <input
                   type="file"
-                  onChange={handleFileUpload}
+                  multiple={uploadMode === 'bulk'}
+                  onChange={handleFileSelect}
                   disabled={uploading}
                   style={{ 
                     width: '100%', 
                     padding: '0.75rem', 
-                    border: '1px solid var(--gray-300)', 
+                    border: '1px solid var(--border-color)', 
                     borderRadius: 'var(--radius-lg)', 
                     outline: 'none',
-                    opacity: uploading ? 0.5 : 1
+                    opacity: uploading ? 0.5 : 1,
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)'
                   }}
                 />
+                {selectedFiles.length > 0 && (
+                  <div style={{ marginTop: '0.5rem', padding: '0.75rem', background: 'var(--gray-50)', borderRadius: 'var(--radius-lg)' }}>
+                    <p style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-color)', marginBottom: '0.5rem', fontWeight: '500' }}>
+                      Valgte filer ({selectedFiles.length}):
+                    </p>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem' }}>
+                      {selectedFiles.map((file, index) => (
+                        <div key={index} style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-color)' }}>
+                          • {file.name} ({(file.size / 1024).toFixed(2)} KB)
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
                 <p style={{ fontSize: 'var(--font-size-xs)', color: 'var(--gray-500)', marginTop: '0.25rem' }}>
-                  Støttede formater: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, JPG, PNG, GIF (maks 10MB)
+                  Støttede formater: PDF, DOC, DOCX, XLS, XLSX, PPT, PPTX, JPG, PNG, GIF (maks 10MB per fil)
                 </p>
               </div>
-              
+
+              {/* Folder Selection */}
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Tittel *
-                </label>
-                <input
-                  type="text"
-                  value={newDocument.title}
-                  onChange={(e) => setNewDocument({...newDocument, title: e.target.value})}
-                  disabled={uploading}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.75rem', 
-                    border: '1px solid var(--gray-300)', 
-                    borderRadius: 'var(--radius-lg)', 
-                    outline: 'none',
-                    opacity: uploading ? 0.5 : 1
-                  }}
-                  placeholder="Dokument tittel"
-                />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Beskrivelse
-                </label>
-                <textarea
-                  value={newDocument.description}
-                  onChange={(e) => setNewDocument({...newDocument, description: e.target.value})}
-                  disabled={uploading}
-                  style={{ 
-                    width: '100%', 
-                    padding: '0.75rem', 
-                    border: '1px solid var(--gray-300)', 
-                    borderRadius: 'var(--radius-lg)', 
-                    outline: 'none',
-                    minHeight: '100px',
-                    resize: 'vertical',
-                    opacity: uploading ? 0.5 : 1
-                  }}
-                  placeholder="Beskrivelse av dokumentet"
-                />
-              </div>
-              
-              <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Kategori
-                </label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                  <label style={{ fontWeight: '500', color: 'var(--text-color)' }}>
+                    Mappe
+                  </label>
+                  <button
+                    onClick={() => setShowFolderModal(true)}
+                    style={{
+                      padding: '0.375rem 0.75rem',
+                      borderRadius: 'var(--radius-md)',
+                      border: '1px solid var(--border-color)',
+                      background: 'var(--card-background)',
+                      color: 'var(--text-color)',
+                      cursor: 'pointer',
+                      fontSize: 'var(--font-size-sm)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.25rem'
+                    }}
+                  >
+                    <FolderPlus style={{ width: '14px', height: '14px' }} />
+                    Opprett mappe
+                  </button>
+                </div>
                 <select
-                  value={newDocument.category}
-                  onChange={(e) => setNewDocument({...newDocument, category: e.target.value as "policy" | "procedure" | "form" | "report" | "other"})}
+                  value={newDocument.folderId || ''}
+                  onChange={(e) => setNewDocument({...newDocument, folderId: e.target.value || null})}
                   disabled={uploading}
                   style={{ 
                     width: '100%', 
                     padding: '0.75rem', 
-                    border: '1px solid var(--gray-300)', 
+                    border: '1px solid var(--border-color)', 
                     borderRadius: 'var(--radius-lg)', 
                     outline: 'none',
-                    opacity: uploading ? 0.5 : 1
+                    opacity: uploading ? 0.5 : 1,
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)'
                   }}
                 >
-                  <option value="policy">Policy</option>
-                  <option value="procedure">Prosedyre</option>
-                  <option value="form">Skjema</option>
-                  <option value="report">Rapport</option>
-                  <option value="other">Annet</option>
+                  <option value="">Ingen mappe (rot)</option>
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>{folder.name}</option>
+                  ))}
                 </select>
               </div>
               
+              {/* Basic Information */}
+              {uploadMode === 'single' && (
+                <>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                      Tittel *
+                    </label>
+                    <input
+                      type="text"
+                      value={newDocument.title}
+                      onChange={(e) => setNewDocument({...newDocument, title: e.target.value})}
+                      disabled={uploading}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        border: '1px solid var(--border-color)', 
+                        borderRadius: 'var(--radius-lg)', 
+                        outline: 'none',
+                        opacity: uploading ? 0.5 : 1,
+                        background: 'var(--card-background)',
+                        color: 'var(--text-color)'
+                      }}
+                      placeholder="Dokument tittel"
+                    />
+                  </div>
+                  
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                      Beskrivelse
+                    </label>
+                    <textarea
+                      value={newDocument.description}
+                      onChange={(e) => setNewDocument({...newDocument, description: e.target.value})}
+                      disabled={uploading}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        border: '1px solid var(--border-color)', 
+                        borderRadius: 'var(--radius-lg)', 
+                        outline: 'none',
+                        minHeight: '100px',
+                        resize: 'vertical',
+                        opacity: uploading ? 0.5 : 1,
+                        background: 'var(--card-background)',
+                        color: 'var(--text-color)'
+                      }}
+                      placeholder="Beskrivelse av dokumentet"
+                    />
+                  </div>
+                </>
+              )}
+
+              {/* Advanced Options - Collapsible */}
+              <details style={{ border: '1px solid var(--border-color)', borderRadius: 'var(--radius-lg)', padding: '1rem' }}>
+                <summary style={{ cursor: 'pointer', fontWeight: '500', color: 'var(--text-color)', marginBottom: '1rem' }}>
+                  Avanserte innstillinger
+                </summary>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem', marginTop: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                      Kategori
+                    </label>
+                    <select
+                      value={newDocument.category}
+                      onChange={(e) => setNewDocument({...newDocument, category: e.target.value as "policy" | "procedure" | "form" | "report" | "other"})}
+                      disabled={uploading}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        border: '1px solid var(--border-color)', 
+                        borderRadius: 'var(--radius-lg)', 
+                        outline: 'none',
+                        opacity: uploading ? 0.5 : 1,
+                        background: 'var(--card-background)',
+                        color: 'var(--text-color)'
+                      }}
+                    >
+                      <option value="policy">Policy</option>
+                      <option value="procedure">Prosedyre</option>
+                      <option value="form">Skjema</option>
+                      <option value="report">Rapport</option>
+                      <option value="other">Annet</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                      Prioritet
+                    </label>
+                    <select
+                      value={newDocument.priority}
+                      onChange={(e) => setNewDocument({...newDocument, priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent'})}
+                      disabled={uploading}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        border: '1px solid var(--border-color)', 
+                        borderRadius: 'var(--radius-lg)', 
+                        outline: 'none',
+                        opacity: uploading ? 0.5 : 1,
+                        background: 'var(--card-background)',
+                        color: 'var(--text-color)'
+                      }}
+                    >
+                      <option value="low">Lav</option>
+                      <option value="normal">Normal</option>
+                      <option value="high">Høy</option>
+                      <option value="urgent">Haster</option>
+                    </select>
+                  </div>
+
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                        Versjon
+                      </label>
+                      <input
+                        type="text"
+                        value={newDocument.version}
+                        onChange={(e) => setNewDocument({...newDocument, version: e.target.value})}
+                        disabled={uploading}
+                        style={{ 
+                          width: '100%', 
+                          padding: '0.75rem', 
+                          border: '1px solid var(--border-color)', 
+                          borderRadius: 'var(--radius-lg)', 
+                          outline: 'none',
+                          opacity: uploading ? 0.5 : 1,
+                          background: 'var(--card-background)',
+                          color: 'var(--text-color)'
+                        }}
+                        placeholder="1.0"
+                      />
+                    </div>
+
+                    <div>
+                      <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                        Språk
+                      </label>
+                      <select
+                        value={newDocument.language}
+                        onChange={(e) => setNewDocument({...newDocument, language: e.target.value})}
+                        disabled={uploading}
+                        style={{ 
+                          width: '100%', 
+                          padding: '0.75rem', 
+                          border: '1px solid var(--border-color)', 
+                          borderRadius: 'var(--radius-lg)', 
+                          outline: 'none',
+                          opacity: uploading ? 0.5 : 1,
+                          background: 'var(--card-background)',
+                          color: 'var(--text-color)'
+                        }}
+                      >
+                        <option value="no">Norsk</option>
+                        <option value="en">Engelsk</option>
+                        <option value="sv">Svensk</option>
+                        <option value="da">Dansk</option>
+                      </select>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                      Forfatter
+                    </label>
+                    <input
+                      type="text"
+                      value={newDocument.author}
+                      onChange={(e) => setNewDocument({...newDocument, author: e.target.value})}
+                      disabled={uploading}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        border: '1px solid var(--border-color)', 
+                        borderRadius: 'var(--radius-lg)', 
+                        outline: 'none',
+                        opacity: uploading ? 0.5 : 1,
+                        background: 'var(--card-background)',
+                        color: 'var(--text-color)'
+                      }}
+                      placeholder={userProfile?.displayName || userProfile?.email || 'Forfatter'}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                      Utløpsdato (valgfritt)
+                    </label>
+                    <input
+                      type="date"
+                      value={newDocument.expiryDate}
+                      onChange={(e) => setNewDocument({...newDocument, expiryDate: e.target.value})}
+                      disabled={uploading}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        border: '1px solid var(--border-color)', 
+                        borderRadius: 'var(--radius-lg)', 
+                        outline: 'none',
+                        opacity: uploading ? 0.5 : 1,
+                        background: 'var(--card-background)',
+                        color: 'var(--text-color)'
+                      }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                      Tags (kommaseparert)
+                    </label>
+                    <input
+                      type="text"
+                      value={newDocument.tags}
+                      onChange={(e) => setNewDocument({...newDocument, tags: e.target.value})}
+                      disabled={uploading}
+                      style={{ 
+                        width: '100%', 
+                        padding: '0.75rem', 
+                        border: '1px solid var(--border-color)', 
+                        borderRadius: 'var(--radius-lg)', 
+                        outline: 'none',
+                        opacity: uploading ? 0.5 : 1,
+                        background: 'var(--card-background)',
+                        color: 'var(--text-color)'
+                      }}
+                      placeholder="viktig, prosjekt, 2024, q1"
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        id="isPublic"
+                        checked={newDocument.isPublic}
+                        onChange={(e) => setNewDocument({...newDocument, isPublic: e.target.checked})}
+                        disabled={uploading}
+                        style={{ width: '16px', height: '16px', opacity: uploading ? 0.5 : 1 }}
+                      />
+                      <label htmlFor="isPublic" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-color)' }}>
+                        Offentlig dokument (synlig for alle ansatte)
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        id="requiresSignature"
+                        checked={newDocument.requiresSignature}
+                        onChange={(e) => setNewDocument({...newDocument, requiresSignature: e.target.checked})}
+                        disabled={uploading}
+                        style={{ width: '16px', height: '16px', opacity: uploading ? 0.5 : 1 }}
+                      />
+                      <label htmlFor="requiresSignature" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-color)' }}>
+                        Krever signatur
+                      </label>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        id="notifyUsers"
+                        checked={newDocument.notifyUsers}
+                        onChange={(e) => setNewDocument({...newDocument, notifyUsers: e.target.checked})}
+                        disabled={uploading}
+                        style={{ width: '16px', height: '16px', opacity: uploading ? 0.5 : 1 }}
+                      />
+                      <label htmlFor="notifyUsers" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-color)' }}>
+                        Varsle brukere ved opplasting
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </details>
+            </div>
+            
+            <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
+              <button
+                onClick={() => {
+                  setShowAddModal(false);
+                  resetDocumentForm();
+                }}
+                disabled={uploading}
+                style={{ 
+                  flex: '1',
+                  padding: '0.75rem', 
+                  border: '1px solid var(--border-color)', 
+                  borderRadius: 'var(--radius-lg)', 
+                  background: 'var(--card-background)',
+                  color: 'var(--text-color)',
+                  cursor: uploading ? 'not-allowed' : 'pointer',
+                  opacity: uploading ? 0.5 : 1
+                }}
+              >
+                Avbryt
+              </button>
+              {uploadMode === 'single' && selectedFiles.length > 0 && (
+                <button
+                  onClick={handleSingleUpload}
+                  disabled={uploading || !newDocument.title.trim()}
+                  className="btn btn-primary"
+                  style={{ 
+                    flex: '1',
+                    padding: '0.75rem', 
+                    cursor: (uploading || !newDocument.title.trim()) ? 'not-allowed' : 'pointer',
+                    opacity: (uploading || !newDocument.title.trim()) ? 0.5 : 1
+                  }}
+                >
+                  Last opp dokument
+                </button>
+              )}
+              {uploadMode === 'bulk' && selectedFiles.length > 0 && (
+                <button
+                  onClick={handleBulkUpload}
+                  disabled={uploading}
+                  className="btn btn-primary"
+                  style={{ 
+                    flex: '1',
+                    padding: '0.75rem', 
+                    cursor: uploading ? 'not-allowed' : 'pointer',
+                    opacity: uploading ? 0.5 : 1
+                  }}
+                >
+                  Last opp {selectedFiles.length} {selectedFiles.length === 1 ? 'dokument' : 'dokumenter'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Folder Modal */}
+      {showFolderModal && (
+        <div style={{ 
+          position: 'fixed', 
+          top: 0, 
+          left: 0, 
+          right: 0, 
+          bottom: 0, 
+          background: 'rgba(0, 0, 0, 0.5)', 
+          display: 'flex', 
+          alignItems: 'center', 
+          justifyContent: 'center',
+          zIndex: 1001
+        }}>
+          <div className="card" style={{ width: '90%', maxWidth: '500px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: 'var(--font-size-xl)', fontWeight: '600', color: 'var(--text-color)' }}>Opprett mappe</h2>
+              <button
+                onClick={() => {
+                  setShowFolderModal(false);
+                  setNewFolder({ name: '', description: '', parentId: null, isPublic: false });
+                }}
+                style={{ 
+                  padding: '0.5rem', 
+                  borderRadius: 'var(--radius-md)', 
+                  border: 'none',
+                  background: 'var(--card-background)',
+                  cursor: 'pointer',
+                  color: 'var(--text-color)'
+                }}
+              >
+                ✕
+              </button>
+            </div>
+            
+            {error && (
+              <div style={{ 
+                padding: '0.75rem', 
+                background: 'var(--red-50)', 
+                border: '1px solid var(--red-200)', 
+                borderRadius: 'var(--radius-lg)', 
+                marginBottom: '1rem' 
+              }}>
+                <p style={{ color: 'var(--red-700)', fontSize: 'var(--font-size-sm)' }}>{error}</p>
+              </div>
+            )}
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-700)' }}>
-                  Tags (kommaseparert)
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                  Mappenavn *
                 </label>
                 <input
                   type="text"
-                  value={newDocument.tags}
-                  onChange={(e) => setNewDocument({...newDocument, tags: e.target.value})}
-                  disabled={uploading}
+                  value={newFolder.name}
+                  onChange={(e) => setNewFolder({...newFolder, name: e.target.value})}
                   style={{ 
                     width: '100%', 
                     padding: '0.75rem', 
-                    border: '1px solid var(--gray-300)', 
+                    border: '1px solid var(--border-color)', 
                     borderRadius: 'var(--radius-lg)', 
                     outline: 'none',
-                    opacity: uploading ? 0.5 : 1
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)'
                   }}
-                  placeholder="viktig, prosjekt, 2024, q1"
+                  placeholder="Mappenavn"
                 />
               </div>
-              
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                  Beskrivelse
+                </label>
+                <textarea
+                  value={newFolder.description}
+                  onChange={(e) => setNewFolder({...newFolder, description: e.target.value})}
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: 'var(--radius-lg)', 
+                    outline: 'none',
+                    minHeight: '80px',
+                    resize: 'vertical',
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)'
+                  }}
+                  placeholder="Beskrivelse av mappen"
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--text-color)' }}>
+                  Overordnet mappe
+                </label>
+                <select
+                  value={newFolder.parentId || ''}
+                  onChange={(e) => setNewFolder({...newFolder, parentId: e.target.value || null})}
+                  style={{ 
+                    width: '100%', 
+                    padding: '0.75rem', 
+                    border: '1px solid var(--border-color)', 
+                    borderRadius: 'var(--radius-lg)', 
+                    outline: 'none',
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)'
+                  }}
+                >
+                  <option value="">Ingen (rot)</option>
+                  {folders.map((folder) => (
+                    <option key={folder.id} value={folder.id}>{folder.name}</option>
+                  ))}
+                </select>
+              </div>
+
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <input
                   type="checkbox"
-                  id="isPublic"
-                  checked={newDocument.isPublic}
-                  onChange={(e) => setNewDocument({...newDocument, isPublic: e.target.checked})}
-                  disabled={uploading}
-                  style={{ width: '16px', height: '16px', opacity: uploading ? 0.5 : 1 }}
+                  id="folderIsPublic"
+                  checked={newFolder.isPublic}
+                  onChange={(e) => setNewFolder({...newFolder, isPublic: e.target.checked})}
+                  style={{ width: '16px', height: '16px' }}
                 />
-                <label htmlFor="isPublic" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--gray-700)' }}>
-                  Offentlig dokument (synlig for alle ansatte)
+                <label htmlFor="folderIsPublic" style={{ fontSize: 'var(--font-size-sm)', color: 'var(--text-color)' }}>
+                  Offentlig mappe (synlig for alle ansatte)
                 </label>
               </div>
             </div>
             
             <div style={{ display: 'flex', gap: '1rem', marginTop: '2rem' }}>
               <button
-                onClick={() => setShowAddModal(false)}
-                disabled={uploading}
+                onClick={() => {
+                  setShowFolderModal(false);
+                  setNewFolder({ name: '', description: '', parentId: null, isPublic: false });
+                }}
                 style={{ 
                   flex: '1',
                   padding: '0.75rem', 
-                  border: '1px solid var(--gray-300)', 
+                  border: '1px solid var(--border-color)', 
                   borderRadius: 'var(--radius-lg)', 
-                  background: 'var(--white)',
-                  color: 'var(--gray-700)',
-                  cursor: uploading ? 'not-allowed' : 'pointer',
-                  opacity: uploading ? 0.5 : 1
+                  background: 'var(--card-background)',
+                  color: 'var(--text-color)',
+                  cursor: 'pointer'
                 }}
               >
                 Avbryt
+              </button>
+              <button
+                onClick={handleCreateFolder}
+                className="btn btn-primary"
+                style={{ 
+                  flex: '1',
+                  padding: '0.75rem'
+                }}
+              >
+                Opprett mappe
               </button>
             </div>
           </div>
@@ -1270,8 +2040,9 @@ export default function DocumentsPage() {
                   padding: '0.5rem', 
                   borderRadius: 'var(--radius-md)', 
                   border: 'none',
-                  background: 'var(--gray-100)',
-                  cursor: 'pointer'
+                  background: 'var(--card-background)',
+                  cursor: 'pointer',
+                  color: 'var(--text-color)'
                 }}
               >
                 ✕
@@ -1389,9 +2160,9 @@ export default function DocumentsPage() {
                   }}
                   style={{ 
                     padding: '0.75rem 1.5rem', 
-                    border: '1px solid var(--red-300)', 
+                    border: '1px solid var(--border-color)', 
                     borderRadius: 'var(--radius-lg)', 
-                    background: 'var(--white)',
+                    background: 'var(--card-background)',
                     color: 'var(--red-600)',
                     cursor: 'pointer',
                     display: 'flex',
@@ -1406,10 +2177,10 @@ export default function DocumentsPage() {
                   onClick={() => setShowDetailModal(false)}
                   style={{ 
                     padding: '0.75rem 1.5rem', 
-                    border: '1px solid var(--gray-300)', 
+                    border: '1px solid var(--border-color)', 
                     borderRadius: 'var(--radius-lg)', 
-                    background: 'var(--white)',
-                    color: 'var(--gray-700)',
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)',
                     cursor: 'pointer'
                   }}
                 >

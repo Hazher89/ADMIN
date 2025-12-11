@@ -263,7 +263,7 @@ export default function LoginPage() {
                 style={{
                   position: 'relative',
                   zIndex: 10,
-                  padding: '0.25rem',
+                  padding: '1rem',
                   borderRadius: 'var(--radius-xl)',
                   background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%)',
                   border: '2px solid',
@@ -276,168 +276,37 @@ export default function LoginPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '220px',
-                  height: '220px',
-                  overflow: 'hidden'
+                  width: '280px',
+                  height: '280px',
+                  overflow: 'visible'
                 }}
               >
-                {/* Advanced Animated Icon */}
-                <svg
-                  viewBox="0 0 64 64"
-                  fill="none"
-                  xmlns="http://www.w3.org/2000/svg"
-                  style={{
-                    width: '100%',
-                    height: '100%',
-                    filter: 'drop-shadow(0 0 20px rgba(6, 182, 212, 0.5))'
-                  }}
-                >
-                  <defs>
-                    <linearGradient id="iconGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#22d3ee" />
-                      <stop offset="50%" stopColor="#0ea5e9" />
-                      <stop offset="100%" stopColor="#06b6d4" />
-                    </linearGradient>
-                    <linearGradient id="innerGradient" x1="0%" y1="0%" x2="100%" y2="100%">
-                      <stop offset="0%" stopColor="#06b6d4" />
-                      <stop offset="100%" stopColor="#0891b2" />
-                    </linearGradient>
-                  </defs>
-                  
-                  {/* Outer rotating ring */}
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r="28"
-                    fill="none"
-                    stroke="url(#iconGradient)"
-                    strokeWidth="1.5"
-                    strokeDasharray="4 4"
-                    opacity="0.6"
-                    style={{
-                      animation: 'rotate-ring 8s linear infinite',
-                      transformOrigin: '32px 32px'
+                {/* DriftPro Logo */}
+                <div style={{
+                  width: '100%',
+                  height: '100%',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  filter: 'drop-shadow(0 0 20px rgba(6, 182, 212, 0.5))'
+                }}>
+                  <div 
+                    className="animated-logo-container"
+                    style={{ 
+                      width: '260px', 
+                      height: '260px', 
+                      display: 'flex', 
+                      alignItems: 'center', 
+                      justifyContent: 'center'
                     }}
-                  />
-                  
-                  {/* Middle rotating ring - reverse */}
-                  <circle
-                    cx="32"
-                    cy="32"
-                    r="24"
-                    fill="none"
-                    stroke="url(#iconGradient)"
-                    strokeWidth="1"
-                    strokeDasharray="3 3"
-                    opacity="0.4"
-                    style={{
-                      animation: 'rotate-ring-reverse 6s linear infinite',
-                      transformOrigin: '32px 32px'
-                    }}
-                  />
-                  
-                  {/* Rounded square background with pulse */}
-                  <rect
-                    x="8"
-                    y="8"
-                    width="48"
-                    height="48"
-                    rx="12"
-                    ry="12"
-                    fill="url(#iconGradient)"
-                    opacity="0.95"
-                    style={{
-                      animation: 'pulse-icon 3s ease-in-out infinite'
-                    }}
-                  />
-                  
-                  {/* Inner operations gear - rotating */}
-                  <g style={{
-                    animation: 'rotate-gear 10s linear infinite',
-                    transformOrigin: '32px 32px'
-                  }}>
-                    <circle cx="32" cy="32" r="18" fill="white" opacity="0.95" />
-                    <circle cx="32" cy="32" r="8" fill="url(#innerGradient)" />
-                    
-                    {/* Gear teeth - 8 directional points with animation */}
-                    {[0, 45, 90, 135, 180, 225, 270, 315].map((angle, i) => {
-                      const rad = (angle * Math.PI) / 180;
-                      const x1 = 32 + Math.cos(rad) * 14;
-                      const y1 = 32 + Math.sin(rad) * 14;
-                      const x2 = 32 + Math.cos(rad) * 18;
-                      const y2 = 32 + Math.sin(rad) * 18;
-                      
-                      return (
-                        <line
-                          key={i}
-                          x1={x1}
-                          y1={y1}
-                          x2={x2}
-                          y2={y2}
-                          stroke="url(#iconGradient)"
-                          strokeWidth="2.5"
-                          strokeLinecap="round"
-                          style={{
-                            animation: `pulse-tooth 2s ease-in-out infinite`,
-                            animationDelay: `${i * 0.1}s`
-                          }}
-                        />
-                      );
-                    })}
-                  </g>
-                  
-                  {/* Operations flow lines - animated */}
-                  <line
-                    x1="4"
-                    y1="32"
-                    x2="20"
-                    y2="32"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    opacity="0.8"
-                    style={{
-                      animation: 'flow-line 2s ease-in-out infinite'
-                    }}
-                  />
-                  <line
-                    x1="44"
-                    y1="32"
-                    x2="60"
-                    y2="32"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    opacity="0.8"
-                    style={{
-                      animation: 'flow-line 2s ease-in-out infinite',
-                      animationDelay: '0.5s'
-                    }}
-                  />
-                  
-                  {/* Floating particles */}
-                  {[0, 60, 120, 180, 240, 300].map((angle, i) => {
-                    const rad = (angle * Math.PI) / 180;
-                    const radius = 26;
-                    const x = 32 + Math.cos(rad) * radius;
-                    const y = 32 + Math.sin(rad) * radius;
-                    
-                    return (
-                      <circle
-                        key={i}
-                        cx={x}
-                        cy={y}
-                        r="1.5"
-                        fill="url(#iconGradient)"
-                        opacity="0.6"
-                        style={{
-                          animation: `float-particle 4s ease-in-out infinite`,
-                          animationDelay: `${i * 0.3}s`
-                        }}
-                      />
-                    );
-                  })}
-                </svg>
+                  >
+                    <DriftProLogo 
+                      variant="icon" 
+                      size={260}
+                      className="driftpro-login-logo"
+                    />
+                  </div>
+                </div>
               </div>
               
               {/* Animated corner accents */}
@@ -962,75 +831,1768 @@ export default function LoginPage() {
           }
         }
 
-        @keyframes rotate-ring {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
+        /* ===== DRIFTPRO LOGO ANIMATIONS - Ultra Advanced & Professional ===== */
+        
+        /* Main rotation */
+        /* ===== DRIFTPRO LOGO ANIMATIONS - Fun & Advanced ===== */
+        
+        /* Main container - faster rotation with bounce */
+        @keyframes dp-logo-rotate {
+          0% { transform: rotate(0deg) scale(1); }
+          25% { transform: rotate(90deg) scale(1.02); }
+          50% { transform: rotate(180deg) scale(1); }
+          75% { transform: rotate(270deg) scale(1.02); }
+          100% { transform: rotate(360deg) scale(1); }
         }
-
-        @keyframes rotate-ring-reverse {
-          from {
-            transform: rotate(360deg);
-          }
-          to {
-            transform: rotate(0deg);
-          }
-        }
-
-        @keyframes rotate-gear {
-          from {
-            transform: rotate(0deg);
-          }
-          to {
-            transform: rotate(360deg);
-          }
-        }
-
-        @keyframes pulse-icon {
+        
+        /* Background active pulse with ripple */
+        @keyframes dp-bg-pulse {
           0%, 100% {
+            opacity: 0.1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.2;
+            transform: scale(1.05);
+          }
+        }
+        
+        /* Ripple effect - expanding circles */
+        @keyframes dp-ripple-expand {
+          0% {
+            transform: scale(0.8);
+            opacity: 0.3;
+            stroke-width: 2;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0.1;
+            stroke-width: 1;
+          }
+          100% {
+            transform: scale(1.6);
+            opacity: 0;
+            stroke-width: 0.5;
+          }
+        }
+        
+        /* Energy burst - spring effect */
+        @keyframes dp-burst-spring {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.3;
+          }
+          25% {
+            transform: scale(1.3);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(0.9);
+            opacity: 0.4;
+          }
+          75% {
+            transform: scale(1.2);
+            opacity: 0.7;
+          }
+        }
+        
+        /* Burst dot - bounce */
+        @keyframes dp-burst-dot-bounce {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 1;
+          }
+        }
+        
+        /* Outer ring - faster rotation */
+        @keyframes dp-ring-outer-rotate {
+          from {
+            stroke-dashoffset: 0;
+            transform: rotate(0deg);
+          }
+          to {
+            stroke-dashoffset: -14;
+            transform: rotate(360deg);
+          }
+        }
+        
+        /* Middle ring - counter rotation */
+        @keyframes dp-ring-middle-rotate {
+          from {
+            stroke-dashoffset: 0;
+            transform: rotate(0deg);
+          }
+          to {
+            stroke-dashoffset: -10;
+            transform: rotate(-360deg);
+          }
+        }
+        
+        /* Core outer - bounce pulse */
+        @keyframes dp-core-outer-pulse {
+          0%, 100% {
+            transform: scale(1);
             opacity: 0.95;
+            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.4));
+          }
+          25% {
+            transform: scale(1.08);
+            opacity: 1;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.6));
+          }
+          50% {
+            transform: scale(1.12);
+            opacity: 1;
+            filter: drop-shadow(0 0 12px rgba(255, 255, 255, 0.8));
+          }
+          75% {
+            transform: scale(1.05);
+            opacity: 0.98;
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.5));
+          }
+        }
+        
+        /* Core inner - elastic pulse */
+        @keyframes dp-core-inner-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          25% {
+            transform: scale(1.12);
+            opacity: 0.98;
+          }
+          50% {
+            transform: scale(1.18);
+            opacity: 0.95;
+          }
+          75% {
+            transform: scale(1.08);
+            opacity: 0.97;
+          }
+        }
+        
+        /* Core center - intense bounce */
+        @keyframes dp-core-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.95;
+          }
+          25% {
+            transform: scale(1.3);
+            opacity: 0.9;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 0.8;
+          }
+          75% {
+            transform: scale(1.2);
+            opacity: 0.85;
+          }
+        }
+        
+        /* Floating elements - playful bounce */
+        @keyframes dp-element-float {
+          0%, 100% {
+            transform: translateY(0px) translateX(0px) scale(1) rotate(0deg);
+            opacity: 0.9;
+          }
+          20% {
+            transform: translateY(-4px) translateX(2px) scale(1.06) rotate(2deg);
+            opacity: 1;
+          }
+          40% {
+            transform: translateY(-6px) translateX(0px) scale(1.1) rotate(0deg);
+            opacity: 1;
+          }
+          60% {
+            transform: translateY(-3px) translateX(-2px) scale(1.05) rotate(-2deg);
+            opacity: 0.95;
+          }
+          80% {
+            transform: translateY(-1px) translateX(1px) scale(1.02) rotate(1deg);
+            opacity: 0.92;
+          }
+        }
+        
+        /* Element glow - wave pulse */
+        @keyframes dp-element-glow-pulse {
+          0%, 100% {
+            opacity: 0.2;
+            transform: scale(1);
+          }
+          33% {
+            opacity: 0.35;
+            transform: scale(1.15);
+          }
+          66% {
+            opacity: 0.45;
+            transform: scale(1.25);
+          }
+        }
+        
+        /* Element dot - bounce pulse */
+        @keyframes dp-element-dot-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.9;
+            filter: drop-shadow(0 0 2px rgba(255, 255, 255, 0.3));
+          }
+          25% {
+            transform: scale(1.15);
+            opacity: 1;
+            filter: drop-shadow(0 0 4px rgba(255, 255, 255, 0.5));
+          }
+          50% {
+            transform: scale(1.25);
+            opacity: 1;
+            filter: drop-shadow(0 0 8px rgba(255, 255, 255, 0.7));
+          }
+          75% {
+            transform: scale(1.1);
+            opacity: 0.95;
+            filter: drop-shadow(0 0 5px rgba(255, 255, 255, 0.6));
+          }
+        }
+        
+        /* Element core - elastic bounce */
+        @keyframes dp-element-core-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          25% {
+            transform: scale(1.4);
+            opacity: 0.95;
+          }
+          50% {
+            transform: scale(1.6);
+            opacity: 0.9;
+          }
+          75% {
+            transform: scale(1.3);
+            opacity: 0.92;
+          }
+        }
+        
+        /* Element indicator - playful orbit */
+        @keyframes dp-element-indicator-orbit {
+          0% {
+            transform: rotate(0deg) translateX(2.5px) rotate(0deg) scale(1);
+            opacity: 0.7;
+          }
+          25% {
+            transform: rotate(90deg) translateX(2.5px) rotate(-90deg) scale(1.2);
+            opacity: 1;
+          }
+          50% {
+            transform: rotate(180deg) translateX(2.5px) rotate(-180deg) scale(1);
+            opacity: 0.9;
+          }
+          75% {
+            transform: rotate(270deg) translateX(2.5px) rotate(-270deg) scale(1.15);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(360deg) translateX(2.5px) rotate(-360deg) scale(1);
+            opacity: 0.7;
+          }
+        }
+        
+        /* Data particle - bouncy movement */
+        @keyframes dp-data-particle-move {
+          0% {
+            transform: translate(0, 0) scale(0.8);
+            opacity: 0.6;
+          }
+          20% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -4px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -4px)) scale(1.1);
+            opacity: 0.9;
+          }
+          40% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -8px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -8px)) scale(1.3);
+            opacity: 1;
+          }
+          60% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -12px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -12px)) scale(1.2);
+            opacity: 0.95;
+          }
+          80% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -16px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -16px)) scale(1);
+            opacity: 0.8;
+          }
+          100% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -20px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -20px)) scale(0.7);
+            opacity: 0.4;
+          }
+        }
+        
+        /* Element connection - active flow */
+        @keyframes dp-element-connection-flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.15;
+          }
+          50% {
+            stroke-dashoffset: -6;
+            opacity: 0.3;
+          }
+          100% {
+            stroke-dashoffset: -12;
+            opacity: 0.15;
+          }
+        }
+        
+        /* Flow path - wave pulse */
+        @keyframes dp-flow-path-pulse {
+          0%, 100% {
+            stroke-opacity: 0.2;
+            stroke-width: 0.6;
+          }
+          33% {
+            stroke-opacity: 0.35;
+            stroke-width: 0.75;
+          }
+          66% {
+            stroke-opacity: 0.45;
+            stroke-width: 0.9;
+          }
+        }
+        
+        /* Flow particle - playful movement */
+        @keyframes dp-flow-particle-move {
+          0% {
+            transform: translate(0, 0) scale(0.7);
+            opacity: 0.5;
+          }
+          20% {
+            transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 3px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 3px)) scale(1);
+            opacity: 0.9;
+          }
+          40% {
+            transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 6px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 6px)) scale(1.2);
+            opacity: 1;
+          }
+          60% {
+            transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 9px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 9px)) scale(1.1);
+            opacity: 0.95;
+          }
+          80% {
+            transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 12px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 12px)) scale(0.9);
+            opacity: 0.7;
+          }
+          100% {
+            transform: translate(calc(cos(var(--flow-angle, 0) * 3.14159 / 180) * 16px), calc(sin(var(--flow-angle, 0) * 3.14159 / 180) * 16px)) scale(0.6);
+            opacity: 0.3;
+          }
+        }
+        
+        /* Sparkle - playful orbit with bounce */
+        @keyframes dp-sparkle-orbit {
+          0% {
+            transform: rotate(0deg) translateX(7px) rotate(0deg) scale(1);
+            opacity: 0.7;
+          }
+          25% {
+            transform: rotate(90deg) translateX(7px) rotate(-90deg) scale(1.4);
+            opacity: 1;
+          }
+          50% {
+            transform: rotate(180deg) translateX(7px) rotate(-180deg) scale(1);
+            opacity: 0.9;
+          }
+          75% {
+            transform: rotate(270deg) translateX(7px) rotate(-270deg) scale(1.3);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(360deg) translateX(7px) rotate(-360deg) scale(1);
+            opacity: 0.7;
+          }
+        }
+        
+        /* Apply animations */
+        .dp-logo-container {
+          animation: dp-logo-rotate 20s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-bg {
+          animation: dp-bg-pulse 3s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-ring-outer {
+          animation: dp-ring-outer-rotate 8s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-ring-middle {
+          animation: dp-ring-middle-rotate 6s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-core-outer {
+          animation: dp-core-outer-pulse 2s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-core-inner {
+          animation: dp-core-inner-pulse 1.5s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-core-pulse {
+          animation: dp-core-pulse 1.2s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-floating-element {
+          animation: dp-element-float 2.5s ease-in-out infinite;
+        }
+        
+        .dp-element-glow {
+          animation: dp-element-glow-pulse 2s ease-in-out infinite;
+        }
+        
+        .dp-element-dot {
+          animation: dp-element-dot-pulse 1.8s ease-in-out infinite;
+        }
+        
+        .dp-element-core {
+          animation: dp-element-core-pulse 1.5s ease-in-out infinite;
+        }
+        
+        .dp-element-indicator {
+          animation: dp-element-indicator-orbit 3s linear infinite;
+        }
+        
+        .dp-data-particle {
+          animation: dp-data-particle-move 2s ease-in-out infinite;
+        }
+        
+        .dp-element-connection {
+          animation: dp-element-connection-flow 2s linear infinite;
+        }
+        
+        .dp-flow-path {
+          animation: dp-flow-path-pulse 2s ease-in-out infinite;
+        }
+        
+        .dp-flow-particle {
+          animation: dp-flow-particle-move 2.5s ease-in-out infinite;
+        }
+        
+        .dp-sparkle {
+          animation: dp-sparkle-orbit 4s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-ripple {
+          animation: dp-ripple-expand 2s ease-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-burst-line {
+          animation: dp-burst-spring 1.5s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .dp-burst-dot {
+          animation: dp-burst-dot-bounce 1.2s ease-in-out infinite;
+        }
+
+        /* Company name overlay animation - ultra advanced reveal */
+        @keyframes driftpro-company-name-show {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0.5) rotateZ(180deg);
+            filter: blur(15px) brightness(0.5);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0.5) rotateZ(180deg);
+            filter: blur(15px) brightness(0.5);
+          }
+          58% {
+            opacity: 0.2;
+            transform: scale(0.7) rotateZ(135deg);
+            filter: blur(10px) brightness(0.7);
+          }
+          59% {
+            opacity: 0.5;
+            transform: scale(0.85) rotateZ(90deg);
+            filter: blur(6px) brightness(0.85);
+          }
+          60% {
+            opacity: 0.8;
+            transform: scale(0.95) rotateZ(45deg);
+            filter: blur(3px) brightness(0.95);
+          }
+          61% {
+            opacity: 1;
+            transform: scale(1) rotateZ(0deg);
+            filter: blur(0px) brightness(1);
+          }
+          93% {
+            opacity: 1;
+            transform: scale(1) rotateZ(0deg);
+            filter: blur(0px) brightness(1);
+          }
+          95% {
+            opacity: 0.9;
+            transform: scale(0.98) rotateZ(-10deg);
+            filter: blur(1px) brightness(0.95);
+          }
+          97% {
+            opacity: 0.6;
+            transform: scale(0.9) rotateZ(-30deg);
+            filter: blur(4px) brightness(0.8);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.5) rotateZ(-180deg);
+            filter: blur(15px) brightness(0.5);
+          }
+        }
+
+        /* Name background base - smooth fade */
+        @keyframes driftpro-name-background-base-fade {
+          0%, 57.14% {
+            opacity: 0;
+          }
+          57.15% {
+            opacity: 0;
+          }
+          59% {
+            opacity: 0.9;
+          }
+          94% {
+            opacity: 0.9;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+
+        /* Name background radial - pulsing effect */
+        @keyframes driftpro-name-background-radial-pulse {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          60% {
+            opacity: 0.6;
+            transform: scale(1);
+          }
+          70% {
+            opacity: 0.7;
+            transform: scale(1.05);
+          }
+          80% {
+            opacity: 0.65;
+            transform: scale(1.02);
+          }
+          93% {
+            opacity: 0.6;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+        }
+
+        /* Pattern overlay animation */
+        @keyframes driftpro-name-pattern-rotate {
+          0%, 57.14% {
+            opacity: 0;
+            transform: rotate(0deg);
+          }
+          57.15% {
+            opacity: 0;
+            transform: rotate(0deg);
+          }
+          60% {
+            opacity: 0.1;
+            transform: rotate(0deg);
+          }
+          93% {
+            opacity: 0.1;
+            transform: rotate(360deg);
+          }
+          100% {
+            opacity: 0;
+            transform: rotate(360deg);
+          }
+        }
+
+        /* Glow rings animation */
+        @keyframes driftpro-name-glow-ring-pulse {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          60% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          94% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+        }
+
+        /* Shimmer effect */
+        @keyframes driftpro-name-shimmer {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateX(-100%);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateX(-100%);
+          }
+          60% {
+            opacity: 0.3;
+            transform: translateX(0%);
+          }
+          70% {
+            opacity: 0.4;
+            transform: translateX(20%);
+          }
+          80% {
+            opacity: 0.3;
+            transform: translateX(40%);
+          }
+          94% {
+            opacity: 0.3;
+            transform: translateX(100%);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(100%);
+          }
+        }
+
+        /* Company name main text - advanced reveal */
+        @keyframes driftpro-company-name-main-fade {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateY(-15px) scale(0.5);
+            filter: blur(8px);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateY(-15px) scale(0.5);
+            filter: blur(8px);
+          }
+          59% {
+            opacity: 0.5;
+            transform: translateY(-8px) scale(0.8);
+            filter: blur(4px);
+          }
+          61% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0px);
+          }
+          93% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0px);
+          }
+          96% {
+            opacity: 0.7;
+            transform: translateY(5px) scale(0.95);
+            filter: blur(2px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(15px) scale(0.5);
+            filter: blur(8px);
+          }
+        }
+
+        /* Main text animation - Utviklet for MAVI Logistikk */
+        @keyframes driftpro-main-text-fade {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateY(-15px) scale(0.6);
+            filter: blur(10px);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateY(-15px) scale(0.6);
+            filter: blur(10px);
+          }
+          59% {
+            opacity: 0.4;
+            transform: translateY(-8px) scale(0.8);
+            filter: blur(5px);
+          }
+          61% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0px);
+          }
+          93% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+            filter: blur(0px);
+          }
+          96% {
+            opacity: 0.7;
+            transform: translateY(8px) scale(0.95);
+            filter: blur(3px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(15px) scale(0.6);
+            filter: blur(10px);
+          }
+        }
+
+        /* Main text shadow */
+        @keyframes driftpro-main-text-shadow-fade {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateY(-12px) translateX(1px);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateY(-12px) translateX(1px);
+          }
+          61% {
+            opacity: 0.4;
+            transform: translateY(-1px) translateX(1px);
+          }
+          93% {
+            opacity: 0.4;
+            transform: translateY(-1px) translateX(1px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(12px) translateX(1px);
+          }
+        }
+
+        /* Main text highlight */
+        @keyframes driftpro-main-text-highlight {
+          0%, 57.14% {
+            opacity: 0;
+          }
+          57.15% {
+            opacity: 0;
+          }
+          61% {
+            opacity: 0.7;
+          }
+          93% {
+            opacity: 0.7;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+
+        /* Individual letter animation - MAVI - ultra advanced */
+        @keyframes driftpro-letter-mavi-pop {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateY(-30px) translateX(0) scale(0.2) rotateX(90deg) rotateY(90deg);
+            filter: blur(10px);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateY(-30px) translateX(0) scale(0.2) rotateX(90deg) rotateY(90deg);
+            filter: blur(10px);
+          }
+          60% {
+            opacity: 0;
+            transform: translateY(-30px) translateX(0) scale(0.2) rotateX(90deg) rotateY(90deg);
+            filter: blur(10px);
+          }
+          61% {
+            opacity: 0.3;
+            transform: translateY(-15px) translateX(0) scale(0.5) rotateX(45deg) rotateY(45deg);
+            filter: blur(6px);
+          }
+          62% {
+            opacity: 0.7;
+            transform: translateY(-5px) translateX(0) scale(0.9) rotateX(15deg) rotateY(15deg);
+            filter: blur(2px);
+          }
+          63% {
+            opacity: 1;
+            transform: translateY(0) translateX(0) scale(1.15) rotateX(0deg) rotateY(0deg);
+            filter: blur(0px);
+          }
+          64% {
+            opacity: 1;
+            transform: translateY(0) translateX(0) scale(1) rotateX(0deg) rotateY(0deg);
+            filter: blur(0px);
+          }
+          93% {
+            opacity: 1;
+            transform: translateY(0) translateX(0) scale(1) rotateX(0deg) rotateY(0deg);
+            filter: blur(0px);
+          }
+          95% {
+            opacity: 0.9;
+            transform: translateY(3px) translateX(0) scale(0.95) rotateX(-10deg) rotateY(-10deg);
+            filter: blur(1px);
+          }
+          97% {
+            opacity: 0.6;
+            transform: translateY(10px) translateX(0) scale(0.8) rotateX(-30deg) rotateY(-30deg);
+            filter: blur(4px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(30px) translateX(0) scale(0.2) rotateX(-90deg) rotateY(-90deg);
+            filter: blur(10px);
+          }
+        }
+
+        /* Letter glow animation */
+        @keyframes driftpro-letter-mavi-glow-pulse {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0.5);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0.5);
+          }
+          62% {
+            opacity: 0.6;
+            transform: scale(1.1);
+          }
+          93% {
+            opacity: 0.6;
+            transform: scale(1.1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.5);
+          }
+        }
+
+        /* Letter highlight animation */
+        @keyframes driftpro-letter-mavi-highlight {
+          0%, 57.14% {
+            opacity: 0;
+          }
+          57.15% {
+            opacity: 0;
+          }
+          63% {
+            opacity: 0.7;
+          }
+          93% {
+            opacity: 0.7;
+          }
+          100% {
+            opacity: 0;
+          }
+        }
+
+        /* Company name sub text - LOGISTIKK */
+        @keyframes driftpro-company-name-sub-fade {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateY(15px) scale(0.5);
+            filter: blur(8px);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateY(15px) scale(0.5);
+            filter: blur(8px);
+          }
+          62% {
+            opacity: 0.5;
+            transform: translateY(8px) scale(0.8);
+            filter: blur(4px);
+          }
+          64% {
+            opacity: 0.95;
+            transform: translateY(0) scale(1);
+            filter: blur(0px);
+          }
+          91% {
+            opacity: 0.95;
+            transform: translateY(0) scale(1);
+            filter: blur(0px);
+          }
+          94% {
+            opacity: 0.7;
+            transform: translateY(-5px) scale(0.95);
+            filter: blur(2px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-15px) scale(0.5);
+            filter: blur(8px);
+          }
+        }
+
+        /* Sub text shadow */
+        @keyframes driftpro-company-name-sub-shadow-fade {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateY(12px) translateX(1px);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateY(12px) translateX(1px);
+          }
+          64% {
+            opacity: 0.2;
+            transform: translateY(2px) translateX(1px);
+          }
+          91% {
+            opacity: 0.2;
+            transform: translateY(2px) translateX(1px);
+          }
+          100% {
+            opacity: 0;
+            transform: translateY(-12px) translateX(1px);
+          }
+        }
+
+        /* Advanced decoration animations */
+        @keyframes driftpro-name-decoration-expand-left {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateX(-20px) scaleX(0);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateX(-20px) scaleX(0);
+          }
+          61% {
+            opacity: 0.6;
+            transform: translateX(0) scaleX(1);
+          }
+          93% {
+            opacity: 0.6;
+            transform: translateX(0) scaleX(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(-20px) scaleX(0);
+          }
+        }
+
+        @keyframes driftpro-name-decoration-expand-right {
+          0%, 57.14% {
+            opacity: 0;
+            transform: translateX(20px) scaleX(0);
+          }
+          57.15% {
+            opacity: 0;
+            transform: translateX(20px) scaleX(0);
+          }
+          61% {
+            opacity: 0.6;
+            transform: translateX(0) scaleX(1);
+          }
+          93% {
+            opacity: 0.6;
+            transform: translateX(0) scaleX(1);
+          }
+          100% {
+            opacity: 0;
+            transform: translateX(20px) scaleX(0);
+          }
+        }
+
+        @keyframes driftpro-name-decoration-secondary {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scaleX(0);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scaleX(0);
+          }
+          63% {
+            opacity: 0.4;
+            transform: scaleX(1);
+          }
+          92% {
+            opacity: 0.4;
+            transform: scaleX(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scaleX(0);
+          }
+        }
+
+        @keyframes driftpro-name-dot-pulse {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          62% {
+            opacity: 0.5;
+            transform: scale(1.5);
+          }
+          64% {
+            opacity: 0.5;
+            transform: scale(1);
+          }
+          93% {
+            opacity: 0.5;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0);
+          }
+        }
+
+        /* Advanced glow particles */
+        @keyframes driftpro-name-glow-particle-pulse {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0) rotate(0deg);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0) rotate(0deg);
+          }
+          60% {
+            opacity: 0.7;
+            transform: scale(1.2) rotate(180deg);
+          }
+          93% {
+            opacity: 0.7;
+            transform: scale(1.2) rotate(180deg);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0) rotate(360deg);
+          }
+        }
+
+        @keyframes driftpro-name-glow-particle-outer-pulse {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          60% {
+            opacity: 0.4;
+            transform: scale(1.5);
+          }
+          93% {
+            opacity: 0.4;
+            transform: scale(1.5);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0);
+          }
+        }
+
+        /* Energy waves */
+        @keyframes driftpro-name-energy-wave-expand {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0.8);
+          }
+          60% {
+            opacity: 0.2;
+            transform: scale(1);
+          }
+          93% {
+            opacity: 0.2;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(1.2);
+          }
+        }
+
+        /* Apply main rotation - smooth continuous */
+        .driftpro-rotating-logo-container {
+          animation: driftpro-logo-rotate 15s linear infinite;
+          transform-origin: 32px 32px;
+        }
+
+        /* Energy field */
+        .driftpro-energy-field {
+          animation: driftpro-energy-field-pulse 4s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        /* Apply company name overlay */
+        .driftpro-company-name-overlay {
+          animation: driftpro-company-name-show 7s ease-in-out infinite;
+          transform-origin: 32px 32px;
+          transform-style: preserve-3d;
+        }
+
+        /* Background layers */
+        .driftpro-name-background-base {
+          animation: driftpro-name-background-base-fade 7s ease-in-out infinite;
+        }
+
+        .driftpro-name-background-radial {
+          animation: driftpro-name-background-radial-pulse 7s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        /* Pattern overlay */
+        .driftpro-name-pattern-1 {
+          animation: driftpro-name-pattern-rotate 7s linear infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-name-pattern-2 {
+          animation: driftpro-name-pattern-rotate 7s linear infinite reverse;
+          transform-origin: 32px 32px;
+        }
+
+        /* Glow rings */
+        .driftpro-name-glow-ring-1 {
+          animation: driftpro-name-glow-ring-pulse 7s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-name-glow-ring-2 {
+          animation: driftpro-name-glow-ring-pulse 7s ease-in-out infinite;
+          animation-delay: 0.15s;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-name-glow-ring-3 {
+          animation: driftpro-name-glow-ring-pulse 7s ease-in-out infinite;
+          animation-delay: 0.3s;
+          transform-origin: 32px 32px;
+        }
+
+        /* Corner accents */
+        @keyframes driftpro-corner-accent-fade {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0);
+          }
+          61% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          93% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0);
+          }
+        }
+
+        .driftpro-corner-top-left-1,
+        .driftpro-corner-top-left-2,
+        .driftpro-corner-top-right-1,
+        .driftpro-corner-top-right-2,
+        .driftpro-corner-bottom-left-1,
+        .driftpro-corner-bottom-left-2,
+        .driftpro-corner-bottom-right-1,
+        .driftpro-corner-bottom-right-2 {
+          animation: driftpro-corner-accent-fade 7s ease-in-out infinite;
+        }
+
+        .driftpro-corner-top-left-2 { animation-delay: 0.1s; }
+        .driftpro-corner-top-right-1 { animation-delay: 0.05s; }
+        .driftpro-corner-top-right-2 { animation-delay: 0.15s; }
+        .driftpro-corner-bottom-left-1 { animation-delay: 0.1s; }
+        .driftpro-corner-bottom-left-2 { animation-delay: 0.2s; }
+        .driftpro-corner-bottom-right-1 { animation-delay: 0.15s; }
+        .driftpro-corner-bottom-right-2 { animation-delay: 0.25s; }
+
+        /* Shimmer effects */
+        .driftpro-name-shimmer-1 {
+          animation: driftpro-name-shimmer 7s ease-in-out infinite;
+          transform-origin: 0 0;
+        }
+
+        .driftpro-name-shimmer-2 {
+          animation: driftpro-name-shimmer 7s ease-in-out infinite;
+          animation-delay: 0.5s;
+          transform-origin: 64px 64px;
+        }
+
+        /* Light rays */
+        @keyframes driftpro-light-ray-pulse {
+          0%, 57.14% {
+            opacity: 0;
+            transform: scale(0.5);
+          }
+          57.15% {
+            opacity: 0;
+            transform: scale(0.5);
+          }
+          61% {
+            opacity: 0.2;
+            transform: scale(1);
+          }
+          93% {
+            opacity: 0.2;
+            transform: scale(1);
+          }
+          100% {
+            opacity: 0;
+            transform: scale(0.5);
+          }
+        }
+
+        .driftpro-light-ray {
+          animation: driftpro-light-ray-pulse 7s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        /* Main text group */
+        .driftpro-main-text-group {
+          transform-origin: 32px 26px;
+        }
+
+        .driftpro-main-text-shadow-1 {
+          animation: driftpro-main-text-shadow-fade 7s ease-in-out infinite;
+          transform: translateX(1px) translateY(1px);
+        }
+
+        .driftpro-main-text-shadow-2 {
+          animation: driftpro-main-text-shadow-fade 7s ease-in-out infinite;
+          transform: translateX(-1px) translateY(-1px);
+          animation-delay: 0.05s;
+        }
+
+        .driftpro-main-text {
+          animation: driftpro-main-text-fade 7s ease-in-out infinite;
+        }
+
+        .driftpro-main-text-highlight {
+          animation: driftpro-main-text-highlight 7s ease-in-out infinite;
+        }
+
+        /* Sub company name group */
+        .driftpro-company-name-sub-group {
+          transform-origin: 32px 38px;
+        }
+
+        .driftpro-company-name-sub-shadow-1 {
+          animation: driftpro-company-name-sub-shadow-fade 7s ease-in-out infinite;
+          transform: translateX(0.5px) translateY(0.5px);
+        }
+
+        .driftpro-company-name-sub-shadow-2 {
+          animation: driftpro-company-name-sub-shadow-fade 7s ease-in-out infinite;
+          transform: translateX(-0.5px) translateY(-0.5px);
+          animation-delay: 0.05s;
+        }
+
+        .driftpro-company-name-sub {
+          animation: driftpro-company-name-sub-fade 7s ease-in-out infinite;
+        }
+
+        .driftpro-company-name-sub-highlight {
+          animation: driftpro-letter-mavi-highlight 7s ease-in-out infinite;
+          animation-delay: 0.1s;
+        }
+
+        /* Decorative elements */
+        .driftpro-name-decoration-left-1 {
+          transform-origin: 14px 32px;
+          animation: driftpro-name-decoration-expand-left 7s ease-in-out infinite;
+        }
+
+        .driftpro-name-decoration-left-2,
+        .driftpro-name-decoration-left-3 {
+          transform-origin: 14px center;
+          animation: driftpro-name-decoration-secondary 7s ease-in-out infinite;
+        }
+
+        .driftpro-name-decoration-left-2 {
+          animation-delay: 0.1s;
+        }
+
+        .driftpro-name-decoration-left-3 {
+          animation-delay: 0.15s;
+        }
+
+        .driftpro-name-decoration-right-1 {
+          transform-origin: 50px 32px;
+          animation: driftpro-name-decoration-expand-right 7s ease-in-out infinite;
+        }
+
+        .driftpro-name-decoration-right-2,
+        .driftpro-name-decoration-right-3 {
+          transform-origin: 50px center;
+          animation: driftpro-name-decoration-secondary 7s ease-in-out infinite;
+        }
+
+        .driftpro-name-decoration-right-2 {
+          animation-delay: 0.1s;
+        }
+
+        .driftpro-name-decoration-right-3 {
+          animation-delay: 0.15s;
+        }
+
+        .driftpro-name-dot-left,
+        .driftpro-name-dot-right {
+          animation: driftpro-name-dot-pulse 7s ease-in-out infinite;
+        }
+
+        .driftpro-name-dot-right {
+          animation-delay: 0.05s;
+        }
+
+        /* Glow particles */
+        .driftpro-name-glow-particle-outer {
+          animation: driftpro-name-glow-particle-outer-pulse 7s ease-in-out infinite;
+        }
+
+        .driftpro-name-glow-particle {
+          animation: driftpro-name-glow-particle-pulse 7s ease-in-out infinite;
+        }
+
+        /* Energy waves */
+        .driftpro-name-energy-wave-1 {
+          animation: driftpro-name-energy-wave-expand 7s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-name-energy-wave-2 {
+          animation: driftpro-name-energy-wave-expand 7s ease-in-out infinite;
+          animation-delay: 0.2s;
+          transform-origin: 32px 32px;
+        }
+        
+        /* Growth rings - showing expansion and growth potential */
+        @keyframes driftpro-growth-ring-expand {
+          0% {
+            transform: scale(1);
+            opacity: 0.3;
+          }
+          33% {
+            transform: scale(1.08);
+            opacity: 0.5;
+          }
+          66% {
+            transform: scale(1.15);
+            opacity: 0.3;
+          }
+          100% {
+            transform: scale(1.25);
+            opacity: 0;
+          }
+        }
+
+        /* Energy field pulse */
+        @keyframes driftpro-energy-field-pulse {
+          0%, 100% {
+            opacity: 0.15;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.3;
+            transform: scale(1.05);
+          }
+        }
+
+        /* Command hub - sophisticated animations */
+        @keyframes driftpro-hub-energy-ring-rotate {
+          from {
+            transform: rotate(0deg);
+            stroke-dashoffset: 0;
+          }
+          to {
+            transform: rotate(360deg);
+            stroke-dashoffset: -20;
+          }
+        }
+
+        @keyframes driftpro-hub-glow-pulse {
+          0%, 100% {
+            opacity: 0.3;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.5;
+            transform: scale(1.08);
+          }
+        }
+
+        @keyframes driftpro-hub-main-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.95;
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.4));
+          }
+          50% {
+            transform: scale(1.06);
+            opacity: 1;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.6));
+          }
+        }
+
+        @keyframes driftpro-hub-core-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.15);
+            opacity: 0.95;
+          }
+        }
+
+        @keyframes driftpro-hub-pulse-indicator {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.95;
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 0.85;
+          }
+        }
+
+        @keyframes driftpro-hub-rotating-particle-orbit {
+          from {
+            transform: rotate(0deg) translateX(5px) rotate(0deg);
+            opacity: 0.7;
+          }
+          50% {
+            opacity: 1;
+          }
+          to {
+            transform: rotate(360deg) translateX(5px) rotate(-360deg);
+            opacity: 0.7;
+          }
+        }
+
+        /* Department nodes - sophisticated animations */
+        @keyframes driftpro-dept-glow-pulse {
+          0%, 100% {
+            opacity: 0.15;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.3;
+            transform: scale(1.15);
+          }
+        }
+
+        @keyframes driftpro-dept-circle-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.9;
+            filter: drop-shadow(0 0 3px rgba(255, 255, 255, 0.4));
+          }
+          50% {
+            transform: scale(1.2);
+            opacity: 1;
+            filter: drop-shadow(0 0 6px rgba(255, 255, 255, 0.6));
+          }
+        }
+
+        @keyframes driftpro-dept-core-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.3);
+            opacity: 0.9;
+          }
+        }
+
+        /* Connection lines - sophisticated flow animation */
+        @keyframes driftpro-dept-connection-flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.15;
+          }
+          50% {
+            stroke-dashoffset: -8;
+            opacity: 0.3;
+          }
+          100% {
+            stroke-dashoffset: -16;
+            opacity: 0.15;
+          }
+        }
+
+        /* Data flow particles - elegant movement along connections */
+        @keyframes driftpro-data-flow-particle-move {
+          0% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.7;
+          }
+          20% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -3px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -3px)) scale(1.05);
+            opacity: 0.85;
+          }
+          40% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -6px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -6px)) scale(1.1);
+            opacity: 0.95;
+          }
+          60% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -9px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -9px)) scale(1.15);
+            opacity: 1;
+          }
+          80% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -12px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -12px)) scale(1.1);
+            opacity: 0.9;
+          }
+          100% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * -17px), calc(sin(var(--angle, 0) * 3.14159 / 180) * -17px)) scale(0.9);
+            opacity: 0.6;
+          }
+        }
+
+        /* Circular flow - continuous operations */
+        @keyframes driftpro-circular-flow-rotate {
+          from {
+            stroke-dashoffset: 0;
+            transform: rotate(0deg);
+          }
+          to {
+            stroke-dashoffset: -20;
+            transform: rotate(360deg);
+          }
+        }
+
+        /* Activity indicators - showing real-time activity */
+        @keyframes driftpro-activity-indicator-pulse {
+          0%, 100% {
+            opacity: 0.5;
             transform: scale(1);
           }
           50% {
             opacity: 1;
-            transform: scale(1.02);
+            transform: scale(2);
           }
         }
 
-        @keyframes pulse-tooth {
+        /* Activity core pulse */
+        @keyframes driftpro-activity-core-pulse {
           0%, 100% {
-            opacity: 1;
-            strokeWidth: 2.5;
-          }
-          50% {
-            opacity: 0.7;
-            strokeWidth: 3;
-          }
-        }
-
-        @keyframes flow-line {
-          0%, 100% {
-            opacity: 0.6;
-            strokeDasharray: 0 20;
+            opacity: 0.8;
+            transform: scale(1);
           }
           50% {
             opacity: 1;
-            strokeDasharray: 20 0;
+            transform: scale(1.5);
           }
         }
 
-        @keyframes float-particle {
-          0%, 100% {
+        /* Growth particles - showing expansion potential */
+        @keyframes driftpro-growth-particle-expand {
+          0% {
             transform: translate(0, 0) scale(1);
-            opacity: 0.6;
+            opacity: 0.4;
+          }
+          33% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * 3px), calc(sin(var(--angle, 0) * 3.14159 / 180) * 3px)) scale(1.3);
+            opacity: 0.7;
+          }
+          66% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * 6px), calc(sin(var(--angle, 0) * 3.14159 / 180) * 6px)) scale(1.8);
+            opacity: 0.5;
+          }
+          100% {
+            transform: translate(calc(cos(var(--angle, 0) * 3.14159 / 180) * 10px), calc(sin(var(--angle, 0) * 3.14159 / 180) * 10px)) scale(2.5);
+            opacity: 0;
+          }
+        }
+
+        /* Growth core pulse */
+        @keyframes driftpro-growth-core-pulse {
+          0%, 100% {
+            opacity: 0.7;
+            transform: scale(1);
           }
           50% {
-            transform: translate(2px, -2px) scale(1.3);
             opacity: 1;
+            transform: scale(1.4);
           }
+        }
+
+        /* Speed particles - fast processing */
+        @keyframes driftpro-speed-particle-orbit {
+          from {
+            transform: rotate(0deg) translateX(19px) rotate(0deg);
+            opacity: 0.5;
+          }
+          50% {
+            opacity: 0.9;
+          }
+          to {
+            transform: rotate(360deg) translateX(19px) rotate(-360deg);
+            opacity: 0.5;
+          }
+        }
+
+        /* Energy sparks */
+        @keyframes driftpro-energy-spark-pulse {
+          0%, 100% {
+            opacity: 0.7;
+            transform: scale(1);
+          }
+          25% {
+            opacity: 1;
+            transform: scale(1.3);
+          }
+          50% {
+            opacity: 0.9;
+            transform: scale(1.1);
+          }
+          75% {
+            opacity: 1;
+            transform: scale(1.4);
+          }
+        }
+
+        @keyframes driftpro-spark-core-pulse {
+          0%, 100% {
+            opacity: 0.9;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.5);
+          }
+        }
+
+        /* Efficiency waves - showing optimization */
+        @keyframes driftpro-wave-pulse {
+          0%, 100% {
+            opacity: 0.15;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.3;
+            transform: scale(1.1);
+          }
+        }
+
+        /* Hub animations */
+        .driftpro-hub-energy-ring {
+          animation: driftpro-hub-energy-ring-rotate 10s linear infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-hub-glow {
+          animation: driftpro-hub-glow-pulse 3s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-hub-main {
+          animation: driftpro-hub-main-pulse 2.5s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-hub-core {
+          animation: driftpro-hub-core-pulse 2s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-hub-pulse {
+          animation: driftpro-hub-pulse-indicator 1.8s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .driftpro-hub-rotating-particle {
+          animation: driftpro-hub-rotating-particle-orbit 6s linear infinite;
+          transform-origin: 32px 32px;
+        }
+
+        /* Department node animations */
+        .driftpro-dept-glow {
+          animation: driftpro-dept-glow-pulse 2.5s ease-in-out infinite;
+        }
+
+        .driftpro-dept-circle {
+          animation: driftpro-dept-circle-pulse 2.3s ease-in-out infinite;
+        }
+
+        .driftpro-dept-core {
+          animation: driftpro-dept-core-pulse 2s ease-in-out infinite;
+        }
+
+        .driftpro-dept-connection {
+          animation: driftpro-dept-connection-flow 3s linear infinite;
+        }
+
+        .driftpro-data-flow-particle {
+          animation: driftpro-data-flow-particle-move 2.5s ease-in-out infinite;
+        }
+
+        /* Circular flow */
+        .driftpro-circular-flow {
+          animation: driftpro-circular-flow-rotate 10s linear infinite;
+          transform-origin: 32px 32px;
+        }
+
+        /* Wave */
+        @keyframes driftpro-wave-pulse {
+          0%, 100% {
+            opacity: 0.1;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.2;
+            transform: scale(1.05);
+          }
+        }
+
+        .driftpro-wave {
+          animation: driftpro-wave-pulse 4s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+
+        .animated-logo-container {
+          /* Container stays still, only inner elements animate */
         }
 
         button:hover .button-shine {

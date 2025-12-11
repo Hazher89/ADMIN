@@ -1642,21 +1642,39 @@ class FirebaseService {
       let storageType: 'onedrive' | 'firebase' = 'firebase';
       let oneDriveItemId: string | undefined;
 
-      // Try OneDrive first if Microsoft Graph is authenticated
-      if (microsoftGraphService.isAuthenticated()) {
-        try {
-          console.log('📁 Uploading to OneDrive...');
+      // Try OneDrive first (app-only authentication - permanent access)
+      try {
+        // Import app-only service dynamically to avoid SSR issues
+        const { oneDriveAppOnlyService } = await import('./onedrive-app-only-service');
+        
+        // Check if OneDrive is available (app-only configured)
+        const isAvailable = await oneDriveAppOnlyService.isAvailable();
+        
+        if (isAvailable) {
+          console.log('📁 Uploading to OneDrive (app-only)...');
           // Generic dokumenter legges under en egen side-mappe i OneDrive
           const folderPath = `DriftPro/Dokumenter/${documentData.companyId}`;
-          const oneDriveResult = await microsoftGraphService.uploadFileToOneDrive(file, folderPath);
-          fileUrl = oneDriveResult.downloadUrl;
-          oneDriveItemId = oneDriveResult.id;
-          storageType = 'onedrive';
-          console.log('✅ File uploaded to OneDrive:', oneDriveResult.name);
-        } catch (onedriveError) {
-          console.warn('⚠️ OneDrive upload failed, falling back to Firebase Storage:', onedriveError);
-          // Fall back to Firebase Storage
+          const oneDriveResult = await oneDriveAppOnlyService.uploadFile(
+            file,
+            folderPath,
+            undefined, // Use original filename
+            undefined // Use default user from env
+          );
+          
+          if (oneDriveResult.success && oneDriveResult.fileId && oneDriveResult.downloadUrl) {
+            fileUrl = oneDriveResult.downloadUrl;
+            oneDriveItemId = oneDriveResult.fileId;
+            storageType = 'onedrive';
+            console.log('✅ File uploaded to OneDrive:', oneDriveResult.fileName);
+          } else {
+            throw new Error(oneDriveResult.error || 'OneDrive upload failed');
+          }
+        } else {
+          console.log('ℹ️ OneDrive app-only ikke konfigurert, bruker Firebase Storage');
         }
+      } catch (onedriveError) {
+        console.warn('⚠️ OneDrive upload failed, falling back to Firebase Storage:', onedriveError);
+        // Fall back to Firebase Storage
       }
 
       // Fall back to Firebase Storage if OneDrive failed or not available
@@ -1713,11 +1731,18 @@ class FirebaseService {
         const oneDriveItemId = docData.oneDriveItemId;
 
         // Delete from appropriate storage
-        if (storageType === 'onedrive' && oneDriveItemId && microsoftGraphService.isAuthenticated()) {
+        if (storageType === 'onedrive' && oneDriveItemId) {
           try {
-            console.log('🗑️ Deleting from OneDrive...');
-            await microsoftGraphService.deleteOneDriveFile(oneDriveItemId);
-            console.log('✅ File deleted from OneDrive');
+            console.log('🗑️ Deleting from OneDrive (app-only)...');
+            // Use app-only service for deletion
+            const { oneDriveAppOnlyService } = await import('./onedrive-app-only-service');
+            const result = await oneDriveAppOnlyService.deleteFile(oneDriveItemId);
+            
+            if (result.success) {
+              console.log('✅ File deleted from OneDrive');
+            } else {
+              console.warn('⚠️ OneDrive deletion failed:', result.error);
+            }
           } catch (onedriveError) {
             console.warn('⚠️ OneDrive deletion failed:', onedriveError);
             // Continue with database deletion even if storage deletion fails

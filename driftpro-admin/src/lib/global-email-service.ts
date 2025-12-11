@@ -48,7 +48,7 @@ export class GlobalEmailService {
 
   public async sendEmail(emailContent: EmailContent): Promise<{ success: boolean; error?: string; messageId?: string }> {
     try {
-      // Prefer server-side app-only API (fast avsender) — no login required
+      // ALWAYS use server-side app-only API (permanent access, no login required)
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
       const response = await fetch(`${baseUrl}/api/email/send`, {
         method: 'POST',
@@ -58,54 +58,24 @@ export class GlobalEmailService {
           subject: emailContent.subject,
           html: emailContent.html,
           text: emailContent.text,
+          fromEmail: emailContent.fromEmail,
         }),
       });
 
       if (response.ok) {
         const result = await response.json();
         if (result.success) {
-          console.log('✅ E-post sendt via server API (fast avsender):', emailContent.subject);
+          console.log('✅ E-post sendt via app-only API (permanent tilgang):', emailContent.subject);
           return { success: true, messageId: result.messageId || `msg_${Date.now()}` };
         }
       }
 
-      // Fallback: bruk interaktiv MSAL hvis server API ikke er konfigurert
-      try {
-        await this.checkAuthenticationStatus();
-        if (!this.isAuthenticated || !this.currentAccount) {
-          throw new Error('Server API feilet og ingen Microsoft Graph-innlogging er aktiv.');
-        }
-
-        const accessToken = await microsoftGraphService.getAccessToken();
-        const fallbackResponse = await fetch(`${baseUrl}/api/send-welcome-email`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: Array.isArray(emailContent.to) ? emailContent.to[0] : emailContent.to,
-            displayName: '',
-            adminName: '',
-            companyName: 'DriftPro',
-            departmentName: '',
-            position: '',
-            accessToken,
-            fromEmail: emailContent.fromEmail || this.currentAccount.username,
-            setupUrl: undefined,
-            password: undefined,
-            passwordSet: false,
-          }),
-        });
-
-        if (!fallbackResponse.ok) {
-          const errorData = await fallbackResponse.json().catch(() => ({}));
-          throw new Error(`Fallback e-post API feil: ${fallbackResponse.status} ${fallbackResponse.statusText} - ${errorData.error || 'Ukjent feil'}`);
-        }
-
-        const result = await fallbackResponse.json();
-        return { success: !!result.success };
-      } catch (fallbackErr) {
-        console.error('Microsoft Graph fallback feilet:', fallbackErr);
-        return { success: false, error: fallbackErr instanceof Error ? fallbackErr.message : 'Ukjent feil' };
-      }
+      // If app-only API fails, return error (no fallback to user login)
+      const errorData = await response.json().catch(() => ({}));
+      return {
+        success: false,
+        error: errorData.error || 'E-post API feilet. Sjekk at GRAPH_TENANT_ID, GRAPH_CLIENT_ID og GRAPH_CLIENT_SECRET er konfigurert.',
+      };
     } catch (error: any) {
       console.error('❌ Feil ved sending av e-post:', error);
       return { success: false, error: error.message || 'Ukjent feil' };

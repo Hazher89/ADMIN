@@ -38,12 +38,16 @@ async function getAppOnlyToken() {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { to, subject, html, text } = body;
+    const { to, subject, html, text, fromEmail } = body;
 
-    const senderUpn = process.env.GRAPH_SENDER_UPN || process.env.NEXT_PUBLIC_GRAPH_SENDER_EMAIL;
+    // Use fromEmail if provided, otherwise fall back to environment variable
+    const senderUpn = fromEmail || process.env.GRAPH_SENDER_UPN || process.env.NEXT_PUBLIC_GRAPH_SENDER_EMAIL;
     if (!senderUpn) {
       return NextResponse.json(
-        { error: 'Fast avsender er ikke konfigurert (GRAPH_SENDER_UPN eller NEXT_PUBLIC_GRAPH_SENDER_EMAIL).' },
+        { 
+          success: false,
+          error: 'Fast avsender er ikke konfigurert. Sett GRAPH_SENDER_UPN, NEXT_PUBLIC_GRAPH_SENDER_EMAIL, eller send fromEmail i request body.' 
+        },
         { status: 500 }
       );
     }
@@ -89,7 +93,12 @@ export async function POST(request: NextRequest) {
       throw new Error(`Graph sendMail-feil: ${sendRes.status} ${sendRes.statusText} - ${err.error?.message || 'Ukjent feil'}`);
     }
 
-    return NextResponse.json({ success: true, provider: 'microsoft_graph_app_only' });
+    return NextResponse.json({ 
+      success: true, 
+      provider: 'microsoft_graph_app_only',
+      messageId: `msg_${Date.now()}`,
+      sender: senderUpn
+    });
   } catch (error) {
     console.error('❌ E-post sending feilet:', error);
     return NextResponse.json(
