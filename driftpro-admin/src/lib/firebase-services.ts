@@ -1043,16 +1043,88 @@ class FirebaseService {
         };
       }
       
+      // First, create Firebase Auth user so they can log in
+      let firebaseAuthUid: string | null = null;
+      try {
+        console.log('🔐 Creating Firebase Auth user for employee:', cleanEmployeeData.email);
+        
+        // Use base URL for API call
+        const baseUrl = typeof window !== 'undefined' 
+          ? window.location.origin 
+          : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        
+        const createUserResponse = await fetch(`${baseUrl}/api/create-user`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: cleanEmployeeData.email,
+            displayName: cleanEmployeeData.displayName,
+            role: cleanEmployeeData.role || 'employee',
+            companyId: cleanEmployeeData.companyId,
+            companyName: cleanEmployeeData.companyName || 'Bedrift'
+          })
+        });
+
+        if (createUserResponse.ok) {
+          const createUserResult = await createUserResponse.json();
+          firebaseAuthUid = createUserResult.userId;
+          console.log('✅ Firebase Auth user created with UID:', firebaseAuthUid);
+        } else {
+          const errorData = await createUserResponse.json().catch(() => ({}));
+          // If user already exists in Firebase Auth, we need to find their UID
+          if (errorData.error?.includes('already-in-use') || errorData.error?.includes('already exists')) {
+            console.warn('⚠️ User already exists in Firebase Auth');
+            // Check if user document exists in Firestore with this email
+            const existingUserQuery = query(
+              collection(firestore, 'users'),
+              where('email', '==', cleanEmployeeData.email)
+            );
+            const existingUserSnapshot = await getDocs(existingUserQuery);
+            if (!existingUserSnapshot.empty) {
+              const existingUserDoc = existingUserSnapshot.docs[0];
+              const existingData = existingUserDoc.data();
+              if (existingData.uid) {
+                firebaseAuthUid = existingData.uid;
+                console.log('✅ Found existing Firebase Auth UID:', firebaseAuthUid);
+              }
+            }
+            // If we still don't have UID, we'll create document and user can reset password
+          } else {
+            console.error('❌ Failed to create Firebase Auth user:', errorData);
+            // Continue anyway - user can be created later via password reset
+          }
+        }
+      } catch (authError) {
+        console.error('❌ Error creating Firebase Auth user:', authError);
+        // Continue anyway - we'll create Firestore document
+        // User can be linked to Auth account later via password reset
+      }
+
       const employeeDoc = {
         ...cleanEmployeeData,
+        uid: firebaseAuthUid || undefined, // Set uid if we have it
+        id: firebaseAuthUid || undefined, // Also set id to uid for consistency
         createdAt: now,
         updatedAt: now
       };
       
       console.log('Employee document to save:', JSON.stringify(employeeDoc, null, 2));
       
-      const docRef = await addDoc(collection(firestore, 'users'), employeeDoc);
-      console.log('✅ Employee created with ID:', docRef.id);
+      // If we have a Firebase Auth UID, use it as document ID, otherwise let Firestore generate one
+      let docRef;
+      if (firebaseAuthUid) {
+        // Use Firebase Auth UID as document ID for consistency
+        await setDoc(doc(firestore, 'users', firebaseAuthUid), employeeDoc);
+        docRef = { id: firebaseAuthUid };
+        console.log('✅ Employee created with Firebase Auth UID:', firebaseAuthUid);
+      } else {
+        // Fallback: create document with auto-generated ID
+        docRef = await addDoc(collection(firestore, 'users'), employeeDoc);
+        console.log('✅ Employee created with auto-generated ID:', docRef.id);
+        console.warn('⚠️ Employee created without Firebase Auth UID - they will need password reset to log in');
+      }
 
       // Log access for audit trail
       if (userContext) {
