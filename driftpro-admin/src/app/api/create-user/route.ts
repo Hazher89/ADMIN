@@ -14,19 +14,36 @@ const firebaseConfig = {
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
 };
 
-// Initialize Firebase
-let app;
-if (getApps().length === 0) {
-  app = initializeApp(firebaseConfig);
-} else {
-  app = getApps()[0];
-}
+// Validate Firebase config before initializing
+const isFirebaseConfigured = firebaseConfig.apiKey && 
+  firebaseConfig.authDomain && 
+  firebaseConfig.projectId;
 
-const db = getFirestore(app);
-const auth = getAuth(app);
+// Initialize Firebase only if configured
+let app;
+let db;
+let auth;
+
+if (isFirebaseConfigured) {
+  if (getApps().length === 0) {
+    app = initializeApp(firebaseConfig);
+  } else {
+    app = getApps()[0];
+  }
+  db = getFirestore(app);
+  auth = getAuth(app);
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Check if Firebase is configured
+    if (!isFirebaseConfigured || !auth || !db) {
+      return NextResponse.json(
+        { error: 'Firebase is not configured. Please set Firebase environment variables.' },
+        { status: 500 }
+      );
+    }
+
     const { email, displayName, role = 'employee', companyId, companyName } = await request.json();
 
     if (!email || !displayName || !companyId) {
