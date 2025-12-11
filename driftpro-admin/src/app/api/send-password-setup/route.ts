@@ -1,12 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getApps, initializeApp } from 'firebase/app';
-import { getFirestore, doc, getDoc, collection, addDoc } from 'firebase/firestore';
-
-// Generate random token
-function generateToken(): string {
-  const nodeCrypto = require('crypto');
-  return nodeCrypto.randomBytes(32).toString('hex');
-}
+import { getFirestore, doc, getDoc } from 'firebase/firestore';
+import { globalEmailService } from '@/lib/global-email-service';
 
 function getDb() {
   try {
@@ -112,8 +107,8 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      // Get employee details from 'users' collection
-      const employeeDoc = await getDoc(doc(firestoreDb, 'users', employeeId));
+      // Get employee details
+      const employeeDoc = await getDoc(doc(firestoreDb, 'employees', employeeId));
       if (!employeeDoc.exists()) {
         return NextResponse.json(
           { error: 'Employee not found' },
@@ -123,33 +118,22 @@ export async function POST(request: NextRequest) {
 
       const employee = employeeDoc.data();
       
-      // Generate secure setup token
-      const setupToken = generateToken();
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + 7); // Token valid for 7 days
-
-      // Store setup token in Firestore
-      await addDoc(collection(firestoreDb, 'setupTokens'), {
-        token: setupToken,
-        userId: employeeId,
-        email: employeeEmail,
-        expiresAt: expiresAt.toISOString(),
-        used: false,
-        createdAt: new Date().toISOString(),
-        type: 'employee_welcome'
-      });
-
-      // Return setup token so client can send the email
-      // Client will send email using Microsoft Graph API (same as test email)
+      // Send password setup email for employee
+      const result = await globalEmailService.sendPasswordResetEmail(
+        employeeEmail,
+        `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${employeeId}`,
+        employee.displayName || 'Employee'
+      );
+      
+      if (!result.success) {
+        return NextResponse.json(
+          { error: `Failed to send email: ${result.error}` },
+          { status: 500 }
+        );
+      }
+      
       return NextResponse.json(
-        { 
-          message: 'Setup token created successfully',
-          setupToken: setupToken,
-          setupUrl: `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3002'}/setup-password?token=${setupToken}&email=${encodeURIComponent(employeeEmail)}`,
-          employeeEmail: employeeEmail,
-          employeeName: employee.displayName || employee.name || 'Ansatt',
-          employeePosition: employee.position || 'Ansatt'
-        },
+        { message: 'Password setup email sent successfully' },
         { status: 200 }
       );
     } else {

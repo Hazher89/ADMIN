@@ -13,9 +13,6 @@ import {
 import { doc, getDoc, setDoc, updateDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 
-// MAVI Logistikk AS - Single company system
-const MAVI_COMPANY_ID = 'mavi_logistikk_as';
-
 interface UserProfile {
   id: string;
   displayName: string;
@@ -131,11 +128,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 
   useEffect(() => {
-    // Set a timeout to ensure loading is set to false after max 3 seconds
+    // Set a timeout to ensure loading is set to false after max 5 seconds
     const timeoutId = setTimeout(() => {
       console.warn('⚠️ Auth loading timeout - setting loading to false');
       setLoading(false);
-    }, 3000);
+    }, 5000);
 
     // Only run on client side
     if (typeof window === 'undefined') {
@@ -147,22 +144,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     let unsubscribe: (() => void) | null = null;
     let hasSetLoading = false;
     let checkTimeout: NodeJS.Timeout | null = null;
-    let initTimeout: NodeJS.Timeout | null = null;
-
-    const setLoadingFalse = () => {
-      if (!hasSetLoading) {
-        hasSetLoading = true;
-        clearTimeout(timeoutId);
-        if (checkTimeout) clearTimeout(checkTimeout);
-        setLoading(false);
-      }
-    };
 
     const initializeAuth = () => {
       // Check if Firebase is available
       if (!auth) {
-        console.error('⚠️ Firebase auth not initialized - setting loading to false');
-        setLoadingFalse();
+        console.error('⚠️ Firebase auth not initialized');
+        clearTimeout(timeoutId);
+        setLoading(false);
         return;
       }
 
@@ -228,13 +216,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           checkTimeout = setTimeout(() => {
             if (!hasSetLoading && !auth?.currentUser) {
               console.log('No user logged in, setting loading to false');
-              setLoadingFalse();
+              clearTimeout(timeoutId);
+              hasSetLoading = true;
+              setLoading(false);
             }
-          }, 500);
+          }, 1000);
         }
       } catch (error) {
         console.error('Error setting up auth state listener:', error);
-        setLoadingFalse();
+        clearTimeout(timeoutId);
+        setLoading(false);
       }
     };
 
@@ -243,25 +234,20 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       initializeAuth();
     } else {
       // Wait a bit for Firebase to initialize, but not too long
-      initTimeout = setTimeout(() => {
-        if (!hasSetLoading) {
-          initializeAuth();
-        }
-      }, 100);
+      const initTimeout = setTimeout(() => {
+        initializeAuth();
+      }, 200);
       
-      // Also set a fallback timeout
-      setTimeout(() => {
-        if (!hasSetLoading) {
-          console.log('Firebase initialization timeout - setting loading to false');
-          setLoadingFalse();
-        }
-      }, 2000);
+      return () => {
+        clearTimeout(timeoutId);
+        clearTimeout(initTimeout);
+        if (unsubscribe) unsubscribe();
+      };
     }
 
     return () => {
       clearTimeout(timeoutId);
       if (checkTimeout) clearTimeout(checkTimeout);
-      if (initTimeout) clearTimeout(initTimeout);
       if (unsubscribe) unsubscribe();
     };
   }, []);
@@ -282,30 +268,30 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           const userDocSnap = await getDoc(userRef);
           
           if (!userDocSnap.exists()) {
-            // Create MAVI Logistikk AS company if it doesn't exist
-            const companyRef = doc(db, 'companies', MAVI_COMPANY_ID);
+            // Create DriftPro main company if it doesn't exist
+            const companyRef = doc(db, 'companies', 'driftpro_main');
             const companyDoc = await getDoc(companyRef);
             
             if (!companyDoc.exists()) {
               await setDoc(companyRef, {
-                id: MAVI_COMPANY_ID,
-                name: 'MAVI Logistikk AS',
-                industry: 'Logistikk',
+                id: 'driftpro_main',
+                name: 'DriftPro Administrasjon',
+                industry: 'Software',
                 employees: 1,
                 location: 'Norge',
                 phone: '+47 12345678',
-                email: 'admin@mavi.no',
-                website: 'https://mavi.no',
+                email: 'admin@driftpro.no',
+                website: 'https://admin.driftpro.no',
                 status: 'active',
                 joinedDate: new Date().toISOString(),
                 revenue: 'N/A',
-                description: 'MAVI Logistikk AS - Logistikkselskap',
+                description: 'Hovedadministrasjon for DriftPro systemet',
                 adminUserId: user.uid,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString(),
                 orgNumber: '123456789',
                 address: {
-                  street: 'MAVI Gate 1',
+                  street: 'DriftPro Gate 1',
                   city: 'Oslo',
                   postalCode: '0001',
                   country: 'Norge'
@@ -326,7 +312,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
               displayName: 'Super Administrator',
               email: email,
               role: 'super_admin',
-              companyId: MAVI_COMPANY_ID,
+              companyId: 'driftpro_main',
               status: 'active',
               createdAt: new Date().toISOString(),
               updatedAt: new Date().toISOString(),
@@ -365,98 +351,45 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           return; // Superadmin login successful
       }
       
-      // CRITICAL: Try to authenticate with Firebase FIRST
-      // This way we can get the UID even if it's not in Firestore yet
-      let userCredential;
-      try {
-        userCredential = await signInWithEmailAndPassword(auth, email, password);
-        console.log('✅ Firebase authentication successful:', userCredential.user.uid);
-      } catch (authError: any) {
-        console.error('❌ Firebase authentication failed:', authError);
-        // If authentication fails, check if it's because user doesn't exist in Firebase Auth
-        if (authError?.code === 'auth/user-not-found') {
-          throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase Auth konto). Kontakt administrator for å få nytt passord.');
-        } else if (authError?.code === 'auth/wrong-password' || authError?.code === 'auth/invalid-credential') {
-          // Check if user exists in Firestore to give better error message
-          const usersQueryCheck = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
-          const userSnapshotCheck = await getDocs(usersQueryCheck);
-          
-          if (userSnapshotCheck.empty) {
-            const usersQueryCaseCheck = query(collection(db, 'users'), where('email', '==', email));
-            const userSnapshotCaseCheck = await getDocs(usersQueryCaseCheck);
-            
-            if (userSnapshotCaseCheck.empty) {
-              throw new Error('Bruker ikke funnet. Kontakt administrator.');
-            }
-          }
-          
-          // User exists in Firestore but password is wrong
-          throw new Error('Feil passord. Prøv igjen eller bruk "Glemt passord" for å sette et nytt passord.');
-        } else if (authError?.code === 'auth/invalid-email') {
-          throw new Error('Ugyldig e-postadresse.');
-        } else {
-          throw new Error(authError?.message || 'Innlogging feilet. Prøv igjen.');
-        }
+      // For all other users, check if user exists and get their companyId
+      const usersQuery = query(collection(db, 'users'), where('email', '==', email));
+      const userSnapshot = await getDocs(usersQuery);
+      
+      if (userSnapshot.empty) {
+          throw new Error('Bruker ikke funnet. Kontakt administrator.');
       }
       
-      // NOW: Check if user exists in Firestore by email (case-insensitive search)
-      const firebaseUid = userCredential.user.uid;
-      let userDoc;
-      let userData;
-      
-      // Try to find user by email (case-insensitive first, then case-sensitive)
-      const usersQueryLower = query(collection(db, 'users'), where('email', '==', email.toLowerCase()));
-      const userSnapshotLower = await getDocs(usersQueryLower);
-      
-      if (!userSnapshotLower.empty) {
-        userDoc = userSnapshotLower.docs[0];
-        userData = userDoc.data();
-      } else {
-        // Try case-sensitive search as fallback
-        const usersQueryCaseSensitive = query(collection(db, 'users'), where('email', '==', email));
-        const userSnapshotCaseSensitive = await getDocs(usersQueryCaseSensitive);
-        
-        if (userSnapshotCaseSensitive.empty) {
-          // User exists in Firebase Auth but not in Firestore - this is a problem
-          console.error('❌ User exists in Firebase Auth but not in Firestore:', {
-            email: email,
-            firebaseUid: firebaseUid
-          });
-          throw new Error('Brukeren finnes i systemet, men profil mangler. Kontakt administrator for å få hjelp.');
-        } else {
-          userDoc = userSnapshotCaseSensitive.docs[0];
-          userData = userSnapshotCaseSensitive.docs[0].data();
-        }
-      }
+      const userDoc = userSnapshot.docs[0];
+      const userData = userDoc.data();
       
       // Check if user has a companyId
       if (!userData.companyId) {
         throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
       }
       
+      // Check if user has been set up with Firebase Authentication
+      if (!userData.uid) {
+        // For DriftPro admin, we'll create the Firebase user if it doesn't exist
+        if (userData.companyId === 'driftpro_main' && userData.role === 'admin') {
+          console.log('Creating Firebase user for DriftPro admin');
+          // Update the user document with the Firebase UID after authentication
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          await updateDoc(doc(db, 'users', userDoc.id), {
+            uid: userCredential.user.uid,
+            updatedAt: new Date().toISOString()
+          });
+          return;
+        } else {
+          throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
+        }
+      }
+      
       if (userData.status !== 'active') {
         throw new Error(`Brukeren er ikke aktivert (status: ${userData.status || 'unknown'}). Kontakt administrator for å få nytt passord.`);
       }
       
-      // NOW: Update UID in Firestore if missing or incorrect
-      if (!userData.uid || userData.uid !== firebaseUid) {
-        console.log('⚠️ UID missing or mismatch in Firestore, updating...', {
-          firestoreUid: userData.uid,
-          firebaseUid: firebaseUid,
-          userDocId: userDoc.id
-        });
-        
-        // Update Firestore with the correct UID from Firebase Auth
-        await updateDoc(doc(db, 'users', userDoc.id), {
-          uid: firebaseUid,
-          status: 'active', // Ensure status is active
-          passwordSet: true, // Mark password as set
-          passwordSetAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
-        
-        console.log('✅ UID updated in Firestore:', firebaseUid);
-      }
+      // ONLY NOW: Proceed with Firebase authentication
+      const userCredential = await signInWithEmailAndPassword(auth, email, password);
       
     } catch (error: unknown) {
       console.error('🚨 LOGIN ERROR:', error);

@@ -38,7 +38,7 @@ export default function EmployeesPage() {
     phone: '',
     departmentId: '',
     position: '',
-        role: 'employee' as 'admin' | 'super_admin' | 'department_leader' | 'employee',
+        role: 'employee' as 'admin' | 'department_leader' | 'employee',
         status: 'active' as 'active' | 'inactive' | 'on_leave',
     birthDate: '',
     employeeNumber: '',
@@ -56,8 +56,6 @@ export default function EmployeesPage() {
     bankAccount: '',
     insuranceNumber: '',
     avatar: '',
-    password: '',
-    confirmPassword: '',
     // Tilgangskontroll
     permissions: {
       dashboard: true,
@@ -276,17 +274,6 @@ export default function EmployeesPage() {
       return;
     }
 
-    // Validate password if provided
-    if (newEmployee.password && newEmployee.password.length < 6) {
-      alert('Passord må være minst 6 tegn');
-      return;
-    }
-
-    if (newEmployee.password && newEmployee.password !== newEmployee.confirmPassword) {
-      alert('Passordene matcher ikke');
-      return;
-    }
-
     console.log('Creating employee with data:', {
       ...newEmployee,
       departmentId: newEmployee.departmentId || '',
@@ -300,7 +287,7 @@ export default function EmployeesPage() {
       const employeeData: any = {
         displayName: newEmployee.displayName.trim(),
         email: newEmployee.email.trim(),
-        role: newEmployee.role as 'admin' | 'super_admin' | 'department_leader' | 'employee',
+        role: newEmployee.role as 'admin' | 'department_leader' | 'employee',
         status: newEmployee.status as 'active' | 'inactive' | 'on_leave',
         companyId: userProfile.companyId,
         hireDate: newEmployee.hireDate || new Date().toISOString(),
@@ -405,46 +392,13 @@ export default function EmployeesPage() {
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
-      // If password is provided, create Firebase Auth user directly
-      let passwordSet = false;
-      if (newEmployee.password && newEmployee.password.trim()) {
-        try {
-          console.log('🔐 Creating Firebase Auth user with password...');
-          const passwordResponse = await fetch('/api/admin/create-employee-with-password', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: newEmployee.email.trim(),
-              password: newEmployee.password,
-              employeeId: employeeId,
-              displayName: newEmployee.displayName.trim()
-            }),
-          });
-
-          const passwordResult = await passwordResponse.json();
-          if (passwordResponse.ok && passwordResult.success) {
-            console.log('✅ Firebase Auth user created with password:', passwordResult.uid);
-            passwordSet = true;
-          } else {
-            console.error('❌ Failed to create Firebase Auth user:', passwordResult);
-            // Don't fail employee creation, just log the error
-          }
-        } catch (passwordError) {
-          console.error('❌ Error creating Firebase Auth user:', passwordError);
-          // Don't fail employee creation, just log the error
-        }
-      }
-
-      // Always send welcome email (different content if password is set)
+      // Send welcome email to the new employee
       let emailSent = false;
       let emailError = null;
-      
       try {
         const departmentName = getDepartmentName(newEmployee.departmentId);
         const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName = userProfile?.companyName || 'MAVI Logistikk AS';
+        const companyName = userProfile?.companyId || 'Bedrift';
 
         console.log('📧 Sending welcome email to new employee:', {
           email: newEmployee.email,
@@ -452,11 +406,10 @@ export default function EmployeesPage() {
           adminName,
           companyName,
           departmentName,
-          position: newEmployee.position || 'Ansatt',
-          passwordSet: passwordSet
+          position: newEmployee.position || 'Ansatt'
         });
 
-        // Try to send via Microsoft Graph first, fallback to globalEmailService
+        // Get Microsoft Graph access token for email sending
         let accessToken = null;
         let fromEmail = null;
         
@@ -467,20 +420,24 @@ export default function EmployeesPage() {
             accessToken = await microsoftGraphService.getAccessToken();
             fromEmail = account.username;
             console.log('✅ Microsoft Graph token obtained for welcome email');
+          } else {
+            console.log('⚠️ No Microsoft Graph account found, skipping welcome email');
+            emailSent = false;
+            emailError = 'Microsoft Graph authentication required for sending emails';
           }
         } catch (tokenError) {
-          console.log('⚠️ Microsoft Graph not available, will use globalEmailService');
+          console.error('❌ Failed to get Microsoft Graph token:', tokenError);
+          emailSent = false;
+          emailError = 'Failed to get Microsoft Graph authentication token';
         }
 
-        // Send welcome email
+        // Send welcome email if we have authentication
         if (accessToken && fromEmail) {
-          // Use Microsoft Graph API
-          try {
-            const response = await fetch('/api/send-welcome-email', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
+          const response = await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
             body: JSON.stringify({
               email: newEmployee.email,
               displayName: newEmployee.displayName,
@@ -489,179 +446,24 @@ export default function EmployeesPage() {
               departmentName,
               position: newEmployee.position || 'Ansatt',
               accessToken,
-              fromEmail,
-              passwordSet: passwordSet,
-              password: passwordSet ? newEmployee.password : undefined
+              fromEmail
             })
-            });
+          });
 
-            if (response.ok) {
-              emailSent = true;
-              console.log('✅ Welcome email sent successfully via Microsoft Graph to:', newEmployee.email);
-            } else {
-              const errorResult = await response.json();
-              emailError = errorResult.error || 'Unknown error';
-              console.error('❌ Failed to send welcome email via Microsoft Graph:', errorResult);
-              // Fall through to try globalEmailService
-            }
-          } catch (graphError) {
-            console.error('❌ Error sending via Microsoft Graph, trying globalEmailService:', graphError);
-            // Fall through to try globalEmailService
+          if (response.ok) {
+            const result = await response.json();
+            emailSent = true;
+            console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+          } else {
+            const errorResult = await response.json();
+            emailError = errorResult.error || 'Unknown error';
+            emailSent = false;
+            console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
           }
         }
-
-        // Fallback: Try to send via send-password-setup API if Microsoft Graph failed
-        if (!emailSent) {
-          try {
-            // First, create the setup token via API
-            const tokenResponse = await fetch('/api/send-password-setup', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                employeeId: employeeId,
-                employeeEmail: newEmployee.email
-              })
-            });
-
-            if (tokenResponse.ok) {
-              // Token created successfully, now try to send email directly from client
-              // (same method as test email)
-              const tokenData = await tokenResponse.json();
-              
-              try {
-                await microsoftGraphService.initializeMSAL();
-                const account = microsoftGraphService.getCurrentAccount();
-                
-                if (account) {
-                  const fallbackToken = await microsoftGraphService.getAccessToken();
-                  const fallbackFromEmail = account.username;
-                  
-                  // Create welcome email HTML
-                  const welcomeEmailHtml = `
-                    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
-                      <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; border-radius: 10px; margin-bottom: 20px;">
-                        <h1 style="color: white; margin: 0; font-size: 28px; text-align: center;">🎉 Velkommen til MAVI Logistikk AS!</h1>
-                      </div>
-                      <div style="background: #f8fafc; padding: 25px; border-radius: 8px; margin-bottom: 20px;">
-                        <h2 style="color: #2d3748; margin-top: 0;">Hei ${tokenData.employeeName || newEmployee.displayName}! 👋</h2>
-                        <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
-                          Vi er glade for å ha deg med på laget! Din konto er nå opprettet i DriftPro-systemet.
-                        </p>
-                        <p style="color: #4a5568; font-size: 16px; line-height: 1.6;">
-                          <strong>Din e-postadresse:</strong> ${newEmployee.email}<br>
-                          <strong>Din stilling:</strong> ${tokenData.employeePosition || newEmployee.position || 'Ansatt'}
-                        </p>
-                      </div>
-                      <div style="background: #e6fffa; padding: 25px; border-radius: 8px; margin-bottom: 20px; border-left: 4px solid #38b2ac;">
-                        <h3 style="color: #234e52; margin-top: 0;">🔐 Sett opp ditt passord</h3>
-                        <p style="color: #2c7a7b; font-size: 16px; line-height: 1.6;">
-                          For å komme i gang må du først sette opp et passord for din konto. Klikk på knappen under for å fortsette:
-                        </p>
-                        <div style="text-align: center; margin: 25px 0;">
-                          <a href="${tokenData.setupUrl}" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px; box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);">
-                            🚀 Sett opp passord
-                          </a>
-                        </div>
-                        <p style="color: #2c7a7b; font-size: 14px; margin-bottom: 0;">
-                          <strong>Viktig:</strong> Denne lenken er gyldig i 7 dager. Hvis lenken ikke fungerer, kontakt din administrator.
-                        </p>
-                      </div>
-                      <div style="background: #f7fafc; padding: 20px; border-radius: 8px; margin-bottom: 20px;">
-                        <h3 style="color: #2d3748; margin-top: 0;">📱 Hva kan du gjøre i DriftPro?</h3>
-                        <ul style="color: #4a5568; font-size: 15px; line-height: 1.6;">
-                          <li>Se din personlige profil og arbeidsinformasjon</li>
-                          <li>Be om ferie og fravær</li>
-                          <li>Se bedriftsnyheter og varsler</li>
-                          <li>Kommunisere med kollegaer</li>
-                          <li>Se arbeidsplaner og oppgaver</li>
-                        </ul>
-                      </div>
-                      <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e2e8f0;">
-                        <p style="color: #718096; font-size: 14px; margin: 0;">
-                          Med vennlig hilsen,<br>
-                          <strong>MAVI Logistikk AS-teamet</strong>
-                        </p>
-                        <p style="color: #a0aec0; font-size: 12px; margin: 10px 0 0 0;">
-                          Denne e-posten ble sendt automatisk fra DriftPro-systemet
-                        </p>
-                      </div>
-                    </div>
-                  `;
-                  
-                  // Send via Microsoft Graph API directly (same as test email)
-                  const graphResponse = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
-                    method: 'POST',
-                    headers: {
-                      'Authorization': `Bearer ${fallbackToken}`,
-                      'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                      message: {
-                        subject: '🎉 Velkommen til MAVI Logistikk AS! Sett opp ditt passord',
-                        body: {
-                          contentType: 'HTML',
-                          content: welcomeEmailHtml
-                        },
-                        toRecipients: [
-                          {
-                            emailAddress: {
-                              address: newEmployee.email
-                            }
-                          }
-                        ],
-                        from: {
-                          emailAddress: {
-                            address: fallbackFromEmail
-                          }
-                        }
-                      },
-                      saveToSentItems: true
-                    })
-                  });
-
-                  if (graphResponse.ok) {
-                    emailSent = true;
-                    console.log('✅ Welcome email sent successfully via Microsoft Graph API (fallback)');
-                  } else {
-                    const errorData = await graphResponse.json().catch(() => ({}));
-                    emailError = `Microsoft Graph feil: ${errorData.error?.message || 'Ukjent feil'}`;
-                    console.error('❌ Failed to send via Microsoft Graph API (fallback):', errorData);
-                  }
-                } else {
-                  emailError = 'Microsoft Graph autentisering påkrevd. Logg inn med Microsoft 365 i E-post System først.';
-                }
-              } catch (fallbackError) {
-                console.error('❌ Error in fallback email sending:', fallbackError);
-                emailError = 'Kunne ikke sende e-post. Sjekk at du er logget inn med Microsoft 365 i E-post System.';
-              }
-            } else {
-              const errorResult = await tokenResponse.json();
-              // Ensure we don't use error message as email address
-              const errorMessage = errorResult.error || 'Unknown error';
-              
-              // Check if it requires authentication
-              if (errorResult.requiresAuth) {
-                emailError = 'Microsoft Graph autentisering påkrevd. Logg inn med Microsoft 365 i E-post System først.';
-              } else {
-                emailError = `Kunne ikke opprette passord-oppsett token: ${errorMessage}`;
-              }
-              
-              console.error('❌ Failed to create setup token:', errorResult);
-            }
-          } catch (emailServiceError) {
-            console.error('❌ Error in fallback email sending:', emailServiceError);
-            emailError = 'Kunne ikke sende e-post. Sjekk at du er logget inn med Microsoft 365 i E-post System.';
-          }
-        }
-      } catch (emailErrorCaught) {
-        console.error('❌ Error sending welcome email:', emailErrorCaught);
+      } catch (emailError) {
+        console.error('❌ Error sending welcome email:', emailError);
         emailSent = false;
-        // Ensure we don't overwrite emailError with the error object itself
-        if (!emailError) {
-          emailError = emailErrorCaught instanceof Error ? emailErrorCaught.message : 'Ukjent feil';
-        }
         // Don't fail the employee creation if email fails
       }
 
@@ -690,8 +492,6 @@ export default function EmployeesPage() {
         bankAccount: '',
         insuranceNumber: '',
         avatar: '',
-        password: '',
-        confirmPassword: '',
         permissions: {
           dashboard: true,
           employees: false,
@@ -728,33 +528,6 @@ export default function EmployeesPage() {
           legal: false,
           audit: false,
           internkontrollOgSamsvar: false,
-          internrevisjon: false,
-          avvik: false,
-          risikovurdering: false,
-          oppfølgingstiltak: false,
-          kontrollpunkter: false,
-          internkontrollRapporter: false,
-          // Sidebar sider
-          chat: false,
-          emailSystem: false,
-          smsLogs: false,
-          partners: false,
-          // Logistikk System faner
-          logistikkBudPriser: false,
-          logistikkLevering: false,
-          logistikkPlanlegging: false,
-          logistikkKunder: false,
-          logistikkLeverandorer: false,
-          logistikkProdukter: false,
-          logistikkLager: false,
-          logistikkFakturering: false,
-          logistikkFinans: false,
-          // HR faner
-          hrAnsatte: false,
-          hrVakter: false,
-          hrFravær: false,
-          hrFerie: false,
-          hrAvdelinger: false,
         },
         vacationAccess: {
           canRequestVacation: true,
@@ -779,16 +552,9 @@ export default function EmployeesPage() {
         loadEmployees();
       }, 1000);
       
-      // Ensure we always use the actual email address, not error message
-      const employeeEmail = newEmployee.email || 'ukjent e-post';
-      let message = '';
-      if (passwordSet) {
-        message = `✅ Ansatt ble lagt til! Passord er satt og brukeren kan logge inn med en gang.`;
-      } else if (emailSent) {
-        message = `✅ Ansatt ble lagt til! Velkomst-e-post med passord-link sendt til ${employeeEmail}`;
-      } else {
-        message = `⚠️ Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${employeeEmail}${emailError ? ` - ${emailError}` : ' - sjekk e-postinnstillinger.'}`;
-      }
+      const message = emailSent 
+        ? `✅ Ansatt ble lagt til! Velkomst-e-post sendt til ${newEmployee.email}`
+        : `⚠️ Ansatt ble lagt til! Kunne ikke sende velkomst-e-post til ${newEmployee.email}${emailError ? ` - ${emailError}` : ' - sjekk e-postinnstillinger.'}`;
       alert(message);
     } catch (error) {
       console.error('Error adding employee:', error);
@@ -1535,31 +1301,6 @@ export default function EmployeesPage() {
                   />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Passord (valgfritt)</label>
-                  <input
-                    type="password"
-                    value={newEmployee.password}
-                    onChange={(e) => setNewEmployee({...newEmployee, password: e.target.value})}
-                    className="form-input"
-                    placeholder="La stå tomt for å sende passord-link på e-post"
-                  />
-                  <small style={{ color: 'var(--gray-500)', fontSize: '0.75rem', marginTop: '0.25rem', display: 'block' }}>
-                    Hvis du setter passord her, kan ansatt logge inn med en gang. Hvis tomt, får ansatt en link på e-post for å sette passord.
-                  </small>
-                </div>
-                {newEmployee.password && (
-                  <div className="form-group">
-                    <label className="form-label">Bekreft passord</label>
-                    <input
-                      type="password"
-                      value={newEmployee.confirmPassword}
-                      onChange={(e) => setNewEmployee({...newEmployee, confirmPassword: e.target.value})}
-                      className="form-input"
-                      placeholder="Bekreft passord"
-                    />
-                  </div>
-                )}
-                <div className="form-group">
                   <label className="form-label">Telefon</label>
                   <input
                     type="tel"
@@ -1785,287 +1526,6 @@ export default function EmployeesPage() {
                     placeholder="Relevant arbeidserfaring"
                     rows={3}
                   />
-                </div>
-              </div>
-
-              {/* Tilgangskontroll-seksjon */}
-              <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--card-background)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem', color: 'var(--text-color)' }}>
-                  🔐 Tilgangskontroll og rettigheter
-                </h3>
-                
-                {/* Kategoriserte side-tilganger */}
-                {[
-                  {
-                    category: 'Hovedside',
-                    icon: '🏠',
-                    permissions: [
-                      { key: 'dashboard', label: 'Dashboard', icon: '🏠' },
-                    ]
-                  },
-                  {
-                    category: 'Internkontroll og Samsvar',
-                    icon: '📋',
-                    permissions: [
-                      { key: 'internrevisjon', label: 'Internrevisjon', icon: '📊' },
-                      { key: 'avvik', label: 'Avvik', icon: '⚠️' },
-                      { key: 'risikovurdering', label: 'Risikovurdering', icon: '🛡️' },
-                      { key: 'oppfølgingstiltak', label: 'Oppfølgingstiltak', icon: '✅' },
-                      { key: 'kontrollpunkter', label: 'Kontrollpunkter', icon: '✓' },
-                      { key: 'internkontrollRapporter', label: 'Rapporter', icon: '📈' },
-                    ]
-                  },
-                  {
-                    category: 'HR & Personal - Faner',
-                    icon: '👥',
-                    permissions: [
-                      { key: 'hrAnsatte', label: 'Ansatte', icon: '👤' },
-                      { key: 'hrVakter', label: 'Vakter', icon: '📅' },
-                      { key: 'hrFravær', label: 'Fravær', icon: '🤒' },
-                      { key: 'hrFerie', label: 'Ferie', icon: '🏖️' },
-                      { key: 'hrAvdelinger', label: 'Avdelinger', icon: '🏢' },
-                    ]
-                  },
-                  {
-                    category: 'Logistikk System - Faner',
-                    icon: '🚚',
-                    permissions: [
-                      { key: 'logistikkBudPriser', label: 'BUD Priser', icon: '💰' },
-                      { key: 'logistikkLevering', label: 'Levering', icon: '🚛' },
-                      { key: 'logistikkPlanlegging', label: 'Planlegging', icon: '🗺️' },
-                      { key: 'logistikkKunder', label: 'Kunder', icon: '👥' },
-                      { key: 'logistikkLeverandorer', label: 'Leverandører', icon: '📦' },
-                      { key: 'logistikkProdukter', label: 'Produkter', icon: '🛍️' },
-                      { key: 'logistikkLager', label: 'Lager', icon: '📦' },
-                      { key: 'logistikkFakturering', label: 'Fakturering', icon: '🧾' },
-                      { key: 'logistikkFinans', label: 'Finans', icon: '💵' },
-                    ]
-                  },
-                  {
-                    category: 'Kommunikasjon',
-                    icon: '💬',
-                    permissions: [
-                      { key: 'chat', label: 'Chat', icon: '💬' },
-                      { key: 'emailSystem', label: 'E-post System', icon: '📧' },
-                      { key: 'smsLogs', label: 'SMS Logg & Telefonbok', icon: '📱' },
-                    ]
-                  },
-                  {
-                    category: 'Samarbeid og dokumenter',
-                    icon: '🤝',
-                    permissions: [
-                      { key: 'partners', label: 'Samarbeidspartnere', icon: '🤝' },
-                      { key: 'documents', label: 'Dokumenter', icon: '📄' },
-                    ]
-                  },
-                  {
-                    category: 'Kjernefunksjoner',
-                    icon: '⚙️',
-                    permissions: [
-                      { key: 'employees', label: 'Ansatte', icon: '👥' },
-                      { key: 'departments', label: 'Avdelinger', icon: '🏢' },
-                      { key: 'calendar', label: 'Kalender', icon: '📅' },
-                      { key: 'notifications', label: 'Varsler', icon: '🔔' },
-                    ]
-                  },
-                  {
-                    category: 'Prosjekt og oppgaver',
-                    icon: '📋',
-                    permissions: [
-                      { key: 'projects', label: 'Prosjekter', icon: '📋' },
-                      { key: 'tasks', label: 'Oppgaver', icon: '✅' },
-                    ]
-                  },
-                  {
-                    category: 'Økonomi og finans',
-                    icon: '💰',
-                    permissions: [
-                      { key: 'finance', label: 'Økonomi', icon: '💰' },
-                      { key: 'invoicing', label: 'Fakturering', icon: '🧾' },
-                      { key: 'payments', label: 'Betalinger', icon: '💳' },
-                      { key: 'procurement', label: 'Innkjøp', icon: '🛒' },
-                    ]
-                  },
-                  {
-                    category: 'Lager og logistikk',
-                    icon: '📦',
-                    permissions: [
-                      { key: 'inventory', label: 'Lager', icon: '📦' },
-                      { key: 'suppliers', label: 'Leverandører', icon: '🚚' },
-                      { key: 'logistics', label: 'Logistikk', icon: '📦' },
-                      { key: 'delivery', label: 'Levering', icon: '🚛' },
-                    ]
-                  },
-                  {
-                    category: 'HR og personal',
-                    icon: '👤',
-                    permissions: [
-                      { key: 'hr', label: 'HR', icon: '👤' },
-                      { key: 'training', label: 'Opplæring', icon: '🎓' },
-                    ]
-                  },
-                  {
-                    category: 'Salg og markedsføring',
-                    icon: '💼',
-                    permissions: [
-                      { key: 'crm', label: 'CRM', icon: '🤝' },
-                      { key: 'sales', label: 'Salg', icon: '💼' },
-                      { key: 'marketing', label: 'Markedsføring', icon: '📢' },
-                      { key: 'customerService', label: 'Kundeservice', icon: '🎧' },
-                    ]
-                  },
-                  {
-                    category: 'Produksjon og kvalitet',
-                    icon: '🏭',
-                    permissions: [
-                      { key: 'production', label: 'Produksjon', icon: '🏭' },
-                      { key: 'quality', label: 'Kvalitet', icon: '⭐' },
-                      { key: 'maintenance', label: 'Vedlikehold', icon: '🔧' },
-                    ]
-                  },
-                  {
-                    category: 'Sikkerhet og compliance',
-                    icon: '🛡️',
-                    permissions: [
-                      { key: 'safety', label: 'Sikkerhet', icon: '🛡️' },
-                      { key: 'compliance', label: 'Compliance', icon: '⚖️' },
-                      { key: 'legal', label: 'Juridisk', icon: '⚖️' },
-                      { key: 'audit', label: 'Revisjon', icon: '🔍' },
-                    ]
-                  },
-                  {
-                    category: 'IT og dokumenter',
-                    icon: '💻',
-                    permissions: [
-                      { key: 'it', label: 'IT', icon: '💻' },
-                      { key: 'mail', label: 'E-post', icon: '📧' },
-                    ]
-                  },
-                  {
-                    category: 'Rapporter og analyser',
-                    icon: '📊',
-                    permissions: [
-                      { key: 'reports', label: 'Rapporter', icon: '📊' },
-                      { key: 'analytics', label: 'Analyser', icon: '📈' },
-                    ]
-                  },
-                  {
-                    category: 'System',
-                    icon: '⚙️',
-                    permissions: [
-                      { key: 'settings', label: 'Innstillinger', icon: '⚙️' },
-                    ]
-                  },
-                ].map((category) => {
-                  const currentPermissions = newEmployee.permissions || {};
-                  return (
-                    <div key={category.category} style={{ marginBottom: '1.5rem', padding: '1rem', background: 'var(--background-color)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                      <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: 'var(--text-color)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                        <span>{category.icon}</span>
-                        {category.category}
-                      </h4>
-                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: '0.75rem' }}>
-                        {category.permissions.map(({ key, label, icon }) => {
-                          const isChecked = currentPermissions[key as keyof typeof currentPermissions] || false;
-                          return (
-                            <label key={key} style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', padding: '0.5rem', borderRadius: '0.375rem', transition: 'background 0.2s', background: isChecked ? 'rgba(56, 189, 248, 0.15)' : 'transparent' }}>
-                              <input
-                                type="checkbox"
-                                checked={isChecked}
-                                onChange={(e) => setNewEmployee({
-                                  ...newEmployee,
-                                  permissions: {
-                                    ...currentPermissions,
-                                    [key]: e.target.checked
-                                  }
-                                })}
-                                style={{ margin: 0, width: '16px', height: '16px', cursor: 'pointer' }}
-                              />
-                              <span style={{ color: isChecked ? 'var(--primary)' : 'var(--text-color)' }}>
-                                {icon} {label}
-                              </span>
-                            </label>
-                          );
-                        })}
-                      </div>
-                    </div>
-                  );
-                })}
-
-                {/* Ferie og fravær-tilgang */}
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
-                    🏖️ Ferie og fravær-tilgang
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.vacationAccess?.canRequestVacation ?? true}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            vacationAccess: {
-                              ...newEmployee.vacationAccess,
-                              canRequestVacation: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan be om ferie</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.vacationAccess?.canApproveVacation ?? false}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            vacationAccess: {
-                              ...newEmployee.vacationAccess,
-                              canApproveVacation: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan godkjenne ferie</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={newEmployee.vacationAccess?.canViewAllVacations ?? false}
-                          onChange={(e) => setNewEmployee({
-                            ...newEmployee,
-                            vacationAccess: {
-                              ...newEmployee.vacationAccess,
-                              canViewAllVacations: e.target.checked
-                            }
-                          })}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan se alle ferier</span>
-                      </label>
-                    </div>
-                    <div>
-                      <label className="form-label" style={{ fontSize: '0.875rem', marginBottom: '0.5rem', display: 'block' }}>
-                        Feriedager per år
-                      </label>
-                      <input
-                        type="number"
-                        value={newEmployee.vacationAccess?.vacationDaysPerYear || 25}
-                        onChange={(e) => setNewEmployee({
-                          ...newEmployee,
-                          vacationAccess: {
-                            ...newEmployee.vacationAccess,
-                            vacationDaysPerYear: parseInt(e.target.value) || 25
-                          }
-                        })}
-                        className="form-input"
-                        style={{ width: '100%' }}
-                        min="0"
-                        max="365"
-                      />
-                    </div>
-                  </div>
                 </div>
               </div>
             </div>
@@ -2872,7 +2332,7 @@ export default function EmployeesPage() {
                     fontSize: '0.75rem', 
                     marginTop: '0.25rem' 
                   }}>
-                    {selectedEmployee?.id 
+                    {selectedEmployee?.uid 
                       ? 'Ansatt får en e-post med link for å sette passordet (brukeren har allerede en konto)'
                       : 'Ansatt kan logge inn med dette passordet med en gang'}
                   </small>
@@ -3696,4 +3156,4 @@ export default function EmployeesPage() {
       )}
     </div>
   );
-}
+} 
