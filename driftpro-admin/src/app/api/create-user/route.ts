@@ -1,43 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getFirestore, collection, addDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { initializeApp, getApps } from 'firebase/app';
+import { collection, addDoc, doc, setDoc, getDoc, updateDoc } from 'firebase/firestore';
+import { createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { getFirebaseAuth, getFirebaseDb, isFirebaseAvailable } from '@/lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
-
-// Initialize Firebase if not already initialized
-const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY,
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN,
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID,
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET,
-  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID
-};
-
-// Validate Firebase config before initializing
-const isFirebaseConfigured = firebaseConfig.apiKey && 
-  firebaseConfig.authDomain && 
-  firebaseConfig.projectId;
-
-// Initialize Firebase only if configured
-let app;
-let db;
-let auth;
-
-if (isFirebaseConfigured) {
-  if (getApps().length === 0) {
-    app = initializeApp(firebaseConfig);
-  } else {
-    app = getApps()[0];
-  }
-  db = getFirestore(app);
-  auth = getAuth(app);
-}
 
 export async function POST(request: NextRequest) {
   try {
-    // Check if Firebase is configured
-    if (!isFirebaseConfigured || !auth || !db) {
+    // Check if Firebase is available
+    const auth = getFirebaseAuth();
+    const db = getFirebaseDb();
+    
+    if (!isFirebaseAvailable() || !auth || !db) {
       return NextResponse.json(
         { error: 'Firebase is not configured. Please set Firebase environment variables.' },
         { status: 500 }

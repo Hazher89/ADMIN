@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where, getFirestore } from 'firebase/firestore';
-import { getApps, initializeApp } from 'firebase/app';
+import { collection, getDocs, addDoc, updateDoc, deleteDoc, doc, query, where } from 'firebase/firestore';
+import { getFirebaseDb, isFirebaseAvailable } from '@/lib/firebase-admin';
 import { globalEmailService } from '@/lib/global-email-service';
 
 /**
@@ -8,45 +8,14 @@ import { globalEmailService } from '@/lib/global-email-service';
  */
 function getDb() {
   try {
-    // Check if Firebase is already initialized
-    let apps = getApps();
-    
-    // If no apps exist, initialize Firebase
-    if (apps.length === 0) {
-      console.log('Initializing Firebase...');
-      const firebaseConfig = {
-        apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-        authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
-        projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
-        storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
-        messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
-        appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
-      };
-      
-      try {
-        initializeApp(firebaseConfig);
-        console.log('Firebase initialized successfully');
-      } catch (initError) {
-        console.error('Error initializing Firebase:', initError);
-        // If initialization fails, try to get existing app
-        apps = getApps();
-        if (apps.length === 0) {
-          throw new Error('Failed to initialize Firebase and no existing apps found');
-        }
-      }
+    const db = getFirebaseDb();
+    if (!db) {
+      console.warn('Firebase database not available - environment variables may not be set');
     }
-    
-    // Get Firestore instance
-    const firestoreDb = getFirestore();
-    if (!firestoreDb) {
-      throw new Error('Failed to get Firestore instance');
-    }
-    
-    console.log('Firestore instance obtained successfully');
-    return firestoreDb;
+    return db;
   } catch (error) {
-    console.error('Error getting Firestore instance:', error);
-    throw new Error('Firebase database not available. Please check Firebase configuration.');
+    console.error('Error getting Firebase database:', error);
+    return null;
   }
 }
 
