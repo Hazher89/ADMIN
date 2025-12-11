@@ -1,20 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp } from 'firebase/firestore';
-
-// Firebase config
-const firebaseConfig = {
-  apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-  authDomain: "driftpro-40ccd.firebaseapp.com",
-  projectId: "driftpro-40ccd",
-  storageBucket: "driftpro-40ccd.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
-};
-
-// Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+import { getFirebaseDb } from '@/lib/firebase-admin';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
 export async function POST(request: NextRequest) {
   try {
@@ -49,17 +35,29 @@ export async function POST(request: NextRequest) {
     const setupToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
     const setupUrl = `https://admin.driftpro.no/setup-password?token=${setupToken}&email=${encodeURIComponent(email)}`;
 
-    // Store setup token in Firestore
-    await addDoc(collection(db, 'setupTokens'), {
-      email: email,
-      token: setupToken,
-      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      createdAt: serverTimestamp(),
-      used: false,
-      type: 'employee_welcome'
-    });
+    // Store setup token in Firestore (if available)
+    if (db) {
+      try {
+        await addDoc(collection(db, 'setupTokens'), {
+          email: email,
+          token: setupToken,
+          expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          createdAt: serverTimestamp(),
+          used: false,
+          type: 'employee_welcome'
+        });
+      } catch (error) {
+        console.warn('Failed to store setup token:', error);
+      }
+    }
 
-    console.log('📧 Sending welcome email via Microsoft Graph');
+    // Get Firestore instance
+    const db = getFirebaseDb();
+    if (!db) {
+      console.warn('Firestore not available, skipping token storage');
+    }
+
+    console.log('📧 Sending welcome email via app-only authentication');
 
     // Create welcome email HTML with password setup link
     const html = `
@@ -163,47 +161,38 @@ ${companyName || 'Bedriften'}-teamet
 Denne e-posten ble sendt automatisk fra DriftPro-systemet
     `;
 
-    // Send email via Microsoft Graph API
-    const response = await fetch('https://graph.microsoft.com/v1.0/me/sendMail', {
+    // Send email via app-only API endpoint
+    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
+    const response = await fetch(`${baseUrl}/api/email/send`, {
       method: 'POST',
       headers: {
-        'Authorization': `Bearer ${accessToken}`,
         'Content-Type': 'application/json',
       },
       body: JSON.stringify({
-        message: {
-          subject: `🎉 Velkommen til ${companyName || 'Bedriften'}! Sett opp ditt passord`,
-          body: {
-            contentType: 'HTML',
-            content: html
-          },
-          toRecipients: [
-            {
-              emailAddress: {
-                address: email
-              }
-            }
-          ],
-          from: {
-            emailAddress: {
-              address: fromEmail
-            }
-          }
-        },
-        saveToSentItems: true
+        to: email,
+        subject: `🎉 Velkommen til ${companyName || 'Bedriften'}! Sett opp ditt passord`,
+        html: html,
+        text: text,
+        fromEmail: senderEmail
       })
     });
 
     if (!response.ok) {
       const errorData = await response.json().catch(() => ({}));
-      throw new Error(`Microsoft Graph API error: ${response.status} ${response.statusText} - ${errorData.error?.message || 'Unknown error'}`);
+      throw new Error(`E-post API feil: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
     }
 
-    console.log('✅ Welcome email sent successfully via Microsoft Graph');
+    const result = await response.json();
+    
+    if (!result.success) {
+      throw new Error(result.error || 'E-post sending feilet');
+    }
+
+    console.log('✅ Welcome email sent successfully via app-only authentication');
     return NextResponse.json({
       success: true,
       message: 'Welcome email sent successfully',
-      provider: 'microsoft_graph'
+      provider: 'microsoft_graph_app_only'
     });
 
   } catch (error) {

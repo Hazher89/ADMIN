@@ -409,30 +409,8 @@ export default function EmployeesPage() {
           position: newEmployee.position || 'Ansatt'
         });
 
-        // Get Microsoft Graph access token for email sending
-        let accessToken = null;
-        let fromEmail = null;
-        
+        // Send welcome email via app-only authentication (no login required)
         try {
-          await microsoftGraphService.initializeMSAL();
-          const account = microsoftGraphService.getCurrentAccount();
-          if (account) {
-            accessToken = await microsoftGraphService.getAccessToken();
-            fromEmail = account.username;
-            console.log('✅ Microsoft Graph token obtained for welcome email');
-          } else {
-            console.log('⚠️ No Microsoft Graph account found, skipping welcome email');
-            emailSent = false;
-            emailError = 'Microsoft Graph authentication required for sending emails';
-          }
-        } catch (tokenError) {
-          console.error('❌ Failed to get Microsoft Graph token:', tokenError);
-          emailSent = false;
-          emailError = 'Failed to get Microsoft Graph authentication token';
-        }
-
-        // Send welcome email if we have authentication
-        if (accessToken && fromEmail) {
           const response = await fetch('/api/send-welcome-email', {
             method: 'POST',
             headers: {
@@ -444,22 +422,31 @@ export default function EmployeesPage() {
               adminName,
               companyName,
               departmentName,
-              position: newEmployee.position || 'Ansatt',
-              accessToken,
-              fromEmail
+              position: newEmployee.position || 'Ansatt'
+              // accessToken and fromEmail no longer required - uses app-only auth
             })
           });
 
           if (response.ok) {
             const result = await response.json();
-            emailSent = true;
-            console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+            if (result.success) {
+              emailSent = true;
+              console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+            } else {
+              emailError = result.error || 'Unknown error';
+              emailSent = false;
+              console.error('❌ Failed to send welcome email:', result.error);
+            }
           } else {
             const errorResult = await response.json();
             emailError = errorResult.error || 'Unknown error';
             emailSent = false;
             console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
           }
+        } catch (emailError) {
+          console.error('❌ Error sending welcome email:', emailError);
+          emailSent = false;
+          emailError = emailError instanceof Error ? emailError.message : 'Unknown error';
         }
       } catch (emailError) {
         console.error('❌ Error sending welcome email:', emailError);
