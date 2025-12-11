@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getFirebaseDb } from '@/lib/firebase-admin';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { microsoftGraphAppOnlyService } from '@/lib/microsoft-graph-app-only-service';
 
 export async function POST(request: NextRequest) {
   try {
@@ -161,47 +162,47 @@ ${companyName || 'Bedriften'}-teamet
 Denne e-posten ble sendt automatisk fra DriftPro-systemet
     `;
 
-    // Send email via app-only API endpoint
-    const baseUrl = process.env.NEXT_PUBLIC_APP_URL || (typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000');
-    const response = await fetch(`${baseUrl}/api/email/send`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        to: email,
-        subject: `🎉 Velkommen til ${companyName || 'Bedriften'}! Sett opp ditt passord`,
-        html: html,
-        text: text,
-        fromEmail: senderEmail
-      })
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(`E-post API feil: ${response.status} ${response.statusText} - ${errorData.error || 'Unknown error'}`);
+    // Send email directly via app-only service (no HTTP fetch needed)
+    if (!microsoftGraphAppOnlyService.isConfigured()) {
+      throw new Error('App-only authentication ikke konfigurert. Sett GRAPH_TENANT_ID, GRAPH_CLIENT_ID og GRAPH_CLIENT_SECRET.');
     }
 
-    const result = await response.json();
-    
-    if (!result.success) {
-      throw new Error(result.error || 'E-post sending feilet');
-    }
+    await microsoftGraphAppOnlyService.sendEmail(
+      senderEmail,
+      email,
+      `🎉 Velkommen til ${companyName || 'Bedriften'}! Sett opp ditt passord`,
+      html,
+      'html',
+      undefined, // cc
+      undefined, // bcc
+      undefined  // attachments
+    );
 
     console.log('✅ Welcome email sent successfully via app-only authentication');
     return NextResponse.json({
       success: true,
       message: 'Welcome email sent successfully',
-      provider: 'microsoft_graph_app_only'
+      provider: 'microsoft_graph_app_only',
+      details: result
     });
 
   } catch (error) {
     console.error('❌ Error in send-welcome-email API:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+    
     return NextResponse.json(
       { 
+        success: false,
         error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'microsoft_graph'
+        details: {
+          message: errorMessage,
+          senderEmail: senderEmail || 'not set',
+          hasEnvVars: {
+            GRAPH_SENDER_UPN: !!process.env.GRAPH_SENDER_UPN,
+            NEXT_PUBLIC_GRAPH_SENDER_EMAIL: !!process.env.NEXT_PUBLIC_GRAPH_SENDER_EMAIL,
+          },
+          provider: 'microsoft_graph_app_only'
+        }
       },
       { status: 500 }
     );

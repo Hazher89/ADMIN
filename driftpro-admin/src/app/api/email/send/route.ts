@@ -101,8 +101,33 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error('❌ E-post sending feilet:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Ukjent feil';
+    
+    // Provide more detailed error information
+    const errorDetails: any = {
+      error: errorMessage,
+      timestamp: new Date().toISOString(),
+    };
+
+    // Check if it's a configuration error
+    if (errorMessage.includes('mangler') || errorMessage.includes('ikke konfigurert')) {
+      errorDetails.configurationError = true;
+      errorDetails.missingVars = {
+        hasTenantId: !!process.env.GRAPH_TENANT_ID,
+        hasClientId: !!process.env.GRAPH_CLIENT_ID,
+        hasClientSecret: !!process.env.GRAPH_CLIENT_SECRET,
+        hasSenderUpn: !!process.env.GRAPH_SENDER_UPN,
+      };
+    }
+
+    // Check if it's an authentication error
+    if (errorMessage.includes('token') || errorMessage.includes('401') || errorMessage.includes('403')) {
+      errorDetails.authenticationError = true;
+      errorDetails.suggestion = 'Sjekk at admin consent er gitt i Azure Portal og at permissions er riktig satt.';
+    }
+
     return NextResponse.json(
-      { success: false, error: error instanceof Error ? error.message : 'Ukjent feil' },
+      { success: false, ...errorDetails },
       { status: 500 }
     );
   }
