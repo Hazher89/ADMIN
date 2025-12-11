@@ -121,7 +121,27 @@ class MicrosoftGraphAppOnlyService {
       );
     }
 
-    return response.json();
+    // Handle empty responses (e.g., 204 No Content for sendMail)
+    const contentType = response.headers.get('content-type');
+    if (response.status === 204 || !contentType?.includes('application/json')) {
+      return {} as T;
+    }
+
+    // Try to parse JSON, but handle empty responses gracefully
+    const text = await response.text();
+    if (!text || text.trim() === '') {
+      return {} as T;
+    }
+
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      // If JSON parsing fails but status is OK, return empty object
+      if (response.ok) {
+        return {} as T;
+      }
+      throw error;
+    }
   }
 
   /**
