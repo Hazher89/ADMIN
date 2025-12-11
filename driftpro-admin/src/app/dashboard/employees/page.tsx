@@ -411,6 +411,8 @@ export default function EmployeesPage() {
 
         // Send welcome email via app-only authentication (no login required)
         try {
+          console.log('📧 Attempting to send welcome email to:', newEmployee.email);
+          
           const response = await fetch('/api/send-welcome-email', {
             method: 'POST',
             headers: {
@@ -427,26 +429,39 @@ export default function EmployeesPage() {
             })
           });
 
+          console.log('📧 Welcome email API response status:', response.status);
+
           if (response.ok) {
             const result = await response.json();
+            console.log('📧 Welcome email API response:', result);
+            
             if (result.success) {
               emailSent = true;
               console.log('✅ Welcome email sent successfully to:', newEmployee.email);
             } else {
-              emailError = result.error || 'Unknown error';
+              emailError = result.error || result.details?.message || 'Unknown error';
               emailSent = false;
-              console.error('❌ Failed to send welcome email:', result.error);
+              console.error('❌ Failed to send welcome email:', result);
+              
+              // Show error to user
+              alert(`Kunne ikke sende velkomstmail: ${emailError}`);
             }
           } else {
-            const errorResult = await response.json();
-            emailError = errorResult.error || 'Unknown error';
+            const errorResult = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+            emailError = errorResult.error || errorResult.details?.message || 'Unknown error';
             emailSent = false;
             console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
+            
+            // Show error to user
+            alert(`Kunne ikke sende velkomstmail: ${emailError}`);
           }
         } catch (emailError) {
           console.error('❌ Error sending welcome email:', emailError);
           emailSent = false;
           emailError = emailError instanceof Error ? emailError.message : 'Unknown error';
+          
+          // Show error to user
+          alert(`Feil ved sending av velkomstmail: ${emailError}`);
         }
       } catch (emailError) {
         console.error('❌ Error sending welcome email:', emailError);
