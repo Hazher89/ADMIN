@@ -204,8 +204,7 @@ class NotificationService {
     deviationTitle: string,
     reporterName: string,
     department: string,
-    companyId: string,
-    recipientIds: string[]
+        recipientIds: string[]
   ): Promise<void> {
     const notificationData = {
       type: 'deviation' as const,
@@ -248,8 +247,7 @@ class NotificationService {
     startDate: string,
     endDate: string,
     department: string,
-    companyId: string,
-    recipientIds: string[]
+        recipientIds: string[]
   ): Promise<void> {
     const notificationData = {
       type: 'vacation' as const,
@@ -292,8 +290,7 @@ class NotificationService {
     absenceType: string,
     date: string,
     department: string,
-    companyId: string,
-    recipientIds: string[]
+        recipientIds: string[]
   ): Promise<void> {
     const notificationData = {
       type: 'absence' as const,
@@ -337,8 +334,7 @@ class NotificationService {
     shiftTime: string,
     assignedBy: string,
     department: string,
-    companyId: string,
-    recipientId: string
+        recipientId: string
   ): Promise<void> {
     const notificationData = {
       title: 'Ny vakt tildelt',
@@ -372,8 +368,7 @@ class NotificationService {
     documentName: string,
     sharedBy: string,
     department: string,
-    companyId: string,
-    recipientIds: string[]
+        recipientIds: string[]
   ): Promise<void> {
     const notificationData = {
       type: 'document' as const,
@@ -445,8 +440,7 @@ class NotificationService {
     employeeName: string,
     action: 'added' | 'updated' | 'deleted',
     performedBy: string,
-    companyId: string,
-    recipientIds: string[]
+        recipientIds: string[]
   ): Promise<void> {
     const actionText = {
       added: 'lagt til',

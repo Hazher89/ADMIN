@@ -32,8 +32,7 @@ interface Notification {
   createdAt: string;
   readAt?: string;
   archivedAt?: string;
-  companyId: string; // Added for company isolation
-}
+  }
 
 export default function NotificationBell() {
   const { user, userProfile } = useAuth();
@@ -112,8 +111,7 @@ export default function NotificationBell() {
               readAt,
               archivedAt,
               metadata: data.metadata || {},
-              companyId: userProfile.companyId || '' // Add company isolation
-            };
+                          };
             
             notificationsData.push(notification);
           } catch (error) {

@@ -38,8 +38,7 @@ interface Order {
   totalProducts: number;
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: any;
-  companyId: string;
-}
+  }
 
 export default function OrdersPage() {
   const { userProfile } = useAuth();
@@ -211,8 +210,7 @@ export default function OrdersPage() {
           customerAddress: orderData.customerAddress,
           serviceName: orderData.products[0]?.serviceName || 'N/A',
           createdAt: serverTimestamp(),
-          companyId: userProfile?.companyId || ''
-        };
+                  };
         
         // Save QR code to database
         await addDoc(collection(db, 'productLabels'), labelData);
@@ -240,7 +238,7 @@ export default function OrdersPage() {
         collection(db, 'customers'),
         where('name', '==', orderData.customerName),
         where('address', '==', orderData.customerAddress),
-        where('companyId', '==', userProfile?.companyId || '')
+        where('companyId', '==',  '')
       );
       
       const existingCustomers = await getDocs(customersQuery);
@@ -260,8 +258,7 @@ export default function OrdersPage() {
           lastOrder: orderData.deliveryDate,
           customerSince: new Date().toISOString().split('T')[0],
           rating: 5.0,
-          companyId: userProfile?.companyId || '',
-          createdAt: serverTimestamp(),
+                    createdAt: serverTimestamp(),
           orders: [orderData.orderNumber] // Track order numbers
         };
         
@@ -330,8 +327,7 @@ export default function OrdersPage() {
         returnOrderId: newOrder.returnOrderId,
         totalProducts: newOrder.products?.reduce((sum, p) => sum + p.quantity, 0) || 0,
         status: 'pending',
-        companyId: userProfile?.companyId || '',
-        createdAt: serverTimestamp()
+                createdAt: serverTimestamp()
       };
 
       if (!db) return;

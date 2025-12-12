@@ -96,8 +96,7 @@ interface Order {
   totalVolume?: number;
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: any;
-  companyId: string;
-  assignedDriver?: string;
+    assignedDriver?: string;
   assignedVehicle?: string;
   routeId?: string;
   coordinates?: {
@@ -149,8 +148,7 @@ interface PlannedRoute {
   totalCost: number;
   status: 'planned' | 'active' | 'completed';
   createdAt: string;
-  companyId: string;
-  routeCoordinates?: {
+    routeCoordinates?: {
     start: { lat: number; lng: number };
     waypoints: { lat: number; lng: number }[];
     end: { lat: number; lng: number };
@@ -238,7 +236,7 @@ export default function AdvancedPlanningPage() {
   }, [userProfile?.companyId, isInitialized]);
 
   const loadRealData = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       console.log('❌ No company ID found');
       return;
     }
@@ -294,7 +292,7 @@ export default function AdvancedPlanningPage() {
 
       // Load partners and extract ALL vehicle details
       console.log('🚛 Loading partners...');
-      const partnersData = await firebaseService.getPartners(userProfile.companyId);
+      const partnersData = await firebaseService.getPartners();
       console.log('👥 Found partners:', partnersData.length);
       setPartners(partnersData);
       
@@ -481,8 +479,7 @@ export default function AdvancedPlanningPage() {
           totalCost: totalValue,
           status: 'planned',
           createdAt: new Date().toISOString(),
-          companyId: userProfile?.companyId || '',
-          optimization: {
+                    optimization: {
             algorithm: 'geographic-clustering',
             efficiency: Math.round((100 - (estimatedDistance / dateOrders.length) * 2) * 10) / 10,
             fuelCost: Math.round(estimatedDistance * 2.5 * 10) / 10,
@@ -548,8 +545,7 @@ export default function AdvancedPlanningPage() {
 
       const routesData = {
         timestamp: new Date().toISOString(),
-        companyId: userProfile?.companyId,
-        companyName: userProfile?.companyName || 'Unknown',
+                companyName: userProfile?.companyName || 'Unknown',
         totalRoutes: routes.length,
         totalOrders: routes.reduce((sum, route) => sum + route.totalOrders, 0),
         totalValue: routes.reduce((sum, route) => sum + route.totalCost, 0),
@@ -636,7 +632,7 @@ export default function AdvancedPlanningPage() {
           Kjøretøy: {vehicles.length} | 
           Partnere: {partners.length} | 
           Planlagte ruter: {plannedRoutes.length} |
-          Company ID: {userProfile?.companyId || 'Ikke funnet'}
+          Company ID: { 'Ikke funnet'}
         </div>
       </div>
 

@@ -143,8 +143,7 @@ export class BrrgService {
     email: string;
     name: string;
     companyName: string;
-    companyId: string;
-    role?: string;
+        role?: string;
     permissions?: string[];
   }) {
     try {
@@ -161,8 +160,7 @@ export class BrrgService {
           email: adminData.email,
           name: adminData.name,
           role: adminData.role || 'admin',
-          companyId: adminData.companyId,
-          companyName: adminData.companyName,
+                    companyName: adminData.companyName,
           permissions: adminData.permissions || []
         })
       });
@@ -183,8 +181,7 @@ export class BrrgService {
   }
 
   // Get admins for a company
-  async getAdmins(companyId: string) {
-    try {
+  async getAdmins(    try {
       console.log('👥 Getting admins for company:', companyId);
       
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';

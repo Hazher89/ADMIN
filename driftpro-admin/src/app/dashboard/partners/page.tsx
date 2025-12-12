@@ -24,8 +24,7 @@ interface RouteAssignment {
   cost: number;
   status: 'assigned' | 'in_progress' | 'completed';
   assignedAt: string;
-  companyId: string;
-}
+  }
 import { useAuth } from '@/contexts/AuthContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
@@ -237,7 +236,7 @@ export default function PartnersPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadPartners();
       loadRouteAssignmentsData();
       loadAudits();
@@ -269,10 +268,10 @@ export default function PartnersPage() {
   }, [activeView, currentDate]);
 
   const loadPartners = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
-      const partnersData = await firebaseService.getPartners(userProfile.companyId);
+      const partnersData = await firebaseService.getPartners();
       const validPartners = Array.isArray(partnersData) ? partnersData.filter(p => p && p.name) : [];
       setPartners(validPartners);
       setFilteredPartners(validPartners);
@@ -286,7 +285,7 @@ export default function PartnersPage() {
   };
 
   const loadRouteAssignmentsData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       const assignments = await firebaseService.getRouteAssignments(userProfile.companyId);
@@ -412,8 +411,7 @@ export default function PartnersPage() {
         email: driverEmail,
         phone: driverPhone,
         role: 'driver',
-        companyId: userProfile?.companyId || '',
-        companyName: partnerName,
+                companyName: partnerName,
         vehicleId: vehicle.registrationNumber || `VEH-${Date.now()}`,
         vehicleName: vehicle.vehicleName || vehicle.model || 'Ukjent kjøretøy',
         status: 'active',
@@ -435,7 +433,7 @@ export default function PartnersPage() {
   };
 
   const handleCreatePartner = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       setError('Mangler bedrifts-ID');
       return;
     }
@@ -452,8 +450,7 @@ export default function PartnersPage() {
       // Create partner first to get ID
       const partnerData = {
         ...newPartner,
-        companyId: userProfile.companyId,
-        status: 'active' as const,
+                status: 'active' as const,
         rating: 0,
         projects: 0,
         revenue: 0,
@@ -497,7 +494,7 @@ export default function PartnersPage() {
       }
       
       // Refresh partners list
-      const updatedPartners = await firebaseService.getPartners(userProfile.companyId);
+      const updatedPartners = await firebaseService.getPartners();
       const validPartners = Array.isArray(updatedPartners) ? updatedPartners.filter(p => p && p.name) : [];
       setPartners(validPartners);
       setFilteredPartners(validPartners);
@@ -739,8 +736,7 @@ export default function PartnersPage() {
         role: 'partner',
         partnerId: selectedPartnerForAction.id,
         partnerName: selectedPartnerForAction.name,
-        companyId: userProfile?.companyId,
-        createdAt: new Date().toISOString(),
+                createdAt: new Date().toISOString(),
         permissions: {
           canViewDocuments: true,
           canViewRoutes: true,
@@ -815,8 +811,7 @@ export default function PartnersPage() {
         title: routeTitle.trim() || `Rute ${selectedDate.toLocaleDateString('no-NO')}`,
         job: selectedJob,
         users: selectedUsers,
-        companyId: userProfile.companyId
-      });
+              });
 
       const assignmentKey = `${selectedPartner.id}_${selectedDate.toISOString().split('T')[0]}`;
       const assignment = {
@@ -851,7 +846,7 @@ export default function PartnersPage() {
   };
 
   const loadRouteAssignments = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       // Get start and end of current week
@@ -879,7 +874,7 @@ export default function PartnersPage() {
   };
 
   const loadAudits = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       const auditsData = await firebaseService.getAudits(userProfile.companyId);
@@ -974,7 +969,7 @@ export default function PartnersPage() {
 
   // Check for overdue audits and upcoming audits, send automatic notifications
   const checkAndNotifyOverdueAudits = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       const now = new Date();

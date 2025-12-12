@@ -25,8 +25,7 @@ interface Driver {
   name: string;
   email: string;
   phone: string;
-  companyId: string;
-  companyName: string;
+    companyName: string;
   vehicleId: string;
   vehicleName: string;
   role: 'driver';

@@ -79,8 +79,7 @@ interface Order {
   totalProducts: number;
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: any;
-  companyId: string;
-  assignedDriver?: string;
+    assignedDriver?: string;
   assignedVehicle?: string;
   routeId?: string;
 }
@@ -99,8 +98,7 @@ interface PlannedRoute {
   totalCost: number;
   status: 'planned' | 'active' | 'completed';
   createdAt: string;
-  companyId: string;
-}
+  }
 
 export default function AdvancedPlanningPage() {
   const { userProfile } = useAuth();
@@ -141,13 +139,13 @@ export default function AdvancedPlanningPage() {
 
   // Load real data
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadRealData();
     }
   }, [userProfile?.companyId]);
 
   const loadRealData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       setLoading(true);
@@ -166,7 +164,7 @@ export default function AdvancedPlanningPage() {
       setOrders(ordersData);
 
       // Load partners and vehicles
-      const partnersData = await firebaseService.getPartners(userProfile.companyId);
+      const partnersData = await firebaseService.getPartners();
       setPartners(partnersData);
 
       // Load planned routes
@@ -271,8 +269,7 @@ export default function AdvancedPlanningPage() {
           totalCost: totalValue,
           status: 'planned',
           createdAt: new Date().toISOString(),
-          companyId: userProfile?.companyId || '',
-          optimization: {
+                    optimization: {
             algorithm: 'geographic-clustering',
             efficiency: Math.round((100 - (estimatedDistance / dateOrders.length) * 2) * 10) / 10,
             fuelCost: Math.round(estimatedDistance * 2.5 * 10) / 10,
@@ -335,8 +332,7 @@ export default function AdvancedPlanningPage() {
 
       const routesData = {
         timestamp: new Date().toISOString(),
-        companyId: userProfile?.companyId,
-        companyName: userProfile?.companyName || 'Unknown',
+                companyName: userProfile?.companyName || 'Unknown',
         totalRoutes: routes.length,
         totalOrders: routes.reduce((sum, route) => sum + route.totalOrders, 0),
         totalValue: routes.reduce((sum, route) => sum + route.totalCost, 0),
@@ -380,8 +376,7 @@ export default function AdvancedPlanningPage() {
       const archiveData = {
         id: `archive-${Date.now()}`,
         timestamp: new Date().toISOString(),
-        companyId: userProfile?.companyId,
-        companyName: userProfile?.companyName || 'Unknown',
+                companyName: userProfile?.companyName || 'Unknown',
         type: 'planned_routes',
         totalRoutes: routes.length,
         totalOrders: routes.reduce((sum, route) => sum + route.totalOrders, 0),
@@ -839,8 +834,7 @@ export default function AdvancedPlanningPage() {
                     partners: partners,
                     plannedRoutes: plannedRoutes,
                     exportDate: new Date().toISOString(),
-                    companyId: userProfile?.companyId
-                  };
+                                      };
                   
                   const dataStr = JSON.stringify(exportData, null, 2);
                   const dataBlob = new Blob([dataStr], {type: 'application/json'});

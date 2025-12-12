@@ -12,8 +12,7 @@ export interface EmailCase {
   createdAt: string;
   updatedAt: string;
   lastActivityAt: string;
-  companyId: string;
-  assignedTo?: string;
+    assignedTo?: string;
   threadCount: number;
   messageCount: number;
   slaDeadline?: string;
@@ -26,8 +25,7 @@ export interface EmailCaseLink {
   kind: 'order_id' | 'SA' | 'FU' | 'HU' | 'customer' | 'phone' | 'address' | 'postal' | 'attachment_sha' | 'saks_id';
   value: string;
   createdAt: string;
-  companyId: string;
-}
+  }
 
 export interface EmailThread {
   id: string;
@@ -39,8 +37,7 @@ export interface EmailThread {
   lastAt: string;
   messageCount: number;
   labels: string[];
-  companyId: string;
-  createdAt: string;
+    createdAt: string;
   updatedAt: string;
 }
 
@@ -63,8 +60,7 @@ export interface EmailCaseMessage {
   folder: string;
   labels: string[];
   checksum: string;
-  companyId: string;
-  isRead: boolean;
+    isRead: boolean;
   createdAt: string;
 }
 
@@ -88,8 +84,7 @@ export interface EmailAttachment {
   kind?: string;
   extractedData?: Record<string, any>;
   createdAt: string;
-  companyId: string;
-}
+  }
 
 export interface EmailCaseSLA {
   id: string;
@@ -107,8 +102,7 @@ export interface EmailRule {
   priority: number;
   isActive: boolean;
   definitionJson: any;
-  companyId: string;
-  createdAt: string;
+    createdAt: string;
   updatedAt: string;
 }
 

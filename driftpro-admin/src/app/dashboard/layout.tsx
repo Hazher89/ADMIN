@@ -103,7 +103,7 @@ export default function DashboardLayout({
     if (user && userProfile) {
       // Give some time for userProfile to load completely
       const checkProfile = () => {
-        if (!userProfile.companyId) {
+        if (!userProfile) {
           console.error('🚨 Security breach: User missing companyId:', userProfile);
           console.log('User profile data:', JSON.stringify(userProfile, null, 2));
           console.log('User auth data:', user);

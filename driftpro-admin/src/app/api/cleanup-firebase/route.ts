@@ -131,8 +131,7 @@ async function cleanupOrphanedFirestoreUsers() {
           id: userDoc.id,
           email: userData.email,
           displayName: userData.displayName,
-          companyId: userData.companyId
-        });
+                  });
       }
     }
     
@@ -328,8 +327,7 @@ async function deleteUserCompletely(email?: string, userId?: string) {
       deletedUser: {
         email: userData.email,
         displayName: userData.displayName,
-        companyId: userData.companyId
-      },
+              },
       note: 'Firebase Auth user deletion requires Admin SDK'
     });
 
@@ -340,8 +338,7 @@ async function deleteUserCompletely(email?: string, userId?: string) {
 }
 
 // Clean up all data for a company
-async function cleanupCompanyData(companyId: string) {
-  try {
+async function cleanupCompanyData(  try {
     console.log('🧹 Cleaning up company data:', companyId);
     
     const collections = [

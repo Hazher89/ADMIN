@@ -319,3 +319,4 @@ Når alle stegene er fullført, har systemet:
 2. Sjekk at alle miljøvariabler er satt
 3. Verifiser at admin consent er gitt i Azure Portal
 4. Sjekk at permissions er riktig satt (Application, ikke Delegated)
+

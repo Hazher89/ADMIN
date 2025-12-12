@@ -81,3 +81,4 @@ export const isFirebaseAvailable = (): boolean => {
 
 // Export for backward compatibility
 export { initializedApp as app, initializedAuth as auth, initializedDb as db };
+

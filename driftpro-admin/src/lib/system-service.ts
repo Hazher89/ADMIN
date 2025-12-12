@@ -7,8 +7,7 @@ export interface SystemStatus {
   lastCheck: string;
   uptime: number;
   version: string;
-  companyId: string; // Added for company isolation
-}
+  }
 
 export interface SystemLog {
   id: string;
@@ -16,8 +15,7 @@ export interface SystemLog {
   message: string;
   timestamp: string;
   userId?: string;
-  companyId: string; // Added for company isolation
-}
+  }
 
 export interface FeatureRequest {
   id: string;
@@ -27,8 +25,7 @@ export interface FeatureRequest {
   status: 'pending' | 'approved' | 'rejected' | 'implemented';
   submittedBy: string;
   submittedAt: string;
-  companyId: string; // Added for company isolation
-}
+  }
 
 export const systemService = {
   // Get system status
@@ -50,8 +47,7 @@ export const systemService = {
           lastCheck: data.lastCheck || new Date().toISOString(),
           uptime: data.uptime || 0,
           version: data.version || '1.0.0',
-          companyId: companyName
-        };
+                  };
       }
       return null;
     } catch (error) {
@@ -79,8 +75,7 @@ export const systemService = {
       } else {
         await addDoc(collection(db, 'systemStatus'), {
           ...status,
-          companyId: companyName,
-          createdAt: serverTimestamp(),
+                    createdAt: serverTimestamp(),
           updatedAt: serverTimestamp()
         });
       }
@@ -108,8 +103,7 @@ export const systemService = {
           message: data.message || '',
           timestamp: data.timestamp || new Date().toISOString(),
           userId: data.userId || undefined,
-          companyId: companyName
-        };
+                  };
       }).sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()).slice(0, limit);
     } catch (error) {
       console.error('Error getting system logs:', error);
@@ -124,8 +118,7 @@ export const systemService = {
     try {
       await addDoc(collection(db, 'systemLogs'), {
         ...log,
-        companyId: companyName,
-        timestamp: serverTimestamp()
+                timestamp: serverTimestamp()
       });
     } catch (error) {
       console.error('Error creating system log:', error);
@@ -153,8 +146,7 @@ export const systemService = {
           status: data.status || 'pending',
           submittedBy: data.submittedBy || '',
           submittedAt: data.submittedAt || new Date().toISOString(),
-          companyId: companyName
-        };
+                  };
       }).sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime());
     } catch (error) {
       console.error('Error getting feature requests:', error);
@@ -169,8 +161,7 @@ export const systemService = {
     try {
       await addDoc(collection(db, 'featureRequests'), {
         ...request,
-        companyId: companyName,
-        submittedAt: serverTimestamp()
+                submittedAt: serverTimestamp()
       });
     } catch (error) {
       console.error('Error creating feature request:', error);

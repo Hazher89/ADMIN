@@ -36,8 +36,7 @@ interface PartnerUser {
 interface Assignment {
   id: string;
   partnerId: string;
-  companyId: string;
-  title: string;
+    title: string;
   description: string;
   startTime: string;
   endTime: string;
@@ -80,7 +79,7 @@ export default function PartnerAssignmentsPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadData();
     }
   }, [userProfile?.companyId]);
@@ -90,7 +89,7 @@ export default function PartnerAssignmentsPage() {
       setLoading(true);
       
       const [partnersData, usersData, assignmentsData] = await Promise.all([
-        firebaseService.getPartners(userProfile!.companyId),
+        firebaseService.getPartners(),
         firebaseService.getPartnerUsers(userProfile!.companyId),
         firebaseService.getPartnerAssignments(userProfile!.companyId)
       ]);
@@ -106,7 +105,7 @@ export default function PartnerAssignmentsPage() {
   };
 
   const handleCreateAssignment = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       setError('Mangler bedrifts-ID');
       return;
     }
@@ -121,8 +120,7 @@ export default function PartnerAssignmentsPage() {
 
       const assignmentData = {
         ...newAssignment,
-        companyId: userProfile.companyId,
-        status: 'pending' as const
+                status: 'pending' as const
       };
 
       await firebaseService.createPartnerAssignment(assignmentData);

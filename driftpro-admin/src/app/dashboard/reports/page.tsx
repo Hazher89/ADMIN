@@ -118,7 +118,7 @@ export default function ReportsPage() {
   });
 
   const loadData = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       setLoading(false);
       return;
     }
@@ -146,8 +146,8 @@ export default function ReportsPage() {
 
       // Load employees for department chart with GDPR filtering
       const userContext = createUserAccessContext(userProfile);
-      const employees = await firebaseService.getEmployees(userProfile.companyId, userContext);
-      const departments = await firebaseService.getDepartments(userProfile.companyId);
+      const employees = await firebaseService.getEmployees(userContext);
+      const departments = await firebaseService.getDepartments();
       
       // Generate department chart data
       const deptEmployeeCount = departments.map(dept => {

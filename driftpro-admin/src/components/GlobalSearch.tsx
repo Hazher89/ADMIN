@@ -336,7 +336,7 @@ export default function GlobalSearch() {
       // Search shifts
       if (hasPermission(userProfile, 'hr') || userProfile?.role === 'employee') {
         try {
-          const shifts = await firebaseService.getShifts(userProfile.companyId);
+          const shifts = await firebaseService.getShifts();
           shifts.forEach((shift) => {
             const emp = employees.find((e) => e.id === shift.employeeId);
             const shouldShow = 
@@ -376,7 +376,7 @@ export default function GlobalSearch() {
       // Search departments
       if (hasPermission(userProfile, 'departments')) {
         try {
-          const departments = await firebaseService.getDepartments(userProfile.companyId);
+          const departments = await firebaseService.getDepartments();
           departments.forEach((dept) => {
             const searchFields = [
               dept.name,

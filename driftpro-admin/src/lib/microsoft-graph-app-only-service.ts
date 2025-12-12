@@ -490,3 +490,4 @@ class MicrosoftGraphAppOnlyService {
 
 // Export singleton instance
 export const microsoftGraphAppOnlyService = new MicrosoftGraphAppOnlyService();
+

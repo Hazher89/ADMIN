@@ -72,8 +72,7 @@ interface Order {
   totalVolume?: number;
   status: 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled';
   createdAt: any;
-  companyId: string;
-  assignedDriver?: string;
+    assignedDriver?: string;
   assignedVehicle?: string;
   routeId?: string;
 }
@@ -92,8 +91,7 @@ interface Customer {
   lastOrder: string;
   customerSince: string;
   rating: number;
-  companyId: string;
-  orders: string[];
+    orders: string[];
   createdAt?: any;
   updatedAt?: any;
 }
@@ -110,8 +108,7 @@ interface Supplier {
   status: string;
   lastOrder: string;
   totalOrders: number;
-  companyId: string;
-}
+  }
 
 interface Product {
   id: string;
@@ -126,8 +123,7 @@ interface Product {
   supplier: string;
   description: string;
   lastRestock: string;
-  companyId: string;
-}
+  }
 
 interface Invoice {
   id: string;
@@ -138,8 +134,7 @@ interface Invoice {
   createdDate: string;
   description: string;
   paidDate: string | null;
-  companyId: string;
-}
+  }
 
 interface Payment {
   id: string;
@@ -148,8 +143,7 @@ interface Payment {
   method: string;
   status: string;
   date: string;
-  companyId: string;
-}
+  }
 
 export default function LogistikkSystemPage() {
   const { user, userProfile, loading: authLoading } = useAuth();
@@ -503,7 +497,7 @@ export default function LogistikkSystemPage() {
   };
 
   const loadAllData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       setIsLoading(true);

@@ -34,8 +34,7 @@ interface Absence {
   id?: string;
   employeeId: string;
   employeeName?: string;
-  companyId: string;
-  startDate: string;
+    startDate: string;
   endDate: string;
   type: 'sick' | 'personal' | 'sickChild' | 'other' | 'vacation';
   reason?: string;
@@ -116,13 +115,13 @@ export default function AbsencePage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadData();
     }
   }, [userProfile?.companyId]);
 
   const loadData = useCallback(async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setLoading(true);
@@ -194,7 +193,7 @@ export default function AbsencePage() {
   }, [userProfile?.companyId]);
 
   const handleAddAbsence = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       // Calculate days between dates
@@ -203,8 +202,7 @@ export default function AbsencePage() {
       const absenceData: any = {
         ...newAbsence,
         employeeId: userProfile.id,
-        companyId: userProfile.companyId,
-        status: 'pending' as const,
+                status: 'pending' as const,
         requestedBy: userProfile.id,
         days: days,
         employeeName: userProfile.displayName || userProfile.email,

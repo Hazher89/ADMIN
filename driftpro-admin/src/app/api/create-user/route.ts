@@ -17,11 +17,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { email, displayName, role = 'employee', companyId, companyName } = await request.json();
+    const { email, displayName, role = 'employee', companyName } = await request.json();
 
-    if (!email || !displayName || !companyId) {
+    if (!email || !displayName) {
       return NextResponse.json(
-        { error: 'Missing required fields: email, displayName, companyId' },
+        { error: 'Missing required fields: email, displayName' },
         { status: 400 }
       );
     }
@@ -39,8 +39,7 @@ export async function POST(request: NextRequest) {
       email: user.email,
       displayName,
       role,
-      companyId,
-      companyName: companyName || 'Selskapet',
+      companyName: companyName || 'Mavi Logistikk',
       status: 'pending',
       passwordSet: false,
       createdAt: new Date().toISOString(),
@@ -68,13 +67,30 @@ export async function POST(request: NextRequest) {
     console.error('Error creating user:', error);
     
     if (error.code === 'auth/email-already-in-use') {
-      // If user exists, send them a password reset email instead
+      // If user exists, try to find their UID in Firestore
       try {
+        // Try to find user by email in Firestore
+        const usersRef = collection(db, 'users');
+        const { query: firestoreQuery, where: firestoreWhere, getDocs } = await import('firebase/firestore');
+        const emailQuery = firestoreQuery(usersRef, firestoreWhere('email', '==', email));
+        const emailSnapshot = await getDocs(emailQuery);
+        
+        let existingUserId: string | null = null;
+        if (!emailSnapshot.empty) {
+          const existingUserDoc = emailSnapshot.docs[0];
+          const existingData = existingUserDoc.data();
+          existingUserId = existingData.uid || existingUserDoc.id;
+        }
+        
+        // Send password reset email
         await sendPasswordResetEmail(auth, email);
+        
         return NextResponse.json(
           { 
             success: true,
-            message: 'User already exists. Password reset email sent.' 
+            userId: existingUserId,
+            message: 'User already exists. Password reset email sent.',
+            alreadyExists: true
           },
           { status: 200 }
         );
@@ -82,7 +98,8 @@ export async function POST(request: NextRequest) {
         console.error('Error sending password reset email:', resetError);
         return NextResponse.json(
           { 
-            error: 'User already exists. Failed to send password reset email.' 
+            error: 'User already exists. Failed to send password reset email.',
+            message: resetError instanceof Error ? resetError.message : 'Unknown error'
           },
           { status: 400 }
         );

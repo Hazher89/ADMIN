@@ -51,17 +51,17 @@ export default function DashboardPage() {
   }, []);
 
   useEffect(() => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       setLoading(false);
       return;
     }
 
     const loadDashboardData = async () => {
-      if (!userProfile?.companyId) return;
+      if (!userProfile) return;
       
       try {
         const [dashboardStats, recentActivities] = await Promise.all([
-          firebaseService.getDashboardStats(userProfile.companyId),
+          firebaseService.getDashboardStats(),
           firebaseService.getActivities(userProfile.companyId, 5)
         ]);
         

@@ -56,8 +56,7 @@ interface EmailThread {
   lastAt: string;
   messageCount: number;
   labels: string[];
-  companyId: string;
-}
+  }
 
 // Use EmailCaseMessage from types
 type Message = EmailCaseMessage;
@@ -210,7 +209,7 @@ export default function EmailSystemPage() {
   
   // Find or create case with Firebase integration
   const findOrCreateCase = useCallback(async (message: EmailMessage, entities: ExtractedEntity[]): Promise<Case> => {
-    if (!userProfile?.companyId) throw new Error('No company ID');
+    if (!userProfile) throw new Error('No company ID');
     
     // Extract entities for linking
     const orderId = entities.find(e => ['sa', 'fu', 'hu', 'orderid'].includes(e.key))?.value || '';
@@ -243,8 +242,7 @@ export default function EmailSystemPage() {
       priority: message.importance === 'high' ? 'high' : 'medium',
       caseType,
       lastActivityAt: message.receivedDateTime,
-      companyId: userProfile.companyId,
-      threadCount: 1,
+            threadCount: 1,
       messageCount: 1,
       slaDeadline: new Date(Date.now() + SLA_POLICIES[caseType]).toISOString(),
       slaStatus: 'running'
@@ -316,8 +314,7 @@ export default function EmailSystemPage() {
           size: att.size,
           sha256: sha256 || att.id, // Fallback to ID if SHA256 fails
           kind,
-          companyId: userProfile?.companyId || ''
-        };
+                  };
         
         // Save to Firebase
         const attachmentId = await firebaseService.createEmailAttachment(attachmentData);
@@ -325,7 +322,7 @@ export default function EmailSystemPage() {
         
         // Check for related attachments (same SHA256)
         if (sha256) {
-          const relatedAttachments = await firebaseService.findEmailAttachmentsBySHA256(sha256, userProfile?.companyId || '');
+          const relatedAttachments = await firebaseService.findEmailAttachmentsBySHA256(sha256,  '');
           if (relatedAttachments.length > 1) {
             console.log(`Found ${relatedAttachments.length} related attachments with same SHA256`);
           }
@@ -340,7 +337,7 @@ export default function EmailSystemPage() {
   
   // Process rules against message
   const processRules = useCallback(async (subject: string, body: string): Promise<any[]> => {
-    if (!userProfile?.companyId) return [];
+    if (!userProfile) return [];
     
     // Get active rules
     const activeRules = await firebaseService.getEmailRules(userProfile.companyId);
@@ -368,7 +365,7 @@ export default function EmailSystemPage() {
   
   // Load cases from Firebase
   const loadCases = useCallback(async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       const loadedCases = await firebaseService.getEmailCases(userProfile.companyId, {
@@ -400,7 +397,7 @@ export default function EmailSystemPage() {
   
   // Load messages for case
   const loadCaseMessages = useCallback(async (caseId: string) => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       const loadedMessages = await firebaseService.getEmailCaseMessages(caseId, userProfile.companyId);
@@ -420,7 +417,7 @@ export default function EmailSystemPage() {
   
   // Find related cases/messages
   const findRelatedCases = useCallback(async (case_: Case) => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       // Find cases with same order_id, phone, postal, etc.
@@ -549,8 +546,7 @@ export default function EmailSystemPage() {
             folder: folderId,
             labels: email.categories || [],
             checksum: email.id,
-            companyId: userProfile.companyId,
-            isRead: email.isRead
+                        isRead: email.isRead
           };
           
           // Save message to Firebase
@@ -590,7 +586,7 @@ export default function EmailSystemPage() {
   
   // Load rules
   const loadRules = useCallback(async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       const loadedRules = await firebaseService.getEmailRules(userProfile.companyId);
@@ -604,8 +600,7 @@ export default function EmailSystemPage() {
             priority: ruleDef.priority,
             isActive: true,
             definitionJson: ruleDef,
-            companyId: userProfile.companyId
-          });
+                      });
         }
         // Reload
         const updatedRules = await firebaseService.getEmailRules(userProfile.companyId);
@@ -662,7 +657,7 @@ export default function EmailSystemPage() {
         if (account) {
           setIsAuthenticated(true);
           // Load data after successful authentication
-          if (userProfile?.companyId) {
+          if (userProfile) {
             await loadCases();
             await loadRules();
           }

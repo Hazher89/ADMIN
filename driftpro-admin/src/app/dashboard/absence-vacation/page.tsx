@@ -121,7 +121,7 @@ export default function AbsenceVacationPage() {
   });
 
   const loadData = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       setLoading(false);
       return;
     }
@@ -131,8 +131,8 @@ export default function AbsenceVacationPage() {
       
       // Load absences and vacations from Firebase with GDPR filtering
       const userContext = createUserAccessContext(userProfile);
-      const absencesData = await firebaseService.getAbsences(userProfile.companyId, userContext);
-      const vacationsData = await firebaseService.getVacations(userProfile.companyId, userContext);
+      const absencesData = await firebaseService.getAbsences(userContext);
+      const vacationsData = await firebaseService.getVacations(userContext);
       
       setAbsences(absencesData);
       setVacations(vacationsData);
@@ -156,14 +156,13 @@ export default function AbsenceVacationPage() {
   }, []);
 
   const handleCreateAbsence = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setError(null);
       const absenceData = {
         ...newAbsence,
-        companyId: userProfile.companyId,
-        createdBy: userProfile.id,
+                createdBy: userProfile.id,
         status: 'pending' as const
       };
 
@@ -178,14 +177,13 @@ export default function AbsenceVacationPage() {
   };
 
   const handleCreateVacation = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setError(null);
       const vacationData = {
         ...newVacation,
-        companyId: userProfile.companyId,
-        createdBy: userProfile.id,
+                createdBy: userProfile.id,
         status: 'pending' as const
       };
 

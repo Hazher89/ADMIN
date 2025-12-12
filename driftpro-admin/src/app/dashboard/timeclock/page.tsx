@@ -27,22 +27,22 @@ export default function TimeclockPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadData();
     }
   }, [userProfile?.companyId]);
 
   const loadData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setLoading(true);
       
       // Load real data from Firebase
       const [timeEntriesData, employeesData, departmentsData] = await Promise.all([
-        firebaseService.getTimeClocks(userProfile.companyId),
+        firebaseService.getTimeClocks(),
         firebaseService.getEmployees(userProfile.companyId),
-        firebaseService.getDepartments(userProfile.companyId)
+        firebaseService.getDepartments()
       ]);
       
       setTimeEntries(timeEntriesData);

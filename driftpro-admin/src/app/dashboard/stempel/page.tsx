@@ -141,13 +141,13 @@ export default function StempelPage() {
     try {
       setLoading(true);
       
-      if (!userProfile?.companyId) return;
+      if (!userProfile) return;
 
       // Load real data from Firebase with GDPR filtering
       const userContext = createUserAccessContext(userProfile);
       const [employeesData, timeClocksData] = await Promise.all([
-        firebaseService.getEmployees(userProfile.companyId, userContext),
-        firebaseService.getTimeClocks(userProfile.companyId)
+        firebaseService.getEmployees(userContext),
+        firebaseService.getTimeClocks()
       ]);
 
       // Convert TimeClock data to StempelEntry format
@@ -220,9 +220,9 @@ export default function StempelPage() {
 
   const loadEmployees = useCallback(async () => {
     try {
-      if (!userProfile?.companyId) return;
+      if (!userProfile) return;
       const userContext = createUserAccessContext(userProfile);
-      const data = await firebaseService.getEmployees(userProfile.companyId, userContext);
+      const data = await firebaseService.getEmployees(userContext);
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -230,7 +230,7 @@ export default function StempelPage() {
   }, [userProfile?.companyId]);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadStempelData();
       loadEmployees();
     }

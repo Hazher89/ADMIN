@@ -234,13 +234,13 @@ export default function HRPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadAllData();
     }
-  }, [userProfile?.companyId]);
+  }, [userProfile]);
 
   const loadAllData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setLoading(true);
@@ -251,11 +251,11 @@ export default function HRPage() {
         absencesData,
         vacationsData
       ] = await Promise.all([
-        firebaseService.getEmployees(userProfile.companyId, createUserAccessContext(userProfile) || undefined),
-        firebaseService.getDepartments(userProfile.companyId),
-        firebaseService.getShifts(userProfile.companyId),
-        firebaseService.getAbsences(userProfile.companyId, createUserAccessContext(userProfile) || undefined),
-        firebaseService.getVacations(userProfile.companyId, createUserAccessContext(userProfile) || undefined)
+        firebaseService.getEmployees(createUserAccessContext(userProfile) || undefined),
+        firebaseService.getDepartments(),
+        firebaseService.getShifts(),
+        firebaseService.getAbsences(createUserAccessContext(userProfile) || undefined, undefined),
+        firebaseService.getVacations(createUserAccessContext(userProfile) || undefined, undefined)
       ]);
 
       setEmployees(employeesData);
@@ -272,7 +272,7 @@ export default function HRPage() {
 
   // Notification functions
   const sendAbsenceNotification = async (absence: AbsenceType) => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       // Send notification to HR managers and admins
@@ -305,7 +305,7 @@ export default function HRPage() {
   };
 
   const sendVacationNotification = async (vacation: Vacation) => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       // Send notification to HR managers and admins
@@ -338,7 +338,7 @@ export default function HRPage() {
   };
 
   const sendDeviationNotification = async (deviation: any) => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       // Send notification to HR managers and admins
@@ -536,7 +536,7 @@ export default function HRPage() {
   const handleUpdateEmployee = async () => {
     if (!selectedEmployee) return;
 
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       alert('Ingen bedrift funnet. Vennligst logg inn på nytt.');
       return;
     }
@@ -603,10 +603,6 @@ export default function HRPage() {
   // Department handlers
   // Handler functions for adding employees and departments
   const handleAddEmployee = async () => {
-    if (!userProfile?.companyId) {
-      alert('Ingen bedrift funnet. Vennligst logg inn på nytt.');
-      return;
-    }
 
     // Validate required fields
     if (!newEmployee.displayName.trim()) {
@@ -625,7 +621,6 @@ export default function HRPage() {
         email: newEmployee.email.trim(),
         role: newEmployee.role as 'admin' | 'department_leader' | 'employee',
         status: newEmployee.status as 'active' | 'inactive' | 'on_leave',
-        companyId: userProfile.companyId,
         hireDate: newEmployee.hireDate || new Date().toISOString(),
       };
       
@@ -717,6 +712,46 @@ export default function HRPage() {
 
       const userContext = createUserAccessContext(userProfile);
       const employeeId = await firebaseService.createEmployee(employeeData, userContext || undefined);
+
+      console.log('✅ Employee created successfully with ID:', employeeId);
+
+      // Send welcome email to the new employee (optional - don't fail if this fails)
+      try {
+        const departmentName = departments.find(d => d.id === newEmployee.departmentId)?.name || '';
+        const adminName = userProfile?.displayName || 'System Administrator';
+        const companyName = userProfile?.companyName || 'Mavi Logistikk';
+
+        console.log('📧 Attempting to send welcome email to:', newEmployee.email);
+        
+        const response = await fetch('/api/send-welcome-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            email: newEmployee.email,
+            displayName: newEmployee.displayName,
+            adminName,
+            companyName,
+            departmentName,
+            position: newEmployee.position || 'Ansatt'
+          })
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success) {
+            console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+          } else {
+            console.warn('⚠️ Welcome email API returned success=false:', result);
+          }
+        } else {
+          console.warn('⚠️ Failed to send welcome email (non-critical):', response.status);
+        }
+      } catch (emailError) {
+        // Don't fail employee creation if email fails - it's non-critical
+        console.warn('⚠️ Failed to send welcome email (non-critical):', emailError);
+      }
 
       setShowAddModal(false);
       setNewEmployee({
@@ -810,7 +845,7 @@ export default function HRPage() {
   };
 
   const handleAddDepartment = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       alert('Ingen bedrift funnet. Vennligst logg inn på nytt.');
       return;
     }
@@ -826,8 +861,7 @@ export default function HRPage() {
       // Build department data, only including fields that have values
       const departmentData: any = {
         name: newDepartment.name.trim(),
-        companyId: userProfile.companyId
-      };
+              };
       
       if (newDepartment.description?.trim()) {
         departmentData.description = newDepartment.description.trim();
@@ -887,7 +921,7 @@ export default function HRPage() {
   };
 
   const handleDeleteDepartment = async (department: Department) => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     // Check if department has employees
     const deptEmployees = employees.filter(emp => emp.departmentId === department.id);
@@ -912,7 +946,7 @@ export default function HRPage() {
   };
 
   const handleUpdateDepartment = async () => {
-    if (!selectedDepartmentItem || !userProfile?.companyId) return;
+    if (!selectedDepartmentItem || !userProfile) return;
     if (!editDepartment.name.trim()) {
       alert('Avdelingsnavn er påkrevd');
       return;
@@ -921,8 +955,7 @@ export default function HRPage() {
     try {
       await firebaseService.updateDepartment(selectedDepartmentItem.id, {
         ...editDepartment,
-        companyId: userProfile.companyId
-      });
+              });
       await loadAllData();
       setShowDepartmentEditModal(false);
       setSelectedDepartmentItem(null);
@@ -1636,9 +1669,9 @@ export default function HRPage() {
               vacations={vacations}
               onAbsenceChange={async () => {
                 // Reload absences from Firebase
-                if (userProfile?.companyId) {
+                if (userProfile) {
                   try {
-                    const absencesData = await firebaseService.getAbsences(userProfile.companyId, createUserAccessContext(userProfile) || undefined);
+                    const absencesData = await firebaseService.getAbsences(createUserAccessContext(userProfile) || undefined);
                     setAbsences(absencesData);
                   } catch (error) {
                     console.error('Error reloading absences:', error);

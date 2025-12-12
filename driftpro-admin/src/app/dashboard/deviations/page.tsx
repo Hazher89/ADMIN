@@ -137,7 +137,7 @@ export default function HMSPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadDeviations();
       loadEmployees();
       loadManagersAndAdmins();
@@ -146,7 +146,7 @@ export default function HMSPage() {
   }, [userProfile?.companyId]);
 
   const loadDeviations = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       setLoading(false);
       return;
     }
@@ -154,7 +154,7 @@ export default function HMSPage() {
     try {
       // Load real data from Firebase with GDPR filtering
       const userContext = createUserAccessContext(userProfile);
-      const deviationsData = await firebaseService.getDeviations(userProfile.companyId, userContext || undefined);
+      const deviationsData = await firebaseService.getDeviations(userContext || undefined);
       setDeviations(deviationsData);
     } catch (error) {
       console.error('Error loading deviations:', error);
@@ -165,11 +165,11 @@ export default function HMSPage() {
   };
 
   const loadEmployees = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       const userContext = createUserAccessContext(userProfile);
-      const data = await firebaseService.getEmployees(userProfile.companyId, userContext || undefined);
+      const data = await firebaseService.getEmployees(userContext || undefined);
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -177,7 +177,7 @@ export default function HMSPage() {
   };
 
   const loadManagersAndAdmins = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       const data = await firebaseService.getManagersAndAdmins(userProfile.companyId);
@@ -188,10 +188,10 @@ export default function HMSPage() {
   };
 
   const loadDepartments = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
-      const data = await firebaseService.getDepartments(userProfile.companyId);
+      const data = await firebaseService.getDepartments();
       setDepartments(data);
     } catch (error) {
       console.error('Error loading departments:', error);
@@ -199,13 +199,12 @@ export default function HMSPage() {
   };
 
   const handleAddDeviation = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       const deviationData = {
         ...newDeviation,
-        companyId: userProfile.companyId,
-        reportedBy: userProfile.id,
+                reportedBy: userProfile.id,
         status: 'reported' as const,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
@@ -277,8 +276,7 @@ export default function HMSPage() {
         ...newRiskAssessment,
         createdAt: new Date().toISOString(),
         status: 'active',
-        companyId: userProfile?.companyId || ''
-      };
+              };
 
       // Add to local state
       setRiskAssessments([...riskAssessments, riskAssessment]);

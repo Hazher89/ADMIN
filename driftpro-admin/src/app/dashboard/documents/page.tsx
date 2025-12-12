@@ -93,13 +93,13 @@ export default function DocumentsPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadData();
     }
   }, [userProfile?.companyId]);
 
   const loadData = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       setLoading(false);
       return;
     }
@@ -140,7 +140,7 @@ export default function DocumentsPage() {
   };
 
   const handleSingleUpload = async () => {
-    if (selectedFiles.length === 0 || !userProfile?.companyId || !userProfile?.id) {
+    if (selectedFiles.length === 0 || ! !userProfile?.id) {
       setError('Vennligst velg en fil');
       return;
     }
@@ -169,8 +169,7 @@ export default function DocumentsPage() {
       const documentData = {
         ...newDocument,
         uploadedBy: userProfile.id,
-        companyId: userProfile.companyId,
-        tags: newDocument.tags ? newDocument.tags.split(',').map(tag => tag.trim()) : [],
+                tags: newDocument.tags ? newDocument.tags.split(',').map(tag => tag.trim()) : [],
         folderId: newDocument.folderId || null,
         expiryDate: newDocument.expiryDate || null,
         priority: newDocument.priority,
@@ -206,7 +205,7 @@ export default function DocumentsPage() {
   };
 
   const handleBulkUpload = async () => {
-    if (selectedFiles.length === 0 || !userProfile?.companyId || !userProfile?.id) {
+    if (selectedFiles.length === 0 || ! !userProfile?.id) {
       setError('Ingen filer valgt');
       return;
     }
@@ -229,8 +228,7 @@ export default function DocumentsPage() {
           departmentId: newDocument.departmentId,
           folderId: newDocument.folderId || null,
           uploadedBy: userProfile.id,
-          companyId: userProfile.companyId,
-          priority: newDocument.priority,
+                    priority: newDocument.priority,
           version: '1.0',
           author: newDocument.author || userProfile.displayName || userProfile.email || '',
           language: newDocument.language
@@ -259,7 +257,7 @@ export default function DocumentsPage() {
   };
 
   const handleCreateFolder = async () => {
-    if (!newFolder.name.trim() || !userProfile?.companyId || !userProfile?.id) {
+    if (!newFolder.name.trim() || ! !userProfile?.id) {
       setError('Mappnavn er påkrevd');
       return;
     }
@@ -272,8 +270,7 @@ export default function DocumentsPage() {
         description: newFolder.description,
         parentId: newFolder.parentId,
         isPublic: newFolder.isPublic,
-        companyId: userProfile.companyId,
-        createdBy: userProfile.id,
+                createdBy: userProfile.id,
         createdAt: new Date().toISOString()
       };
 

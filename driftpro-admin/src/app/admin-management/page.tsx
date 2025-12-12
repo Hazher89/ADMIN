@@ -68,8 +68,7 @@ export default function AdminManagementPage() {
     }
   }, []);
 
-  const loadAdmins = async (companyId: string) => {
-    try {
+  const loadAdmins = async (    try {
       setLoading(true);
       const adminsData = await brrgService.getAdmins(companyId);
       setAdmins(adminsData);
@@ -93,8 +92,7 @@ export default function AdminManagementPage() {
         email: formData.email,
         name: formData.name,
         role: formData.role,
-        companyId: companyId,
-        companyName: companyName, // Add company name
+                companyName: companyName, // Add company name
         permissions: formData.permissions
       });
 

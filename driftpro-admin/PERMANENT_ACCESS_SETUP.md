@@ -230,3 +230,4 @@ Når dette er satt opp, har systemet permanent tilgang til:
 - ✅ OneDrive-lagring (automatisk)
 - ✅ Ingen brukerinnlogging nødvendig
 - ✅ Fungerer 24/7 uten avbrudd
+

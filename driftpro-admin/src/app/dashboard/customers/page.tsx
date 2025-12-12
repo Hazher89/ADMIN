@@ -40,8 +40,7 @@ interface Customer {
   lastOrder: string;
   customerSince: string;
   rating: number;
-  companyId: string;
-  orders: string[];
+    orders: string[];
   createdAt?: any;
   updatedAt?: any;
 }

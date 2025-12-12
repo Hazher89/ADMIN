@@ -94,13 +94,13 @@ export default function AbsencePage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadData();
     }
   }, [userProfile?.companyId]);
 
   const loadData = useCallback(async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setLoading(true);
@@ -162,14 +162,13 @@ export default function AbsencePage() {
   }, [userProfile?.companyId]);
 
   const handleAddAbsence = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       const absenceData = {
         ...newAbsence,
         employeeId: userProfile.id,
-        companyId: userProfile.companyId,
-        status: 'pending' as const,
+                status: 'pending' as const,
         requestedBy: userProfile.id,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()

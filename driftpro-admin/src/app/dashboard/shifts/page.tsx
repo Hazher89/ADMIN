@@ -49,17 +49,17 @@ export default function ShiftsPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadData();
     }
   }, [userProfile?.companyId]);
 
   const loadData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setLoading(true);
-      const data = await firebaseService.getShifts(userProfile.companyId);
+      const data = await firebaseService.getShifts();
       setShifts(data);
     } catch (error) {
       console.error('Error loading shifts:', error);
@@ -69,13 +69,12 @@ export default function ShiftsPage() {
   };
 
   const handleAddShift = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       const shiftData = {
         ...newShift,
-        companyId: userProfile.companyId,
-        status: 'scheduled' as const,
+                status: 'scheduled' as const,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };

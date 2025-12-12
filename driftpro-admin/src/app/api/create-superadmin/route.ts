@@ -84,8 +84,7 @@ export async function POST(request: NextRequest) {
           role: 'super_admin',
           email: email,
           displayName: 'Super Administrator',
-          companyId: 'driftpro_main',
-          status: 'active',
+                    status: 'active',
           isProtected: true,
           cannotBeDeleted: true,
           updatedAt: new Date().toISOString()
@@ -115,8 +114,7 @@ export async function POST(request: NextRequest) {
           role: 'super_admin',
           email: email,
           displayName: 'Super Administrator',
-          companyId: 'driftpro_main',
-          status: 'active',
+                    status: 'active',
           isProtected: true,
           cannotBeDeleted: true,
           updatedAt: new Date().toISOString()
@@ -182,8 +180,7 @@ export async function POST(request: NextRequest) {
       displayName: 'Super Administrator',
       email: email,
       role: 'super_admin',
-      companyId: 'driftpro_main',
-      status: 'active',
+            status: 'active',
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
       hireDate: new Date().toISOString(),
@@ -220,8 +217,7 @@ export async function POST(request: NextRequest) {
       userId: userId,
       email: email,
       role: 'super_admin',
-      companyId: 'driftpro_main',
-      isProtected: true,
+            isProtected: true,
       cannotBeDeleted: true
     });
 

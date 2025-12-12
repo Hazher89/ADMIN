@@ -287,13 +287,13 @@ export default function AuditPage() {
 
   // Load data
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadAllData();
     }
   }, [userProfile?.companyId, activeTab]);
 
   const loadAllData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     setLoading(true);
     try {
@@ -314,7 +314,7 @@ export default function AuditPage() {
   };
 
   const loadEmployees = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     try {
       const data = await firebaseService.getEmployees(userProfile.companyId);
       setEmployees(data);
@@ -324,9 +324,9 @@ export default function AuditPage() {
   };
 
   const loadDepartments = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     try {
-      const data = await firebaseService.getDepartments(userProfile.companyId);
+      const data = await firebaseService.getDepartments();
       setDepartments(data);
     } catch (error) {
       console.error('Error loading departments:', error);
@@ -334,7 +334,7 @@ export default function AuditPage() {
   };
 
   const loadAudits = async () => {
-    if (!userProfile?.companyId || activeTab !== 'audits') return;
+    if (! activeTab !== 'audits') return;
     try {
       const data = await firebaseService.getInternalAudits(userProfile.companyId, {
         status: selectedStatus !== 'all' ? selectedStatus : undefined,
@@ -349,15 +349,14 @@ export default function AuditPage() {
   };
 
   const loadDeviations = async () => {
-    if (!userProfile?.companyId || activeTab !== 'deviations') return;
+    if (! activeTab !== 'deviations') return;
     try {
       const userContext = userProfile ? {
         userId: userProfile.id,
         role: (userProfile.role === 'driver' ? 'employee' : userProfile.role) as 'admin' | 'super_admin' | 'department_leader' | 'employee',
         departmentId: userProfile.departmentId,
-        companyId: userProfile.companyId
-      } : undefined;
-      const data = await firebaseService.getDeviations(userProfile.companyId, userContext, {
+              } : undefined;
+      const data = await firebaseService.getDeviations(userContext, {
         status: deviationStatus !== 'all' ? deviationStatus : undefined,
         type: deviationType !== 'all' ? deviationType : undefined,
         severity: deviationSeverity !== 'all' ? deviationSeverity : undefined
@@ -370,7 +369,7 @@ export default function AuditPage() {
   };
 
   const loadRiskAssessments = async () => {
-    if (!userProfile?.companyId || activeTab !== 'risk-assessment') return;
+    if (! activeTab !== 'risk-assessment') return;
     try {
       const data = await firebaseService.getRiskAssessments(userProfile.companyId);
       setRiskAssessments(data);
@@ -381,7 +380,7 @@ export default function AuditPage() {
   };
 
   const loadFollowUpActions = async () => {
-    if (!userProfile?.companyId || activeTab !== 'follow-up') return;
+    if (! activeTab !== 'follow-up') return;
     try {
       const data = await firebaseService.getFollowUpActions(userProfile.companyId);
       setFollowUpActions(data);
@@ -392,7 +391,7 @@ export default function AuditPage() {
   };
 
   const loadCheckpoints = async () => {
-    if (!userProfile?.companyId || activeTab !== 'checkpoints') return;
+    if (! activeTab !== 'checkpoints') return;
     try {
       const data = await firebaseService.getCheckpoints(userProfile.companyId);
       setCheckpoints(data);
@@ -457,8 +456,7 @@ export default function AuditPage() {
         findings: [],
         recommendations: [],
         status: 'Planlagt',
-        companyId: userProfile.companyId,
-        createdBy: userProfile.id
+                createdBy: userProfile.id
       });
       
       // Upload files if any
@@ -507,8 +505,7 @@ export default function AuditPage() {
   };
 
   // Helper function to send status update email
-  const sendStatusUpdateEmail = async (caseType: string, caseTitle: string, oldStatus: string, newStatus: string, createdBy: string, companyId: string) => {
-    try {
+  const sendStatusUpdateEmail = async (caseType: string, caseTitle: string, oldStatus: string, newStatus: string, createdBy: string,     try {
       const creator = await firebaseService.getEmployee(createdBy);
       if (!creator || !creator.email) return;
 
@@ -588,7 +585,7 @@ export default function AuditPage() {
       
       // Send email if status changed
       if (oldStatus !== newStatus && selectedAudit.createdBy) {
-        await sendStatusUpdateEmail('Internrevisjon', newAudit.title, oldStatus, newStatus, selectedAudit.createdBy, userProfile?.companyId || '');
+        await sendStatusUpdateEmail('Internrevisjon', newAudit.title, oldStatus, newStatus, selectedAudit.createdBy,  '');
       }
       
       await loadAudits();
@@ -642,7 +639,7 @@ export default function AuditPage() {
   };
 
   const handleUploadAuditDocument = async (file: File, auditId: string, description?: string, category?: string) => {
-    if (!userProfile?.companyId || !userProfile?.id) return;
+    if (! !userProfile?.id) return;
     
     setUploadingDocument(true);
     setUploadProgress(0);
@@ -701,8 +698,7 @@ export default function AuditPage() {
 
       const deviationId = await firebaseService.createDeviation({
         ...newDeviation,
-        companyId: userProfile.companyId,
-        reportedBy: userProfile.id,
+                reportedBy: userProfile.id,
         status: 'reported',
         assignedTo,
         assignedToIds: assignedToIds.length > 0 ? assignedToIds : undefined
@@ -776,7 +772,7 @@ export default function AuditPage() {
       
       // Send email if status changed
       if (oldStatus !== newDeviation.status && selectedDeviation.reportedBy) {
-        await sendStatusUpdateEmail('Avvik', newDeviation.title || 'Avvik', oldStatus, newDeviation.status, selectedDeviation.reportedBy, userProfile?.companyId || '');
+        await sendStatusUpdateEmail('Avvik', newDeviation.title || 'Avvik', oldStatus, newDeviation.status, selectedDeviation.reportedBy,  '');
       }
       
       await loadDeviations();
@@ -824,7 +820,7 @@ export default function AuditPage() {
     // Use "Hva kan skje?" as title if title is not set
     const finalTitle = newRiskAssessment.title || newRiskAssessment.whatCanHappen || 'Ny risikovurdering';
     
-    if (!finalTitle || !userProfile?.companyId || !newRiskAssessment.responsiblePersonIds || newRiskAssessment.responsiblePersonIds.length === 0) {
+    if (!finalTitle || ! !newRiskAssessment.responsiblePersonIds || newRiskAssessment.responsiblePersonIds.length === 0) {
       alert('Vennligst fyll ut alle påkrevde felt, inkludert minst én ansvarlig ansatt');
       return;
     }
@@ -872,8 +868,7 @@ export default function AuditPage() {
         responsiblePersonId: newRiskAssessment.responsiblePersonIds[0],
         responsiblePersonIds: newRiskAssessment.responsiblePersonIds,
         reviewDate: newRiskAssessment.reviewDate || '',
-        companyId: userProfile.companyId,
-        createdBy: userProfile.id,
+                createdBy: userProfile.id,
         status: sentToLeader ? 'pending_approval' : 'draft',
         sentToLeader,
         area: newRiskAssessment.area || '',
@@ -992,7 +987,7 @@ export default function AuditPage() {
       
       // Send email if status changed
       if (oldStatus !== (newRiskAssessment.status || selectedRisk.status) && selectedRisk.createdBy) {
-        await sendStatusUpdateEmail('Risikovurdering', newRiskAssessment.title, oldStatus, newRiskAssessment.status || selectedRisk.status, selectedRisk.createdBy, userProfile?.companyId || '');
+        await sendStatusUpdateEmail('Risikovurdering', newRiskAssessment.title, oldStatus, newRiskAssessment.status || selectedRisk.status, selectedRisk.createdBy,  '');
       }
       
       await loadRiskAssessments();
@@ -1051,7 +1046,7 @@ export default function AuditPage() {
 
   // Handler functions for Follow-up Actions
   const handleAddFollowUpAction = async () => {
-    if (!newFollowUpAction.title || !newFollowUpAction.description || !userProfile?.companyId || !newFollowUpAction.responsiblePersonIds || newFollowUpAction.responsiblePersonIds.length === 0) {
+    if (!newFollowUpAction.title || !newFollowUpAction.description || ! !newFollowUpAction.responsiblePersonIds || newFollowUpAction.responsiblePersonIds.length === 0) {
       alert('Vennligst fyll ut alle påkrevde felt, inkludert minst én ansvarlig ansatt');
       return;
     }
@@ -1079,8 +1074,7 @@ export default function AuditPage() {
         responsiblePerson: responsiblePersonNames,
         responsiblePersonId: newFollowUpAction.responsiblePersonIds[0], // Keep for backward compatibility
         responsiblePersonIds: newFollowUpAction.responsiblePersonIds,
-        companyId: userProfile.companyId,
-        createdBy: userProfile.id,
+                createdBy: userProfile.id,
         sentToLeader,
         leaderId
       });
@@ -1150,7 +1144,7 @@ export default function AuditPage() {
       
       // Send email if status changed
       if (oldStatus !== newFollowUpAction.status && selectedFollowUp.createdBy) {
-        await sendStatusUpdateEmail('Oppfølgingstiltak', newFollowUpAction.title, oldStatus, newFollowUpAction.status, selectedFollowUp.createdBy, userProfile?.companyId || '');
+        await sendStatusUpdateEmail('Oppfølgingstiltak', newFollowUpAction.title, oldStatus, newFollowUpAction.status, selectedFollowUp.createdBy,  '');
       }
       
       await loadFollowUpActions();
@@ -1185,7 +1179,7 @@ export default function AuditPage() {
 
   // Handler functions for Checkpoints
   const handleAddCheckpoint = async () => {
-    if (!newCheckpoint.title || !newCheckpoint.description || !userProfile?.companyId || !newCheckpoint.responsiblePersonIds || newCheckpoint.responsiblePersonIds.length === 0) {
+    if (!newCheckpoint.title || !newCheckpoint.description || ! !newCheckpoint.responsiblePersonIds || newCheckpoint.responsiblePersonIds.length === 0) {
       alert('Vennligst fyll ut alle påkrevde felt, inkludert minst én ansvarlig ansatt');
       return;
     }
@@ -1213,8 +1207,7 @@ export default function AuditPage() {
         responsiblePerson: responsiblePersonNames,
         responsiblePersonId: newCheckpoint.responsiblePersonIds[0], // Keep for backward compatibility
         responsiblePersonIds: newCheckpoint.responsiblePersonIds,
-        companyId: userProfile.companyId,
-        createdBy: userProfile.id,
+                createdBy: userProfile.id,
         sentToLeader,
         leaderId
       });
@@ -1282,7 +1275,7 @@ export default function AuditPage() {
       
       // Send email if status changed
       if (oldStatus !== newCheckpoint.status && selectedCheckpoint.createdBy) {
-        await sendStatusUpdateEmail('Kontrollpunkt', newCheckpoint.title, oldStatus, newCheckpoint.status, selectedCheckpoint.createdBy, userProfile?.companyId || '');
+        await sendStatusUpdateEmail('Kontrollpunkt', newCheckpoint.title, oldStatus, newCheckpoint.status, selectedCheckpoint.createdBy,  '');
       }
       
       await loadCheckpoints();
@@ -4331,7 +4324,7 @@ export default function AuditPage() {
                                     if (confirm('Er du sikker på at du vil slette dette vedlegget?')) {
                                       try {
                                         await firebaseService.deleteDeviationFile(selectedDeviation.id, doc.id);
-                                        const updated = await firebaseService.getDeviations(userProfile?.companyId || '', undefined, {});
+                                        const updated = await firebaseService.getDeviations(undefined, {});
                                         const found = updated.find(d => d.id === selectedDeviation.id);
                                         if (found) setSelectedDeviation(found);
                                       } catch (error) {

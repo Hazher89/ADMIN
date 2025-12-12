@@ -105,8 +105,7 @@ export async function POST(request: NextRequest) {
       // Update existing user to admin for this company
       await updateDoc(doc(firestoreDb, 'users', existingUser.id), {
         role: role,
-        companyId: companyId,
-        companyName: companyName || '',
+                companyName: companyName || '',
         updatedAt: new Date().toISOString(),
         permissions: permissions || []
       });
@@ -115,8 +114,7 @@ export async function POST(request: NextRequest) {
         id: existingUser.id,
         ...userData,
         role: role,
-        companyId: companyId,
-        companyName: companyName || '',
+                companyName: companyName || '',
         updatedAt: new Date().toISOString(),
         permissions: permissions || []
       };
@@ -137,8 +135,7 @@ export async function POST(request: NextRequest) {
         email: email.toLowerCase().trim(),
         displayName: name,
         role: role,
-        companyId: companyId,
-        companyName: companyName || '',
+                companyName: companyName || '',
         permissions: permissions || [],
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),

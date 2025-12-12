@@ -3,9 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import ErrorBoundary from '@/components/ErrorBoundary';
-import { microsoftGraphService } from '@/lib/microsoft-graph-service';
-import { globalEmailService } from '@/lib/global-email-service';
-import type { AccountInfo } from '@azure/msal-browser';
+// Microsoft Graph imports removed - using app-only authentication only
 import { 
   Settings, 
   Users, 
@@ -85,35 +83,12 @@ export default function SettingsPage() {
   const [showAdvanced, setShowAdvanced] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
   
-  // Email-specific states
+  // Email test states (simplified - no Microsoft Graph/Office 365)
   const [emailTestStatus, setEmailTestStatus] = useState<'idle' | 'testing' | 'success' | 'error'>('idle');
   const [emailTestMessage, setEmailTestMessage] = useState('');
   const [testEmailAddress, setTestEmailAddress] = useState('');
-  const [emailLogs, setEmailLogs] = useState<any[]>([]);
-  const [showEmailLogs, setShowEmailLogs] = useState(false);
-  const [emailTemplates, setEmailTemplates] = useState<any[]>([]);
-  const [notificationSettings, setNotificationSettings] = useState<any[]>([]);
-  
-  // Office 365 Login states
-  const [showLoginModal, setShowLoginModal] = useState(false);
-  const [loginEmail, setLoginEmail] = useState('');
-  const [loginPassword, setLoginPassword] = useState('');
-  const [isLoggingIn, setIsLoggingIn] = useState(false);
-  const [loginStatus, setLoginStatus] = useState<'not_logged_in' | 'logging_in' | 'logged_in' | 'error'>('not_logged_in');
-  const [loginMessage, setLoginMessage] = useState('');
-  const [office365Credentials, setOffice365Credentials] = useState<{email: string, password: string} | null>(null);
-  
-  // Microsoft Graph Authentication states
-  const [isMicrosoftAuthenticated, setIsMicrosoftAuthenticated] = useState(false);
-  const [microsoftAccount, setMicrosoftAccount] = useState<AccountInfo | null>(null);
-  const [isMicrosoftAuthenticating, setIsMicrosoftAuthenticating] = useState(false);
-  const [microsoftAuthError, setMicrosoftAuthError] = useState<string | null>(null);
-  
-  // Two-step process states
-  const [currentStep, setCurrentStep] = useState<'login' | 'sender_config'>('login');
-  const [senderName, setSenderName] = useState('DriftPro System');
-  const [senderEmail, setSenderEmail] = useState('');
-  const [showSenderConfig, setShowSenderConfig] = useState(false);
+  const [testEmailSubject, setTestEmailSubject] = useState('Test e-post fra DriftPro');
+  const [testEmailBody, setTestEmailBody] = useState('Dette er en test e-post fra DriftPro-systemet.');
 
   // Initialize default system settings
   const defaultSettings: SystemSetting[] = [
@@ -784,7 +759,7 @@ export default function SettingsPage() {
         return;
       }
 
-      if (!userProfile?.companyId) {
+      if (!userProfile) {
         setLoading(false);
         return;
       }

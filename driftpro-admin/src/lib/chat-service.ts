@@ -136,8 +136,7 @@ class ChatService {
   }
 
   // Load users for chat
-  async loadUsers(companyId: string): Promise<User[]> {
-    if (!db) return [];
+  async loadUsers(    if (!db) return [];
 
     try {
       const usersQuery = query(

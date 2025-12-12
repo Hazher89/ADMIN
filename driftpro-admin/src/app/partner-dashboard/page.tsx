@@ -35,7 +35,7 @@ export default function PartnerDashboard() {
       
       // Load routes assigned to this partner
       const partnerRoutes = await firebaseService.getRouteAssignments(
-        userProfile?.companyId || '', 
+         '', 
         undefined, 
         undefined
       );

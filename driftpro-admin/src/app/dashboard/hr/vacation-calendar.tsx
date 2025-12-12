@@ -339,13 +339,13 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
   });
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadVacationData();
     }
   }, [userProfile?.companyId, selectedEmployeeId, selectedYear]);
 
   const loadVacationData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       setLoading(true);
@@ -356,7 +356,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
 
       const userContext = createUserAccessContext(userProfile);
       const [vacationsData, allocationsData] = await Promise.all([
-        firebaseService.getVacations(userProfile.companyId, userContext || undefined, filters),
+        firebaseService.getVacations(userContext || undefined, filters),
         firebaseService.getVacationAllocations(userProfile.companyId, {
           // Load all allocations for settings modal
           employeeId: undefined,
@@ -504,13 +504,12 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
   };
 
   const handleAllocateVacation = async (employeeId: string, year: number) => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     
     try {
       await firebaseService.createOrUpdateVacationAllocation({
         employeeId,
-        companyId: userProfile.companyId,
-        year,
+                year,
         allocatedDays: 25, // 5 weeks
         usedDays: 0,
         transferredDays: 0,
@@ -1188,8 +1187,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                           const dayDifference = editVacation.days - oldVacation.days;
                           await firebaseService.createOrUpdateVacationAllocation({
                             employeeId: editVacation.employeeId,
-                            companyId: userProfile.companyId,
-                            year: newYear,
+                                                        year: newYear,
                             allocatedDays: allocation.allocatedDays,
                             usedDays: allocation.usedDays + dayDifference,
                             transferredDays: allocation.transferredDays || 0,
@@ -1208,8 +1206,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                         if (oldAllocation) {
                           await firebaseService.createOrUpdateVacationAllocation({
                             employeeId: editVacation.employeeId,
-                            companyId: userProfile.companyId,
-                            year: oldYear,
+                                                        year: oldYear,
                             allocatedDays: oldAllocation.allocatedDays,
                             usedDays: oldAllocation.usedDays - oldVacation.days,
                             transferredDays: oldAllocation.transferredDays || 0,
@@ -1220,8 +1217,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                         if (newAllocation) {
                           await firebaseService.createOrUpdateVacationAllocation({
                             employeeId: editVacation.employeeId,
-                            companyId: userProfile.companyId,
-                            year: newYear,
+                                                        year: newYear,
                             allocatedDays: newAllocation.allocatedDays,
                             usedDays: newAllocation.usedDays + editVacation.days,
                             transferredDays: newAllocation.transferredDays || 0,
@@ -1230,8 +1226,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                         } else {
                           await firebaseService.createOrUpdateVacationAllocation({
                             employeeId: editVacation.employeeId,
-                            companyId: userProfile.companyId,
-                            year: newYear,
+                                                        year: newYear,
                             allocatedDays: 25,
                             usedDays: editVacation.days,
                             transferredDays: 0,
@@ -1325,8 +1320,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                     if (allocation) {
                       await firebaseService.createOrUpdateVacationAllocation({
                         employeeId: vacationToDelete.employeeId,
-                        companyId: userProfile.companyId,
-                        year: vacationYear,
+                                                year: vacationYear,
                         allocatedDays: allocation.allocatedDays,
                         usedDays: allocation.usedDays - vacationToDelete.days,
                         transferredDays: allocation.transferredDays || 0,
@@ -1561,8 +1555,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                     await firebaseService.createVacation({
                       employeeId: newVacation.employeeId,
                       employeeName: employee.displayName,
-                      companyId: userProfile.companyId,
-                      startDate: newVacation.startDate,
+                                            startDate: newVacation.startDate,
                       endDate: newVacation.endDate,
                       type: 'vacation',
                       days: newVacation.days,
@@ -1579,8 +1572,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                     if (existingAllocation) {
                       await firebaseService.createOrUpdateVacationAllocation({
                         employeeId: newVacation.employeeId,
-                        companyId: userProfile.companyId,
-                        year: vacationYear,
+                                                year: vacationYear,
                         allocatedDays: existingAllocation.allocatedDays,
                         usedDays: existingAllocation.usedDays + newVacation.days,
                         transferredDays: existingAllocation.transferredDays || 0,
@@ -1590,8 +1582,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                       // Create new allocation if it doesn't exist
                       await firebaseService.createOrUpdateVacationAllocation({
                         employeeId: newVacation.employeeId,
-                        companyId: userProfile.companyId,
-                        year: vacationYear,
+                                                year: vacationYear,
                         allocatedDays: 25,
                         usedDays: newVacation.days,
                         transferredDays: 0,
@@ -2008,8 +1999,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                                             if (allocation && userProfile?.companyId) {
                                               await firebaseService.createOrUpdateVacationAllocation({
                                                 employeeId: vacation.employeeId,
-                                                companyId: userProfile.companyId,
-                                                year: vacationYear,
+                                                                                                year: vacationYear,
                                                 allocatedDays: allocation.allocatedDays,
                                                 usedDays: allocation.usedDays - vacation.days,
                                                 transferredDays: allocation.transferredDays || 0,
@@ -2073,7 +2063,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                             )}
                             <button
                               onClick={async () => {
-                                if (!userProfile?.companyId) return;
+                                if (!userProfile) return;
                                 try {
                                   await handleAllocateVacation(employee.id, selectedYear);
                                   await loadVacationData();

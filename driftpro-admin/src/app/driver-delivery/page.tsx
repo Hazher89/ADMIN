@@ -72,8 +72,7 @@ interface Driver {
   name: string;
   email: string;
   phone: string;
-  companyId: string;
-  companyName: string;
+    companyName: string;
   vehicleId: string;
   vehicleName: string;
   role: 'driver';
@@ -86,8 +85,7 @@ interface Route {
   name: string;
   driverId: string;
   driverName: string;
-  companyId: string;
-  companyName: string;
+    companyName: string;
   vehicleId: string;
   vehicleName: string;
   status: 'assigned' | 'in_progress' | 'completed' | 'cancelled';
@@ -225,8 +223,7 @@ function DriverDeliveryContent() {
         name: routeData.name || `Rute ${routeDoc.id}`,
         driverId: routeData.driverId || '',
         driverName: routeData.driverName || driver?.name || 'Ukjent',
-        companyId: routeData.companyId || '',
-        companyName: routeData.companyName || '',
+                companyName: routeData.companyName || '',
         vehicleId: routeData.vehicleId || '',
         vehicleName: routeData.vehicleName || '',
         status: routeData.status || 'assigned',

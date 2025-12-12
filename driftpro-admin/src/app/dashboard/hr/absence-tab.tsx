@@ -465,8 +465,7 @@ export function AbsenceTab({
       const absenceData: Omit<AbsenceType, 'id' | 'createdAt' | 'updatedAt'> = {
         employeeId: newAbsence.employeeId,
         employeeName: selectedEmp?.displayName || (selectedEmp as any)?.name || 'Ukjent ansatt',
-        companyId: userProfile.companyId,
-        startDate: newAbsence.startDate,
+                startDate: newAbsence.startDate,
         endDate: newAbsence.endDate,
         type: newAbsence.type as 'sick' | 'personal' | 'sickChild' | 'other' | 'vacation',
         reason: newAbsence.type === 'sick' ? 'Egenmelding' : 

@@ -78,3 +78,4 @@ Hvis du har en `employees` collection som ikke brukes:
 - Sjekk at de har `companyId` satt i Firestore
 - Sjekk at de har `status: 'active'`
 - Sjekk at de er i `users` collection (ikke `employees`)
+

@@ -89,3 +89,4 @@ GRAPH_SENDER_UPN=driftpro@mavilogistikk.no
 Systemet har nå permanent tilgang! 🎉
 
 **Se `SETUP_GUIDE_STEP_BY_STEP.md` for detaljert guide.**
+

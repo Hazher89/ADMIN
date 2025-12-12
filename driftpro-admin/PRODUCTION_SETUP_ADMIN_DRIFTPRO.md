@@ -179,3 +179,4 @@ Når alt er satt opp, har **admin.driftpro.no** permanent tilgang til:
 - ✅ E-post-sending (ingen innlogging nødvendig)
 - ✅ OneDrive-lagring (automatisk)
 - ✅ Fungerer 24/7
+

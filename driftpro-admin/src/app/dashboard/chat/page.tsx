@@ -60,7 +60,7 @@ export default function ChatPage() {
 
   // Real-time listeners
   useEffect(() => {
-    if (!userProfile?.id || !userProfile?.companyId || !db) return;
+    if (!userProfile?.id || ! !db) return;
 
     // Listen to chats in real-time
     const chatsQuery = query(

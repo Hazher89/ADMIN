@@ -49,3 +49,4 @@ Sjekk at `driftpro@mavilogistikk.no`:
 3. **Sjekk konsollen (F12) for feilmeldinger**
 
 4. **Sjekk Netlify logs for server-side feil**
+

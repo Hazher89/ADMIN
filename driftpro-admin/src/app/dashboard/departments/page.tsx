@@ -48,18 +48,18 @@ export default function DepartmentsPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadDepartments();
       loadEmployees();
     }
   }, [userProfile?.companyId]);
 
   const loadDepartments = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setLoading(true);
-      const data = await firebaseService.getDepartments(userProfile.companyId);
+      const data = await firebaseService.getDepartments();
       setDepartments(data);
     } catch (error) {
       console.error('Error loading departments:', error);
@@ -69,11 +69,11 @@ export default function DepartmentsPage() {
   };
 
   const loadEmployees = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       const userContext = createUserAccessContext(userProfile);
-      const data = await firebaseService.getEmployees(userProfile.companyId, userContext || undefined);
+      const data = await firebaseService.getEmployees(userContext || undefined);
       setEmployees(data);
     } catch (error) {
       console.error('Error loading employees:', error);
@@ -100,7 +100,7 @@ export default function DepartmentsPage() {
   };
 
   const handleAddDepartment = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       const userContext = createUserAccessContext(userProfile);
@@ -108,8 +108,7 @@ export default function DepartmentsPage() {
       // Build department data, only including fields that have values
       const departmentData: any = {
         name: newDepartment.name.trim(),
-        companyId: userProfile.companyId
-      };
+              };
       
       if (newDepartment.description?.trim()) {
         departmentData.description = newDepartment.description.trim();

@@ -67,19 +67,19 @@ export default function SurveysPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile?.companyId) {
+    if (userProfile) {
       loadData();
     }
   }, [userProfile?.companyId]);
 
   const loadData = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       setLoading(true);
       
       // Load surveys from Firebase
-      const surveysData = await firebaseService.getSurveys(userProfile.companyId);
+      const surveysData = await firebaseService.getSurveys();
       setSurveys(surveysData);
     } catch (error) {
       console.error('Error loading surveys:', error);
@@ -90,13 +90,12 @@ export default function SurveysPage() {
   };
 
   const handleAddSurvey = async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
 
     try {
       const surveyData = {
         ...newSurvey,
-        companyId: userProfile.companyId,
-        createdBy: userProfile.id || userProfile.email || 'Unknown',
+                createdBy: userProfile.id || userProfile.email || 'Unknown',
         status: 'draft' as const,
         responses: 0
       };

@@ -27,7 +27,7 @@ export async function POST(request: NextRequest) {
 
     if (!email || !password || !displayName || !companyId) {
       return NextResponse.json(
-        { error: 'Missing required fields: email, password, displayName, companyId' },
+        { error: 'Missing required fields' },
         { status: 400 }
       );
     }

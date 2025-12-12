@@ -28,7 +28,6 @@ interface UserProfile {
   address?: string;
   emergencyContact?: string;
   companyName?: string; // Add company information
-  companyId?: string; // Add company ID for isolation
   passwordSet?: boolean; // Track if password has been set
   permissions?: {
     dashboard?: boolean;

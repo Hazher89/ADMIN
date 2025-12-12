@@ -1,4 +1,4 @@
-// GDPR COMPLIANCE: All queries are filtered by companyId to prevent cross-company data access
+// All data is for Mavi Logistikk only - no multi-company support
 // This ensures complete data isolation between companies
 
 import {
@@ -56,7 +56,6 @@ export interface Employee {
   bio?: string;
   address?: string;
   emergencyContact?: string;
-  companyId: string;
   status: 'active' | 'inactive' | 'on_leave';
   hireDate: string;
   birthDate?: string;
@@ -160,7 +159,6 @@ export interface Department {
   name: string;
   description?: string;
   managerId?: string;
-  companyId: string;
   createdAt: string;
   updatedAt: string;
   employeeCount: number;
@@ -173,7 +171,6 @@ export interface Shift {
   id: string;
   employeeId: string;
   departmentId: string;
-  companyId: string;
   startTime: string;
   endTime: string;
   breakStart?: string;
@@ -199,7 +196,6 @@ export interface Deviation {
   assignedTo?: string;
   assignedToIds?: string[]; // Multiple assigned persons
   departmentId: string;
-  companyId: string;
   location?: string;
   equipment?: string;
   cost?: number;
@@ -239,7 +235,6 @@ export interface Document {
   fileType: string;
   category: 'policy' | 'procedure' | 'form' | 'report' | 'other';
   uploadedBy: string;
-  companyId: string;
   departmentId?: string;
   createdAt: string;
   updatedAt: string;
@@ -253,7 +248,6 @@ export interface Document {
 export interface TimeClock {
   id: string;
   employeeId: string;
-  companyId: string;
   clockInTime: string;
   clockOutTime?: string;
   breakStartTime?: string;
@@ -269,7 +263,6 @@ export interface Absence {
   id: string;
   employeeId: string;
   employeeName?: string; // Made optional for backward compatibility
-  companyId: string;
   startDate: string;
   endDate: string;
   type: 'sick' | 'personal' | 'sickChild' | 'other' | 'vacation';
@@ -287,7 +280,6 @@ export interface Vacation {
   id: string;
   employeeId: string;
   employeeName: string;
-  companyId: string;
   startDate: string;
   endDate: string;
   type: 'vacation' | 'sick' | 'personal' | 'other';
@@ -305,7 +297,6 @@ export interface Vacation {
 export interface VacationAllocation {
   id: string;
   employeeId: string;
-  companyId: string;
   year: number;
   allocatedDays: number; // Standard 25 days (5 weeks)
   usedDays: number;
@@ -401,7 +392,6 @@ export interface Activity {
   description: string;
   userId: string;
   userName: string;
-  companyId: string;
   createdAt: string;
   metadata?: Record<string, unknown>;
 }
@@ -416,7 +406,6 @@ export interface Survey {
   startDate: string;
   endDate: string;
   responses: number;
-  companyId: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -435,7 +424,6 @@ export interface SurveyResponse {
   surveyId: string;
   employeeId: string;
   employeeName: string;
-  companyId: string;
   answers: SurveyAnswer[];
   submittedAt: string;
 }
@@ -500,7 +488,6 @@ export interface Partner {
     type: string;
     uploadedAt: string;
   }>;
-  companyId: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -514,14 +501,12 @@ export interface Setting {
   status: 'active' | 'inactive' | 'pending';
   icon: string;
   value?: string;
-  companyId: string;
   createdBy: string;
   updatedAt: string;
 }
 
 export interface PartnerAssignment {
   id: string;
-  companyId: string;
   partnerId: string;
   title: string;
   description: string;
@@ -542,7 +527,6 @@ export interface PartnerAssignment {
 
 export interface PartnerUser {
   id: string;
-  companyId: string;
   partnerId: string;
   userId: string;
   fullName: string;
@@ -583,7 +567,6 @@ export interface InternalAudit {
   actualHours?: number;
   cost?: number;
   complianceScore?: number;
-  companyId: string;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
@@ -644,7 +627,6 @@ export interface RiskAssessment {
   reviewDate: string;
   attachments?: string[]; // Legacy - kept for backward compatibility
   documents?: AuditDocument[]; // New - full document objects with metadata
-  companyId: string;
   createdBy: string;
   sentToLeader?: boolean;
   leaderId?: string;
@@ -691,7 +673,6 @@ export interface FollowUpAction {
   verifiedAt?: string;
   attachments?: string[]; // Legacy - kept for backward compatibility
   documents?: AuditDocument[]; // New - full document objects with metadata
-  companyId: string;
   createdBy: string;
   sentToLeader?: boolean;
   leaderId?: string;
@@ -716,7 +697,6 @@ export interface Checkpoint {
   checklist: Array<{ item: string; checked: boolean; notes?: string }>;
   attachments?: string[]; // Legacy - kept for backward compatibility
   documents?: AuditDocument[]; // New - full document objects with metadata
-  companyId: string;
   createdBy: string;
   sentToLeader?: boolean;
   leaderId?: string;
@@ -724,25 +704,23 @@ export interface Checkpoint {
   updatedAt: string;
 }
 
-// GDPR Access Control Helper
+// Access Control Helper
 export interface UserAccessContext {
   userId: string;
   role: 'admin' | 'super_admin' | 'department_leader' | 'employee';
   departmentId?: string;
-  companyId: string;
 }
 
 // Helper function to create UserAccessContext from userProfile
 export function createUserAccessContext(userProfile: any): UserAccessContext | null {
-  if (!userProfile || !userProfile.id || !userProfile.companyId) {
+  if (!userProfile || !userProfile.id) {
     return null;
   }
   
   return {
     userId: userProfile.id,
     role: userProfile.role || 'employee',
-    departmentId: userProfile.departmentId,
-    companyId: userProfile.companyId
+    departmentId: userProfile.departmentId
   };
 }
 
@@ -763,13 +741,12 @@ class FirebaseService {
     return false;
   }
 
-  // GDPR Helper: Log access for audit trail
+  // Helper: Log access for audit trail
   private async logAccess(
     action: string,
     userId: string,
     resourceType: string,
     resourceId: string,
-    companyId: string,
     metadata?: Record<string, unknown>
   ): Promise<void> {
     const firestore = ensureDb();
@@ -789,7 +766,6 @@ class FirebaseService {
         userId,
         resourceType,
         resourceId,
-        companyId,
         timestamp: serverTimestamp(),
         metadata: cleanMetadata,
         createdAt: new Date().toISOString()
@@ -800,36 +776,32 @@ class FirebaseService {
     }
   }
 
-  // Employee Management with GDPR filtering
-  async getEmployees(companyId: string, userContext?: UserAccessContext): Promise<Employee[]> {
+  // Employee Management with role-based filtering
+  async getEmployees(userContext?: UserAccessContext): Promise<Employee[]> {
     const firestore = ensureDb();
 
-    console.log('Fetching employees for company:', companyId, 'with context:', userContext);
+    console.log('Fetching employees with context:', userContext);
 
     try {
       let q;
       
-      // GDPR: Filter based on role and department
+      // Filter based on role and department
       if (userContext) {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all employees
-          q = query(
-        collection(firestore, 'users'),
-        where('companyId', '==', companyId)
-      );
+          q = query(collection(firestore, 'users'));
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders only see employees in their department
           q = query(
             collection(firestore, 'users'),
-            where('companyId', '==', companyId),
             where('departmentId', '==', userContext.departmentId)
           );
         } else if (userContext.role === 'employee') {
           // Employees only see themselves - fetch by document ID
           const employeeDoc = await getDoc(doc(firestore, 'users', userContext.userId));
-          if (employeeDoc.exists() && employeeDoc.data().companyId === companyId) {
+          if (employeeDoc.exists()) {
             const employee = { id: employeeDoc.id, ...employeeDoc.data() } as Employee;
-            await this.logAccess('view_employee', userContext.userId, 'employee', userContext.userId, companyId);
+            await this.logAccess('view_employee', userContext.userId, 'employee', userContext.userId);
             return [employee];
           }
           return [];
@@ -839,12 +811,8 @@ class FirebaseService {
           return [];
         }
       } else {
-        // Fallback: if no context provided, return all (for backward compatibility)
-        // This should be avoided in production
-        q = query(
-          collection(firestore, 'users'),
-          where('companyId', '==', companyId)
-        );
+        // Fallback: if no context provided, return all
+        q = query(collection(firestore, 'users'));
       }
 
       const snapshot = await getDocs(q);
@@ -864,10 +832,10 @@ class FirebaseService {
         if (userContext.departmentId) {
           logMetadata.departmentId = userContext.departmentId;
         }
-        await this.logAccess('view_employees', userContext.userId, 'employees', 'list', companyId, logMetadata);
+        await this.logAccess('view_employees', userContext.userId, 'employees', 'list', logMetadata);
       }
       
-      console.log('Found employees for company', companyId, ':', employees.length, employees);
+      console.log('Found employees:', employees.length, employees);
       return employees;
     } catch (error) {
       console.error('Error fetching employees:', error);
@@ -890,14 +858,14 @@ class FirebaseService {
       if (userContext) {
         // Superadmin and admin have access to all
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
-          await this.logAccess('view_employee', userContext.userId, 'employee', id, employee.companyId);
+          await this.logAccess('view_employee', userContext.userId, 'employee', id);
           return employee;
         }
         
         // Department leaders can only access employees in their department
         if (userContext.role === 'department_leader') {
           if (employee.departmentId === userContext.departmentId) {
-            await this.logAccess('view_employee', userContext.userId, 'employee', id, employee.companyId);
+            await this.logAccess('view_employee', userContext.userId, 'employee', id);
             return employee;
           }
           console.warn('Department leader does not have access to this employee');
@@ -907,7 +875,7 @@ class FirebaseService {
         // Employees can only access themselves
         if (userContext.role === 'employee') {
           if (id === userContext.userId) {
-            await this.logAccess('view_employee', userContext.userId, 'employee', id, employee.companyId);
+            await this.logAccess('view_employee', userContext.userId, 'employee', id);
             return employee;
           }
           console.warn('Employee does not have access to this employee');
@@ -923,15 +891,14 @@ class FirebaseService {
     }
   }
 
-  async getManagersAndAdmins(companyId: string): Promise<Employee[]> {
+  async getManagersAndAdmins(): Promise<Employee[]> {
     const firestore = ensureDb();
 
-    console.log('Fetching managers and admins for company:', companyId);
+    console.log('Fetching managers and admins');
 
     try {
       const q = query(
         collection(firestore, 'users'),
-        where('companyId', '==', companyId),
         where('role', 'in', ['admin', 'department_leader'])
       );
       const snapshot = await getDocs(q);
@@ -947,7 +914,7 @@ class FirebaseService {
         return a.displayName.localeCompare(b.displayName);
       });
       
-      console.log('Found managers and admins for company', companyId, ':', managers.length, managers);
+      console.log('Found managers and admins:', managers.length, managers);
       return managers;
     } catch (error) {
       console.error('Error fetching managers and admins:', error);
@@ -1014,8 +981,8 @@ class FirebaseService {
       const cleanEmployeeData = cleanObject(employeeData);
       
       // Ensure required fields are present
-      if (!cleanEmployeeData || !cleanEmployeeData.displayName || !cleanEmployeeData.email || !cleanEmployeeData.companyId) {
-        throw new Error('Missing required fields: displayName, email, or companyId');
+      if (!cleanEmployeeData || !cleanEmployeeData.displayName || !cleanEmployeeData.email) {
+        throw new Error('Missing required fields: displayName or email');
       }
       
       // Ensure permissions, vacationAccess, and leadership are always present (even if empty)
@@ -1045,13 +1012,23 @@ class FirebaseService {
       
       // First, create Firebase Auth user so they can log in
       let firebaseAuthUid: string | null = null;
+      let authError: Error | null = null;
+      
       try {
         console.log('🔐 Creating Firebase Auth user for employee:', cleanEmployeeData.email);
         
-        // Use base URL for API call
-        const baseUrl = typeof window !== 'undefined' 
-          ? window.location.origin 
-          : process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+        // Use base URL for API call - must work on both client and server
+        let baseUrl: string;
+        if (typeof window !== 'undefined') {
+          baseUrl = window.location.origin;
+        } else {
+          // Server-side: use environment variable or default
+          baseUrl = process.env.NEXT_PUBLIC_APP_URL || process.env.VERCEL_URL 
+            ? `https://${process.env.VERCEL_URL || process.env.NEXT_PUBLIC_APP_URL?.replace(/^https?:\/\//, '')}`
+            : 'http://localhost:3000';
+        }
+        
+        console.log('📡 Calling create-user API at:', `${baseUrl}/api/create-user`);
         
         const createUserResponse = await fetch(`${baseUrl}/api/create-user`, {
           method: 'POST',
@@ -1062,46 +1039,85 @@ class FirebaseService {
             email: cleanEmployeeData.email,
             displayName: cleanEmployeeData.displayName,
             role: cleanEmployeeData.role || 'employee',
-            companyId: cleanEmployeeData.companyId,
-            companyName: cleanEmployeeData.companyName || 'Bedrift'
+            companyName: 'Mavi Logistikk'
           })
         });
 
-        if (createUserResponse.ok) {
-          const createUserResult = await createUserResponse.json();
+        const createUserResult = await createUserResponse.json().catch(() => ({}));
+        
+        if (createUserResponse.ok && createUserResult.success) {
           firebaseAuthUid = createUserResult.userId;
-          console.log('✅ Firebase Auth user created with UID:', firebaseAuthUid);
+          if (firebaseAuthUid) {
+            console.log('✅ Firebase Auth user created/found with UID:', firebaseAuthUid);
+          } else {
+            console.warn('⚠️ API returned success but no userId');
+          }
         } else {
-          const errorData = await createUserResponse.json().catch(() => ({}));
-          // If user already exists in Firebase Auth, we need to find their UID
-          if (errorData.error?.includes('already-in-use') || errorData.error?.includes('already exists')) {
-            console.warn('⚠️ User already exists in Firebase Auth');
-            // Check if user document exists in Firestore with this email
-            const existingUserQuery = query(
-              collection(firestore, 'users'),
-              where('email', '==', cleanEmployeeData.email)
-            );
-            const existingUserSnapshot = await getDocs(existingUserQuery);
-            if (!existingUserSnapshot.empty) {
-              const existingUserDoc = existingUserSnapshot.docs[0];
-              const existingData = existingUserDoc.data();
-              if (existingData.uid) {
-                firebaseAuthUid = existingData.uid;
-                console.log('✅ Found existing Firebase Auth UID:', firebaseAuthUid);
+          // If user already exists, try to find their UID
+          if (createUserResult.alreadyExists || createUserResult.error?.includes('already')) {
+            console.warn('⚠️ User already exists in Firebase Auth, trying to find UID');
+            firebaseAuthUid = createUserResult.userId || null;
+            
+            // If still no UID, search Firestore
+            if (!firebaseAuthUid) {
+              const existingUserQuery = query(
+                collection(firestore, 'users'),
+                where('email', '==', cleanEmployeeData.email)
+              );
+              const existingUserSnapshot = await getDocs(existingUserQuery);
+              if (!existingUserSnapshot.empty) {
+                const existingUserDoc = existingUserSnapshot.docs[0];
+                const existingData = existingUserDoc.data();
+                firebaseAuthUid = existingData.uid || existingUserDoc.id;
+                console.log('✅ Found existing Firebase Auth UID in Firestore:', firebaseAuthUid);
               }
             }
-            // If we still don't have UID, we'll create document and user can reset password
           } else {
-            console.error('❌ Failed to create Firebase Auth user:', errorData);
-            // Continue anyway - user can be created later via password reset
+            authError = new Error(createUserResult.error || createUserResult.message || 'Failed to create Firebase Auth user');
+            console.error('❌ Failed to create Firebase Auth user:', authError.message);
+            // Don't throw - we'll create the Firestore document anyway
+            // User can be linked to Auth account later via password reset
           }
         }
-      } catch (authError) {
-        console.error('❌ Error creating Firebase Auth user:', authError);
+      } catch (authErrorCaught) {
+        authError = authErrorCaught instanceof Error ? authErrorCaught : new Error(String(authErrorCaught));
+        console.error('❌ Error calling create-user API:', authError.message);
         // Continue anyway - we'll create Firestore document
         // User can be linked to Auth account later via password reset
       }
+      
+      // If we still don't have a UID, try one more time to find existing user by email
+      if (!firebaseAuthUid) {
+        try {
+          const existingUserQuery = query(
+            collection(firestore, 'users'),
+            where('email', '==', cleanEmployeeData.email)
+          );
+          const existingUserSnapshot = await getDocs(existingUserQuery);
+          if (!existingUserSnapshot.empty) {
+            const existingUserDoc = existingUserSnapshot.docs[0];
+            const existingData = existingUserDoc.data();
+            firebaseAuthUid = existingData.uid || existingUserDoc.id;
+            console.log('✅ Found existing user in Firestore with UID:', firebaseAuthUid);
+          }
+        } catch (findError) {
+          console.warn('Could not find existing user:', findError);
+        }
+      }
 
+      // Check if employee already exists (by email)
+      const existingEmployeeQuery = query(
+        collection(firestore, 'users'),
+        where('email', '==', cleanEmployeeData.email)
+      );
+      const existingEmployeeSnapshot = await getDocs(existingEmployeeQuery);
+      
+      if (!existingEmployeeSnapshot.empty) {
+        const existingDoc = existingEmployeeSnapshot.docs[0];
+        const existingData = existingDoc.data();
+        throw new Error(`Ansatt med e-post ${cleanEmployeeData.email} eksisterer allerede`);
+      }
+      
       const employeeDoc = {
         ...cleanEmployeeData,
         uid: firebaseAuthUid || undefined, // Set uid if we have it
@@ -1124,6 +1140,17 @@ class FirebaseService {
         docRef = await addDoc(collection(firestore, 'users'), employeeDoc);
         console.log('✅ Employee created with auto-generated ID:', docRef.id);
         console.warn('⚠️ Employee created without Firebase Auth UID - they will need password reset to log in');
+        
+        // Update the document with the generated ID
+        await updateDoc(doc(firestore, 'users', docRef.id), {
+          id: docRef.id
+        });
+      }
+      
+      // If there was an auth error but we created the document, log it as a warning
+      if (authError && !firebaseAuthUid) {
+        console.warn('⚠️ Employee created in Firestore but Firebase Auth creation failed:', authError.message);
+        console.warn('⚠️ User will need to reset password to log in');
       }
 
       // Log access for audit trail
@@ -1135,7 +1162,7 @@ class FirebaseService {
         if (employeeData.departmentId) {
           logMetadata.departmentId = employeeData.departmentId;
         }
-        await this.logAccess('create_employee', userContext.userId, 'employee', docRef.id, employeeData.companyId, logMetadata);
+        await this.logAccess('create_employee', userContext.userId, 'employee', docRef.id, logMetadata);
       }
 
       // Create activity log (don't fail if this fails)
@@ -1146,7 +1173,6 @@ class FirebaseService {
         description: `${employeeData.displayName} ble lagt til i systemet`,
         userId: docRef.id,
         userName: employeeData.displayName,
-        companyId: employeeData.companyId
       });
       console.log('Activity log created for employee:', docRef.id);
       } catch (activityError) {
@@ -1214,7 +1240,7 @@ class FirebaseService {
         if (employeeData.departmentId) {
           logMetadata.departmentId = employeeData.departmentId;
         }
-        await this.logAccess('update_employee', userContext.userId, 'employee', id, employeeData.companyId, logMetadata);
+        await this.logAccess('update_employee', userContext.userId, 'employee', id, logMetadata);
       }
       
       console.log('✅ Employee updated successfully');
@@ -1263,7 +1289,7 @@ class FirebaseService {
         if (employeeData.departmentId) {
           logMetadata.departmentId = employeeData.departmentId;
         }
-        await this.logAccess('delete_employee', userContext.userId, 'employee', id, employeeData.companyId, logMetadata);
+        await this.logAccess('delete_employee', userContext.userId, 'employee', id, logMetadata);
       }
       
       console.log(`✅ Employee deleted from Firestore: ${employeeData.displayName} (${employeeData.email})`);
@@ -1279,14 +1305,11 @@ class FirebaseService {
   }
 
   // Department Management
-  async getDepartments(companyId: string): Promise<Department[]> {
+  async getDepartments(): Promise<Department[]> {
     const firestore = ensureDb();
 
     try {
-      const q = query(
-        collection(firestore, 'departments'),
-        where('companyId', '==', companyId)
-      );
+      const q = query(collection(firestore, 'departments'));
       const snapshot = await getDocs(q);
       const departments = snapshot.docs.map(doc => ({
         id: doc.id,
@@ -1343,8 +1366,8 @@ class FirebaseService {
       });
 
       // Ensure required fields are present
-      if (!cleanDepartmentData || !cleanDepartmentData.name || !cleanDepartmentData.companyId) {
-        throw new Error('Missing required fields: name or companyId');
+      if (!cleanDepartmentData || !cleanDepartmentData.name) {
+        throw new Error('Missing required fields: name');
       }
 
       const now = new Date().toISOString();
@@ -1359,7 +1382,7 @@ class FirebaseService {
         const logMetadata: Record<string, unknown> = {
           departmentName: departmentData.name
         };
-        await this.logAccess('create_department', userContext.userId, 'department', docRef.id, departmentData.companyId, logMetadata);
+        await this.logAccess('create_department', userContext.userId, 'department', docRef.id, logMetadata);
       }
 
       return docRef.id;
@@ -1413,7 +1436,7 @@ class FirebaseService {
           departmentName: departmentData.name,
           updatedFields: Object.keys(cleanData || {})
         };
-        await this.logAccess('update_department', userContext.userId, 'department', id, departmentData.companyId, logMetadata);
+        await this.logAccess('update_department', userContext.userId, 'department', id, logMetadata);
       }
     } catch (error) {
       console.error('Error updating department:', error);
@@ -1436,7 +1459,7 @@ class FirebaseService {
         const logMetadata: Record<string, unknown> = {
           departmentName: departmentData.name
         };
-        await this.logAccess('delete_department', userContext.userId, 'department', id, departmentData.companyId, logMetadata);
+        await this.logAccess('delete_department', userContext.userId, 'department', id, logMetadata);
       }
     } catch (error) {
       console.error('Error deleting department:', error);
@@ -1445,14 +1468,11 @@ class FirebaseService {
   }
 
   // Shift Management
-  async getShifts(companyId: string, filters?: { departmentId?: string; status?: string; date?: string }): Promise<Shift[]> {
+  async getShifts(filters?: { departmentId?: string; status?: string; date?: string }): Promise<Shift[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(
-        collection(firestore, 'shifts'),
-        where('companyId', '==', companyId)
-      );
+      let q = query(collection(firestore, 'shifts'));
 
       if (filters?.departmentId) {
         q = query(q, where('departmentId', '==', filters.departmentId));
@@ -1493,7 +1513,6 @@ class FirebaseService {
         description: `Skift opprettet for ${shiftData.startTime}`,
         userId: shiftData.employeeId,
         userName: 'System',
-        companyId: shiftData.companyId
       });
 
       return docRef.id;
@@ -1518,43 +1537,35 @@ class FirebaseService {
   }
 
   // Deviation Management
-  async getDeviations(companyId: string, userContext?: UserAccessContext, filters?: { status?: string; type?: string; severity?: string }): Promise<Deviation[]> {
+  async getDeviations(filters?: { status?: string; type?: string; severity?: string }): Promise<Deviation[]> {
     const firestore = ensureDb();
 
     try {
       let q;
       
-      // GDPR: Filter based on role and department
+      // Filter based on role and department
       if (userContext) {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all deviations
-          q = query(
-        collection(firestore, 'deviations'),
-        where('companyId', '==', companyId)
-      );
+          q = query(collection(firestore, 'deviations'));
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders only see deviations from their department
           q = query(
             collection(firestore, 'deviations'),
-            where('companyId', '==', companyId),
             where('departmentId', '==', userContext.departmentId)
           );
         } else if (userContext.role === 'employee') {
           // Employees only see their own deviations
           q = query(
             collection(firestore, 'deviations'),
-            where('companyId', '==', companyId),
             where('reportedBy', '==', userContext.userId)
           );
         } else {
           return [];
         }
       } else {
-        // Fallback: if no context provided, return all (for backward compatibility)
-        q = query(
-          collection(firestore, 'deviations'),
-          where('companyId', '==', companyId)
-        );
+        // Fallback: if no context provided, return all
+        q = query(collection(firestore, 'deviations'));
       }
 
       if (filters?.status) {
@@ -1581,7 +1592,7 @@ class FirebaseService {
         if (userContext.departmentId) {
           logMetadata.departmentId = userContext.departmentId;
         }
-        await this.logAccess('view_deviations', userContext.userId, 'deviations', 'list', companyId, logMetadata);
+        await this.logAccess('view_deviations', userContext.userId, 'deviations', 'list', logMetadata);
       }
       
       // Sort in-memory by createdAt descending
@@ -1609,8 +1620,7 @@ class FirebaseService {
         description: deviationData.title,
         userId: deviationData.reportedBy,
         userName: 'System',
-        companyId: deviationData.companyId
-      });
+              });
 
       return docRef.id;
     } catch (error) {
@@ -1634,43 +1644,35 @@ class FirebaseService {
   }
 
   // Document Management with GDPR filtering
-  async getDocuments(companyId: string, userContext?: UserAccessContext, filters?: { category?: string; departmentId?: string }): Promise<Document[]> {
+  async getDocuments(filters?: { category?: string; departmentId?: string }): Promise<Document[]> {
     const firestore = ensureDb();
 
     try {
       let q;
       
-      // GDPR: Filter based on role and department
+      // Filter based on role and department
       if (userContext) {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all documents
-          q = query(
-        collection(firestore, 'documents'),
-        where('companyId', '==', companyId)
-      );
+          q = query(collection(firestore, 'documents'));
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders only see documents from their department
           q = query(
             collection(firestore, 'documents'),
-            where('companyId', '==', companyId),
             where('departmentId', '==', userContext.departmentId)
           );
         } else if (userContext.role === 'employee') {
           // Employees only see their own documents
           q = query(
             collection(firestore, 'documents'),
-            where('companyId', '==', companyId),
-            where('createdBy', '==', userContext.userId)
+            where('uploadedBy', '==', userContext.userId)
           );
         } else {
           return [];
         }
       } else {
-        // Fallback: if no context provided, return all (for backward compatibility)
-        q = query(
-          collection(firestore, 'documents'),
-          where('companyId', '==', companyId)
-        );
+        // Fallback: if no context provided, return all
+        q = query(collection(firestore, 'documents'));
       }
 
       if (filters?.category) {
@@ -1695,7 +1697,7 @@ class FirebaseService {
         if (userContext.departmentId) {
           logMetadata.departmentId = userContext.departmentId;
         }
-        await this.logAccess('view_documents', userContext.userId, 'documents', 'list', companyId, logMetadata);
+        await this.logAccess('view_documents', userContext.userId, 'documents', 'list', logMetadata);
       }
       
       // Sort in-memory by createdAt descending
@@ -1725,7 +1727,7 @@ class FirebaseService {
         if (isAvailable) {
           console.log('📁 Uploading to OneDrive (app-only)...');
           // Generic dokumenter legges under en egen side-mappe i OneDrive
-          const folderPath = `DriftPro/Dokumenter/${documentData.companyId}`;
+          const folderPath = `DriftPro/Dokumenter/MaviLogistikk`;
           const oneDriveResult = await oneDriveAppOnlyService.uploadFile(
             file,
             folderPath,
@@ -1753,7 +1755,7 @@ class FirebaseService {
       if (storageType === 'firebase' || !fileUrl) {
         if (!storage) throw new Error('Firebase Storage not initialized');
       const fileName = `${Date.now()}_${file.name}`;
-      const storageRef = ref(storage, `documents/${documentData.companyId}/${fileName}`);
+      const storageRef = ref(storage, `documents/MaviLogistikk/${fileName}`);
       await uploadBytes(storageRef, file);
         fileUrl = await getDownloadURL(storageRef);
         console.log('✅ File uploaded to Firebase Storage');
@@ -1779,8 +1781,7 @@ class FirebaseService {
         description: documentData.title,
         userId: documentData.uploadedBy,
         userName: 'System',
-        companyId: documentData.companyId
-      });
+              });
 
       return docRef.id;
     } catch (error) {
@@ -1837,14 +1838,11 @@ class FirebaseService {
   }
 
   // Time Clock Management
-  async getTimeClocks(companyId: string, filters?: { employeeId?: string; date?: string }): Promise<TimeClock[]> {
+  async getTimeClocks(): Promise<TimeClock[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(
-        collection(firestore, 'timeclocks'),
-        where('companyId', '==', companyId)
-      );
+      let q = query(collection(firestore, 'timeclocks'));
 
       if (filters?.employeeId) {
         q = query(q, where('employeeId', '==', filters.employeeId));
@@ -1864,14 +1862,13 @@ class FirebaseService {
     }
   }
 
-  async clockIn(employeeId: string, companyId: string, location?: string): Promise<string> {
+  async clockIn(employeeId: string, location?: string): Promise<string> {
     const firestore = ensureDb();
 
     try {
       const now = new Date().toISOString();
       const docRef = await addDoc(collection(firestore, 'timeclocks'), {
         employeeId,
-        companyId,
         clockInTime: now,
         location,
         createdAt: now,
@@ -1883,8 +1880,7 @@ class FirebaseService {
         title: 'Innstempling',
         description: 'Ansatt stempler inn',
         userId: employeeId,
-        userName: 'System',
-        companyId
+        userName: 'System'
       });
 
       return docRef.id;
@@ -1910,7 +1906,7 @@ class FirebaseService {
   }
 
   // Absence Management
-  async getAbsences(companyId: string, userContext?: UserAccessContext, filters?: { employeeId?: string; status?: string }): Promise<Absence[]> {
+  async getAbsences(filters?: { employeeId?: string; status?: string }): Promise<Absence[]> {
     const firestore = ensureDb();
 
     try {
@@ -1920,14 +1916,11 @@ class FirebaseService {
       if (userContext) {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all absences
-          q = query(
-        collection(firestore, 'absences'),
-        where('companyId', '==', companyId)
-      );
+          q = query(collection(firestore, 'absences'));
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders see absences from their department employees
           // First, get all employees in the department
-          const departmentEmployees = await this.getEmployees(companyId, userContext);
+          const departmentEmployees = await this.getEmployees(userContext);
           const employeeIds = departmentEmployees.map(emp => emp.id);
           
           if (employeeIds.length === 0) {
@@ -1938,21 +1931,17 @@ class FirebaseService {
           if (employeeIds.length <= 10) {
             q = query(
               collection(firestore, 'absences'),
-              where('companyId', '==', companyId),
+              
               where('employeeId', 'in', employeeIds)
             );
           } else {
             // If more than 10, we need to fetch all and filter in memory
-            q = query(
-              collection(firestore, 'absences'),
-              where('companyId', '==', companyId)
-            );
+            q = query(collection(firestore, 'absences'));
           }
         } else if (userContext.role === 'employee') {
           // Employees only see their own absences
           q = query(
             collection(firestore, 'absences'),
-            where('companyId', '==', companyId),
             where('employeeId', '==', userContext.userId)
           );
         } else {
@@ -1960,10 +1949,7 @@ class FirebaseService {
         }
       } else {
         // Fallback: if no context provided, return all (for backward compatibility)
-        q = query(
-          collection(firestore, 'absences'),
-          where('companyId', '==', companyId)
-        );
+        q = query(collection(firestore, 'absences'));
       }
 
       if (filters?.employeeId) {
@@ -1995,7 +1981,7 @@ class FirebaseService {
 
       // If department leader has more than 10 employees, filter in memory
       if (userContext?.role === 'department_leader' && userContext.departmentId) {
-        const departmentEmployees = await this.getEmployees(companyId, userContext);
+        const departmentEmployees = await this.getEmployees(userContext);
         const employeeIds = new Set(departmentEmployees.map(emp => emp.id));
         absences = absences.filter(absence => employeeIds.has(absence.employeeId));
       }
@@ -2008,7 +1994,7 @@ class FirebaseService {
         if (userContext.departmentId) {
           logMetadata.departmentId = userContext.departmentId;
         }
-        await this.logAccess('view_absences', userContext.userId, 'absences', 'list', companyId, logMetadata);
+        await this.logAccess('view_absences', userContext.userId, 'absences', 'list', logMetadata);
       }
 
       // Sort by creation date (newest first) in memory
@@ -2041,7 +2027,7 @@ class FirebaseService {
           status: absenceData.status
         };
         // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
-        await this.logAccess('create_absence', userContext.userId, 'absence', docRef.id, absenceData.companyId, logMetadata);
+        await this.logAccess('create_absence', userContext.userId, 'absence', docRef.id, logMetadata);
       }
       
       return docRef.id;
@@ -2073,7 +2059,7 @@ class FirebaseService {
           updatedFields: Object.keys(data)
         };
         // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
-        await this.logAccess('update_absence', userContext.userId, 'absence', id, absenceData.companyId, logMetadata);
+        await this.logAccess('update_absence', userContext.userId, 'absence', id, logMetadata);
       }
     } catch (error) {
       console.error('Error updating absence:', error);
@@ -2101,7 +2087,7 @@ class FirebaseService {
           endDate: absenceData.endDate
         };
         // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
-        await this.logAccess('delete_absence', userContext.userId, 'absence', id, absenceData.companyId, logMetadata);
+        await this.logAccess('delete_absence', userContext.userId, 'absence', id, logMetadata);
       }
     } catch (error) {
       console.error('Error deleting absence:', error);
@@ -2110,7 +2096,7 @@ class FirebaseService {
   }
 
   // Vacation Management with GDPR filtering
-  async getVacations(companyId: string, userContext?: UserAccessContext, filters?: { employeeId?: string; status?: string }): Promise<Vacation[]> {
+  async getVacations(filters?: { employeeId?: string; status?: string }): Promise<Vacation[]> {
     const firestore = ensureDb();
 
     try {
@@ -2122,12 +2108,12 @@ class FirebaseService {
           // Superadmin and admin see all vacations
           q = query(
         collection(firestore, 'vacations'),
-        where('companyId', '==', companyId)
+        
       );
         } else if (userContext.role === 'department_leader' && userContext.departmentId) {
           // Department leaders see vacations from their department employees
           // First, get all employees in the department
-          const departmentEmployees = await this.getEmployees(companyId, userContext);
+          const departmentEmployees = await this.getEmployees(userContext);
           const employeeIds = departmentEmployees.map(emp => emp.id);
           
           if (employeeIds.length === 0) {
@@ -2138,21 +2124,17 @@ class FirebaseService {
           if (employeeIds.length <= 10) {
             q = query(
               collection(firestore, 'vacations'),
-              where('companyId', '==', companyId),
+              
               where('employeeId', 'in', employeeIds)
             );
           } else {
             // If more than 10, we need to fetch all and filter in memory
-            q = query(
-              collection(firestore, 'vacations'),
-              where('companyId', '==', companyId)
-            );
+            q = query(collection(firestore, 'vacations'));
           }
         } else if (userContext.role === 'employee') {
           // Employees only see their own vacations
           q = query(
             collection(firestore, 'vacations'),
-            where('companyId', '==', companyId),
             where('employeeId', '==', userContext.userId)
           );
         } else {
@@ -2160,10 +2142,7 @@ class FirebaseService {
         }
       } else {
         // Fallback: if no context provided, return all (for backward compatibility)
-        q = query(
-          collection(firestore, 'vacations'),
-          where('companyId', '==', companyId)
-        );
+        q = query(collection(firestore, 'vacations'));
       }
 
       if (filters?.employeeId) {
@@ -2195,7 +2174,7 @@ class FirebaseService {
 
       // If department leader has more than 10 employees, filter in memory
       if (userContext?.role === 'department_leader' && userContext.departmentId) {
-        const departmentEmployees = await this.getEmployees(companyId, userContext);
+        const departmentEmployees = await this.getEmployees(userContext);
         const employeeIds = new Set(departmentEmployees.map(emp => emp.id));
         vacations = vacations.filter(vacation => employeeIds.has(vacation.employeeId));
       }
@@ -2208,7 +2187,7 @@ class FirebaseService {
         if (userContext.departmentId) {
           logMetadata.departmentId = userContext.departmentId;
         }
-        await this.logAccess('view_vacations', userContext.userId, 'vacations', 'list', companyId, logMetadata);
+        await this.logAccess('view_vacations', userContext.userId, 'vacations', 'list', logMetadata);
       }
 
       // Sort by creation date (newest first) in memory
@@ -2240,7 +2219,7 @@ class FirebaseService {
           days: vacationData.days,
           status: vacationData.status
         };
-        await this.logAccess('create_vacation', userContext.userId, 'vacation', docRef.id, vacationData.companyId, logMetadata);
+        await this.logAccess('create_vacation', userContext.userId, 'vacation', docRef.id, logMetadata);
       }
       
       return docRef.id;
@@ -2271,7 +2250,7 @@ class FirebaseService {
           updatedFields: Object.keys(data),
           status: data.status || vacationData.status
         };
-        await this.logAccess('update_vacation', userContext.userId, 'vacation', id, vacationData.companyId, logMetadata);
+        await this.logAccess('update_vacation', userContext.userId, 'vacation', id, logMetadata);
       }
     } catch (error) {
       console.error('Error updating vacation:', error);
@@ -2298,7 +2277,7 @@ class FirebaseService {
           endDate: vacationData.endDate,
           days: vacationData.days
         };
-        await this.logAccess('delete_vacation', userContext.userId, 'vacation', id, vacationData.companyId, logMetadata);
+        await this.logAccess('delete_vacation', userContext.userId, 'vacation', id, logMetadata);
       }
     } catch (error) {
       console.error('Error deleting vacation:', error);
@@ -2307,13 +2286,13 @@ class FirebaseService {
   }
 
   // Vacation Allocation Management
-  async getVacationAllocations(companyId: string, filters?: { employeeId?: string; year?: number }): Promise<VacationAllocation[]> {
+  async getVacationAllocations( filters?: { employeeId?: string; year?: number }): Promise<VacationAllocation[]> {
     const firestore = ensureDb();
 
     try {
       let q = query(
         collection(firestore, 'vacationAllocations'),
-        where('companyId', '==', companyId)
+        
       );
 
       if (filters?.employeeId) {
@@ -2343,7 +2322,6 @@ class FirebaseService {
       // Check if allocation already exists
       const existingQuery = query(
         collection(firestore, 'vacationAllocations'),
-        where('companyId', '==', allocationData.companyId),
         where('employeeId', '==', allocationData.employeeId),
         where('year', '==', allocationData.year)
       );
@@ -2375,20 +2353,20 @@ class FirebaseService {
     }
   }
 
-  async transferVacationDays(employeeId: string, companyId: string, fromYear: number, toYear: number, days: number): Promise<void> {
+  async transferVacationDays(employeeId: string, fromYear: number, toYear: number, days: number): Promise<void> {
     const firestore = ensureDb();
 
     try {
       // Get allocations for both years
       const fromYearQuery = query(
         collection(firestore, 'vacationAllocations'),
-        where('companyId', '==', companyId),
+        
         where('employeeId', '==', employeeId),
         where('year', '==', fromYear)
       );
       const toYearQuery = query(
         collection(firestore, 'vacationAllocations'),
-        where('companyId', '==', companyId),
+        
         where('employeeId', '==', employeeId),
         where('year', '==', toYear)
       );
@@ -2423,7 +2401,6 @@ class FirebaseService {
         // Create new allocation for to year
         await addDoc(collection(firestore, 'vacationAllocations'), {
           employeeId,
-          companyId,
           year: toYear,
           allocatedDays: 25, // Standard 5 weeks
           usedDays: 0,
@@ -2440,7 +2417,7 @@ class FirebaseService {
   }
 
   // Dashboard Statistics
-  async getDashboardStats(companyId: string): Promise<DashboardStats> {
+  async getDashboardStats(): Promise<DashboardStats> {
     const firestore = ensureDb();
 
     try {
@@ -2454,14 +2431,14 @@ class FirebaseService {
         documentsSnapshot,
         activeTimeClocksSnapshot
       ] = await Promise.all([
-        getDocs(query(collection(firestore, 'users'), where('companyId', '==', companyId))),
-        getDocs(query(collection(firestore, 'shifts'), where('companyId', '==', companyId), where('status', '==', 'in_progress'))),
-        getDocs(query(collection(firestore, 'vacations'), where('companyId', '==', companyId), where('status', '==', 'pending'))),
-        getDocs(query(collection(firestore, 'departments'), where('companyId', '==', companyId))),
-        getDocs(query(collection(firestore, 'deviations'), where('companyId', '==', companyId))),
-        getDocs(query(collection(firestore, 'deviations'), where('companyId', '==', companyId), where('status', 'in', ['reported', 'investigating']))),
-        getDocs(query(collection(firestore, 'documents'), where('companyId', '==', companyId))),
-        getDocs(query(collection(firestore, 'timeclocks'), where('companyId', '==', companyId), where('clockOutTime', '==', null)))
+        getDocs(query(collection(firestore, 'users'))),
+        getDocs(query(collection(firestore, 'shifts'),  where('status', '==', 'in_progress'))),
+        getDocs(query(collection(firestore, 'vacations'),  where('status', '==', 'pending'))),
+        getDocs(query(collection(firestore, 'departments'))),
+        getDocs(query(collection(firestore, 'deviations'))),
+        getDocs(query(collection(firestore, 'deviations'),  where('status', 'in', ['reported', 'investigating']))),
+        getDocs(query(collection(firestore, 'documents'))),
+        getDocs(query(collection(firestore, 'timeclocks'),  where('clockOutTime', '==', null)))
       ]);
 
       return {
@@ -2490,13 +2467,13 @@ class FirebaseService {
   }
 
   // Activity Logging
-  async getActivities(companyId: string, limitCount: number = 10): Promise<Activity[]> {
+  async getActivities(): Promise<Activity[]> {
     const firestore = ensureDb();
 
     try {
       const q = query(
         collection(firestore, 'activities'),
-        where('companyId', '==', companyId)
+        
       );
       const snapshot = await getDocs(q);
       const activities = snapshot.docs.map(doc => ({
@@ -2527,14 +2504,14 @@ class FirebaseService {
   }
 
   // Real-time listeners
-  subscribeToDashboardStats(companyId: string, callback: (stats: DashboardStats) => void) {
+  subscribeToDashboardStats(callback: (stats: DashboardStats) => void) {
     const firestore = ensureDb();
 
     // For real-time stats, we'll use a combination of listeners
     const unsubscribe = onSnapshot(
-      query(collection(firestore, 'users'), where('companyId', '==', companyId)),
+      query(collection(firestore, 'users')),
       async () => {
-        const stats = await this.getDashboardStats(companyId);
+        const stats = await this.getDashboardStats();
         callback(stats);
       }
     );
@@ -2542,12 +2519,12 @@ class FirebaseService {
     return unsubscribe;
   }
 
-  subscribeToActivities(companyId: string, callback: (activities: Activity[]) => void) {
+  subscribeToActivities(callback: (activities: Activity[]) => void) {
     const firestore = ensureDb();
 
     const q = query(
       collection(firestore, 'activities'),
-      where('companyId', '==', companyId)
+      
     );
 
     return onSnapshot(q, (snapshot) => {
@@ -2707,8 +2684,7 @@ class FirebaseService {
         displayName: companyData.adminName,
         email: companyData.adminEmail,
         role: 'admin',
-        companyId: companyRef.id,
-        phone: companyData.adminPhone,
+                phone: companyData.adminPhone,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString(),
         status: 'active',
@@ -2725,8 +2701,7 @@ class FirebaseService {
           email: companyData.adminEmail,
           password: companyData.adminPassword,
           displayName: companyData.adminName,
-          companyId: companyRef.id
-        }),
+                  }),
       });
 
       if (!response.ok) {
@@ -2742,8 +2717,7 @@ class FirebaseService {
       });
 
       return {
-        companyId: companyRef.id,
-        adminUserId: adminUserId
+                adminUserId: adminUserId
       };
     } catch (error) {
       console.error('Error creating company with admin:', error);
@@ -2936,7 +2910,7 @@ class FirebaseService {
     }
   }
 
-  async getCompanyStats(companyId: string): Promise<{
+  async getCompanyStats(): Promise<{
     totalEmployees: number;
     totalDepartments: number;
     totalDocuments: number;
@@ -2947,11 +2921,11 @@ class FirebaseService {
 
     try {
       const [employeesSnapshot, departmentsSnapshot, documentsSnapshot, deviationsSnapshot, shiftsSnapshot] = await Promise.all([
-        getDocs(query(collection(firestore, 'users'), where('companyId', '==', companyId))),
-        getDocs(query(collection(firestore, 'departments'), where('companyId', '==', companyId))),
-        getDocs(query(collection(firestore, 'documents'), where('companyId', '==', companyId))),
-        getDocs(query(collection(firestore, 'deviations'), where('companyId', '==', companyId))),
-        getDocs(query(collection(firestore, 'shifts'), where('companyId', '==', companyId), where('status', '==', 'in_progress')))
+        getDocs(query(collection(firestore, 'users'))),
+        getDocs(query(collection(firestore, 'departments'))),
+        getDocs(query(collection(firestore, 'documents'))),
+        getDocs(query(collection(firestore, 'deviations'))),
+        getDocs(query(collection(firestore, 'shifts'),  where('status', '==', 'in_progress')))
       ]);
 
       return {
@@ -2974,13 +2948,13 @@ class FirebaseService {
   }
 
   // Survey methods
-  async getSurveys(companyId: string): Promise<Survey[]> {
+  async getSurveys(): Promise<Survey[]> {
     const firestore = ensureDb();
 
     try {
       const surveysQuery = query(
         collection(firestore, 'surveys'),
-        where('companyId', '==', companyId)
+        
       );
       
       const snapshot = await getDocs(surveysQuery);
@@ -3076,13 +3050,13 @@ class FirebaseService {
   }
 
   // Partner methods
-  async getPartners(companyId: string): Promise<Partner[]> {
+  async getPartners(): Promise<Partner[]> {
     const firestore = ensureDb();
 
     try {
       const partnersQuery = query(
         collection(firestore, 'partners'),
-        where('companyId', '==', companyId)
+        
       );
       
       const snapshot = await getDocs(partnersQuery);
@@ -3115,7 +3089,7 @@ class FirebaseService {
           partnerName: partnerData.name,
           type: partnerData.type
         };
-        await this.logAccess('create_partner', userContext.userId, 'partner', docRef.id, partnerData.companyId, logMetadata);
+        await this.logAccess('create_partner', userContext.userId, 'partner', docRef.id, logMetadata);
       }
 
       return docRef.id;
@@ -3134,8 +3108,7 @@ class FirebaseService {
     title: string;
     job?: string;
     users?: string[];
-    companyId: string;
-    routeData?: any; // Added for permanent storage
+        routeData?: any; // Added for permanent storage
   }): Promise<string> {
     const firestore = ensureDb();
 
@@ -3155,16 +3128,16 @@ class FirebaseService {
     }
   }
 
-  async getRouteAssignments(companyId: string, startDate?: string, endDate?: string): Promise<any[]> {
+  async getRouteAssignments( startDate?: string, endDate?: string): Promise<any[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(collection(firestore, 'routeAssignments'), where('companyId', '==', companyId));
+      let q = query(collection(firestore, 'routeAssignments'));
       
       if (startDate && endDate) {
         q = query(
           collection(firestore, 'routeAssignments'), 
-          where('companyId', '==', companyId),
+          
           where('date', '>=', startDate),
           where('date', '<=', endDate)
         );
@@ -3208,7 +3181,7 @@ class FirebaseService {
   }
 
   // Save planned routes for persistence
-  async savePlannedRoutes(companyId: string, routes: any[]): Promise<void> {
+  async savePlannedRoutes( routes: any[]): Promise<void> {
     console.log('🚀 Saving planned routes:', { companyId, routesCount: routes.length });
     
     const firestore = ensureDb();
@@ -3327,8 +3300,8 @@ class FirebaseService {
   }
 
   // Get saved planned routes
-  async getPlannedRoutes(companyId: string): Promise<any[]> {
-    console.log('📋 Loading planned routes for company:', companyId);
+  async getPlannedRoutes(): Promise<any[]> {
+    console.log('📋 Loading planned routes for company:');
     
     const firestore = ensureDb();
 
@@ -3340,7 +3313,7 @@ class FirebaseService {
     try {
       const q = query(
         collection(firestore, 'plannedRoutes'),
-        where('companyId', '==', companyId)
+        
       );
       
       const snapshot = await getDocs(q);
@@ -3382,7 +3355,7 @@ class FirebaseService {
           type: partnerData.type,
           updatedFields: Object.keys(data)
         };
-        await this.logAccess('update_partner', userContext.userId, 'partner', id, partnerData.companyId, logMetadata);
+        await this.logAccess('update_partner', userContext.userId, 'partner', id, logMetadata);
       }
     } catch (error) {
       console.error('Error updating partner:', error);
@@ -3406,7 +3379,7 @@ class FirebaseService {
           partnerName: partnerData.name,
           type: partnerData.type
         };
-        await this.logAccess('delete_partner', userContext.userId, 'partner', id, partnerData.companyId, logMetadata);
+        await this.logAccess('delete_partner', userContext.userId, 'partner', id, logMetadata);
       }
     } catch (error) {
       console.error('Error deleting partner:', error);
@@ -3415,13 +3388,13 @@ class FirebaseService {
   }
 
   // Settings methods
-  async getSettings(companyId: string): Promise<Setting[]> {
+  async getSettings(): Promise<Setting[]> {
     const firestore = ensureDb();
 
     try {
       const settingsQuery = query(
         collection(firestore, 'settings'),
-        where('companyId', '==', companyId)
+        
       );
       
       const snapshot = await getDocs(settingsQuery);
@@ -3506,7 +3479,7 @@ class FirebaseService {
     }
   }
 
-  async getPartnerAssignments(companyId: string, partnerId?: string): Promise<PartnerAssignment[]> {
+  async getPartnerAssignments( partnerId?: string): Promise<PartnerAssignment[]> {
     const firestore = ensureDb();
 
     try {
@@ -3514,13 +3487,13 @@ class FirebaseService {
       if (partnerId) {
         q = query(
           collection(firestore, 'partnerAssignments'),
-          where('companyId', '==', companyId),
+          
           where('partnerId', '==', partnerId)
         );
       } else {
         q = query(
           collection(firestore, 'partnerAssignments'),
-          where('companyId', '==', companyId)
+          
         );
       }
 
@@ -3591,7 +3564,7 @@ class FirebaseService {
   }
 
   // Partner User Management
-  async getPartnerUsers(companyId: string, partnerId?: string): Promise<PartnerUser[]> {
+  async getPartnerUsers( partnerId?: string): Promise<PartnerUser[]> {
     const firestore = ensureDb();
 
     try {
@@ -3599,13 +3572,13 @@ class FirebaseService {
       if (partnerId) {
         q = query(
           collection(firestore, 'partnerUsers'),
-          where('companyId', '==', companyId),
+          
           where('partnerId', '==', partnerId)
         );
       } else {
         q = query(
           collection(firestore, 'partnerUsers'),
-          where('companyId', '==', companyId)
+          
         );
       }
 
@@ -3721,7 +3694,7 @@ class FirebaseService {
   }
 
   // Partner Assignment File Upload
-  async uploadPartnerAssignmentFile(file: File, partnerId: string, assignmentId: string, companyId: string): Promise<{ fileUrl: string; fileName: string; fileSize: number }> {
+  async uploadPartnerAssignmentFile(file: File, partnerId: string, assignmentId: string): Promise<{ fileUrl: string; fileName: string; fileSize: number }> {
     const firestore = ensureDb();
     if (!storage) throw new Error('Firebase Storage not initialized');
 
@@ -3783,18 +3756,17 @@ class FirebaseService {
       description: auditData.title,
       userId: auditData.createdBy,
       userName: 'System',
-      companyId: auditData.companyId
-    });
+          });
 
     return docRef.id;
   }
 
-  async getInternalAudits(companyId: string, filters?: { status?: string; type?: string; priority?: string; department?: string }): Promise<InternalAudit[]> {
+  async getInternalAudits( filters?: { status?: string; type?: string; priority?: string; department?: string }): Promise<InternalAudit[]> {
     const firestore = ensureDb();
     
     let q = query(
       collection(firestore, 'internalAudits'),
-      where('companyId', '==', companyId)
+      
     );
 
     const snapshot = await getDocs(q);
@@ -4414,8 +4386,7 @@ class FirebaseService {
     partnerName: string;
     scheduledDate: string;
     status: 'scheduled' | 'completed' | 'overdue';
-    companyId: string;
-    createdBy: string;
+        createdBy: string;
     notes?: string;
   }): Promise<string> {
     const firestore = ensureDb();
@@ -4427,12 +4398,12 @@ class FirebaseService {
     return docRef.id;
   }
 
-  async getAudits(companyId: string): Promise<any[]> {
+  async getAudits(): Promise<any[]> {
     const firestore = ensureDb();
     
     const q = query(
       collection(firestore, 'audits'),
-      where('companyId', '==', companyId)
+      
     );
     const snapshot = await getDocs(q);
     const audits = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
@@ -4459,7 +4430,7 @@ class FirebaseService {
   }
 
   // Check for overdue audits and send notifications
-  async checkOverdueAudits(companyId: string): Promise<any[]> {
+  async checkOverdueAudits(): Promise<any[]> {
     const audits = await this.getAudits(companyId);
     const today = new Date();
     const overdueAudits = audits.filter(audit => {
@@ -4493,8 +4464,7 @@ class FirebaseService {
       partnerName: auditData.partnerName,
       scheduledDate: nextAuditDate.toISOString(),
       status: 'scheduled',
-      companyId: auditData.companyId,
-      createdBy: auditData.createdBy,
+            createdBy: auditData.createdBy,
       notes: `Neste audit planlagt 3 måneder etter forrige audit (${completedDate.toLocaleDateString('no-NO')})`
     });
   }
@@ -4516,11 +4486,11 @@ class FirebaseService {
   }
 
   // Get cases
-  async getEmailCases(companyId: string, filters?: { status?: string; caseType?: string; priority?: string }): Promise<EmailCase[]> {
+  async getEmailCases( filters?: { status?: string; caseType?: string; priority?: string }): Promise<EmailCase[]> {
     const firestore = ensureDb();
     let q = query(
       collection(firestore, 'emailCases'),
-      where('companyId', '==', companyId)
+      
     );
     const snapshot = await getDocs(q);
     let cases = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailCase[];
@@ -4541,13 +4511,13 @@ class FirebaseService {
   }
 
   // Get case by ID or caseId
-  async getEmailCase(caseIdOrId: string, companyId: string): Promise<EmailCase | null> {
+  async getEmailCase(caseIdOrId: string): Promise<EmailCase | null> {
     const firestore = ensureDb();
     // Try by caseId first
     let q = query(
       collection(firestore, 'emailCases'),
       where('caseId', '==', caseIdOrId),
-      where('companyId', '==', companyId)
+      
     );
     let snapshot = await getDocs(q);
     if (!snapshot.empty) {
@@ -4571,7 +4541,7 @@ class FirebaseService {
   }
 
   // Add case link
-  async addEmailCaseLink(caseId: string, kind: string, value: string, companyId: string): Promise<string> {
+  async addEmailCaseLink(caseId: string, kind: string, value: string): Promise<string> {
     const firestore = ensureDb();
     const now = new Date().toISOString();
     const docRef = await addDoc(collection(firestore, 'emailCaseLinks'), {
@@ -4585,7 +4555,7 @@ class FirebaseService {
   }
 
   // Find case by links
-  async findEmailCaseByLinks(kinds: string[], values: string[], companyId: string): Promise<EmailCase | null> {
+  async findEmailCaseByLinks(kinds: string[], values: string[]): Promise<EmailCase | null> {
     const firestore = ensureDb();
     for (const [index, kind] of kinds.entries()) {
       const value = values[index];
@@ -4595,12 +4565,12 @@ class FirebaseService {
         collection(firestore, 'emailCaseLinks'),
         where('kind', '==', kind),
         where('value', '==', value),
-        where('companyId', '==', companyId)
+        
       );
       const snapshot = await getDocs(q);
       if (!snapshot.empty) {
         const link = snapshot.docs[0].data() as EmailCaseLink;
-        return this.getEmailCase(link.caseId, companyId);
+        return this.getEmailCase(link.caseId);
       }
     }
     return null;
@@ -4618,12 +4588,12 @@ class FirebaseService {
   }
 
   // Get messages for case
-  async getEmailCaseMessages(caseId: string, companyId: string): Promise<EmailCaseMessage[]> {
+  async getEmailCaseMessages(caseId: string): Promise<EmailCaseMessage[]> {
     const firestore = ensureDb();
     const q = query(
       collection(firestore, 'emailCaseMessages'),
       where('caseId', '==', caseId),
-      where('companyId', '==', companyId)
+      
     );
     const snapshot = await getDocs(q);
     const messages = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailCaseMessage[];
@@ -4664,12 +4634,12 @@ class FirebaseService {
   }
 
   // Find attachments by SHA256
-  async findEmailAttachmentsBySHA256(sha256: string, companyId: string): Promise<EmailAttachment[]> {
+  async findEmailAttachmentsBySHA256(sha256: string): Promise<EmailAttachment[]> {
     const firestore = ensureDb();
     const q = query(
       collection(firestore, 'emailAttachments'),
       where('sha256', '==', sha256),
-      where('companyId', '==', companyId)
+      
     );
     const snapshot = await getDocs(q);
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailAttachment[];
@@ -4725,11 +4695,11 @@ class FirebaseService {
   }
 
   // Get rules
-  async getEmailRules(companyId: string): Promise<EmailRule[]> {
+  async getEmailRules(): Promise<EmailRule[]> {
     const firestore = ensureDb();
     const q = query(
       collection(firestore, 'emailRules'),
-      where('companyId', '==', companyId)
+      
     );
     const snapshot = await getDocs(q);
     const rules = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })) as EmailRule[];
@@ -4790,18 +4760,17 @@ class FirebaseService {
       description: riskData.title,
       userId: riskData.createdBy,
       userName: 'System',
-      companyId: riskData.companyId
-    });
+          });
 
     return docRef.id;
   }
 
-  async getRiskAssessments(companyId: string, filters?: { status?: string; riskLevel?: string; departmentId?: string }): Promise<RiskAssessment[]> {
+  async getRiskAssessments( filters?: { status?: string; riskLevel?: string; departmentId?: string }): Promise<RiskAssessment[]> {
     const firestore = ensureDb();
     
     let q = query(
       collection(firestore, 'riskAssessments'),
-      where('companyId', '==', companyId)
+      
     );
 
     const snapshot = await getDocs(q);
@@ -4865,18 +4834,17 @@ class FirebaseService {
       description: actionData.title,
       userId: actionData.createdBy,
       userName: 'System',
-      companyId: actionData.companyId
-    });
+          });
 
     return docRef.id;
   }
 
-  async getFollowUpActions(companyId: string, filters?: { status?: string; priority?: string; departmentId?: string }): Promise<FollowUpAction[]> {
+  async getFollowUpActions( filters?: { status?: string; priority?: string; departmentId?: string }): Promise<FollowUpAction[]> {
     const firestore = ensureDb();
     
     let q = query(
       collection(firestore, 'followUpActions'),
-      where('companyId', '==', companyId)
+      
     );
 
     const snapshot = await getDocs(q);
@@ -4940,18 +4908,17 @@ class FirebaseService {
       description: checkpointData.title,
       userId: checkpointData.createdBy,
       userName: 'System',
-      companyId: checkpointData.companyId
-    });
+          });
 
     return docRef.id;
   }
 
-  async getCheckpoints(companyId: string, filters?: { status?: string; category?: string; departmentId?: string }): Promise<Checkpoint[]> {
+  async getCheckpoints( filters?: { status?: string; category?: string; departmentId?: string }): Promise<Checkpoint[]> {
     const firestore = ensureDb();
     
     let q = query(
       collection(firestore, 'checkpoints'),
-      where('companyId', '==', companyId)
+      
     );
 
     const snapshot = await getDocs(q);
@@ -5000,7 +4967,7 @@ class FirebaseService {
   }
 
   // Helper function to get nearest leader for an employee
-  async getNearestLeader(employeeId: string, companyId: string): Promise<Employee | null> {
+  async getNearestLeader(employeeId: string): Promise<Employee | null> {
     const firestore = ensureDb();
     
     try {
@@ -5035,7 +5002,7 @@ class FirebaseService {
       // Fallback: get first department_leader or admin
       const q = query(
         collection(firestore, 'users'),
-        where('companyId', '==', companyId),
+        
         where('role', 'in', ['admin', 'department_leader'])
       );
       const snapshot = await getDocs(q);

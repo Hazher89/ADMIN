@@ -13,8 +13,7 @@ interface Department {
   id: string;
   name: string;
   description?: string;
-  companyId: string;
-  createdAt?: string;
+    createdAt?: string;
   updatedAt?: string;
 }
 
@@ -166,13 +165,13 @@ export default function EmployeesPage() {
       return;
     }
     
-    if (userProfile?.companyId) {
+    if (userProfile) {
       console.log('Loading employees for company:', userProfile.companyId);
       setLoading(true);
       
       // Define load functions inside useEffect to avoid dependency issues
       const loadEmployees = async () => {
-        if (!userProfile?.companyId) {
+        if (!userProfile) {
           console.error('No company ID found in loadEmployees');
           setLoading(false);
           return;
@@ -182,7 +181,7 @@ export default function EmployeesPage() {
 
         try {
           const userContext = createUserAccessContext(userProfile);
-          const data = await firebaseService.getEmployees(userProfile.companyId, userContext || undefined);
+          const data = await firebaseService.getEmployees(userContext || undefined);
           console.log('Loaded employees:', data);
           setEmployees(data);
         } catch (error) {
@@ -194,10 +193,10 @@ export default function EmployeesPage() {
       };
 
       const loadDepartments = async () => {
-        if (!userProfile?.companyId) return;
+        if (!userProfile) return;
 
         try {
-          const data = await firebaseService.getDepartments(userProfile.companyId);
+          const data = await firebaseService.getDepartments();
           setDepartments(data);
         } catch (error) {
           console.error('Error loading departments:', error);
@@ -213,7 +212,7 @@ export default function EmployeesPage() {
       console.log('userProfile object:', userProfile);
       // Don't set loading to false immediately, wait a bit to see if userProfile loads
       timeoutId = setTimeout(() => {
-        if (!userProfile?.companyId) {
+        if (!userProfile) {
           setLoading(false);
         }
       }, 2000);
@@ -229,7 +228,7 @@ export default function EmployeesPage() {
 
   // Create a reusable loadEmployees function for other functions to use
   const loadEmployees = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       console.error('No company ID found in loadEmployees');
       return;
     }
@@ -238,7 +237,7 @@ export default function EmployeesPage() {
 
     try {
       const userContext = createUserAccessContext(userProfile);
-      const data = await firebaseService.getEmployees(userProfile.companyId, userContext || undefined);
+      const data = await firebaseService.getEmployees(userContext || undefined);
       console.log('Loaded employees:', data);
       setEmployees(data);
     } catch (error) {
@@ -257,7 +256,7 @@ export default function EmployeesPage() {
   });
 
   const handleAddEmployee = async () => {
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       console.error('No company ID found');
       alert('Ingen bedrift funnet. Vennligst logg inn på nytt.');
       return;
@@ -278,8 +277,7 @@ export default function EmployeesPage() {
       ...newEmployee,
       departmentId: newEmployee.departmentId || '',
       position: newEmployee.position || '',
-      companyId: userProfile.companyId,
-      hireDate: new Date().toISOString()
+            hireDate: new Date().toISOString()
     });
 
     try {
@@ -289,8 +287,7 @@ export default function EmployeesPage() {
         email: newEmployee.email.trim(),
         role: newEmployee.role as 'admin' | 'department_leader' | 'employee',
         status: newEmployee.status as 'active' | 'inactive' | 'on_leave',
-        companyId: userProfile.companyId,
-        hireDate: newEmployee.hireDate || new Date().toISOString(),
+                hireDate: newEmployee.hireDate || new Date().toISOString(),
       };
       
       // Add optional fields only if they have values
@@ -398,7 +395,7 @@ export default function EmployeesPage() {
       try {
         const departmentName = getDepartmentName(newEmployee.departmentId);
         const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName = userProfile?.companyId || 'Bedrift';
+        const companyName =  'Bedrift';
 
         console.log('📧 Sending welcome email to new employee:', {
           email: newEmployee.email,
@@ -567,7 +564,7 @@ export default function EmployeesPage() {
   const handleEditEmployee = async () => {
     if (!selectedEmployee) return;
 
-    if (!userProfile?.companyId) {
+    if (!userProfile) {
       console.error('No company ID found');
       alert('Ingen bedrift funnet. Vennligst logg inn på nytt.');
       return;
@@ -800,7 +797,7 @@ export default function EmployeesPage() {
             </p>
           )}
           <p className="mt-2 text-sm text-gray-500">
-            Debug: companyId = {userProfile?.companyId || 'undefined'}
+            Debug: companyId = { 'undefined'}
           </p>
           <p className="mt-1 text-xs text-gray-400">
             Auth loading: {authLoading ? 'true' : 'false'}

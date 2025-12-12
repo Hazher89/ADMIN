@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
 
     if (!companyId) {
       return NextResponse.json(
-        { error: 'companyId parameter is required' },
+        { error: '' },
         { status: 400 }
       );
     }
@@ -97,3 +97,4 @@ export async function GET(request: NextRequest) {
     );
   }
 }
+

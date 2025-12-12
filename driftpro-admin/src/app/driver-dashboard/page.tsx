@@ -35,8 +35,7 @@ interface Driver {
   name: string;
   email: string;
   phone: string;
-  companyId: string;
-  companyName: string;
+    companyName: string;
   vehicleId: string;
   vehicleName: string;
   role: 'driver';
@@ -50,8 +49,7 @@ interface AssignedRoute {
   name: string;
   driverId: string;
   driverName: string;
-  companyId: string;
-  companyName: string;
+    companyName: string;
   vehicleId: string;
   vehicleName: string;
   status: 'assigned' | 'in_progress' | 'completed' | 'cancelled';
@@ -122,8 +120,7 @@ export default function DriverDashboardPage() {
           name: data.name || `Rute ${doc.id}`,
           driverId: data.driverId || driverId,
           driverName: data.driverName || userProfile?.displayName || 'Ukjent',
-          companyId: data.companyId || '',
-          companyName: data.companyName || '',
+                    companyName: data.companyName || '',
           vehicleId: data.vehicleId || '',
           vehicleName: data.vehicleName || '',
           status: data.status || 'assigned',

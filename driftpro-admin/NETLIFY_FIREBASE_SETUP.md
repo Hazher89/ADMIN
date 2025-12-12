@@ -74,3 +74,4 @@ Når du legger til `FIREBASE_PRIVATE_KEY` i Netlify:
 ## 🔍 Sjekk at variablene er satt
 
 I Netlify build logs, skal du se at Firebase initialiseres uten feil.
+

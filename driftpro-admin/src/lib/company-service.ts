@@ -35,8 +35,7 @@ export interface Protocol {
   nextReview: Date;
   attachments: Attachment[];
   tags: string[];
-  companyId: string;
-  createdBy: string;
+    createdBy: string;
   createdAt: Date;
   updatedAt: Date;
   approvalWorkflow: ApprovalWorkflow;
@@ -66,8 +65,7 @@ export interface ManagementReview {
   decisions: Decision[];
   actionItems: ActionItem[];
   attachments: Attachment[];
-  companyId: string;
-  createdBy: string;
+    createdBy: string;
   createdAt: Date;
   updatedAt: Date;
   meetingMinutes: string;
@@ -97,8 +95,7 @@ export interface Compliance {
   findings: Finding[];
   correctiveActions: CorrectiveAction[];
   attachments: Attachment[];
-  companyId: string;
-  responsiblePerson: string;
+    responsiblePerson: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -128,8 +125,7 @@ export interface JSA {
   trainingRequirements: TrainingRequirement[];
   permits: Permit[];
   attachments: Attachment[];
-  companyId: string;
-  createdBy: string;
+    createdBy: string;
   approvedBy?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -166,8 +162,7 @@ export interface Equipment {
   repairs: Repair[];
   costs: Cost[];
   attachments: Attachment[];
-  companyId: string;
-  createdBy: string;
+    createdBy: string;
   createdAt: Date;
   updatedAt: Date;
   utilization: Utilization;
@@ -194,8 +189,7 @@ export interface WorkProcess {
   controls: Control[];
   improvements: Improvement[];
   attachments: Attachment[];
-  companyId: string;
-  owner: string;
+    owner: string;
   createdBy: string;
   createdAt: Date;
   updatedAt: Date;
@@ -225,8 +219,7 @@ export interface OrgChart {
   startDate: Date;
   contactInfo: ContactInfo;
   emergencyContact: EmergencyContact;
-  companyId: string;
-  createdBy: string;
+    createdBy: string;
   createdAt: Date;
   updatedAt: Date;
   reportingStructure: ReportingStructure;
@@ -764,10 +757,7 @@ export interface Comment {
 
 // SUPER AVANSERT COMPANY SERVICE
 export class CompanyService {
-  private companyId: string;
-
-  constructor(companyId: string) {
-    this.companyId = companyId;
+  private   constructor(    this.companyId = companyId;
   }
 
   // PROTOCOL MANAGEMENT - SUPER AVANSERT
@@ -1276,8 +1266,7 @@ export class CompanyService {
       await addDoc(collection(db, 'auditTrail'), {
         action,
         details,
-        companyId: this.companyId,
-        timestamp: serverTimestamp(),
+                timestamp: serverTimestamp(),
         userId: 'system' // This should be the actual user ID
       });
     } catch (error) {

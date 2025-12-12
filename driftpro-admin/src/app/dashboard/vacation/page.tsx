@@ -43,14 +43,14 @@ export default function VacationPage() {
 
   // Load data
   const loadData = useCallback(async () => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     try {
       setLoading(true);
       // Load data with GDPR filtering
       const userContext = createUserAccessContext(userProfile);
       const [vacationData, employeeData] = await Promise.all([
-        firebaseService.getVacations(userProfile.companyId, userContext),
-        firebaseService.getEmployees(userProfile.companyId, userContext)
+        firebaseService.getVacations(userContext),
+        firebaseService.getEmployees(userContext)
       ]);
 
       const employeeIndex = new Map<string, Employee>();
@@ -105,12 +105,11 @@ export default function VacationPage() {
 
   // Actions
   const addVacation = async (employeeId: string, startDate: string, endDate: string, reason: string) => {
-    if (!userProfile?.companyId) return;
+    if (!userProfile) return;
     try {
       await firebaseService.createVacation({
         employeeId,
-        companyId: userProfile.companyId,
-        type: 'vacation',
+                type: 'vacation',
         startDate,
         endDate,
         notes: reason,
