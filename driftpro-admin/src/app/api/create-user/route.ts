@@ -54,8 +54,84 @@ export async function POST(request: NextRequest) {
       handleCodeInApp: true
     };
 
-    // Send password reset email (this will be the welcome email)
-    await sendPasswordResetEmail(auth, email, actionCodeSettings);
+    // Send password reset email from Firebase Auth (contains the reset link)
+    try {
+      await sendPasswordResetEmail(auth, email, actionCodeSettings);
+      console.log('✅ Password reset email sent from Firebase Auth');
+    } catch (emailError) {
+      console.error('⚠️ Failed to send password reset email from Firebase Auth:', emailError);
+      // Continue anyway - we'll send welcome email via Microsoft Graph
+    }
+
+    // Also send a proper welcome email via Microsoft Graph with instructions
+    try {
+      const { globalEmailService } = await import('@/lib/global-email-service');
+      const forgotPasswordUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/forgot-password`;
+      
+      const welcomeHtml = `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+          <h2 style="color: #2563eb;">Velkommen til ${companyName || 'Mavi Logistikk'}!</h2>
+          <p>Hei ${displayName},</p>
+          <p>Vi er glade for å informere deg om at du nå har blitt registrert i DriftPro-systemet.</p>
+          <p>Du kan nå logge inn på systemet med din e-postadresse: <strong>${email}</strong></p>
+          <p><strong>For å sette opp passordet ditt:</strong></p>
+          <ol>
+            <li>Gå til innloggingssiden: <a href="${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login">${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login</a></li>
+            <li>Klikk på "Glemt passord?"</li>
+            <li>Skriv inn din e-postadresse: <strong>${email}</strong></li>
+            <li>Du vil motta en e-post med en lenke for å sette opp passordet ditt</li>
+            <li>Klikk på lenken i e-posten og sett opp ditt nye passord</li>
+          </ol>
+          <p>Alternativt kan du bruke denne direkte lenken: <a href="${forgotPasswordUrl}">${forgotPasswordUrl}</a></p>
+          <p><strong>Viktig:</strong> Du må sette opp passordet ditt før du kan logge inn første gang.</p>
+          <p>Hvis du har spørsmål eller trenger hjelp, ikke nøl med å ta kontakt med systemadministratoren.</p>
+          <br>
+          <p>Med vennlig hilsen,<br>${companyName || 'Mavi Logistikk'}-teamet</p>
+        </div>
+      `;
+
+      const welcomeText = `
+Velkommen til ${companyName || 'Mavi Logistikk'}!
+
+Hei ${displayName},
+
+Vi er glade for å informere deg om at du nå har blitt registrert i DriftPro-systemet.
+
+Du kan nå logge inn på systemet med din e-postadresse: ${email}
+
+FOR Å SETTE OPP PASSORDET DITT:
+1. Gå til innloggingssiden: ${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/login
+2. Klikk på "Glemt passord?"
+3. Skriv inn din e-postadresse: ${email}
+4. Du vil motta en e-post med en lenke for å sette opp passordet ditt
+5. Klikk på lenken i e-posten og sett opp ditt nye passord
+
+Alternativt kan du bruke denne direkte lenken: ${forgotPasswordUrl}
+
+VIKTIG: Du må sette opp passordet ditt før du kan logge inn første gang.
+
+Hvis du har spørsmål eller trenger hjelp, ikke nøl med å ta kontakt med systemadministratoren.
+
+Med vennlig hilsen,
+${companyName || 'Mavi Logistikk'}-teamet
+      `;
+
+      const emailResult = await globalEmailService.sendEmail({
+        to: email,
+        subject: `Velkommen til ${companyName || 'Mavi Logistikk'} - Sett opp passordet ditt`,
+        html: welcomeHtml,
+        text: welcomeText
+      });
+
+      if (emailResult.success) {
+        console.log('✅ Welcome email sent successfully via Microsoft Graph');
+      } else {
+        console.error('⚠️ Failed to send welcome email via Microsoft Graph:', emailResult.error);
+      }
+    } catch (welcomeEmailError) {
+      console.error('⚠️ Error sending welcome email:', welcomeEmailError);
+      // Don't fail - password reset email from Firebase Auth should still work
+    }
 
     return NextResponse.json({
       success: true,
@@ -83,13 +159,58 @@ export async function POST(request: NextRequest) {
         }
         
         // Send password reset email
-        await sendPasswordResetEmail(auth, email);
+        try {
+          await sendPasswordResetEmail(auth, email);
+          console.log('✅ Password reset email sent from Firebase Auth');
+        } catch (resetEmailError) {
+          console.error('⚠️ Failed to send password reset email from Firebase Auth:', resetEmailError);
+        }
+
+        // Also send welcome email with instructions
+        try {
+          const { globalEmailService } = await import('@/lib/global-email-service');
+          const forgotPasswordUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/forgot-password`;
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+          
+          const welcomeHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+              <h2 style="color: #2563eb;">Velkommen til ${companyName || 'Mavi Logistikk'}!</h2>
+              <p>Hei ${displayName},</p>
+              <p>Din bruker eksisterer allerede i systemet. For å logge inn må du sette opp passordet ditt.</p>
+              <p>Du kan nå logge inn på systemet med din e-postadresse: <strong>${email}</strong></p>
+              <div style="background-color: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
+                <h3 style="color: #2563eb; margin-top: 0;">Slik setter du opp passordet ditt:</h3>
+                <ol style="margin: 10px 0; padding-left: 20px;">
+                  <li>Gå til innloggingssiden: <a href="${appUrl}/login">${appUrl}/login</a></li>
+                  <li>Klikk på <strong>"Glemt passord?"</strong> eller bruk denne direkte lenken: <a href="${forgotPasswordUrl}">${forgotPasswordUrl}</a></li>
+                  <li>Skriv inn din e-postadresse: <strong>${email}</strong></li>
+                  <li>Du vil motta en e-post med en lenke for å sette opp passordet ditt</li>
+                  <li>Klikk på lenken i e-posten og sett opp ditt nye passord</li>
+                </ol>
+              </div>
+              <p><strong>Viktig:</strong> Du må sette opp passordet ditt før du kan logge inn.</p>
+              <p>Hvis du har spørsmål eller trenger hjelp, ikke nøl med å ta kontakt med systemadministratoren.</p>
+              <br>
+              <p>Med vennlig hilsen,<br>${companyName || 'Mavi Logistikk'}-teamet</p>
+            </div>
+          `;
+
+          await globalEmailService.sendEmail({
+            to: email,
+            subject: `Velkommen til ${companyName || 'Mavi Logistikk'} - Sett opp passordet ditt`,
+            html: welcomeHtml,
+            text: `Velkommen til ${companyName || 'Mavi Logistikk'}!\n\nHei ${displayName},\n\nDin bruker eksisterer allerede i systemet. For å logge inn må du sette opp passordet ditt.\n\nGå til: ${forgotPasswordUrl}\n\nMed vennlig hilsen,\n${companyName || 'Mavi Logistikk'}-teamet`
+          });
+          console.log('✅ Welcome email sent via Microsoft Graph');
+        } catch (welcomeEmailError) {
+          console.error('⚠️ Error sending welcome email:', welcomeEmailError);
+        }
         
         return NextResponse.json(
           { 
             success: true,
             userId: existingUserId,
-            message: 'User already exists. Password reset email sent.',
+            message: 'User already exists. Password reset email and welcome email sent.',
             alreadyExists: true
           },
           { status: 200 }
