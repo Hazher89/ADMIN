@@ -21,7 +21,8 @@ export async function POST(request: NextRequest) {
     // If a specific resetLink is provided, use it; otherwise fall back to forgot-password page
     const forgotPasswordUrl = resetLink || `${appUrl}/forgot-password`;
 
-    // Create welcome email HTML
+    // Create welcome email HTML with a single "Sett passord" button
+    const primaryLink = forgotPasswordUrl; // until we have a dedicated setup token
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #2563eb;">Velkommen til ${companyName || 'Mavi Logistikk'}!</h2>
@@ -30,19 +31,16 @@ export async function POST(request: NextRequest) {
         ${position ? `<p><strong>Stilling:</strong> ${position}</p>` : ''}
         ${departmentName ? `<p><strong>Avdeling:</strong> ${departmentName}</p>` : ''}
         <p>Du kan nå logge inn på systemet med din e-postadresse: <strong>${email}</strong></p>
-        
-        <div style="background-color: #f0f9ff; border-left: 4px solid #2563eb; padding: 15px; margin: 20px 0;">
-          <h3 style="color: #2563eb; margin-top: 0;">Slik setter du opp passordet ditt:</h3>
-          <ol style="margin: 10px 0; padding-left: 20px;">
-            <li>Gå til innloggingssiden: <a href="${loginUrl}">${loginUrl}</a></li>
-            <li>Klikk på <strong>"Glemt passord?"</strong> eller bruk denne direkte lenken: <a href="${forgotPasswordUrl}">${forgotPasswordUrl}</a></li>
-            <li>Skriv inn din e-postadresse: <strong>${email}</strong></li>
-            <li>Du vil motta en e-post med en lenke for å sette opp passordet ditt</li>
-            <li>Klikk på lenken i e-posten og sett opp ditt nye passord</li>
-            <li>Etter at du har satt opp passordet, kan du logge inn med din e-post og det nye passordet</li>
-          </ol>
+
+        <div style="margin: 24px 0; text-align: center;">
+          <a href="${primaryLink}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+            Sett opp passord
+          </a>
         </div>
-        
+
+        <p>Hvis knappen ikke fungerer, kopier denne lenken og lim den inn i nettleseren din:</p>
+        <p style="word-break: break-all;"><a href="${primaryLink}">${primaryLink}</a></p>
+
         <p><strong>Viktig:</strong> Du må sette opp passordet ditt før du kan logge inn første gang.</p>
         <p>Hvis du har spørsmål eller trenger hjelp, ikke nøl med å ta kontakt med ${adminName || 'systemadministratoren'}.</p>
         <br>
