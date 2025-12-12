@@ -505,7 +505,8 @@ export default function AuditPage() {
   };
 
   // Helper function to send status update email
-  const sendStatusUpdateEmail = async (caseType: string, caseTitle: string, oldStatus: string, newStatus: string, createdBy: string,     try {
+  const sendStatusUpdateEmail = async (caseType: string, caseTitle: string, oldStatus: string, newStatus: string, createdBy: string) => {
+    try {
       const creator = await firebaseService.getEmployee(createdBy);
       if (!creator || !creator.email) return;
 

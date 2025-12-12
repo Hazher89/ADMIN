@@ -337,9 +337,10 @@ async function deleteUserCompletely(email?: string, userId?: string) {
   }
 }
 
-// Clean up all data for a company
-async function cleanupCompanyData(  try {
-    console.log('🧹 Cleaning up company data:', companyId);
+// Clean up all data
+async function cleanupCompanyData() {
+  try {
+    console.log('🧹 Cleaning up all data');
     
     const collections = [
       'users',
@@ -366,7 +367,7 @@ async function cleanupCompanyData(  try {
     
     for (const collectionName of collections) {
       try {
-        const collectionQuery = query(collection(db, collectionName), where('companyId', '==', companyId));
+        const collectionQuery = query(collection(db, collectionName));
         const snapshot = await getDocs(collectionQuery);
         
         let deletedCount = 0;

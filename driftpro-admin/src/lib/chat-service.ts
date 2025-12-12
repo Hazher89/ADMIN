@@ -136,12 +136,12 @@ class ChatService {
   }
 
   // Load users for chat
-  async loadUsers(    if (!db) return [];
+  async loadUsers() {
+    if (!db) return [];
 
     try {
       const usersQuery = query(
         collection(db, 'users'),
-        where('companyId', '==', companyId),
         where('status', '==', 'active')
       );
 

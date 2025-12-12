@@ -180,12 +180,13 @@ export class BrrgService {
     }
   }
 
-  // Get admins for a company
-  async getAdmins(    try {
-      console.log('👥 Getting admins for company:', companyId);
+  // Get admins
+  async getAdmins() {
+    try {
+      console.log('👥 Getting admins');
       
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
-      const response = await fetch(`${baseUrl}/api/admins?companyId=${companyId}`);
+      const response = await fetch(`${baseUrl}/api/admins`);
       
       if (!response.ok) {
         const errorData = await response.json();

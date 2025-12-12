@@ -68,9 +68,10 @@ export default function AdminManagementPage() {
     }
   }, []);
 
-  const loadAdmins = async (    try {
+  const loadAdmins = async () => {
+    try {
       setLoading(true);
-      const adminsData = await brrgService.getAdmins(companyId);
+      const adminsData = await brrgService.getAdmins();
       setAdmins(adminsData);
     } catch (error: any) {
       console.error('Error loading admins:', error);
