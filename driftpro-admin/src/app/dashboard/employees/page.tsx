@@ -436,44 +436,45 @@ export default function EmployeesPage() {
               })
             });
 
-          console.log('📧 Welcome email API response status:', response.status);
+            console.log('📧 Welcome email API response status:', response.status);
 
-          if (response.ok) {
-            const result = await response.json();
-            console.log('📧 Welcome email API response:', result);
-            
-            if (result.success) {
-              emailSent = true;
-              console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+            if (response.ok) {
+              const result = await response.json();
+              console.log('📧 Welcome email API response:', result);
+              
+              if (result.success) {
+                emailSent = true;
+                console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+              } else {
+                emailError = result.error || result.details?.message || 'Unknown error';
+                emailSent = false;
+                console.error('❌ Failed to send welcome email:', result);
+                
+                // Show error to user
+                alert(`Kunne ikke sende velkomstmail: ${emailError}`);
+              }
             } else {
-              emailError = result.error || result.details?.message || 'Unknown error';
+              const errorResult = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+              emailError = errorResult.error || errorResult.details?.message || 'Unknown error';
               emailSent = false;
-              console.error('❌ Failed to send welcome email:', result);
+              console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
               
               // Show error to user
               alert(`Kunne ikke sende velkomstmail: ${emailError}`);
             }
-          } else {
-            const errorResult = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-            emailError = errorResult.error || errorResult.details?.message || 'Unknown error';
+          } catch (emailError) {
+            console.error('❌ Error sending welcome email:', emailError);
             emailSent = false;
-            console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
+            emailError = emailError instanceof Error ? emailError.message : 'Unknown error';
             
             // Show error to user
-            alert(`Kunne ikke sende velkomstmail: ${emailError}`);
+            alert(`Feil ved sending av velkomstmail: ${emailError}`);
           }
         } catch (emailError) {
-          console.error('❌ Error sending welcome email:', emailError);
+          console.error('❌ Error in welcome email setup:', emailError);
           emailSent = false;
-          emailError = emailError instanceof Error ? emailError.message : 'Unknown error';
-          
-          // Show error to user
-          alert(`Feil ved sending av velkomstmail: ${emailError}`);
+          // Don't fail the employee creation if email fails
         }
-      } catch (emailError) {
-        console.error('❌ Error sending welcome email:', emailError);
-        emailSent = false;
-        // Don't fail the employee creation if email fails
       }
 
       setShowAddModal(false);
