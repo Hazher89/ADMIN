@@ -1,26 +1,27 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { globalEmailService } from '@/lib/global-email-service';
 
+// NOTE: This route ONLY sends a welcome email. It does NOT create users.
+// User creation happens elsewhere (e.g., /api/create-user or firebaseService.createEmployee).
+
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { email, displayName, adminName, companyName, departmentName, position } = body;
+    const { email, displayName, adminName, companyName, departmentName, position, resetLink } = body;
 
     if (!email || !displayName) {
       return NextResponse.json(
-        { 
-          success: false,
-          error: 'Missing required fields: email, displayName' 
-        },
+        { success: false, error: 'Missing required fields: email, displayName' },
         { status: 400 }
       );
     }
 
     console.log('📧 Sending welcome email to:', email);
 
-    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000';
+    const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no';
     const loginUrl = `${appUrl}/login`;
-    const forgotPasswordUrl = `${appUrl}/forgot-password`;
+    // If a specific resetLink is provided, use it; otherwise fall back to forgot-password page
+    const forgotPasswordUrl = resetLink || `${appUrl}/forgot-password`;
 
     // Create welcome email HTML
     const html = `
@@ -78,7 +79,7 @@ Med vennlig hilsen,
 ${companyName || 'Mavi Logistikk'}-teamet
     `;
 
-    // Send email using global email service
+    // Send email using global email service (Microsoft Graph)
     const result = await globalEmailService.sendEmail({
       to: email,
       subject: `Velkommen til ${companyName || 'Mavi Logistikk'} - Sett opp passordet ditt`,
@@ -96,21 +97,14 @@ ${companyName || 'Mavi Logistikk'}-teamet
     } else {
       console.error('❌ Failed to send welcome email:', result.error);
       return NextResponse.json(
-        { 
-          success: false,
-          error: result.error || 'Failed to send welcome email'
-        },
+        { success: false, error: result.error || 'Failed to send welcome email' },
         { status: 500 }
       );
     }
   } catch (error) {
     console.error('❌ Error in send-welcome-email API:', error);
     return NextResponse.json(
-      { 
-        success: false,
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error'
-      },
+      { success: false, error: 'Internal server error', details: error instanceof Error ? error.message : 'Unknown error' },
       { status: 500 }
     );
   }
