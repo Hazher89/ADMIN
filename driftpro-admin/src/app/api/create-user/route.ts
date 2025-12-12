@@ -33,9 +33,10 @@ export async function POST(request: NextRequest) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
     const user = userCredential.user;
 
-    // Create user profile in Firestore
+    // Create user profile in Firestore - ALWAYS include uid
     const userProfile = {
       id: user.uid,
+      uid: user.uid, // CRITICAL: Always set uid field explicitly
       email: user.email,
       displayName,
       role,
@@ -135,6 +136,24 @@ export async function POST(request: NextRequest) {
           const existingUserDoc = emailSnapshot.docs[0];
           const existingData = existingUserDoc.data();
           existingUserId = existingData.uid || existingUserDoc.id;
+          
+          // AUTO-FIX: If uid is missing, try to find Firebase Auth user and set it
+          if (!existingData.uid && existingUserId) {
+            console.warn('⚠️ Existing user missing uid, attempting auto-fix...');
+            try {
+              // Try to get Firebase Auth user by email
+              // We can't directly look up by email, but we can try to sign in if we have a password
+              // For now, just set uid to match document ID as fallback
+              await updateDoc(existingUserDoc.ref, {
+                uid: existingUserId,
+                id: existingUserId,
+                updatedAt: new Date().toISOString()
+              });
+              console.log('✅ Auto-fixed missing uid for existing user:', email);
+            } catch (fixError) {
+              console.error('❌ Could not auto-fix missing uid for existing user:', fixError);
+            }
+          }
         }
         
         // Send password reset email

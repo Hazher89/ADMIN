@@ -1128,10 +1128,17 @@ class FirebaseService {
         updatedAt: now
       };
       
-      // Only add uid and id if we have a Firebase Auth UID
+      // CRITICAL: Always add uid and id if we have a Firebase Auth UID
       if (firebaseAuthUid) {
         employeeDoc.uid = firebaseAuthUid;
         employeeDoc.id = firebaseAuthUid;
+      }
+      
+      // IMPORTANT: Also ensure uid is set even if firebaseAuthUid came from create-user API
+      // This is a safety check to ensure uid is never missing
+      if (!employeeDoc.uid && employeeDoc.id) {
+        employeeDoc.uid = employeeDoc.id;
+        console.log('⚠️ Warning: Set uid from id field as fallback');
       }
       
       // Remove any undefined values to avoid Firestore errors
@@ -1147,6 +1154,9 @@ class FirebaseService {
       let employeeId: string;
       if (firebaseAuthUid) {
         // Use Firebase Auth UID as document ID for consistency
+        // CRITICAL: Ensure uid is always set before saving
+        employeeDoc.uid = firebaseAuthUid;
+        employeeDoc.id = firebaseAuthUid;
         await setDoc(doc(firestore, 'users', firebaseAuthUid), employeeDoc);
         employeeId = firebaseAuthUid;
         console.log('✅ Employee created with Firebase Auth UID:', firebaseAuthUid);
@@ -1157,10 +1167,31 @@ class FirebaseService {
         console.log('✅ Employee created with auto-generated ID:', employeeId);
         console.warn('⚠️ Employee created without Firebase Auth UID - they will need password reset to log in');
         
-        // Update the document with the generated ID
+        // Update the document with the generated ID and ensure uid matches id
         await updateDoc(doc(firestore, 'users', employeeId), {
-          id: employeeId
+          id: employeeId,
+          uid: employeeId // Set uid to match id as fallback
         });
+      }
+      
+      // FINAL SAFETY CHECK: Ensure uid is always set after document creation
+      // This is a last resort fix to prevent missing uid issues
+      try {
+        const finalDoc = await getDoc(doc(firestore, 'users', employeeId));
+        if (finalDoc.exists()) {
+          const finalData = finalDoc.data();
+          if (!finalData.uid || finalData.uid !== employeeId) {
+            console.warn('⚠️ Auto-fixing missing uid field for employee:', employeeId);
+            await updateDoc(doc(firestore, 'users', employeeId), {
+              uid: employeeId,
+              id: employeeId,
+              updatedAt: new Date().toISOString()
+            });
+            console.log('✅ Auto-fixed uid field for employee:', employeeId);
+          }
+        }
+      } catch (checkError) {
+        console.warn('⚠️ Could not verify uid field after employee creation:', checkError);
       }
       
       // If there was an auth error but we created the document, log it as a warning

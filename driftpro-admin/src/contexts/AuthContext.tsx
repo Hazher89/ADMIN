@@ -364,9 +364,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Note: companyId check removed - DriftPro is now only for Mavi Logistikk
       // All users automatically belong to Mavi Logistikk
       
-      // Check if user has been set up with Firebase Authentication
+      // AUTO-FIX: If uid is missing, try to get it from Firebase Auth and update Firestore
       if (!userData.uid) {
-        throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
+        console.warn('⚠️ User missing uid field, attempting auto-fix...');
+        
+        try {
+          // Try to sign in to get Firebase Auth user
+          const userCredential = await signInWithEmailAndPassword(auth, email, password);
+          const firebaseUser = userCredential.user;
+          
+          // Update Firestore with the uid
+          await updateDoc(userDoc.ref, {
+            uid: firebaseUser.uid,
+            id: firebaseUser.uid, // Also ensure id matches
+            updatedAt: new Date().toISOString()
+          });
+          
+          console.log('✅ Auto-fixed missing uid field for user:', email);
+          // Continue with login - uid is now set
+        } catch (autoFixError) {
+          // If we can't sign in, uid fix failed
+          console.error('❌ Could not auto-fix missing uid:', autoFixError);
+          throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
+        }
+      }
+      
+      // SECONDARY CHECK: Ensure uid matches the document ID if id exists
+      if (userData.id && userData.uid && userData.uid !== userData.id) {
+        console.warn('⚠️ User uid does not match id field, attempting auto-fix...');
+        try {
+          await updateDoc(userDoc.ref, {
+            uid: userData.id, // Use id as source of truth if they differ
+            updatedAt: new Date().toISOString()
+          });
+          console.log('✅ Auto-fixed uid/id mismatch for user:', email);
+        } catch (fixError) {
+          console.error('❌ Could not auto-fix uid/id mismatch:', fixError);
+        }
       }
       
       if (userData.status !== 'active') {
