@@ -1231,13 +1231,6 @@ class FirebaseService {
         }
       }
 
-      // Store setupPasswordUrl temporarily so caller can access it
-      // We'll attach it to the return value via a custom property (hacky but works)
-      const returnValue: any = docRef.id;
-      if (setupPasswordUrl) {
-        (returnValue as any).setupPasswordUrl = setupPasswordUrl;
-      }
-
       // Create activity log (don't fail if this fails)
       try {
       await this.createActivity({
@@ -1251,6 +1244,11 @@ class FirebaseService {
       } catch (activityError) {
         console.warn('Failed to create activity log (non-critical):', activityError);
       }
+
+      // Store setupPasswordUrl in the employee document for later retrieval if needed
+      // But for now, we'll attach it to the return value
+      const returnValue: any = docRef.id;
+      (returnValue as any).setupPasswordUrl = setupPasswordUrl;
 
       return returnValue;
     } catch (error) {

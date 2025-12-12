@@ -711,9 +711,9 @@ export default function HRPage() {
       employeeData.leadership = newEmployee.leadership || {};
 
       const userContext = createUserAccessContext(userProfile);
-      const employeeResult = await firebaseService.createEmployee(employeeData, userContext || undefined);
-      const employeeId = typeof employeeResult === 'string' ? employeeResult : (employeeResult as any)?.id || employeeResult;
-      const setupPasswordUrl = (employeeResult as any)?.setupPasswordUrl || null;
+      const employeeResult: any = await firebaseService.createEmployee(employeeData, userContext || undefined);
+      const employeeId = typeof employeeResult === 'string' ? employeeResult : employeeResult;
+      const setupPasswordUrl = employeeResult?.setupPasswordUrl || null;
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
