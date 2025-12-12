@@ -1420,7 +1420,30 @@ class FirebaseService {
     try {
       console.log('Deleting employee with ID:', id);
       // Get employee data before deletion
-      const employeeDoc = await getDoc(doc(firestore, 'users', id));
+      let employeeDocRef = doc(firestore, 'users', id);
+      let employeeDoc = await getDoc(employeeDocRef);
+
+      // Fallback: if doc id not found, try to locate by id/uid field (legacy docs)
+      if (!employeeDoc.exists()) {
+        console.warn('⚠️ Employee doc not found by doc id, trying fallback queries...', id);
+
+        // Try match on id field
+        const byId = await getDocs(query(collection(firestore, 'users'), where('id', '==', id)));
+        if (!byId.empty) {
+          employeeDoc = byId.docs[0];
+          employeeDocRef = employeeDoc.ref;
+          console.log('✅ Found employee via id field fallback:', employeeDoc.id);
+        } else {
+          // Try match on uid field
+          const byUid = await getDocs(query(collection(firestore, 'users'), where('uid', '==', id)));
+          if (!byUid.empty) {
+            employeeDoc = byUid.docs[0];
+            employeeDocRef = employeeDoc.ref;
+            console.log('✅ Found employee via uid field fallback:', employeeDoc.id);
+          }
+        }
+      }
+
       if (!employeeDoc.exists()) {
         throw new Error('Employee not found');
       }
@@ -1441,7 +1464,7 @@ class FirebaseService {
       }
       
       // Delete from Firestore
-      await deleteDoc(doc(firestore, 'users', id));
+      await deleteDoc(employeeDocRef);
       
       // Log access for audit trail
       if (userContext) {
