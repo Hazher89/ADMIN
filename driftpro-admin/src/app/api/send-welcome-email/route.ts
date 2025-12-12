@@ -1,6 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { globalEmailService } from '@/lib/global-email-service';
-
 // NOTE: This route ONLY sends a welcome email. It does NOT create users.
 // User creation happens elsewhere (e.g., /api/create-user or firebaseService.createEmployee).
 
@@ -79,25 +77,39 @@ Med vennlig hilsen,
 ${companyName || 'Mavi Logistikk'}-teamet
     `;
 
-    // Send email using global email service (Microsoft Graph)
-    const result = await globalEmailService.sendEmail({
-      to: email,
-      subject: `Velkommen til ${companyName || 'Mavi Logistikk'} - Sett opp passordet ditt`,
-      html,
-      text
-    });
-
-    if (result.success) {
-      console.log('✅ Welcome email sent successfully to:', email);
-      return NextResponse.json({
-        success: true,
-        message: 'Welcome email sent successfully',
-        messageId: result.messageId
+    // Send email via internal email API using absolute URL (works on Netlify functions)
+    try {
+      const emailResponse = await fetch(`${appUrl}/api/email/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: email,
+          subject: `Velkommen til ${companyName || 'Mavi Logistikk'} - Sett opp passordet ditt`,
+          html,
+          text
+        })
       });
-    } else {
-      console.error('❌ Failed to send welcome email:', result.error);
+
+      const emailResult = await emailResponse.json().catch(() => ({}));
+
+      if (emailResponse.ok && emailResult.success) {
+        console.log('✅ Welcome email sent successfully to:', email);
+        return NextResponse.json({
+          success: true,
+          message: 'Welcome email sent successfully',
+          messageId: emailResult.messageId
+        });
+      }
+
+      console.error('❌ Failed to send welcome email via API:', emailResult.error || emailResult);
       return NextResponse.json(
-        { success: false, error: result.error || 'Failed to send welcome email' },
+        { success: false, error: emailResult.error || 'Failed to send welcome email' },
+        { status: 500 }
+      );
+    } catch (sendError) {
+      console.error('❌ Error sending welcome email:', sendError);
+      return NextResponse.json(
+        { success: false, error: 'Failed to send welcome email', details: sendError instanceof Error ? sendError.message : 'Unknown error' },
         { status: 500 }
       );
     }
