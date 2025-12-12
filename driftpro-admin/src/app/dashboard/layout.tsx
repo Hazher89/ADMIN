@@ -137,28 +137,8 @@ export default function DashboardLayout({
     }
   }, [user, userProfile, logout, router]);
 
-  // Check if user is DriftPro admin
-  const isDriftProAdmin = userProfile?.companyId === 'driftpro_main';
-  
-  // Get company permissions for non-DriftPro users
-  const [companyPermissions, setCompanyPermissions] = useState<string[]>([]);
-  
-  useEffect(() => {
-    if (userProfile?.companyId && !isDriftProAdmin) {
-      // Load company permissions
-      const loadCompanyPermissions = async () => {
-        try {
-          const company = await firebaseService.getCompany(userProfile.companyId!);
-          if (company?.permissions) {
-            setCompanyPermissions(company.permissions.map(p => p.id));
-          }
-        } catch (error) {
-          console.error('Error loading company permissions:', error);
-        }
-      };
-      loadCompanyPermissions();
-    }
-  }, [userProfile?.companyId, isDriftProAdmin]);
+  // Note: Company permissions loading removed - DriftPro is now only for Mavi Logistikk
+  // All users automatically belong to Mavi Logistikk, no company-specific permissions needed
 
   // Icon style helper to prevent large icons before CSS loads
   const iconStyle = { width: '20px', height: '20px', flexShrink: 0, display: 'block' };
