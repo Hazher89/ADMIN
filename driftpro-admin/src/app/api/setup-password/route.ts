@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp } from 'firebase/app';
 import { getFirestore, collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 
 // Firebase config
 const firebaseConfig = {
@@ -160,27 +160,66 @@ export async function POST(request: NextRequest) {
     const userData = userDoc.data();
 
     try {
-      // If token has temporaryPassword (set by admin), use it if no password provided
-      // Otherwise use the provided password
-      const passwordToUse = tokenData.temporaryPassword || password;
+      // Check if Firebase Auth user already exists (created by /api/create-user)
+      // If user document has a uid, try to sign in with temporary password first
+      let firebaseUser;
+      let userCredential;
       
-      // Create Firebase Auth user
-      const userCredential = await createUserWithEmailAndPassword(
-        auth,
-        tokenData.email,
-        passwordToUse
-      );
+      if (userData.uid) {
+        // User already exists in Firebase Auth, try to sign in and update password
+        console.log('⚠️ Firebase Auth user already exists, updating password instead');
+        
+        try {
+          // Try to sign in with temporary password (from /api/create-user)
+          // If that fails, try with the new password (in case temp password was already changed)
+          const tempPassword = tokenData.temporaryPassword;
+          if (tempPassword) {
+            try {
+              userCredential = await signInWithEmailAndPassword(auth, tokenData.email, tempPassword);
+              firebaseUser = userCredential.user;
+              
+              // Update to new password
+              await updatePassword(firebaseUser, password);
+              console.log('✅ Password updated successfully');
+            } catch (signInError) {
+              // Temp password might already be changed, try with new password
+              userCredential = await signInWithEmailAndPassword(auth, tokenData.email, password);
+              firebaseUser = userCredential.user;
+            }
+          } else {
+            // No temp password, try direct sign in (user might have been created elsewhere)
+            userCredential = await signInWithEmailAndPassword(auth, tokenData.email, password);
+            firebaseUser = userCredential.user;
+          }
+        } catch (signInError) {
+          // Can't sign in - user might need to reset password via forgot password flow
+          throw new Error('Could not sign in with existing credentials. Please use forgot password.');
+        }
+      } else {
+        // User doesn't exist in Firebase Auth yet, create it
+        const passwordToUse = tokenData.temporaryPassword || password;
+        userCredential = await createUserWithEmailAndPassword(
+          auth,
+          tokenData.email,
+          passwordToUse
+        );
+        firebaseUser = userCredential.user;
 
-      const firebaseUser = userCredential.user;
+        // If a temporary password was used and a new password was provided, update it
+        if (tokenData.temporaryPassword && password && password !== tokenData.temporaryPassword) {
+          await updatePassword(firebaseUser, password);
+        }
+      }
 
       // Update user profile
       await updateProfile(firebaseUser, {
         displayName: userData.displayName || userData.name || 'Ny bruker'
       });
 
-      // Update user document with password setup status and UID
+      // Update user document with password setup status and UID (CRITICAL!)
       await updateDoc(userDoc.ref, {
         uid: firebaseUser.uid,
+        id: firebaseUser.uid, // Also update id field to match uid
         status: 'active',
         passwordSet: true,
         passwordSetAt: new Date().toISOString(),
@@ -193,11 +232,11 @@ export async function POST(request: NextRequest) {
         usedAt: new Date().toISOString()
       });
 
-      console.log('✅ Password setup completed successfully via Microsoft Graph');
+      console.log('✅ Password setup completed successfully, UID:', firebaseUser.uid);
 
       return NextResponse.json({
         success: true,
-        message: 'Password set up successfully via Microsoft Graph',
+        message: 'Password set up successfully',
         userId: firebaseUser.uid,
         provider: 'microsoft_graph'
       });
@@ -206,34 +245,46 @@ export async function POST(request: NextRequest) {
       console.error('❌ Firebase Auth error:', authError);
       
       if (authError instanceof Error && authError.message.includes('email-already-in-use')) {
-        console.log('⚠️ Firebase Auth user already exists, updating user document instead');
+        console.log('⚠️ Firebase Auth user already exists but we could not sign in');
         
-        // User already exists in Firebase Auth, just update the user document
-        await updateDoc(userDoc.ref, {
-          status: 'active',
-          passwordSet: true,
-          passwordSetAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString()
-        });
+        // This is a problem - user exists but we can't access them
+        // Try to find the user by email and get their UID from Firestore
+        // But first, let's try to update the Firestore document with what we know
+        const firestoreUserQuery = query(collection(db, 'users'), where('email', '==', tokenData.email));
+        const firestoreUserSnapshot = await getDocs(firestoreUserQuery);
+        
+        if (!firestoreUserSnapshot.empty) {
+          const firestoreUserDoc = firestoreUserSnapshot.docs[0];
+          const firestoreUserData = firestoreUserDoc.data();
+          
+          if (firestoreUserData.uid) {
+            // We have a UID, update the document and mark token as used
+            await updateDoc(firestoreUserDoc.ref, {
+              status: 'active',
+              passwordSet: true,
+              passwordSetAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
 
-        // Mark token as used
-        await updateDoc(tokenDoc.ref, {
-          used: true,
-          usedAt: new Date().toISOString()
-        });
+            await updateDoc(tokenDoc.ref, {
+              used: true,
+              usedAt: new Date().toISOString()
+            });
 
-        console.log('✅ Password setup completed for existing Firebase Auth user via Microsoft Graph');
-        return NextResponse.json({
-          success: true,
-          message: 'Password setup completed for existing user via Microsoft Graph',
-          userId: 'existing_user',
-          provider: 'microsoft_graph'
-        });
+            console.log('✅ Updated Firestore document for existing user');
+            return NextResponse.json({
+              success: true,
+              message: 'User already exists. Please use forgot password to reset your password.',
+              userId: firestoreUserData.uid,
+              provider: 'microsoft_graph'
+            });
+          }
+        }
       }
 
       return NextResponse.json(
         { 
-          error: 'Failed to create user account',
+          error: 'Failed to set up password',
           details: authError instanceof Error ? authError.message : 'Unknown error',
           provider: 'microsoft_graph'
         },
