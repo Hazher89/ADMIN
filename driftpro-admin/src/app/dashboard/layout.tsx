@@ -238,13 +238,9 @@ export default function DashboardLayout({
   ];
 
   // Filter sidebar items based on permissions
-  const sidebarItems = isDriftProAdmin 
-    ? allSidebarItems 
-    : allSidebarItems.filter(item => 
-        item.isAdmin || 
-        (item.id && companyPermissions.includes(item.id)) ||
-        item.id === 'dashboard'
-      );
+  // Note: Since all users belong to Mavi Logistikk, show all items
+  // Individual items may have their own permission checks
+  const sidebarItems = allSidebarItems;
 
 
   const groupedItems = sidebarItems.reduce((acc, item) => {
