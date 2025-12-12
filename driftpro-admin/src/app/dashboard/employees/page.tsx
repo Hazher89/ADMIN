@@ -21,7 +21,7 @@ interface Department {
 }
 
 export default function EmployeesPage() {
-  const { userProfile, loading: authLoading } = useAuth();
+  const { userProfile, loading: authLoading, updateUserProfile } = useAuth();
   
   // Authorization check
   useEffect(() => {
@@ -643,6 +643,22 @@ export default function EmployeesPage() {
 
       const userContext = createUserAccessContext(userProfile);
       await firebaseService.updateEmployee(selectedEmployee.id, updateData, userContext || undefined);
+
+      // If the edited employee is the currently logged-in user, refresh local profile
+      if (userProfile?.id === selectedEmployee.id && updateUserProfile) {
+        await updateUserProfile({
+          displayName: updateData.displayName,
+          email: updateData.email,
+          phone: updateData.phone,
+          departmentId: updateData.departmentId,
+          position: updateData.position,
+          role: updateData.role,
+          status: updateData.status,
+          permissions: updateData.permissions,
+          vacationAccess: updateData.vacationAccess,
+          leadership: (updateData as any).leadership,
+        } as any);
+      }
       setShowEditModal(false);
       setSelectedEmployee(null);
       loadEmployees();

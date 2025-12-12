@@ -125,3 +125,4 @@ ${companyName || 'Mavi Logistikk'}-teamet
     );
   }
 }
+

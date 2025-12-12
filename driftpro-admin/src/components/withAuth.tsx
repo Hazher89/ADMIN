@@ -120,3 +120,4 @@ export function usePermission(permission: string): boolean {
   const { userProfile } = useAuth();
   return hasPermission(userProfile, permission);
 }
+
