@@ -1118,13 +1118,24 @@ class FirebaseService {
         throw new Error(`Ansatt med e-post ${cleanEmployeeData.email} eksisterer allerede`);
       }
       
-      const employeeDoc = {
+      const employeeDoc: any = {
         ...cleanEmployeeData,
-        uid: firebaseAuthUid || undefined, // Set uid if we have it
-        id: firebaseAuthUid || undefined, // Also set id to uid for consistency
         createdAt: now,
         updatedAt: now
       };
+      
+      // Only add uid and id if we have a Firebase Auth UID
+      if (firebaseAuthUid) {
+        employeeDoc.uid = firebaseAuthUid;
+        employeeDoc.id = firebaseAuthUid;
+      }
+      
+      // Remove any undefined values to avoid Firestore errors
+      Object.keys(employeeDoc).forEach(key => {
+        if (employeeDoc[key] === undefined) {
+          delete employeeDoc[key];
+        }
+      });
       
       console.log('Employee document to save:', JSON.stringify(employeeDoc, null, 2));
       
