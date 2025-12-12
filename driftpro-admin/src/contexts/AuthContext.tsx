@@ -164,9 +164,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(user);
           
           if (user && db) {
-            // Fetch user profile from Firestore
             try {
+              // Try to fetch by UID first
               const userDoc = await getDoc(doc(db, 'users', user.uid));
+              
               if (userDoc.exists()) {
                 const data = userDoc.data();
                 const userProfile: UserProfile = {
@@ -182,23 +183,94 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                   bio: data.bio || undefined,
                   address: data.address || undefined,
                   emergencyContact: data.emergencyContact || undefined,
-                  companyName: data.companyName || undefined, // Add company information
-                  companyId: data.companyId || undefined,
+                  companyName: data.companyName || undefined, // Optional legacy field
                   passwordSet: data.passwordSet || false,
                   permissions: data.permissions || undefined,
                   vacationAccess: data.vacationAccess || undefined
                 };
                 setUserProfile(userProfile);
               } else {
-                // Don't create a default profile without companyId
-                // This should not happen for properly created employees
-                console.error('🚨 User profile not found in Firestore:', user.uid);
-                console.log('This usually means the employee was not properly created in the system');
-                setUserProfile(null);
+                // Auto-fix: try to find by email and migrate to uid-based doc
+                console.warn('⚠️ User doc not found by UID, trying email lookup for', user.email);
+                const emailQuery = query(collection(db, 'users'), where('email', '==', user.email));
+                const emailSnapshot = await getDocs(emailQuery);
+
+                if (!emailSnapshot.empty) {
+                  const fallbackDoc = emailSnapshot.docs[0];
+                  const data = fallbackDoc.data() || {};
+                  const mergedData = {
+                    ...data,
+                    id: user.uid,
+                    uid: user.uid,
+                    email: data.email || user.email || '',
+                    displayName: data.displayName || user.displayName || 'Ny bruker',
+                    role: data.role || 'employee',
+                    updatedAt: new Date().toISOString(),
+                  };
+
+                  // Write to the correct UID-based document
+                  await setDoc(doc(db, 'users', user.uid), mergedData, { merge: true });
+
+                  const userProfile: UserProfile = {
+                    id: user.uid,
+                    displayName: mergedData.displayName,
+                    email: mergedData.email,
+                    phone: mergedData.phone || undefined,
+                    departmentId: mergedData.departmentId || undefined,
+                    position: mergedData.position || undefined,
+                    role: mergedData.role || 'employee',
+                    avatar: mergedData.avatar || undefined,
+                    createdAt: mergedData.createdAt || new Date().toISOString(),
+                    bio: mergedData.bio || undefined,
+                    address: mergedData.address || undefined,
+                    emergencyContact: mergedData.emergencyContact || undefined,
+                    companyName: mergedData.companyName || undefined,
+                    passwordSet: mergedData.passwordSet || false,
+                    permissions: mergedData.permissions || undefined,
+                    vacationAccess: mergedData.vacationAccess || undefined
+                  };
+                  
+                  setUserProfile(userProfile);
+                  console.log('✅ Auto-fixed missing UID document for user via email lookup');
+                } else {
+                  console.error('🚨 User profile not found in Firestore by UID or email. Creating minimal profile...');
+                  const minimalProfile = {
+                    id: user.uid,
+                    uid: user.uid,
+                    email: user.email || '',
+                    displayName: user.displayName || 'Ny bruker',
+                    role: 'employee',
+                    status: 'active',
+                    createdAt: new Date().toISOString(),
+                    updatedAt: new Date().toISOString(),
+                    passwordSet: true,
+                    permissions: {
+                      dashboard: true,
+                      notifications: true,
+                      calendar: true,
+                      internkontrollOgSamsvar: false,
+                    }
+                  };
+
+                  await setDoc(doc(db, 'users', user.uid), minimalProfile, { merge: true });
+
+                  const userProfile: UserProfile = {
+                    id: user.uid,
+                    displayName: minimalProfile.displayName,
+                    email: minimalProfile.email,
+                    role: 'employee',
+                    createdAt: minimalProfile.createdAt,
+                    avatar: undefined,
+                    permissions: minimalProfile.permissions,
+                    vacationAccess: undefined,
+                  };
+
+                  setUserProfile(userProfile);
+                  console.log('✅ Created minimal profile for user:', user.uid);
+                }
               }
             } catch (error) {
               console.error('Error fetching user profile:', error);
-              // Don't create a fallback profile without companyId
               console.error('🚨 Failed to load user profile, setting to null');
               setUserProfile(null);
             }
