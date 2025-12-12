@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, addDoc, doc, setDoc, getDoc, updateDoc, serverTimestamp } from 'firebase/firestore';
+import { collection, addDoc, doc, setDoc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
 import { getFirebaseAuth, getFirebaseDb, isFirebaseAvailable } from '@/lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
@@ -53,14 +53,14 @@ export async function POST(request: NextRequest) {
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 72); // Token valid for 72 hours
 
-    // Store setup token in Firestore
+    // Store setup token in Firestore (use Timestamp for expiresAt to match setup-password expectations)
     await addDoc(collection(db, 'setupTokens'), {
       token: setupToken,
       userId: user.uid,
       email: email,
-      expiresAt: expiresAt.toISOString(),
+      expiresAt: Timestamp.fromDate(expiresAt),
       used: false,
-      createdAt: new Date().toISOString(),
+      createdAt: serverTimestamp(),
       type: 'employee_welcome',
       companyName: companyName || 'Mavi Logistikk',
       adminName: 'System Administrator'
@@ -149,15 +149,15 @@ export async function POST(request: NextRequest) {
         const expiresAt = new Date();
         expiresAt.setHours(expiresAt.getHours() + 72); // Token valid for 72 hours
 
-        // Store setup token in Firestore
+        // Store setup token in Firestore (use Timestamp for expiresAt to match setup-password expectations)
         if (existingUserId) {
           await addDoc(collection(db, 'setupTokens'), {
             token: setupToken,
             userId: existingUserId,
             email: email,
-            expiresAt: expiresAt.toISOString(),
+            expiresAt: Timestamp.fromDate(expiresAt),
             used: false,
-            createdAt: new Date().toISOString(),
+            createdAt: serverTimestamp(),
             type: 'employee_welcome',
             companyName: companyName || 'Mavi Logistikk',
             adminName: 'System Administrator'
