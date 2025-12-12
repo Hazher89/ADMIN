@@ -1052,6 +1052,10 @@ class FirebaseService {
           } else {
             console.warn('⚠️ API returned success but no userId');
           }
+          // Store setupPasswordUrl for later use (if provided by create-user API)
+          if (createUserResult.setupPasswordUrl) {
+            cleanEmployeeData.setupPasswordUrl = createUserResult.setupPasswordUrl;
+          }
         } else {
           // If user already exists, try to find their UID
           if (createUserResult.alreadyExists || createUserResult.error?.includes('already')) {
@@ -1176,6 +1180,64 @@ class FirebaseService {
         await this.logAccess('create_employee', userContext.userId, 'employee', docRef.id, logMetadata);
       }
 
+      // Generate a password setup token for direct password setup (if we have a user)
+      // This ensures we have a token even if /api/create-user didn't create one
+      let setupPasswordUrl: string | null = null;
+      if (docRef.id && cleanEmployeeData.email) {
+        try {
+          // Check if token already exists for this user (created by /api/create-user)
+          const existingTokenQuery = query(
+            collection(firestore, 'setupTokens'),
+            where('userId', '==', docRef.id),
+            where('email', '==', cleanEmployeeData.email),
+            where('type', '==', 'employee_welcome')
+          );
+          const existingTokens = await getDocs(existingTokenQuery);
+
+          if (existingTokens.empty) {
+            // Create new setup token
+            const setupToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 72); // Token valid for 72 hours
+
+            await addDoc(collection(firestore, 'setupTokens'), {
+              token: setupToken,
+              userId: docRef.id,
+              email: cleanEmployeeData.email,
+              expiresAt: Timestamp.fromDate(expiresAt),
+              used: false,
+              createdAt: serverTimestamp(),
+              type: 'employee_welcome',
+              companyName: 'Mavi Logistikk',
+              adminName: 'System Administrator'
+            });
+
+            const appUrl = typeof window !== 'undefined' 
+              ? window.location.origin 
+              : process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no';
+            setupPasswordUrl = `${appUrl}/setup-password?token=${setupToken}`;
+            console.log('✅ Setup password token created in createEmployee:', setupPasswordUrl);
+          } else {
+            // Use existing token
+            const existingToken = existingTokens.docs[0].data();
+            const appUrl = typeof window !== 'undefined' 
+              ? window.location.origin 
+              : process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no';
+            setupPasswordUrl = `${appUrl}/setup-password?token=${existingToken.token}`;
+            console.log('✅ Using existing setup password token');
+          }
+        } catch (tokenError) {
+          console.warn('⚠️ Failed to create setup token (non-critical):', tokenError);
+        }
+      }
+
+      // Store setupPasswordUrl temporarily so caller can access it
+      // We'll attach it to the return value via a custom property (hacky but works)
+      const returnValue: any = docRef.id;
+      if (setupPasswordUrl) {
+        (returnValue as any).setupPasswordUrl = setupPasswordUrl;
+      }
+
       // Create activity log (don't fail if this fails)
       try {
       await this.createActivity({
@@ -1190,7 +1252,7 @@ class FirebaseService {
         console.warn('Failed to create activity log (non-critical):', activityError);
       }
 
-      return docRef.id;
+      return returnValue;
     } catch (error) {
       console.error('❌ Error creating employee:', error);
       throw error;

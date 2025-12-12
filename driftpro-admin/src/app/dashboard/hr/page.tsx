@@ -711,11 +711,13 @@ export default function HRPage() {
       employeeData.leadership = newEmployee.leadership || {};
 
       const userContext = createUserAccessContext(userProfile);
-      const employeeId = await firebaseService.createEmployee(employeeData, userContext || undefined);
+      const employeeResult = await firebaseService.createEmployee(employeeData, userContext || undefined);
+      const employeeId = typeof employeeResult === 'string' ? employeeResult : (employeeResult as any)?.id || employeeResult;
+      const setupPasswordUrl = (employeeResult as any)?.setupPasswordUrl || null;
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
-      // Send welcome email to the new employee (optional - don't fail if this fails)
+      // Send welcome email to the new employee with setup password link (optional - don't fail if this fails)
       try {
         const departmentName = departments.find(d => d.id === newEmployee.departmentId)?.name || '';
         const adminName = userProfile?.displayName || 'System Administrator';
@@ -734,7 +736,8 @@ export default function HRPage() {
             adminName,
             companyName,
             departmentName,
-            position: newEmployee.position || 'Ansatt'
+            position: newEmployee.position || 'Ansatt',
+            resetLink: setupPasswordUrl || undefined // Include setup password link if available
           })
         });
 

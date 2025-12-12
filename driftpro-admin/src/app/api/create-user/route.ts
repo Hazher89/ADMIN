@@ -114,6 +114,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       userId: user.uid,
+      setupPasswordUrl: setupPasswordUrl,
       message: 'User created successfully and welcome email sent'
     });
 
@@ -201,6 +202,7 @@ export async function POST(request: NextRequest) {
           { 
             success: true,
             userId: existingUserId,
+            setupPasswordUrl: setupPasswordUrl,
             message: 'User already exists. Password reset email and welcome email sent.',
             alreadyExists: true
           },

@@ -385,17 +385,19 @@ export default function EmployeesPage() {
       console.log('Calling firebaseService.createEmployee with data:', employeeData);
       
       const userContext = createUserAccessContext(userProfile);
-      const employeeId = await firebaseService.createEmployee(employeeData, userContext || undefined);
+      const employeeResult = await firebaseService.createEmployee(employeeData, userContext || undefined);
+      const employeeId = typeof employeeResult === 'string' ? employeeResult : (employeeResult as any)?.id || employeeResult;
+      const setupPasswordUrl = (employeeResult as any)?.setupPasswordUrl || null;
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
-      // Send welcome email to the new employee
+      // Send welcome email to the new employee with setup password link
       let emailSent = false;
       let emailError = null;
       try {
         const departmentName = getDepartmentName(newEmployee.departmentId);
         const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName =  'Bedrift';
+        const companyName = 'Mavi Logistikk';
 
         console.log('📧 Sending welcome email to new employee:', {
           email: newEmployee.email,
@@ -403,7 +405,8 @@ export default function EmployeesPage() {
           adminName,
           companyName,
           departmentName,
-          position: newEmployee.position || 'Ansatt'
+          position: newEmployee.position || 'Ansatt',
+          setupPasswordUrl
         });
 
         // Send welcome email via app-only authentication (no login required)
@@ -421,8 +424,8 @@ export default function EmployeesPage() {
               adminName,
               companyName,
               departmentName,
-              position: newEmployee.position || 'Ansatt'
-              // accessToken and fromEmail no longer required - uses app-only auth
+              position: newEmployee.position || 'Ansatt',
+              resetLink: setupPasswordUrl || undefined // Include setup password link if available
             })
           });
 
