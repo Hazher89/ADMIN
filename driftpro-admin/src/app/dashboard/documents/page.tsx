@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/lib/permissions';
+import AccessDenied from '@/components/AccessDenied';
 import { firebaseService, Document } from '@/lib/firebase-services';
 import { 
   FileText, 
@@ -40,7 +42,12 @@ import {
 } from 'lucide-react';
 
 export default function DocumentsPage() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
+  
+  // Authorization check - Documents page requires 'documents' permission
+  if (!authLoading && userProfile && !hasPermission(userProfile, 'documents')) {
+    return <AccessDenied message="Du har ikke tilgang til Dokumenter-siden." />;
+  }
   const [documents, setDocuments] = useState<Document[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');

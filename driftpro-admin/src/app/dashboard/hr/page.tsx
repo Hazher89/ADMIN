@@ -6,6 +6,8 @@ import { firebaseService, Employee, Department, Shift, VacationAllocation, creat
 import { notificationService } from '@/lib/notification-service';
 import { AbsenceTab } from './absence-tab';
 import VacationCalendar from './vacation-calendar';
+import { hasPermission } from '@/lib/permissions';
+import AccessDenied from '@/components/AccessDenied';
 import { 
   Users, User, Clock, Calendar, DollarSign, 
   Plus, Search, Filter, Download, Eye, Edit, Trash2,
@@ -39,7 +41,13 @@ interface Vacation {
 }
 
 export default function HRPage() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
+  
+  // Authorization check - HR page requires 'hr' permission
+  if (!authLoading && userProfile && !hasPermission(userProfile, 'hr')) {
+    return <AccessDenied message="Du har ikke tilgang til HR & Personal-siden." />;
+  }
+  
   const [activeTab, setActiveTab] = useState('employees');
   const [isMobile, setIsMobile] = useState(false);
   const [loading, setLoading] = useState(true);

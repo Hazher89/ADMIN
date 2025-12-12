@@ -2,6 +2,8 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission } from '@/lib/permissions';
+import AccessDenied from '@/components/AccessDenied';
 import { firebaseService, InternalAudit, Deviation as FirestoreDeviation, Employee, Department, AuditDocument, AuditComment, RiskAssessment, FollowUpAction, Checkpoint } from '@/lib/firebase-services';
 import { 
   Shield, 
@@ -113,7 +115,12 @@ const ResponsiblePersonMultiSelect = ({
 );
 
 export default function AuditPage() {
-  const { userProfile } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
+  
+  // Authorization check - Audit page requires 'internkontrollOgSamsvar' permission
+  if (!authLoading && userProfile && !hasPermission(userProfile, 'internkontrollOgSamsvar')) {
+    return <AccessDenied message="Du har ikke tilgang til Internkontroll og Samsvar-siden." />;
+  }
   
   // Shared state
   const [loading, setLoading] = useState(true);

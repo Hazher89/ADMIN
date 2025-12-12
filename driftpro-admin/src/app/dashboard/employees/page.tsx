@@ -6,6 +6,8 @@ import { firebaseService, createUserAccessContext } from '@/lib/firebase-service
 import { microsoftGraphService } from '@/lib/microsoft-graph-service';
 // import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 import { UserPlus, Search, Filter, Edit, Trash2, Plus, MoreHorizontal, User, Building, MapPin, CheckCircle, Eye, Settings, Key, UserX, UserCheck, Calendar, AlertTriangle, Clock } from 'lucide-react';
+import { hasPermission } from '@/lib/permissions';
+import AccessDenied from '@/components/AccessDenied';
 
 import { Employee } from '@/lib/firebase-services';
 
@@ -19,6 +21,21 @@ interface Department {
 
 export default function EmployeesPage() {
   const { userProfile, loading: authLoading } = useAuth();
+  
+  // Authorization check
+  useEffect(() => {
+    if (!authLoading && userProfile) {
+      if (!hasPermission(userProfile, 'employees')) {
+        return; // Will show AccessDenied below
+      }
+    }
+  }, [authLoading, userProfile]);
+  
+  // Show access denied if no permission
+  if (!authLoading && userProfile && !hasPermission(userProfile, 'employees')) {
+    return <AccessDenied message="Du har ikke tilgang til å se ansatte." />;
+  }
+  
   const [employees, setEmployees] = useState<Employee[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [loading, setLoading] = useState(true);
