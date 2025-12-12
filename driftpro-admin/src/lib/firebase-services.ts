@@ -922,7 +922,7 @@ class FirebaseService {
     }
   }
 
-  async createEmployee(employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>, userContext?: UserAccessContext): Promise<string> {
+  async createEmployee(employeeData: Omit<Employee, 'id' | 'createdAt' | 'updatedAt'>, userContext?: UserAccessContext): Promise<string | { id: string; setupPasswordUrl: string | null }> {
     const firestore = ensureDb();
 
     console.log('Creating employee with data:', employeeData, 'userContext:', userContext);
@@ -1245,12 +1245,11 @@ class FirebaseService {
         console.warn('Failed to create activity log (non-critical):', activityError);
       }
 
-      // Store setupPasswordUrl in the employee document for later retrieval if needed
-      // But for now, we'll attach it to the return value
-      const returnValue: any = docRef.id;
-      (returnValue as any).setupPasswordUrl = setupPasswordUrl;
-
-      return returnValue;
+      // Return both employee ID and setup password URL as an object
+      return {
+        id: docRef.id,
+        setupPasswordUrl: setupPasswordUrl
+      };
     } catch (error) {
       console.error('❌ Error creating employee:', error);
       throw error;

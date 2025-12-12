@@ -385,9 +385,9 @@ export default function EmployeesPage() {
       console.log('Calling firebaseService.createEmployee with data:', employeeData);
       
       const userContext = createUserAccessContext(userProfile);
-      const employeeResult: any = await firebaseService.createEmployee(employeeData, userContext || undefined);
-      const employeeId = typeof employeeResult === 'string' ? employeeResult : employeeResult;
-      const setupPasswordUrl = employeeResult?.setupPasswordUrl || null;
+      const employeeResult = await firebaseService.createEmployee(employeeData, userContext || undefined);
+      const employeeId = typeof employeeResult === 'string' ? employeeResult : employeeResult.id;
+      const setupPasswordUrl = typeof employeeResult === 'string' ? null : employeeResult.setupPasswordUrl;
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
