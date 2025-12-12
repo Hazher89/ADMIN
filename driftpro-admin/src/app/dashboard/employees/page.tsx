@@ -8,6 +8,7 @@ import { microsoftGraphService } from '@/lib/microsoft-graph-service';
 import { UserPlus, Search, Filter, Edit, Trash2, Plus, MoreHorizontal, User, Building, MapPin, CheckCircle, Eye, Settings, Key, UserX, UserCheck, Calendar, AlertTriangle, Clock } from 'lucide-react';
 import { hasPermission } from '@/lib/permissions';
 import AccessDenied from '@/components/AccessDenied';
+import PermissionsManager from '@/components/PermissionsManager';
 
 import { Employee } from '@/lib/firebase-services';
 
@@ -1291,7 +1292,7 @@ export default function EmployeesPage() {
           {/* Stor modal så ALT er synlig (inkl. tilgangskontroll) */}
           <div
             className="modal-content"
-            style={{ maxWidth: '90vw', maxHeight: '90vh', width: '1200px' }}
+            style={{ maxWidth: '95vw', maxHeight: '95vh', width: '1400px', overflowY: 'auto' }}
           >
             <div className="modal-header">
               <h2 className="modal-title">Legg til ny ansatt</h2>
@@ -1555,6 +1556,21 @@ export default function EmployeesPage() {
                   />
                 </div>
               </div>
+
+              {/* Permissions Manager - Full Control Section */}
+              <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid var(--border-color, #e5e7eb)' }}>
+                <PermissionsManager
+                  permissions={newEmployee.permissions}
+                  onChange={(updatedPermissions) => {
+                    setNewEmployee({
+                      ...newEmployee,
+                      permissions: updatedPermissions
+                    });
+                  }}
+                  role={newEmployee.role}
+                  readOnly={false}
+                />
+              </div>
             </div>
             <div className="modal-footer">
               <button
@@ -1577,7 +1593,7 @@ export default function EmployeesPage() {
       {/* Edit Employee Modal */}
       {showEditModal && selectedEmployee && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
-          <div className="modal-content" style={{ maxWidth: '900px', maxHeight: '90vh', overflowY: 'auto' }}>
+          <div className="modal-content" style={{ maxWidth: '95vw', maxHeight: '95vh', width: '1400px', overflowY: 'auto' }}>
             <div className="modal-header">
               <h2 className="modal-title">Rediger ansatt</h2>
               <button
@@ -1857,11 +1873,20 @@ export default function EmployeesPage() {
                 </div>
               </div>
 
-              {/* Tilgangskontroll-seksjon */}
-              <div style={{ marginTop: '2rem', padding: '1.5rem', background: 'var(--card-background)', borderRadius: '0.5rem', border: '1px solid var(--border-color)' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', marginBottom: '1.5rem', color: 'var(--text-color)' }}>
-                  🔐 Tilgangskontroll og rettigheter
-                </h3>
+              {/* Permissions Manager - Full Control Section */}
+              <div style={{ marginTop: '2rem', paddingTop: '2rem', borderTop: '2px solid var(--border-color, #e5e7eb)' }}>
+                <PermissionsManager
+                  permissions={(selectedEmployee as any).permissions || {}}
+                  onChange={(updatedPermissions) => {
+                    setSelectedEmployee({
+                      ...selectedEmployee,
+                      permissions: updatedPermissions
+                    } as any);
+                  }}
+                  role={selectedEmployee.role}
+                  readOnly={false}
+                />
+              </div>
                 
                 {/* Kategoriserte side-tilganger */}
                 {[
@@ -2062,7 +2087,7 @@ export default function EmployeesPage() {
                 })}
 
                 {/* Ferie og fravær-tilgang */}
-                <div style={{ marginBottom: '1.5rem' }}>
+                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color, #e5e7eb)' }}>
                   <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
                     🏖️ Ferie og fravær-tilgang
                   </h4>
@@ -2155,7 +2180,7 @@ export default function EmployeesPage() {
                 </div>
 
                 {/* Lederskap og hierarki */}
-                <div>
+                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color, #e5e7eb)' }}>
                   <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
                     👔 Lederskap og hierarki
                   </h4>
