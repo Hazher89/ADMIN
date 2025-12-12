@@ -717,43 +717,50 @@ export default function HRPage() {
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
-      // Send welcome email to the new employee with setup password link (optional - don't fail if this fails)
-      try {
-        const departmentName = departments.find(d => d.id === newEmployee.departmentId)?.name || '';
-        const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName = userProfile?.companyName || 'Mavi Logistikk';
+      // Send welcome email to the new employee with setup password link
+      // Note: /api/create-user already sends a welcome email, but we send another one
+      // with department/position info if we have a setup password URL
+      if (setupPasswordUrl) {
+        try {
+          const departmentName = departments.find(d => d.id === newEmployee.departmentId)?.name || '';
+          const adminName = userProfile?.displayName || 'System Administrator';
+          const companyName = userProfile?.companyName || 'Mavi Logistikk';
 
-        console.log('📧 Attempting to send welcome email to:', newEmployee.email);
-        
-        const response = await fetch('/api/send-welcome-email', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            email: newEmployee.email,
-            displayName: newEmployee.displayName,
-            adminName,
-            companyName,
-            departmentName,
-            position: newEmployee.position || 'Ansatt',
-            resetLink: setupPasswordUrl || undefined // Include setup password link if available
-          })
-        });
+          console.log('📧 Attempting to send welcome email with setup password link to:', newEmployee.email);
+          
+          const response = await fetch('/api/send-welcome-email', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: newEmployee.email,
+              displayName: newEmployee.displayName,
+              adminName,
+              companyName,
+              departmentName,
+              position: newEmployee.position || 'Ansatt',
+              resetLink: setupPasswordUrl // REQUIRED: direct link to /setup-password?token=...
+            })
+          });
 
-        if (response.ok) {
-          const result = await response.json();
-          if (result.success) {
-            console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+          if (response.ok) {
+            const result = await response.json();
+            if (result.success) {
+              console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+            } else {
+              console.warn('⚠️ Welcome email API returned success=false:', result);
+            }
           } else {
-            console.warn('⚠️ Welcome email API returned success=false:', result);
+            const errorResult = await response.json().catch(() => ({}));
+            console.warn('⚠️ Failed to send welcome email (non-critical):', response.status, errorResult);
           }
-        } else {
-          console.warn('⚠️ Failed to send welcome email (non-critical):', response.status);
+        } catch (emailError) {
+          // Don't fail employee creation if email fails - it's non-critical
+          console.warn('⚠️ Failed to send welcome email (non-critical):', emailError);
         }
-      } catch (emailError) {
-        // Don't fail employee creation if email fails - it's non-critical
-        console.warn('⚠️ Failed to send welcome email (non-critical):', emailError);
+      } else {
+        console.warn('⚠️ No setup password URL available - welcome email should have been sent by /api/create-user');
       }
 
       setShowAddModal(false);

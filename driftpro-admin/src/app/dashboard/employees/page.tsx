@@ -392,42 +392,49 @@ export default function EmployeesPage() {
       console.log('✅ Employee created successfully with ID:', employeeId);
 
       // Send welcome email to the new employee with setup password link
+      // Note: /api/create-user already sends a welcome email, but we send another one
+      // with department/position info if we have a setup password URL
       let emailSent = false;
       let emailError = null;
-      try {
-        const departmentName = getDepartmentName(newEmployee.departmentId);
-        const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName = 'Mavi Logistikk';
-
-        console.log('📧 Sending welcome email to new employee:', {
-          email: newEmployee.email,
-          displayName: newEmployee.displayName,
-          adminName,
-          companyName,
-          departmentName,
-          position: newEmployee.position || 'Ansatt',
-          setupPasswordUrl
-        });
-
-        // Send welcome email via app-only authentication (no login required)
+      
+      if (!setupPasswordUrl) {
+        console.warn('⚠️ No setup password URL available - welcome email should have been sent by /api/create-user');
+        emailError = 'Ingen setup password URL - velkomstmailen skal ha blitt sendt av systemet';
+      } else {
         try {
-          console.log('📧 Attempting to send welcome email to:', newEmployee.email);
-          
-          const response = await fetch('/api/send-welcome-email', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify({
-              email: newEmployee.email,
-              displayName: newEmployee.displayName,
-              adminName,
-              companyName,
-              departmentName,
-              position: newEmployee.position || 'Ansatt',
-              resetLink: setupPasswordUrl || undefined // Include setup password link if available
-            })
+          const departmentName = getDepartmentName(newEmployee.departmentId);
+          const adminName = userProfile?.displayName || 'System Administrator';
+          const companyName = 'Mavi Logistikk';
+
+          console.log('📧 Sending welcome email to new employee:', {
+            email: newEmployee.email,
+            displayName: newEmployee.displayName,
+            adminName,
+            companyName,
+            departmentName,
+            position: newEmployee.position || 'Ansatt',
+            setupPasswordUrl
           });
+
+          // Send welcome email via app-only authentication (no login required)
+          try {
+            console.log('📧 Attempting to send welcome email to:', newEmployee.email);
+            
+            const response = await fetch('/api/send-welcome-email', {
+              method: 'POST',
+              headers: {
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                email: newEmployee.email,
+                displayName: newEmployee.displayName,
+                adminName,
+                companyName,
+                departmentName,
+                position: newEmployee.position || 'Ansatt',
+                resetLink: setupPasswordUrl // REQUIRED: direct link to /setup-password?token=...
+              })
+            });
 
           console.log('📧 Welcome email API response status:', response.status);
 

@@ -18,11 +18,19 @@ export async function POST(request: NextRequest) {
 
     const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no';
     const loginUrl = `${appUrl}/login`;
-    // If a specific resetLink is provided, use it; otherwise fall back to forgot-password page
-    const forgotPasswordUrl = resetLink || `${appUrl}/forgot-password`;
+    
+    // resetLink MUST be provided - it should be a /setup-password?token=... link
+    // If not provided, we cannot send the welcome email properly
+    if (!resetLink) {
+      console.error('❌ No resetLink provided - cannot send welcome email without setup password link');
+      return NextResponse.json(
+        { success: false, error: 'resetLink is required - must be a /setup-password?token=... URL' },
+        { status: 400 }
+      );
+    }
 
-    // Create welcome email HTML with a single "Sett passord" button
-    const primaryLink = forgotPasswordUrl; // until we have a dedicated setup token
+    // The resetLink should point directly to /setup-password?token=...
+    const setupPasswordUrl = resetLink;
     const html = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
         <h2 style="color: #2563eb;">Velkommen til ${companyName || 'Mavi Logistikk'}!</h2>
@@ -33,13 +41,13 @@ export async function POST(request: NextRequest) {
         <p>Du kan nå logge inn på systemet med din e-postadresse: <strong>${email}</strong></p>
 
         <div style="margin: 24px 0; text-align: center;">
-          <a href="${primaryLink}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">
+          <a href="${setupPasswordUrl}" style="display: inline-block; background-color: #2563eb; color: #ffffff; padding: 12px 20px; border-radius: 6px; text-decoration: none; font-weight: 600;">
             Sett opp passord
           </a>
         </div>
 
         <p>Hvis knappen ikke fungerer, kopier denne lenken og lim den inn i nettleseren din:</p>
-        <p style="word-break: break-all;"><a href="${primaryLink}">${primaryLink}</a></p>
+        <p style="word-break: break-all;"><a href="${setupPasswordUrl}">${setupPasswordUrl}</a></p>
 
         <p><strong>Viktig:</strong> Du må sette opp passordet ditt før du kan logge inn første gang.</p>
         <p>Hvis du har spørsmål eller trenger hjelp, ikke nøl med å ta kontakt med ${adminName || 'systemadministratoren'}.</p>
@@ -59,13 +67,11 @@ ${departmentName ? `Avdeling: ${departmentName}` : ''}
 
 Du kan nå logge inn på systemet med din e-postadresse: ${email}
 
-SLIK SETTER DU OPP PASSORDET DITT:
-1. Gå til innloggingssiden: ${loginUrl}
-2. Klikk på "Glemt passord?" eller bruk denne direkte lenken: ${forgotPasswordUrl}
-3. Skriv inn din e-postadresse: ${email}
-4. Du vil motta en e-post med en lenke for å sette opp passordet ditt
-5. Klikk på lenken i e-posten og sett opp ditt nye passord
-6. Etter at du har satt opp passordet, kan du logge inn med din e-post og det nye passordet
+FOR Å SETTE OPP PASSORDET DITT:
+Klikk på denne lenken for å sette opp passordet ditt med en gang:
+${setupPasswordUrl}
+
+Etter at du har satt opp passordet, kan du logge inn på ${loginUrl} med din e-post og det nye passordet.
 
 VIKTIG: Du må sette opp passordet ditt før du kan logge inn første gang.
 
