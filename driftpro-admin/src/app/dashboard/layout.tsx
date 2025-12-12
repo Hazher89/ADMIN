@@ -98,27 +98,17 @@ export default function DashboardLayout({
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // GDPR Compliance: Ensure user has a valid companyId
+  // GDPR Compliance: Ensure user has a valid profile
+  // Note: companyId check removed - DriftPro is now only for Mavi Logistikk
   useEffect(() => {
     if (user && userProfile) {
       // Give some time for userProfile to load completely
       const checkProfile = () => {
-        if (!userProfile) {
-          console.error('🚨 Security breach: User missing companyId:', userProfile);
-          console.log('User profile data:', JSON.stringify(userProfile, null, 2));
-          console.log('User auth data:', user);
-          
-          // Check if this is a new employee who hasn't set up their password yet
-          // But only if they're not already authenticated
-          if (userProfile.email && !userProfile.passwordSet && userProfile.role === 'employee') {
-            console.log('🔍 New employee detected, but they need to complete password setup first');
-            // Don't redirect here, let them complete the setup process
-            return;
-          }
-          
-          alert('Sikkerhetsbrudd oppdaget. Du blir logget ut.');
-          logout();
-          router.push('/login');
+        // Check if this is a new employee who hasn't set up their password yet
+        // But only if they're not already authenticated
+        if (userProfile.email && !userProfile.passwordSet && userProfile.role === 'employee') {
+          console.log('🔍 New employee detected, but they need to complete password setup first');
+          // Don't redirect here, let them complete the setup process
           return;
         }
         

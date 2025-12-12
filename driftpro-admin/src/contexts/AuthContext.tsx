@@ -361,26 +361,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const userDoc = userSnapshot.docs[0];
       const userData = userDoc.data();
       
-      // Check if user has a companyId
-      if (!userData.companyId) {
-        throw new Error('Brukeren har ikke tilknytning til noen bedrift. Kontakt administrator.');
-      }
+      // Note: companyId check removed - DriftPro is now only for Mavi Logistikk
+      // All users automatically belong to Mavi Logistikk
       
       // Check if user has been set up with Firebase Authentication
       if (!userData.uid) {
-        // For DriftPro admin, we'll create the Firebase user if it doesn't exist
-        if (userData.companyId === 'driftpro_main' && userData.role === 'admin') {
-          console.log('Creating Firebase user for DriftPro admin');
-          // Update the user document with the Firebase UID after authentication
-          const userCredential = await signInWithEmailAndPassword(auth, email, password);
-          await updateDoc(doc(db, 'users', userDoc.id), {
-            uid: userCredential.user.uid,
-            updatedAt: new Date().toISOString()
-          });
-          return;
-        } else {
-          throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
-        }
+        throw new Error('Brukeren er ikke fullstendig satt opp (mangler Firebase UID). Kontakt administrator for å få nytt passord.');
       }
       
       if (userData.status !== 'active') {
