@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
+import { getFirestore, collection, query, where, getDocs, updateDoc, doc, deleteDoc, getDoc } from 'firebase/firestore';
 import { getAuth, createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword, updatePassword } from 'firebase/auth';
 
 // Firebase config
@@ -216,15 +216,31 @@ export async function POST(request: NextRequest) {
         displayName: userData.displayName || userData.name || 'Ny bruker'
       });
 
-      // Update user document with password setup status and UID (CRITICAL!)
+      // CRITICAL: Update user document with password setup status and UID
+      // Always ensure both uid and id are set and match Firebase Auth UID
       await updateDoc(userDoc.ref, {
         uid: firebaseUser.uid,
-        id: firebaseUser.uid, // Also update id field to match uid
+        id: firebaseUser.uid, // Ensure id field always matches uid
         status: 'active',
         passwordSet: true,
         passwordSetAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       });
+      
+      // FINAL SAFETY CHECK: Verify uid was set correctly
+      const verifyDoc = await getDoc(userDoc.ref);
+      if (verifyDoc.exists()) {
+        const verifyData = verifyDoc.data();
+        if (!verifyData.uid || verifyData.uid !== firebaseUser.uid) {
+          console.warn('⚠️ uid verification failed, attempting second update...');
+          await updateDoc(userDoc.ref, {
+            uid: firebaseUser.uid,
+            id: firebaseUser.uid,
+            updatedAt: new Date().toISOString()
+          });
+          console.log('✅ Second update completed for uid field');
+        }
+      }
 
       // Mark token as used
       await updateDoc(tokenDoc.ref, {
