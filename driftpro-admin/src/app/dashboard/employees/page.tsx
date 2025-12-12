@@ -1889,199 +1889,198 @@ export default function EmployeesPage() {
               </div>
 
               {/* Ferie og fravær-tilgang */}
-                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color, #e5e7eb)' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
-                    🏖️ Ferie og fravær-tilgang
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={(selectedEmployee as any).vacationAccess?.canRequestVacation ?? true}
-                          onChange={(e) => setSelectedEmployee({
-                            ...selectedEmployee,
-                            vacationAccess: {
-                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
-                              canRequestVacation: e.target.checked
-                            }
-                          } as any)}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan be om ferie</span>
+              <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color, #e5e7eb)' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                  🏖️ Ferie og fravær-tilgang
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={(selectedEmployee as any).vacationAccess?.canRequestVacation ?? true}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          vacationAccess: {
+                            ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                            canRequestVacation: e.target.checked
+                          }
+                        } as any)}
+                        style={{ margin: 0 }}
+                      />
+                      <span>Kan be om ferie</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={(selectedEmployee as any).vacationAccess?.canApproveVacation ?? false}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          vacationAccess: {
+                            ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                            canApproveVacation: e.target.checked
+                          }
+                        } as any)}
+                        style={{ margin: 0 }}
+                      />
+                      <span>Kan godkjenne ferie</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={(selectedEmployee as any).vacationAccess?.canViewAllVacations ?? false}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          vacationAccess: {
+                            ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                            canViewAllVacations: e.target.checked
+                          }
+                        } as any)}
+                        style={{ margin: 0 }}
+                      />
+                      <span>Kan se alle ferier</span>
+                    </label>
+                  </div>
+                  <div>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
+                        Feriedager per år
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={(selectedEmployee as any).vacationAccess?.canApproveVacation ?? false}
-                          onChange={(e) => setSelectedEmployee({
-                            ...selectedEmployee,
-                            vacationAccess: {
-                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
-                              canApproveVacation: e.target.checked
-                            }
-                          } as any)}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan godkjenne ferie</span>
-                      </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={(selectedEmployee as any).vacationAccess?.canViewAllVacations ?? false}
-                          onChange={(e) => setSelectedEmployee({
-                            ...selectedEmployee,
-                            vacationAccess: {
-                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
-                              canViewAllVacations: e.target.checked
-                            }
-                          } as any)}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan se alle ferier</span>
-                      </label>
+                      <input
+                        type="number"
+                        value={(selectedEmployee as any).vacationAccess?.vacationDaysPerYear ?? 25}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          vacationAccess: {
+                            ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                            vacationDaysPerYear: parseInt(e.target.value) || 25
+                          }
+                        } as any)}
+                        className="form-input"
+                        style={{ width: '100%', padding: '0.5rem' }}
+                        min="0"
+                        max="50"
+                      />
                     </div>
-                    <div>
-                      <div style={{ marginBottom: '0.75rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
-                          Feriedager per år
-                        </label>
-                        <input
-                          type="number"
-                          value={(selectedEmployee as any).vacationAccess?.vacationDaysPerYear ?? 25}
-                          onChange={(e) => setSelectedEmployee({
-                            ...selectedEmployee,
-                            vacationAccess: {
-                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
-                              vacationDaysPerYear: parseInt(e.target.value) || 25
-                            }
-                          } as any)}
-                          className="form-input"
-                          style={{ width: '100%', padding: '0.5rem' }}
-                          min="0"
-                          max="50"
-                        />
-                      </div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
-                        <input
-                          type="checkbox"
-                          checked={(selectedEmployee as any).vacationAccess?.managerApprovalRequired ?? true}
-                          onChange={(e) => setSelectedEmployee({
-                            ...selectedEmployee,
-                            vacationAccess: {
-                              ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
-                              managerApprovalRequired: e.target.checked
-                            }
-                          } as any)}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Leder-godkjenning påkrevd</span>
-                      </label>
-                    </div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer' }}>
+                      <input
+                        type="checkbox"
+                        checked={(selectedEmployee as any).vacationAccess?.managerApprovalRequired ?? true}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          vacationAccess: {
+                            ...((selectedEmployee as any).vacationAccess || newEmployee.vacationAccess),
+                            managerApprovalRequired: e.target.checked
+                          }
+                        } as any)}
+                        style={{ margin: 0 }}
+                      />
+                      <span>Leder-godkjenning påkrevd</span>
+                    </label>
                   </div>
                 </div>
+              </div>
 
-                {/* Lederskap og hierarki */}
-                <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color, #e5e7eb)' }}>
-                  <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
-                    👔 Lederskap og hierarki
-                  </h4>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                    <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={(selectedEmployee as any).leadership?.isManager ?? false}
-                          onChange={(e) => setSelectedEmployee({
+              {/* Lederskap og hierarki */}
+              <div style={{ marginTop: '1.5rem', paddingTop: '1.5rem', borderTop: '1px solid var(--border-color, #e5e7eb)' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                  👔 Lederskap og hierarki
+                </h4>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={(selectedEmployee as any).leadership?.isManager ?? false}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          leadership: {
+                            ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                            isManager: e.target.checked
+                          }
+                        } as any)}
+                        style={{ margin: 0 }}
+                      />
+                      <span>Er leder</span>
+                    </label>
+                    <div style={{ marginBottom: '0.75rem' }}>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
+                        Rapporterer til
+                      </label>
+                      <select
+                        value={(selectedEmployee as any).leadership?.reportsTo || (selectedEmployee as any).managerId || ''}
+                        onChange={(e) => {
+                          setSelectedEmployee({
                             ...selectedEmployee,
                             leadership: {
                               ...((selectedEmployee as any).leadership || newEmployee.leadership),
-                              isManager: e.target.checked
-                            }
-                          } as any)}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Er leder</span>
-                      </label>
-                      <div style={{ marginBottom: '0.75rem' }}>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
-                          Rapporterer til
-                        </label>
-                        <select
-                          value={(selectedEmployee as any).leadership?.reportsTo || (selectedEmployee as any).managerId || ''}
-                          onChange={(e) => {
-                            setSelectedEmployee({
-                              ...selectedEmployee,
-                            leadership: {
-                                ...((selectedEmployee as any).leadership || newEmployee.leadership),
                               reportsTo: e.target.value
-                              },
-                              managerId: e.target.value
-                            } as any);
-                          }}
-                          className="form-input"
-                          style={{ width: '100%', padding: '0.5rem' }}
-                        >
-                          <option value="">Velg leder</option>
-                          {employees.filter(emp => emp.id !== selectedEmployee.id && (emp.role === 'department_leader' || emp.role === 'admin')).map(emp => (
-                            <option key={emp.id} value={emp.id}>
-                              {emp.displayName} ({emp.role === 'admin' ? 'Administrator' : 'Avdelingsleder'})
-                            </option>
-                          ))}
-                        </select>
-                      </div>
+                            },
+                            managerId: e.target.value
+                          } as any);
+                        }}
+                        className="form-input"
+                        style={{ width: '100%', padding: '0.5rem' }}
+                      >
+                        <option value="">Velg leder</option>
+                        {employees.filter(emp => emp.id !== selectedEmployee.id && (emp.role === 'department_leader' || emp.role === 'admin')).map(emp => (
+                          <option key={emp.id} value={emp.id}>
+                            {emp.displayName} ({emp.role === 'admin' ? 'Administrator' : 'Avdelingsleder'})
+                          </option>
+                        ))}
+                      </select>
                     </div>
+                  </div>
+                  <div>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={(selectedEmployee as any).leadership?.canApproveExpenses ?? false}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          leadership: {
+                            ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                            canApproveExpenses: e.target.checked
+                          }
+                        } as any)}
+                        style={{ margin: 0 }}
+                      />
+                      <span>Kan godkjenne utgifter</span>
+                    </label>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
+                      <input
+                        type="checkbox"
+                        checked={(selectedEmployee as any).leadership?.canApprovePurchases ?? false}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          leadership: {
+                            ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                            canApprovePurchases: e.target.checked
+                          }
+                        } as any)}
+                        style={{ margin: 0 }}
+                      />
+                      <span>Kan godkjenne innkjøp</span>
+                    </label>
                     <div>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.5rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={(selectedEmployee as any).leadership?.canApproveExpenses ?? false}
-                          onChange={(e) => setSelectedEmployee({
-                            ...selectedEmployee,
-                            leadership: {
-                              ...((selectedEmployee as any).leadership || newEmployee.leadership),
-                              canApproveExpenses: e.target.checked
-                            }
-                          } as any)}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan godkjenne utgifter</span>
+                      <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
+                        Budsjettgrense (kr)
                       </label>
-                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontSize: '0.875rem', cursor: 'pointer', marginBottom: '0.75rem' }}>
-                        <input
-                          type="checkbox"
-                          checked={(selectedEmployee as any).leadership?.canApprovePurchases ?? false}
-                          onChange={(e) => setSelectedEmployee({
-                            ...selectedEmployee,
-                            leadership: {
-                              ...((selectedEmployee as any).leadership || newEmployee.leadership),
-                              canApprovePurchases: e.target.checked
-                            }
-                          } as any)}
-                          style={{ margin: 0 }}
-                        />
-                        <span>Kan godkjenne innkjøp</span>
-                      </label>
-                      <div>
-                        <label style={{ fontSize: '0.875rem', fontWeight: '500', color: '#374151', marginBottom: '0.25rem', display: 'block' }}>
-                          Budsjettgrense (kr)
-                        </label>
-                        <input
-                          type="number"
-                          value={(selectedEmployee as any).leadership?.budgetLimit ?? 0}
-                          onChange={(e) => setSelectedEmployee({
-                            ...selectedEmployee,
-                            leadership: {
-                              ...((selectedEmployee as any).leadership || newEmployee.leadership),
-                              budgetLimit: parseInt(e.target.value) || 0
-                            }
-                          } as any)}
-                          className="form-input"
-                          style={{ width: '100%', padding: '0.5rem' }}
-                          min="0"
-                          placeholder="0"
-                        />
-                      </div>
+                      <input
+                        type="number"
+                        value={(selectedEmployee as any).leadership?.budgetLimit ?? 0}
+                        onChange={(e) => setSelectedEmployee({
+                          ...selectedEmployee,
+                          leadership: {
+                            ...((selectedEmployee as any).leadership || newEmployee.leadership),
+                            budgetLimit: parseInt(e.target.value) || 0
+                          }
+                        } as any)}
+                        className="form-input"
+                        style={{ width: '100%', padding: '0.5rem' }}
+                        min="0"
+                        placeholder="0"
+                      />
                     </div>
                   </div>
                 </div>
