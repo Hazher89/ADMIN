@@ -1144,21 +1144,22 @@ class FirebaseService {
       console.log('Employee document to save:', JSON.stringify(employeeDoc, null, 2));
       
       // If we have a Firebase Auth UID, use it as document ID, otherwise let Firestore generate one
-      let docRef;
+      let employeeId: string;
       if (firebaseAuthUid) {
         // Use Firebase Auth UID as document ID for consistency
         await setDoc(doc(firestore, 'users', firebaseAuthUid), employeeDoc);
-        docRef = { id: firebaseAuthUid };
+        employeeId = firebaseAuthUid;
         console.log('✅ Employee created with Firebase Auth UID:', firebaseAuthUid);
       } else {
         // Fallback: create document with auto-generated ID
-        docRef = await addDoc(collection(firestore, 'users'), employeeDoc);
-        console.log('✅ Employee created with auto-generated ID:', docRef.id);
+        const docRef = await addDoc(collection(firestore, 'users'), employeeDoc);
+        employeeId = docRef.id;
+        console.log('✅ Employee created with auto-generated ID:', employeeId);
         console.warn('⚠️ Employee created without Firebase Auth UID - they will need password reset to log in');
         
         // Update the document with the generated ID
-        await updateDoc(doc(firestore, 'users', docRef.id), {
-          id: docRef.id
+        await updateDoc(doc(firestore, 'users', employeeId), {
+          id: employeeId
         });
       }
       
@@ -1177,18 +1178,18 @@ class FirebaseService {
         if (employeeData.departmentId) {
           logMetadata.departmentId = employeeData.departmentId;
         }
-        await this.logAccess('create_employee', userContext.userId, 'employee', docRef.id, logMetadata);
+        await this.logAccess('create_employee', userContext.userId, 'employee', employeeId, logMetadata);
       }
 
       // Generate a password setup token for direct password setup (if we have a user)
       // This ensures we have a token even if /api/create-user didn't create one
       let setupPasswordUrl: string | null = null;
-      if (docRef.id && cleanEmployeeData.email) {
+      if (employeeId && cleanEmployeeData.email) {
         try {
           // Check if token already exists for this user (created by /api/create-user)
           const existingTokenQuery = query(
             collection(firestore, 'setupTokens'),
-            where('userId', '==', docRef.id),
+            where('userId', '==', employeeId),
             where('email', '==', cleanEmployeeData.email),
             where('type', '==', 'employee_welcome')
           );
@@ -1202,7 +1203,7 @@ class FirebaseService {
 
             await addDoc(collection(firestore, 'setupTokens'), {
               token: setupToken,
-              userId: docRef.id,
+              userId: employeeId,
               email: cleanEmployeeData.email,
               expiresAt: Timestamp.fromDate(expiresAt),
               used: false,
@@ -1237,17 +1238,17 @@ class FirebaseService {
         type: 'employee_added',
         title: 'Ny ansatt registrert',
         description: `${employeeData.displayName} ble lagt til i systemet`,
-        userId: docRef.id,
+        userId: employeeId,
         userName: employeeData.displayName,
       });
-      console.log('Activity log created for employee:', docRef.id);
+      console.log('Activity log created for employee:', employeeId);
       } catch (activityError) {
         console.warn('Failed to create activity log (non-critical):', activityError);
       }
 
       // Return both employee ID and setup password URL as an object
       return {
-        id: docRef.id,
+        id: employeeId,
         setupPasswordUrl: setupPasswordUrl
       };
     } catch (error) {
