@@ -139,6 +139,8 @@ export default function DashboardLayout({
 
   // Note: Company permissions loading removed - DriftPro is now only for Mavi Logistikk
   // All users automatically belong to Mavi Logistikk, no company-specific permissions needed
+  const isDriftProAdmin = false; // No longer used, but kept for backward compatibility
+  const companyPermissions: string[] = []; // No longer used, but kept for backward compatibility
 
   // Icon style helper to prevent large icons before CSS loads
   const iconStyle = { width: '20px', height: '20px', flexShrink: 0, display: 'block' };
