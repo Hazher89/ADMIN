@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useAuth } from '@/contexts/AuthContext';
+import { hasPermission as checkPermission } from '@/lib/permissions';
 import { 
   Home, 
   Users, 
@@ -63,6 +64,7 @@ interface SidebarItem {
   category?: string;
   isAdmin?: boolean;
   id?: string;
+  permission?: string; // Permission key required to access this item
 }
 
 // Prevent pre-rendering since this layout uses usePathname
@@ -137,13 +139,13 @@ export default function DashboardLayout({
     }
   }, [user, userProfile, logout, router]);
 
-  // Note: Company permissions loading removed - DriftPro is now only for Mavi Logistikk
-  // All users automatically belong to Mavi Logistikk, no company-specific permissions needed
-  const isDriftProAdmin = false; // No longer used, but kept for backward compatibility
-  const companyPermissions: string[] = []; // No longer used, but kept for backward compatibility
-
   // Icon style helper to prevent large icons before CSS loads
   const iconStyle = { width: '20px', height: '20px', flexShrink: 0, display: 'block' };
+
+  // Permission checking helper
+  const hasAccess = (permissionKey: string): boolean => {
+    return checkPermission(userProfile, permissionKey);
+  };
 
   // Sidebar items configuration
   const allSidebarItems: SidebarItem[] = [
@@ -153,63 +155,72 @@ export default function DashboardLayout({
       href: '/dashboard',
       icon: <Home size={20} style={iconStyle} />,
       category: 'main',
-      id: 'dashboard'
+      id: 'dashboard',
+      permission: 'dashboard'
     },
     {
       name: 'HR & Personal',
       href: '/dashboard/hr',
       icon: <Users size={20} style={iconStyle} />,
       category: 'main',
-      id: 'hr'
+      id: 'hr',
+      permission: 'hr'
     },
-      {
-        name: 'Logistikk System',
-        href: '/dashboard/logistikk-system',
-        icon: <Truck size={20} style={iconStyle} />,
-        category: 'main',
-        id: 'logistikk-system'
-      },
+    {
+      name: 'Logistikk System',
+      href: '/dashboard/logistikk-system',
+      icon: <Truck size={20} style={iconStyle} />,
+      category: 'main',
+      id: 'logistikk-system',
+      permission: 'logistics'
+    },
     {
       name: 'Internkontroll og Samsvar',
       href: '/dashboard/audit',
       icon: <Activity size={20} style={iconStyle} />,
       category: 'main',
-      id: 'audit'
+      id: 'audit',
+      permission: 'internkontrollOgSamsvar'
     },
     {
       name: 'Dokumenter',
       href: '/dashboard/documents',
       icon: <FileText size={20} style={iconStyle} />,
       category: 'main',
-      id: 'documents'
+      id: 'documents',
+      permission: 'documents'
     },
     {
       name: 'Chat',
       href: '/dashboard/chat',
       icon: <MessageSquare size={20} style={iconStyle} />,
       category: 'main',
-      id: 'chat'
+      id: 'chat',
+      permission: 'chat'
     },
     {
       name: 'E-post System',
       href: '/dashboard/email-system',
       icon: <Mail size={20} style={iconStyle} />,
       category: 'main',
-      id: 'email-system'
+      id: 'email-system',
+      permission: 'emailSystem'
     },
     {
       name: 'Rapporter',
       href: '/dashboard/reports',
       icon: <BarChart3 size={20} style={iconStyle} />,
       category: 'main',
-      id: 'reports'
+      id: 'reports',
+      permission: 'reports'
     },
     {
       name: 'SMS Logg & Telefonbok',
       href: '/dashboard/sms-logs',
       icon: <Phone size={20} style={iconStyle} />,
       category: 'main',
-      id: 'sms-logs'
+      id: 'sms-logs',
+      permission: 'smsLogs'
     },
     
     // Management
@@ -218,29 +229,22 @@ export default function DashboardLayout({
       href: '/dashboard/partners',
       icon: <Handshake size={20} style={iconStyle} />,
       category: 'management',
-      id: 'partners'
-    },
-    
-    // Partner Portal (only for single users, not companies)
-    ...(userProfile?.role === 'employee' ? [{
-      name: 'Partner Portal',
-      href: '/partner-login',
-      icon: <Globe size={20} style={iconStyle} />,
-      category: 'management',
-      id: 'partner-portal'
-    }] : []),
-    
-    
-    // Admin-only pages (only visible for DriftPro AS)
-    ...(isDriftProAdmin ? [
-
-    ] : [])
+      id: 'partners',
+      permission: 'partners'
+    }
   ];
 
-  // Filter sidebar items based on permissions
-  // Note: Since all users belong to Mavi Logistikk, show all items
-  // Individual items may have their own permission checks
-  const sidebarItems = allSidebarItems;
+  // Filter sidebar items based on STRICT permissions
+  // Only show items user has explicit permission for
+  const sidebarItems = allSidebarItems.filter(item => {
+    // If no permission specified, default to requiring admin (legacy items)
+    if (!item.permission) {
+      return userProfile?.role === 'admin' || userProfile?.role === 'super_admin';
+    }
+    
+    // Check if user has permission for this item
+    return hasAccess(item.permission);
+  });
 
 
   const groupedItems = sidebarItems.reduce((acc, item) => {

@@ -986,8 +986,70 @@ class FirebaseService {
       }
       
       // Ensure permissions, vacationAccess, and leadership are always present (even if empty)
+      // DEFAULT PERMISSIONS: Employees get minimal access by default
       if (!cleanEmployeeData.permissions) {
-        cleanEmployeeData.permissions = {};
+        cleanEmployeeData.permissions = {
+          dashboard: true, // Everyone can see their dashboard
+          // All other permissions default to false for security
+          employees: false,
+          departments: false,
+          projects: false,
+          tasks: false,
+          inventory: false,
+          suppliers: false,
+          finance: false,
+          invoicing: false,
+          payments: false,
+          hr: false,
+          crm: false,
+          delivery: false,
+          settings: false,
+          mail: false,
+          reports: false,
+          analytics: false,
+          notifications: false,
+          calendar: false,
+          documents: false,
+          training: false,
+          compliance: false,
+          maintenance: false,
+          quality: false,
+          safety: false,
+          procurement: false,
+          logistics: false,
+          production: false,
+          sales: false,
+          marketing: false,
+          customerService: false,
+          it: false,
+          legal: false,
+          audit: false,
+          internkontrollOgSamsvar: false,
+          internrevisjon: false,
+          avvik: false,
+          risikovurdering: false,
+          oppfølgingstiltak: false,
+          kontrollpunkter: false,
+          internkontrollRapporter: false,
+          chat: false,
+          emailSystem: false,
+          smsLogs: false,
+          partners: false,
+          logistikkBudPriser: false,
+          logistikkLevering: false,
+          logistikkPlanlegging: false,
+          logistikkKunder: false,
+          logistikkLeverandorer: false,
+          logistikkProdukter: false,
+          logistikkLager: false,
+          logistikkFakturering: false,
+          logistikkFinans: false,
+          hrAnsatte: false,
+          hrVakter: false,
+          hrFravær: false,
+          hrFerie: false,
+          hrAvdelinger: false
+        };
       }
       if (!cleanEmployeeData.vacationAccess) {
         cleanEmployeeData.vacationAccess = {
