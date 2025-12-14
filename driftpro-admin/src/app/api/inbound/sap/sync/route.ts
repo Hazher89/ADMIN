@@ -66,25 +66,28 @@ async function fetchEmailsFromGraph(): Promise<any[]> {
   
   try {
     // Hent e-poster fra innboks med attachments inkludert
-    const response = await fetch(
-      `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(senderEmail)}/messages?$top=50&$orderby=receivedDateTime desc&$expand=attachments&$select=id,subject,from,sender,receivedDateTime,hasAttachments,attachments`,
-      {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    );
+    const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(senderEmail)}/messages?$top=50&$orderby=receivedDateTime desc&$expand=attachments&$select=id,subject,from,sender,receivedDateTime,hasAttachments,attachments`;
+    console.log(`📧 Fetching emails from: ${url}`);
+    
+    const response = await fetch(url, {
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+      },
+    });
 
     if (!response.ok) {
-      console.error('Failed to fetch emails:', await response.text());
-      return [];
+      const errorText = await response.text();
+      console.error(`❌ Failed to fetch emails (${response.status} ${response.statusText}):`, errorText);
+      throw new Error(`Graph API feil: ${response.status} ${response.statusText} - ${errorText}`);
     }
 
     const data = await response.json();
-    return data.value || [];
-  } catch (error) {
-    console.error('Error fetching emails:', error);
-    return [];
+    const emails = data.value || [];
+    console.log(`✅ Hentet ${emails.length} e-poster fra Graph API`);
+    return emails;
+  } catch (error: any) {
+    console.error('❌ Error fetching emails:', error);
+    throw error; // Re-throw for å få bedre feilmelding i responsen
   }
 }
 
@@ -135,10 +138,40 @@ export async function POST(req: NextRequest) {
   }
 
   try {
+    // Sjekk miljøvariabler
+    const tenantId = process.env.GRAPH_TENANT_ID;
+    const clientId = process.env.GRAPH_CLIENT_ID;
+    const clientSecret = process.env.GRAPH_CLIENT_SECRET;
+    const senderUpn = process.env.GRAPH_SENDER_UPN || 'driftpro@mavilogistikk.no';
+    
+    if (!tenantId || !clientId || !clientSecret) {
+      return NextResponse.json(
+        { 
+          success: false, 
+          error: 'Microsoft Graph ikke konfigurert. Sjekk miljøvariablene GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET',
+          debug: {
+            hasTenantId: !!tenantId,
+            hasClientId: !!clientId,
+            hasClientSecret: !!clientSecret,
+            senderUpn: senderUpn,
+          }
+        },
+        { status: 500 }
+      );
+    }
+
     const accessToken = await getGraphAccessToken();
     if (!accessToken) {
       return NextResponse.json(
-        { success: false, error: 'Microsoft Graph ikke konfigurert. Sjekk miljøvariablene GRAPH_TENANT_ID, GRAPH_CLIENT_ID, GRAPH_CLIENT_SECRET' },
+        { 
+          success: false, 
+          error: 'Kunne ikke få access token fra Microsoft Graph. Sjekk at credentials er riktige og at app registration har riktige permissions.',
+          debug: {
+            tenantId: tenantId ? 'satt' : 'mangler',
+            clientId: clientId ? 'satt' : 'mangler',
+            clientSecret: clientSecret ? 'satt' : 'mangler',
+          }
+        },
         { status: 500 }
       );
     }
@@ -151,9 +184,13 @@ export async function POST(req: NextRequest) {
     );
 
     // Hent nye e-poster fra Microsoft Graph
+    console.log(`📧 Henter e-poster fra ${senderUpn}...`);
     const emails = await fetchEmailsFromGraph();
+    console.log(`✅ Fant ${emails.length} e-poster`);
+    
     const processed: string[] = [];
     const skipped: string[] = [];
+    const errors: Array<{ messageId: string; error: string }> = [];
 
     for (const email of emails) {
       const messageId = email.id;
@@ -236,34 +273,53 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      const docData = {
-        messageId: messageId,
-        from: email.from?.emailAddress?.address || email.sender?.emailAddress?.address || '',
-        subject: email.subject || '',
-        receivedAt: email.receivedDateTime || new Date().toISOString(),
-        attachments,
-        note: 'Synkronisert fra Microsoft Graph',
-        sourceDomain: fromEmail.split('@')[1] || '',
-        autoProcess: isElkjop,
-        status: isElkjop ? 'auto_pending' : 'pending',
-        createdAt: Timestamp.fromDate(new Date(email.receivedDateTime || Date.now())),
-        updatedAt: Timestamp.now(),
-      };
+      try {
+        const docData = {
+          messageId: messageId,
+          from: email.from?.emailAddress?.address || email.sender?.emailAddress?.address || '',
+          subject: email.subject || '',
+          receivedAt: email.receivedDateTime || new Date().toISOString(),
+          attachments,
+          note: 'Synkronisert fra Microsoft Graph',
+          sourceDomain: fromEmail.split('@')[1] || '',
+          autoProcess: isElkjop,
+          status: isElkjop ? 'auto_pending' : 'pending',
+          createdAt: Timestamp.fromDate(new Date(email.receivedDateTime || Date.now())),
+          updatedAt: Timestamp.now(),
+        };
 
-      await addDoc(collection(db, 'inboundRoutes'), docData);
-      processed.push(messageId);
+        await addDoc(collection(db, 'inboundRoutes'), docData);
+        processed.push(messageId);
+        console.log(`✅ Prosessert e-post: ${email.subject} (${attachments.length} PDF-vedlegg)`);
+      } catch (docError: any) {
+        console.error(`❌ Feil ved lagring av e-post ${messageId}:`, docError);
+        errors.push({ messageId, error: docError?.message || 'Ukjent feil' });
+      }
     }
 
     return NextResponse.json({
       success: true,
       processed: processed.length,
       skipped: skipped.length,
-      message: `Prosessert ${processed.length} nye e-poster, hoppet over ${skipped.length} duplikater`,
+      errors: errors.length,
+      message: `Prosessert ${processed.length} nye e-poster, hoppet over ${skipped.length} duplikater${errors.length > 0 ? `, ${errors.length} feil` : ''}`,
+      debug: {
+        totalEmails: emails.length,
+        emailsWithAttachments: emails.filter(e => e.hasAttachments).length,
+        errors: errors,
+      }
     });
   } catch (error: any) {
-    console.error('Sync inbound error:', error);
+    console.error('❌ Sync inbound error:', error);
     return NextResponse.json(
-      { success: false, error: error?.message || 'Internal error' },
+      { 
+        success: false, 
+        error: error?.message || 'Internal error',
+        debug: {
+          errorType: error?.constructor?.name,
+          stack: error?.stack?.split('\n').slice(0, 5),
+        }
+      },
       { status: 500 }
     );
   }
