@@ -218,7 +218,20 @@ export default function PartnersPage() {
     const items = Array.isArray(inboundItems) ? inboundItems : [];
     const byDate: Record<string, { total: number; sent: number; failed: number }> = {};
     
-    for (const it of items) {
+    const pickDateKey = (it: any): string => {
+      // Prefer the date parsed from the PDF (source of truth for “rutedato”).
+      const parsed =
+        (typeof it?.parsedDate === 'string' && it.parsedDate) ||
+        (typeof it?.parsedDateFromPdf === 'string' && it.parsedDateFromPdf) ||
+        (Array.isArray(it?.attachments) &&
+          (it.attachments.find((a: any) => typeof a?.parsedDateFromPdf === 'string' && a.parsedDateFromPdf)?.parsedDateFromPdf ||
+            it.attachments.find((a: any) => typeof a?.parsedDate === 'string' && a.parsedDate)?.parsedDate)) ||
+        '';
+
+      // If it looks like YYYY-MM-DD, use it directly.
+      if (parsed && /^\d{4}-\d{2}-\d{2}$/.test(parsed)) return parsed;
+
+      // Fallback: receivedAt / createdAt
       const rawReceived = it?.receivedAt;
       const receivedStr = typeof rawReceived === 'string' ? rawReceived : '';
       const createdAtDate =
@@ -231,6 +244,11 @@ export default function PartnersPage() {
         (receivedStr && receivedStr.includes('T') ? receivedStr.split('T')[0] : '') ||
         (createdAtDate ? new Date(createdAtDate).toISOString().split('T')[0] : '') ||
         'ukjent';
+      return dateKey;
+    };
+
+    for (const it of items) {
+      const dateKey = pickDateKey(it);
 
       byDate[dateKey] = byDate[dateKey] || { total: 0, sent: 0, failed: 0 };
       byDate[dateKey].total += 1;
@@ -243,7 +261,8 @@ export default function PartnersPage() {
     return {
       ...(pr || {}),
       total: inboundDerived.total > 0 ? inboundDerived.total : prTotal,
-      sent: inboundDerived.total > 0 ? (inboundDerived.total - inboundDerived.failed - inboundDerived.pending - inboundDerived.autoPending) : prSent,
+      // Inbound table typically contains pending/failed. We keep "sent" from stored report (when present).
+      sent: prSent,
       failed: inboundDerived.failed > 0 ? inboundDerived.failed : prFailed,
       byDate: Object.keys(byDate).length > 0 ? byDate : (pr?.byDate || {}),
     };
@@ -796,6 +815,13 @@ export default function PartnersPage() {
         const atts = Array.isArray(item.attachments) ? item.attachments : [];
         const pdfAtt = atts.find((a: any) => a?.isPdf && a?.fileUrl) || atts.find((a: any) => a?.fileUrl);
         if (!pdfAtt?.fileUrl) {
+          try {
+            await updateDoc(doc(db, 'inboundRoutes', item.id), {
+              status: 'failed',
+              error: 'Ingen vedlegg med filUrl (kan ikke lese PDF)',
+              updatedAt: serverTimestamp(),
+            });
+          } catch {}
           results.push({ status: 'failed', message: 'Ingen PDF-vedlegg', date: item.receivedAt?.split('T')?.[0], fileName: pdfAtt?.fileName || 'Ukjent', inboundId: item.id });
           continue;
         }
@@ -821,6 +847,7 @@ export default function PartnersPage() {
             await updateDoc(doc(db, 'inboundRoutes', item.id), {
               status: 'failed',
               error: 'Fant ikke bilnummer i PDF (prøvd med OCR)',
+              parsedDate: dateIso,
               updatedAt: serverTimestamp(),
             });
           } catch {}
@@ -835,6 +862,8 @@ export default function PartnersPage() {
             await updateDoc(doc(db, 'inboundRoutes', item.id), {
               status: 'failed',
               error: `Fant ikke partner for bilnummer ${vehicleDigits}`,
+              parsedDate: dateIso,
+              parsedVehicle: vehicleDigits,
               updatedAt: serverTimestamp(),
             });
           } catch {}
@@ -864,6 +893,8 @@ export default function PartnersPage() {
             status: 'processed',
             assignmentId,
             pdfHash: hash,
+            parsedDate: dateIso,
+            parsedVehicle: vehicleDigits,
           });
         } catch {}
         try { await deleteDoc(doc(db, 'inboundRoutes', item.id)); } catch {}
