@@ -2012,6 +2012,148 @@ export default function PartnersPage() {
         </div>
       )}
 
+
+      {/* Process Report Modal */}
+      {showProcessReport && processingReport && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1300,
+          padding: '1rem'
+        }}>
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
+          }}>
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid var(--gray-200)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(135deg, #111827 0%, #0b1220 100%)'
+            }}>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--gray-900)' }}>
+                  📊 Rapport: Automatisk rute-distribusjon
+                </div>
+              </div>
+              <button
+                onClick={() => setShowProcessReport(false)}
+                style={{
+                  padding: '0.6rem 0.9rem',
+                  background: 'rgba(255,255,255,0.06)',
+                  border: '1px solid var(--gray-300)',
+                  color: 'var(--gray-800)',
+                  borderRadius: '10px',
+                  cursor: 'pointer',
+                  fontWeight: 700
+                }}
+              >
+                Lukk
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', overflowY: 'auto', maxHeight: '70vh' }}>
+              <div style={{
+                display: 'grid',
+                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+                gap: '1rem',
+                marginBottom: '2rem'
+              }}>
+                <div style={{
+                  padding: '1rem',
+                  background: '#1f2937',
+                  borderRadius: '12px',
+                  border: '1px solid #374151'
+                }}>
+                  <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Totalt</div>
+                  <div style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 700 }}>{processingReport.total}</div>
+                </div>
+                <div style={{
+                  padding: '1rem',
+                  background: '#064e3b',
+                  borderRadius: '12px',
+                  border: '1px solid #065f46'
+                }}>
+                  <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Sendt</div>
+                  <div style={{ color: '#10b981', fontSize: '1.5rem', fontWeight: 700 }}>{processingReport.processed}</div>
+                </div>
+                <div style={{
+                  padding: '1rem',
+                  background: '#7f1d1d',
+                  borderRadius: '12px',
+                  border: '1px solid #991b1b'
+                }}>
+                  <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Feilet</div>
+                  <div style={{ color: '#ef4444', fontSize: '1.5rem', fontWeight: 700 }}>{processingReport.failed}</div>
+                </div>
+              </div>
+
+              <div style={{ marginTop: '2rem' }}>
+                <h3 style={{ color: '#e5e7eb', fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
+                  Detaljert oversikt
+                </h3>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--gray-200)', color: '#cbd5e1' }}>
+                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Fil</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Bilnummer</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Dato</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Partner</th>
+                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {processingReport.details.map((detail: any, idx: number) => (
+                      <tr key={idx} style={{ borderBottom: '1px solid #1f2937' }}>
+                        <td style={{ padding: '0.75rem', color: '#e5e7eb' }}>{detail.fileName}</td>
+                        <td style={{ padding: '0.75rem', color: '#e5e7eb' }}>{detail.vehicle}</td>
+                        <td style={{ padding: '0.75rem', color: '#e5e7eb' }}>{detail.date || 'N/A'}</td>
+                        <td style={{ padding: '0.75rem', color: '#e5e7eb' }}>{detail.partnerName || 'N/A'}</td>
+                        <td style={{ padding: '0.75rem' }}>
+                          <span style={{
+                            padding: '0.25rem 0.5rem',
+                            borderRadius: '6px',
+                            fontSize: '0.75rem',
+                            fontWeight: 600,
+                            background: detail.status === 'sent' ? '#064e3b' : '#7f1d1d',
+                            color: detail.status === 'sent' ? '#10b981' : '#ef4444'
+                          }}>
+                            {detail.status === 'sent' ? '✅ Sendt' : 
+                             detail.status === 'no_vehicle' ? '❌ Ingen bil' :
+                             detail.status === 'no_partner' ? '❌ Ingen partner' : '❌ Feil'}
+                          </span>
+                          {detail.error && (
+                            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
+                              {detail.error}
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Desktop Page Header */}
       {!isMobile && (
       <div className="page-header">
