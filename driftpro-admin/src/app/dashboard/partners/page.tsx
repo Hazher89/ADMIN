@@ -600,9 +600,39 @@ export default function PartnersPage() {
         return null;
       };
 
+      const pickFromLabels = (): string | null => {
+        // Backup Form / variants often use labels instead of "Resource ID"
+        const reList = [
+          /(?:vehicle|truck|bil)\s*(?:id|no|nr|number|nummer)?\s*[:#\-\s]*M?\s*0*([0-9]{1,6})/i,
+          /(?:resource)\s*id[^A-Za-z0-9]*M?\s*0*([0-9]{1,6})/i,
+          /\bM\s*0*([0-9]{1,6})\b/i,
+        ];
+        for (const re of reList) {
+          const m = primary.match(re);
+          if (m?.[1]) {
+            const norm = normalizeVehicleNumber(m[1]);
+            if (norm) return norm;
+          }
+        }
+
+        // OCR often confuses O and 0. Try a "digit-corrected" pass.
+        const corrected = primary.replace(/O/g, '0').replace(/o/g, '0');
+        for (const re of reList) {
+          const m = corrected.match(re);
+          if (m?.[1]) {
+            const norm = normalizeVehicleNumber(m[1]);
+            if (norm) return norm;
+          }
+        }
+
+        return null;
+      };
+
       // If we need Driver Name later, we can add, but Resource ID er fasit.
       const fromResource = pickFromResourceId();
       if (fromResource) return fromResource;
+      const fromLabels = pickFromLabels();
+      if (fromLabels) return fromLabels;
       return null;
     };
 
@@ -615,9 +645,14 @@ export default function PartnersPage() {
         const data = await file.arrayBuffer();
         const loadingTask = await pdfjs.getDocument({ data });
         const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        const txt = await page.getTextContent();
-        const str = txt.items.map((i: any) => i.str || '').join(' ');
+        const maxPages = Math.min(pdf.numPages || 1, 3);
+        let out = '';
+        for (let p = 1; p <= maxPages; p++) {
+          const page = await pdf.getPage(p);
+          const txt = await page.getTextContent();
+          out += ' ' + txt.items.map((i: any) => i.str || '').join(' ');
+        }
+        const str = out.trim();
         return str || null;
       } catch (err) {
         console.warn('pdfjs text parse failed:', err);
@@ -698,8 +733,16 @@ export default function PartnersPage() {
     };
 
     const parseFromText = (text: string): string | null => {
+      // Label-aware first (Backup Form often has "Date"/"Dato"/"Route date")
+      const labeledRe =
+        /(?:route\s*date|rute\s*dato|delivery\s*date|leverings\s*dato|date|dato)\s*[:\s-]*((?:\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})|(?:\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}))/i;
       const startDateRe = /start\s*date[:\s-]*((?:\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})|(?:\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}))/i;
       const genericRe = /(\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}|\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/;
+      const labeled = text.match(labeledRe);
+      if (labeled?.[1]) {
+        const norm = normalizeDate(labeled[1]);
+        if (norm) return norm;
+      }
       const first = text.match(startDateRe);
       if (first?.[1]) {
         const norm = normalizeDate(first[1]);
@@ -722,9 +765,14 @@ export default function PartnersPage() {
         const data = await file.arrayBuffer();
         const loadingTask = await pdfjs.getDocument({ data });
         const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        const txt = await page.getTextContent();
-        const str = txt.items.map((i: any) => i.str || '').join(' ');
+        const maxPages = Math.min(pdf.numPages || 1, 3);
+        let out = '';
+        for (let p = 1; p <= maxPages; p++) {
+          const page = await pdf.getPage(p);
+          const txt = await page.getTextContent();
+          out += ' ' + txt.items.map((i: any) => i.str || '').join(' ');
+        }
+        const str = out.trim();
         return str || null;
       } catch (err) {
         console.warn('pdfjs date parse failed:', err);
@@ -795,6 +843,7 @@ export default function PartnersPage() {
       const nowIso = new Date().toISOString();
       const results: any[] = [];
       const seenHashes = new Set<string>();
+      const parsedCache = new Map<string, { vehicleDigits: string | null; parsedDateFromPdf: string | null }>();
 
       // Process newest first
       for (const item of (Array.isArray(items) ? items : [])) {
@@ -827,8 +876,17 @@ export default function PartnersPage() {
         }
         seenHashes.add(hash);
 
-        const vehicleDigits = await extractVehicleNumberFromPdf(file);
-        const parsedDateFromPdf = await extractDateFromPdf(file);
+        let vehicleDigits: string | null = null;
+        let parsedDateFromPdf: string | null = null;
+        const cached = parsedCache.get(hash);
+        if (cached) {
+          vehicleDigits = cached.vehicleDigits;
+          parsedDateFromPdf = cached.parsedDateFromPdf;
+        } else {
+          vehicleDigits = await extractVehicleNumberFromPdf(file);
+          parsedDateFromPdf = await extractDateFromPdf(file);
+          parsedCache.set(hash, { vehicleDigits, parsedDateFromPdf });
+        }
         const fallbackDate = item.receivedAt?.split('T')?.[0] || new Date().toISOString().split('T')[0];
         const routeDate = parsedDateFromPdf || fallbackDate;
 
