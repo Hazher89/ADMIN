@@ -231,20 +231,9 @@ export default function PartnersPage() {
       // If it looks like YYYY-MM-DD, use it directly.
       if (parsed && /^\d{4}-\d{2}-\d{2}$/.test(parsed)) return parsed;
 
-      // Fallback: receivedAt / createdAt
-      const rawReceived = it?.receivedAt;
-      const receivedStr = typeof rawReceived === 'string' ? rawReceived : '';
-      const createdAtDate =
-        typeof it?.createdAt?.toDate === 'function'
-          ? it.createdAt.toDate()
-          : it?.createdAt instanceof Date
-          ? it.createdAt
-          : null;
-      const dateKey =
-        (receivedStr && receivedStr.includes('T') ? receivedStr.split('T')[0] : '') ||
-        (createdAtDate ? new Date(createdAtDate).toISOString().split('T')[0] : '') ||
-        'ukjent';
-      return dateKey;
+      // If we cannot parse a route date from the PDF, we should NOT guess based on receivedAt.
+      // That creates misleading “søndag ...” groupings even when the route date is different.
+      return 'ukjent';
     };
 
     for (const it of items) {
@@ -839,7 +828,9 @@ export default function PartnersPage() {
         seenHashes.add(hash);
 
         const vehicleDigits = await extractVehicleNumberFromPdf(file);
-        const dateIso = (await extractDateFromPdf(file)) || (item.receivedAt?.split('T')?.[0] || new Date().toISOString().split('T')[0]);
+        const parsedDateFromPdf = await extractDateFromPdf(file);
+        const fallbackDate = item.receivedAt?.split('T')?.[0] || new Date().toISOString().split('T')[0];
+        const routeDate = parsedDateFromPdf || fallbackDate;
 
         if (!vehicleDigits) {
           // Update Firestore status so it can be tracked
@@ -847,11 +838,34 @@ export default function PartnersPage() {
             await updateDoc(doc(db, 'inboundRoutes', item.id), {
               status: 'failed',
               error: 'Fant ikke bilnummer i PDF (prøvd med OCR)',
-              parsedDate: dateIso,
+              parsedDate: parsedDateFromPdf || undefined,
               updatedAt: serverTimestamp(),
             });
           } catch {}
-          results.push({ status: 'failed', message: 'Fant ikke bilnummer i PDF', date: dateIso, fileName: file.name, inboundId: item.id });
+          results.push({ status: 'failed', message: 'Fant ikke bilnummer i PDF', date: parsedDateFromPdf || 'ukjent', fileName: file.name, inboundId: item.id });
+          continue;
+        }
+
+        // Persist what we DID manage to parse (even if later steps fail)
+        try {
+          await updateDoc(doc(db, 'inboundRoutes', item.id), {
+            parsedVehicle: vehicleDigits,
+            parsedDate: parsedDateFromPdf || undefined,
+            updatedAt: serverTimestamp(),
+          });
+        } catch {}
+
+        // We require a PDF route date to avoid misleading groupings / wrong assignments
+        if (!parsedDateFromPdf) {
+          try {
+            await updateDoc(doc(db, 'inboundRoutes', item.id), {
+              status: 'failed',
+              error: 'Fant ikke rutedato i PDF (prøvd med OCR)',
+              parsedVehicle: vehicleDigits,
+              updatedAt: serverTimestamp(),
+            });
+          } catch {}
+          results.push({ status: 'failed', message: 'Fant ikke rutedato i PDF', date: 'ukjent', fileName: file.name, vehicle: vehicleDigits, inboundId: item.id });
           continue;
         }
 
@@ -862,27 +876,43 @@ export default function PartnersPage() {
             await updateDoc(doc(db, 'inboundRoutes', item.id), {
               status: 'failed',
               error: `Fant ikke partner for bilnummer ${vehicleDigits}`,
-              parsedDate: dateIso,
+              parsedDate: parsedDateFromPdf,
               parsedVehicle: vehicleDigits,
               updatedAt: serverTimestamp(),
             });
           } catch {}
-          results.push({ status: 'failed', message: `Fant ikke partner for bilnummer ${vehicleDigits}`, date: dateIso, fileName: file.name, vehicle: vehicleDigits, inboundId: item.id });
+          results.push({ status: 'failed', message: `Fant ikke partner for bilnummer ${vehicleDigits}`, date: parsedDateFromPdf, fileName: file.name, vehicle: vehicleDigits, inboundId: item.id });
           continue;
         }
 
         // Create assignment exactly like mass route tildeling
-        const uploaded = await uploadFilesToFirebase([file], partner.id);
-        const title = `SAP Rute ${dateIso} (${vehicleDigits})`;
-        const assignmentId = await firebaseService.createRouteAssignment({
-          partnerId: partner.id,
-          partnerName: partner.name,
-          date: dateIso,
-          files: uploaded,
-          title,
-          job: '',
-          users: [],
-        });
+        let assignmentId: string | null = null;
+        try {
+          const uploaded = await uploadFilesToFirebase([file], partner.id);
+          const title = `SAP Rute ${routeDate} (${vehicleDigits})`;
+          assignmentId = await firebaseService.createRouteAssignment({
+            partnerId: partner.id,
+            partnerName: partner.name,
+            date: routeDate,
+            files: uploaded,
+            title,
+            job: '',
+            users: [],
+          });
+        } catch (e: any) {
+          const msg = e?.message || 'Feil ved opplasting/tildeling';
+          try {
+            await updateDoc(doc(db, 'inboundRoutes', item.id), {
+              status: 'failed',
+              error: msg,
+              parsedDate: parsedDateFromPdf,
+              parsedVehicle: vehicleDigits,
+              updatedAt: serverTimestamp(),
+            });
+          } catch {}
+          results.push({ status: 'failed', message: msg, date: parsedDateFromPdf, fileName: file.name, vehicle: vehicleDigits, inboundId: item.id });
+          continue;
+        }
 
         // Archive then delete inbound to keep it clean
         try {
@@ -891,15 +921,15 @@ export default function PartnersPage() {
             archivedAt: nowIso,
             processedAt: nowIso,
             status: 'processed',
-            assignmentId,
+            assignmentId: assignmentId || undefined,
             pdfHash: hash,
-            parsedDate: dateIso,
+            parsedDate: parsedDateFromPdf,
             parsedVehicle: vehicleDigits,
           });
         } catch {}
         try { await deleteDoc(doc(db, 'inboundRoutes', item.id)); } catch {}
 
-        results.push({ status: 'sent', message: `Sendt til ${partner.name} (${vehicleDigits})`, date: dateIso, fileName: file.name, vehicle: vehicleDigits, partnerName: partner.name });
+        results.push({ status: 'sent', message: `Sendt til ${partner.name} (${vehicleDigits})`, date: parsedDateFromPdf, fileName: file.name, vehicle: vehicleDigits, partnerName: partner.name });
       }
 
       // Build report for UI
@@ -2369,8 +2399,11 @@ export default function PartnersPage() {
                       <th style={{ padding: '0.5rem' }}>Mottatt</th>
                       <th style={{ padding: '0.5rem' }}>Fra</th>
                       <th style={{ padding: '0.5rem' }}>Emne</th>
+                      <th style={{ padding: '0.5rem' }}>Rutedato (fra PDF)</th>
+                      <th style={{ padding: '0.5rem' }}>Bil (fra PDF)</th>
                       <th style={{ padding: '0.5rem' }}>Fil(er)</th>
                       <th style={{ padding: '0.5rem' }}>Status</th>
+                      <th style={{ padding: '0.5rem' }}>Feilårsak</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2381,6 +2414,12 @@ export default function PartnersPage() {
                         </td>
                         <td style={{ padding: '0.5rem', color: '#e5e7eb' }}>{item.from || ''}</td>
                         <td style={{ padding: '0.5rem', color: '#e5e7eb' }}>{item.subject || ''}</td>
+                        <td style={{ padding: '0.5rem', color: '#e5e7eb' }}>
+                          {item.parsedDate || item.attachments?.find?.((a: any) => a?.parsedDateFromPdf)?.parsedDateFromPdf || '—'}
+                        </td>
+                        <td style={{ padding: '0.5rem', color: '#e5e7eb' }}>
+                          {item.parsedVehicle || item.attachments?.find?.((a: any) => a?.parsedVehicleFromPdf)?.parsedVehicleFromPdf || '—'}
+                        </td>
                         <td style={{ padding: '0.5rem', color: '#a5b4fc' }}>
                           {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
                             item.attachments.map((a: any, idx: number) => (
@@ -2411,6 +2450,11 @@ export default function PartnersPage() {
                           }}
                         >
                           {String(item.status || 'pending')}
+                        </td>
+                        <td style={{ padding: '0.5rem', color: '#cbd5e1', maxWidth: '380px' }}>
+                          <span title={String(item.error || '')}>
+                            {String(item.error || '').slice(0, 160) || '—'}
+                          </span>
                         </td>
                       </tr>
                     ))}
