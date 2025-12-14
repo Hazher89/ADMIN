@@ -4,7 +4,6 @@
  */
 
 import { initializeApp, getApps, FirebaseApp } from 'firebase/app';
-import { getAuth, Auth } from 'firebase/auth';
 import { getFirestore, Firestore } from 'firebase/firestore';
 
 // Firebase config with fallbacks for build-time
@@ -28,12 +27,12 @@ const isFirebaseConfigured = () => {
 
 // Initialize Firebase safely
 let app: FirebaseApp | undefined;
-let auth: Auth | undefined;
 let db: Firestore | undefined;
 
 const initializeFirebaseAdmin = () => {
-  // Skip initialization during build if not configured
-  const isBuildTime = process.env.NODE_ENV === 'production' && !process.env.NEXT_PUBLIC_FIREBASE_API_KEY;
+  // Skip initialization ONLY during Next.js production build phase (not during runtime on Netlify/Vercel)
+  // Netlify functions often run with NODE_ENV=production, so NODE_ENV is NOT a safe build-time detector.
+  const isBuildTime = process.env.NEXT_PHASE === 'phase-production-build';
   
   if (isBuildTime && !isFirebaseConfigured()) {
     console.warn('Firebase: Skipping initialization during build - environment variables not set');
@@ -50,7 +49,6 @@ const initializeFirebaseAdmin = () => {
     }
 
     if (app) {
-      auth = getAuth(app);
       db = getFirestore(app);
     }
   } catch (error: any) {
@@ -63,22 +61,27 @@ const initializeFirebaseAdmin = () => {
     // Return undefined values instead of throwing
   }
 
-  return { app, auth, db };
+  return { app, db };
 };
 
 // Initialize immediately
-const { app: initializedApp, auth: initializedAuth, db: initializedDb } = initializeFirebaseAdmin();
+const { app: initializedApp, db: initializedDb } = initializeFirebaseAdmin() as any;
 
 // Export getters that return undefined if not configured
 export const getFirebaseApp = (): FirebaseApp | undefined => initializedApp;
-export const getFirebaseAuth = (): Auth | undefined => initializedAuth;
+// Backward compatibility: some legacy API routes import this.
+// We intentionally do NOT initialize firebase/auth here (browser-oriented).
+export const getFirebaseAuth = (): undefined => undefined;
 export const getFirebaseDb = (): Firestore | undefined => initializedDb;
 
 // Check if Firebase is available
 export const isFirebaseAvailable = (): boolean => {
-  return !!(initializedApp && initializedAuth && initializedDb);
+  // In serverless/API routes we only require Firestore.
+  return !!(initializedApp && initializedDb);
 };
 
 // Export for backward compatibility
-export { initializedApp as app, initializedAuth as auth, initializedDb as db };
+// auth is intentionally not initialized here (firebase/auth is browser-oriented and can break on serverless runtimes)
+export const auth = undefined;
+export { initializedApp as app, initializedDb as db };
 

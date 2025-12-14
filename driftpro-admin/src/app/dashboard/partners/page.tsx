@@ -381,12 +381,13 @@ export default function PartnersPage() {
           if (syncData?.success) {
             setSuccess(`Synkronisert! ${syncData.processed} nye e-poster prosessert, ${syncData.skipped} hoppet over.`);
           } else {
-            // Ikke vis feil hvis sync feiler, bare logg
-            console.warn('Sync feilet:', syncData?.error);
+            // VIS feil (tidligere ble dette ofte skjult og det så ut som "tomt")
+            console.warn('Sync feilet:', syncData?.error, syncData?.debug);
+            setError(syncData?.error || 'Synk feilet. Sjekk Graph/Firebase konfig.');
           }
         } catch (syncError) {
-          // Ignorer sync-feil, fortsett med å laste data
           console.warn('Sync error:', syncError);
+          setError('Synk feilet (nettverk/konfig).');
         }
       }
 
@@ -413,17 +414,15 @@ export default function PartnersPage() {
   };
 
   const processInboundRoutes = async () => {
-    if (!userProfile?.companyId) {
-      setError('Company ID mangler');
-      return;
-    }
+    // Default til "mavi" dersom companyId mangler, slik at vi alltid kan prosessere
+    const companyId = userProfile?.companyId || 'mavi';
 
     setInboundLoading(true);
     try {
       const res = await fetch('/api/inbound/sap/process', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyId: userProfile.companyId }),
+        body: JSON.stringify({ companyId }),
       });
       
       const data = await res.json();
