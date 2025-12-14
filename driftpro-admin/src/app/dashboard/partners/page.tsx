@@ -185,6 +185,8 @@ export default function PartnersPage() {
   const [showInboundModal, setShowInboundModal] = useState(false);
   const [inboundItems, setInboundItems] = useState<any[]>([]);
   const [inboundLoading, setInboundLoading] = useState(false);
+  const [processingReport, setProcessingReport] = useState<any>(null);
+  const [showProcessReport, setShowProcessReport] = useState(false);
 
   // Job management
   const [showJobManagementModal, setShowJobManagementModal] = useState(false);
@@ -399,6 +401,39 @@ export default function PartnersPage() {
     } catch (e) {
       console.error('Inbound fetch error', e);
       setError('Kunne ikke hente innkommende ruter');
+    } finally {
+      setInboundLoading(false);
+    }
+  };
+
+  const processInboundRoutes = async () => {
+    if (!userProfile?.companyId) {
+      setError('Company ID mangler');
+      return;
+    }
+
+    setInboundLoading(true);
+    try {
+      const res = await fetch('/api/inbound/sap/process', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ companyId: userProfile.companyId }),
+      });
+      
+      const data = await res.json();
+      
+      if (data?.success) {
+        setProcessingReport(data.report);
+        setShowProcessReport(true);
+        setSuccess(`Prosessering fullført! ${data.report.processed} ruter sendt, ${data.report.failed} feilet.`);
+        // Last inn på nytt
+        await loadInbound(false);
+      } else {
+        setError(data?.error || 'Kunne ikke prosessere ruter');
+      }
+    } catch (e) {
+      console.error('Process error', e);
+      setError('Kunne ikke prosessere ruter');
     } finally {
       setInboundLoading(false);
     }
@@ -1869,6 +1904,22 @@ export default function PartnersPage() {
                 </div>
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={processInboundRoutes}
+                  style={{
+                    padding: '0.6rem 0.9rem',
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: '1px solid rgba(16,185,129,0.35)',
+                    color: '#fff',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    fontWeight: 700
+                  }}
+                  disabled={inboundLoading}
+                  title="Prosesser pending ruter og del dem automatisk til partnere"
+                >
+                  {inboundLoading ? 'Prosesserer...' : '🤖 Prosesser automatisk'}
+                </button>
                 <button
                   onClick={() => loadInbound(true)}
                   style={{
