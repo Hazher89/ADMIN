@@ -9,7 +9,10 @@ import {
   getDocs,
   updateDoc,
   doc,
+  deleteDoc,
+  limit,
 } from 'firebase/firestore';
+import { createHash } from 'crypto';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -122,6 +125,31 @@ async function downloadAttachment(attachmentId: string, messageId: string, acces
     return null;
   }
 }
+
+const computePdfHash = async (fileUrl: string): Promise<string | null> => {
+  try {
+    let bytes: Uint8Array | null = null;
+
+    if (fileUrl?.startsWith('data:')) {
+      const idx = fileUrl.indexOf('base64,');
+      if (idx !== -1) {
+        const b64 = fileUrl.slice(idx + 'base64,'.length);
+        bytes = new Uint8Array(Buffer.from(b64, 'base64'));
+      }
+    } else if (fileUrl) {
+      const res = await fetch(fileUrl);
+      if (!res.ok) return null;
+      const ab = await res.arrayBuffer();
+      bytes = new Uint8Array(ab);
+    }
+
+    if (!bytes || bytes.length === 0) return null;
+    return createHash('sha256').update(Buffer.from(bytes)).digest('hex');
+  } catch (e) {
+    console.warn('computePdfHash failed', e);
+    return null;
+  }
+};
 
 const normalizeVehicle = (val: string): string => {
   const m = val.match(/\d+/);
@@ -300,16 +328,20 @@ export async function POST(req: NextRequest) {
     const processed: string[] = [];
     const skipped: string[] = [];
     const errors: Array<{ messageId: string; error: string }> = [];
+
+    // We'll build a report from auto-processing of ALL existing auto_pending
     const reportDetails: Array<{
       messageId: string;
+      inboundId?: string;
       fileName: string;
       date?: string;
       vehicle?: string;
       partnerName?: string;
-      status: 'sent' | 'no_vehicle' | 'no_partner' | 'failed';
+      status: 'sent' | 'no_vehicle' | 'no_partner' | 'duplicate' | 'failed';
       error?: string;
     }> = [];
 
+    // 1) Import new emails into inboundRoutes (no direct processing here)
     for (const email of emails) {
       const messageId = email.id;
 
@@ -389,31 +421,20 @@ export async function POST(req: NextRequest) {
             }
           }
 
+          const pdfHash = isPdf && fileUrl ? await computePdfHash(fileUrl) : null;
           attachments.push({
             fileName: att.name || (isPdf ? 'vedlegg.pdf' : 'vedlegg'),
             fileUrl: fileUrl,
             contentType: att.contentType || (isPdf ? 'application/pdf' : 'application/octet-stream'),
             size: att.size || 0,
             isPdf: isPdf,
+            pdfHash: pdfHash || undefined,
           });
           
           console.log(`  ✅ Lagt til vedlegg: ${att.name} (${isPdf ? 'PDF' : att.contentType})`);
         }
       }
 
-      // Parse bilnummer + dato fra PDF (samme prinsipp som mass rute tildeling)
-      let parsedVehicle: string | null = null;
-      let parsedDate: string | null = null;
-      const firstPdf = attachments.find((a) => a?.isPdf && a?.fileUrl);
-      if (firstPdf?.fileUrl) {
-        const txt = await extractPdfText(firstPdf.fileUrl);
-        if (txt) {
-          parsedVehicle = extractVehicleFromText(txt);
-          parsedDate = extractDateFromText(txt);
-        }
-      }
-
-      const routeDate = parsedDate || (email.receivedDateTime ? email.receivedDateTime.split('T')[0] : new Date().toISOString().split('T')[0]);
       const autoProcess = isElkjop || isBackupForm;
 
       try {
@@ -427,107 +448,139 @@ export async function POST(req: NextRequest) {
           sourceDomain: fromEmail.split('@')[1] || '',
           autoProcess,
           status: autoProcess ? 'auto_pending' : 'pending',
-          parsedDate: parsedDate || undefined,
-          parsedVehicle: parsedVehicle || undefined,
           createdAt: Timestamp.fromDate(new Date(email.receivedDateTime || Date.now())),
           updatedAt: Timestamp.now(),
         };
 
-        const inboundRef = await addDoc(collection(db, 'inboundRoutes'), docData);
+        await addDoc(collection(db, 'inboundRoutes'), docData);
         processed.push(messageId);
-
-        // AUTO-DELING: hvis vi har bilnummer og dato, finn partner og opprett routeAssignment direkte
-        if (autoProcess) {
-          if (!parsedVehicle) {
-            await updateDoc(doc(db, 'inboundRoutes', inboundRef.id), {
-              status: 'failed',
-              error: 'Fant ikke bilnummer i PDF',
-              updatedAt: Timestamp.now(),
-            });
-            reportDetails.push({
-              messageId,
-              fileName: firstPdf?.fileName || attachments?.[0]?.fileName || 'Ukjent',
-              date: routeDate,
-              status: 'no_vehicle',
-              error: 'Fant ikke bilnummer i PDF',
-            });
-          } else {
-            const normalizedVehicle = parsedVehicle;
-
-            // Finn partner ut fra bilnummer
-            const partnersSnap = await getDocs(collection(db, 'partners'));
-            let matchedPartner: { id: string; name: string } | null = null;
-            for (const p of partnersSnap.docs) {
-              const pdata: any = p.data();
-              const vehicles = Array.isArray(pdata.vehicles) ? pdata.vehicles : [];
-              for (const v of vehicles) {
-                const vn = normalizeVehicle(v?.vehicleNumber || v?.registrationNumber || v?.vehicleName || '');
-                if (vn && vn === normalizedVehicle) {
-                  matchedPartner = { id: p.id, name: pdata.name || 'Ukjent' };
-                  break;
-                }
-              }
-              if (matchedPartner) break;
-            }
-
-            if (!matchedPartner) {
-              await updateDoc(doc(db, 'inboundRoutes', inboundRef.id), {
-                status: 'failed',
-                error: `Ingen partner funnet for bilnummer ${normalizedVehicle}`,
-                updatedAt: Timestamp.now(),
-              });
-              reportDetails.push({
-                messageId,
-                fileName: firstPdf?.fileName || attachments?.[0]?.fileName || 'Ukjent',
-                date: routeDate,
-                vehicle: normalizedVehicle,
-                status: 'no_partner',
-                error: `Ingen partner funnet for bilnummer ${normalizedVehicle}`,
-              });
-            } else {
-              const pdfFiles = attachments.filter((a) => a?.isPdf && a?.fileUrl);
-              const title = `SAP Rute ${routeDate} (${normalizedVehicle})`;
-
-              const assignmentRef = await addDoc(collection(db, 'routeAssignments'), {
-                partnerId: matchedPartner.id,
-                partnerName: matchedPartner.name,
-                date: routeDate, // IMPORTANT: YYYY-MM-DD (kalenderen matcher på dette)
-                files: pdfFiles,
-                title,
-                job: '',
-                users: [],
-                source: 'sap_inbound',
-                vehicleNumber: normalizedVehicle,
-                inboundMessageId: messageId,
-                createdAt: new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-              });
-
-              await updateDoc(doc(db, 'inboundRoutes', inboundRef.id), {
-                status: 'processed',
-                processedAt: Timestamp.now(),
-                assignmentId: assignmentRef.id,
-                partnerId: matchedPartner.id,
-                partnerName: matchedPartner.name,
-                updatedAt: Timestamp.now(),
-              });
-
-              reportDetails.push({
-                messageId,
-                fileName: firstPdf?.fileName || attachments?.[0]?.fileName || 'Ukjent',
-                date: routeDate,
-                vehicle: normalizedVehicle,
-                partnerName: matchedPartner.name,
-                status: 'sent',
-              });
-            }
-          }
-        }
-
-        console.log(`✅ Prosessert e-post: ${email.subject} (${attachments.length} vedlegg)`);
+        console.log(`✅ Importert e-post: ${email.subject} (${attachments.length} vedlegg)`);
       } catch (docError: any) {
         console.error(`❌ Feil ved lagring av e-post ${messageId}:`, docError);
         errors.push({ messageId, error: docError?.message || 'Ukjent feil' });
+      }
+    }
+
+    // 2) Process ALL existing auto_pending inboundRoutes (super-smart, like mass upload)
+    const partnersSnap = await getDocs(collection(db, 'partners'));
+    const vehicleToPartner = new Map<string, { id: string; name: string }>();
+    partnersSnap.docs.forEach((p) => {
+      const pdata: any = p.data();
+      const vehicles = Array.isArray(pdata.vehicles) ? pdata.vehicles : [];
+      for (const v of vehicles) {
+        const vn = normalizeVehicle(v?.vehicleNumber || v?.registrationNumber || v?.vehicleName || '');
+        if (vn) vehicleToPartner.set(vn, { id: p.id, name: pdata.name || 'Ukjent' });
+      }
+    });
+
+    const pendingSnap = await getDocs(
+      query(collection(db, 'inboundRoutes'), where('status', '==', 'auto_pending'), limit(250))
+    );
+
+    const seenHashes = new Set<string>();
+
+    for (const inbound of pendingSnap.docs) {
+      const inboundId = inbound.id;
+      const inboundData: any = inbound.data();
+      const messageId = inboundData.messageId || inboundId;
+      const receivedAt = inboundData.receivedAt || '';
+      const fallbackDate = receivedAt?.includes('T') ? receivedAt.split('T')[0] : new Date().toISOString().split('T')[0];
+      const attachments = Array.isArray(inboundData.attachments) ? inboundData.attachments : [];
+      const pdfAttachments = attachments.filter((a: any) => a?.isPdf && a?.fileUrl);
+
+      if (pdfAttachments.length === 0) {
+        await updateDoc(doc(db, 'inboundRoutes', inboundId), {
+          status: 'failed',
+          error: 'Ingen PDF-vedlegg funnet',
+          updatedAt: Timestamp.now(),
+        });
+        reportDetails.push({ messageId, inboundId, fileName: attachments?.[0]?.fileName || 'Ukjent', date: fallbackDate, status: 'failed', error: 'Ingen PDF-vedlegg funnet' });
+        continue;
+      }
+
+      // Process EACH PDF (same as mass route upload)
+      const createdAssignmentIds: string[] = [];
+      let hadFailure = false;
+
+      for (const pdf of pdfAttachments) {
+        const fileUrl = pdf.fileUrl as string;
+        const fileName = pdf.fileName || 'vedlegg.pdf';
+
+        const pdfHash = pdf.pdfHash || (await computePdfHash(fileUrl));
+        if (pdfHash) {
+          if (seenHashes.has(pdfHash)) {
+            // Duplicate inside this run -> delete the inbound (keeps system clean)
+            await deleteDoc(doc(db, 'inboundRoutes', inboundId));
+            reportDetails.push({ messageId, inboundId, fileName, date: fallbackDate, status: 'duplicate', error: 'Duplikat PDF (samme innhold)' });
+            hadFailure = true;
+            break;
+          }
+          seenHashes.add(pdfHash);
+
+          // If this PDF already produced a route assignment earlier, delete duplicate inbound
+          const dupSnap = await getDocs(query(collection(db, 'routeAssignments'), where('pdfHash', '==', pdfHash), limit(1)));
+          if (!dupSnap.empty) {
+            await deleteDoc(doc(db, 'inboundRoutes', inboundId));
+            reportDetails.push({ messageId, inboundId, fileName, date: fallbackDate, status: 'duplicate', error: 'Duplikat (rute allerede opprettet tidligere)' });
+            hadFailure = true;
+            break;
+          }
+        }
+
+        const txt = await extractPdfText(fileUrl);
+        const parsedVehicle = txt ? extractVehicleFromText(txt) : null;
+        const parsedDate = txt ? extractDateFromText(txt) : null;
+        const routeDate = parsedDate || inboundData.parsedDate || fallbackDate;
+
+        if (!parsedVehicle) {
+          hadFailure = true;
+          reportDetails.push({ messageId, inboundId, fileName, date: routeDate, status: 'no_vehicle', error: 'Fant ikke bilnummer i PDF' });
+          continue;
+        }
+
+        const partner = vehicleToPartner.get(parsedVehicle);
+        if (!partner) {
+          hadFailure = true;
+          reportDetails.push({ messageId, inboundId, fileName, date: routeDate, vehicle: parsedVehicle, status: 'no_partner', error: `Fant ikke partner for ${parsedVehicle}` });
+          continue;
+        }
+
+        const title = `SAP Rute ${routeDate} (${parsedVehicle})`;
+        const assignmentRef = await addDoc(collection(db, 'routeAssignments'), {
+          partnerId: partner.id,
+          partnerName: partner.name,
+          date: routeDate, // YYYY-MM-DD
+          files: [pdf],
+          title,
+          job: '',
+          users: [],
+          source: 'sap_inbound',
+          vehicleNumber: parsedVehicle,
+          inboundMessageId: messageId,
+          inboundId,
+          pdfHash: pdfHash || undefined,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+
+        createdAssignmentIds.push(assignmentRef.id);
+        reportDetails.push({ messageId, inboundId, fileName, date: routeDate, vehicle: parsedVehicle, partnerName: partner.name, status: 'sent' });
+      }
+
+      if (hadFailure) {
+        await updateDoc(doc(db, 'inboundRoutes', inboundId), {
+          status: 'failed',
+          error: 'En eller flere PDF-er kunne ikke tildeles automatisk',
+          updatedAt: Timestamp.now(),
+        });
+      } else {
+        await updateDoc(doc(db, 'inboundRoutes', inboundId), {
+          status: 'processed',
+          processedAt: Timestamp.now(),
+          assignmentId: createdAssignmentIds.length === 1 ? createdAssignmentIds[0] : undefined,
+          assignmentIds: createdAssignmentIds,
+          updatedAt: Timestamp.now(),
+        });
       }
     }
 
