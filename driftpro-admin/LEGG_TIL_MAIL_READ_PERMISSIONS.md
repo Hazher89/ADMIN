@@ -75,3 +75,4 @@ Når permissions er lagt til og consent er gitt:
 - ✅ Gi **admin consent** etter å ha lagt til permissions
 - ✅ Vent 1-2 minutter etter consent før du tester
 
+

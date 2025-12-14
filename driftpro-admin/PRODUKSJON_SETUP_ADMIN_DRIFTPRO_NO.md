@@ -237,3 +237,4 @@ Når alt er konfigurert:
 4. ✅ Klikk "Oppdater"
 5. ✅ E-posten skal vises i listen!
 
+

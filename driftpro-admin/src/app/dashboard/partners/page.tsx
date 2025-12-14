@@ -1,7 +1,7 @@
 'use client';
 // @ts-nocheck
 
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { firebaseService, Partner } from '@/lib/firebase-services';
 
 interface RouteAssignment {
@@ -28,7 +28,7 @@ interface RouteAssignment {
   }
 import { useAuth } from '@/contexts/AuthContext';
 import { createUserWithEmailAndPassword } from 'firebase/auth';
-import { doc, setDoc } from 'firebase/firestore';
+import { doc, setDoc, deleteDoc, updateDoc, addDoc, collection, serverTimestamp } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import { brrgService } from '@/lib/brrg-service';
 import { 
@@ -57,6 +57,7 @@ import {
 
 export default function PartnersPage() {
   const { userProfile } = useAuth();
+  const inboundAutoRunningRef = useRef(false);
   const [isMobile, setIsMobile] = useState(false);
   const [partners, setPartners] = useState<Partner[]>([]);
   const [filteredPartners, setFilteredPartners] = useState<Partner[]>([]);
@@ -186,6 +187,67 @@ export default function PartnersPage() {
   const [inboundItems, setInboundItems] = useState<any[]>([]);
   const [inboundLoading, setInboundLoading] = useState(false);
   const [processingReport, setProcessingReport] = useState<any>(null);
+
+  // UI helper: keep counters consistent with what's shown in the table
+  // (latestReport can legitimately be 0 if there were no auto_pending in the last run,
+  // while the table can still contain old failed/pending items).
+  const inboundDerived = useMemo(() => {
+    const items = Array.isArray(inboundItems) ? inboundItems : [];
+    let total = 0;
+    let failed = 0;
+    let pending = 0;
+    let autoPending = 0;
+    for (const it of items) {
+      total += 1;
+      const s = String(it?.status || 'pending').toLowerCase();
+      if (s === 'failed') failed += 1;
+      else if (s === 'auto_pending') autoPending += 1;
+      else pending += 1; // pending/unknown
+    }
+    return { total, failed, pending, autoPending };
+  }, [inboundItems]);
+
+  const displayProcessingReport = useMemo(() => {
+    const pr = processingReport || null;
+    const prTotal = Number(pr?.total ?? 0) || 0;
+    const prSent = Number(pr?.sent ?? pr?.processed ?? 0) || 0;
+    const prFailed = Number(pr?.failed ?? 0) || 0;
+
+    // ALWAYS use the actual table counts as the source of truth
+    // The stored report might be from an old sync run, but the table shows current reality
+    const items = Array.isArray(inboundItems) ? inboundItems : [];
+    const byDate: Record<string, { total: number; sent: number; failed: number }> = {};
+    
+    for (const it of items) {
+      const rawReceived = it?.receivedAt;
+      const receivedStr = typeof rawReceived === 'string' ? rawReceived : '';
+      const createdAtDate =
+        typeof it?.createdAt?.toDate === 'function'
+          ? it.createdAt.toDate()
+          : it?.createdAt instanceof Date
+          ? it.createdAt
+          : null;
+      const dateKey =
+        (receivedStr && receivedStr.includes('T') ? receivedStr.split('T')[0] : '') ||
+        (createdAtDate ? new Date(createdAtDate).toISOString().split('T')[0] : '') ||
+        'ukjent';
+
+      byDate[dateKey] = byDate[dateKey] || { total: 0, sent: 0, failed: 0 };
+      byDate[dateKey].total += 1;
+      const s = String(it?.status || 'pending').toLowerCase();
+      if (s === 'failed') byDate[dateKey].failed += 1;
+      else if (s === 'processed' || s === 'sent') byDate[dateKey].sent += 1;
+    }
+
+    // Merge stored report metadata (like createdAt) with accurate counts from table
+    return {
+      ...(pr || {}),
+      total: inboundDerived.total > 0 ? inboundDerived.total : prTotal,
+      sent: inboundDerived.total > 0 ? (inboundDerived.total - inboundDerived.failed - inboundDerived.pending - inboundDerived.autoPending) : prSent,
+      failed: inboundDerived.failed > 0 ? inboundDerived.failed : prFailed,
+      byDate: Object.keys(byDate).length > 0 ? byDate : (pr?.byDate || {}),
+    };
+  }, [processingReport, inboundDerived.total, inboundDerived.failed, inboundDerived.pending, inboundDerived.autoPending, inboundItems]);
 
   // Auto-refresh inbound while modal is open (keeps it "instant" without DevTools)
   useEffect(() => {
@@ -435,6 +497,20 @@ export default function PartnersPage() {
         if (data?.latestReport) {
           setProcessingReport(data.latestReport);
         }
+
+        // Super-smart: use the SAME PDF reader as Mass rute tildeling to auto-assign inbound items
+        // This fixes many "failed" cases that serverless PDF parsing can't handle reliably.
+        // Run automatically when items are loaded (not just when modal is open) to process failed items
+        if (Array.isArray(data.items) && data.items.length > 0) {
+          // Only process if there are items that need processing (auto_pending, failed, pending)
+          const needsProcessing = data.items.some((item: any) => {
+            const status = String(item?.status || '').toLowerCase();
+            return ['auto_pending', 'failed', 'pending'].includes(status);
+          });
+          if (needsProcessing) {
+            await autoAssignInboundUsingMassLogic(data.items);
+          }
+        }
       } else {
         console.error('❌ Feil ved henting av innkommende ruter:', data);
         if (!res.ok) {
@@ -584,6 +660,248 @@ export default function PartnersPage() {
     }
 
     return null;
+  };
+
+  const extractDateFromPdf = async (file: File): Promise<string | null> => {
+    // Match server-side logic, but using the same pdfjs/OCR approach as vehicle parsing.
+    const normalizeDate = (raw: string): string | null => {
+      const parts = raw.includes('-')
+        ? raw.split('-')
+        : raw.includes('.')
+        ? raw.split('.')
+        : raw.split('/');
+      if (parts.length !== 3) return null;
+
+      let y: number, m: number, d: number;
+      if (parts[0].length === 4) {
+        y = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10);
+        d = parseInt(parts[2], 10);
+      } else {
+        d = parseInt(parts[0], 10);
+        m = parseInt(parts[1], 10);
+        y = parseInt(parts[2], 10);
+        if (y < 100) y += 2000;
+      }
+      if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return null;
+      const mm = m < 10 ? `0${m}` : `${m}`;
+      const dd = d < 10 ? `0${d}` : `${d}`;
+      return `${y}-${mm}-${dd}`;
+    };
+
+    const parseFromText = (text: string): string | null => {
+      const startDateRe = /start\s*date[:\s-]*((?:\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})|(?:\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}))/i;
+      const genericRe = /(\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}|\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/;
+      const first = text.match(startDateRe);
+      if (first?.[1]) {
+        const norm = normalizeDate(first[1]);
+        if (norm) return norm;
+      }
+      const fallback = text.match(genericRe);
+      if (fallback?.[1]) {
+        const norm = normalizeDate(fallback[1]);
+        if (norm) return norm;
+      }
+      return null;
+    };
+
+    const tryPdfJsText = async (): Promise<string | null> => {
+      if (typeof window === 'undefined') return null;
+      try {
+        const pdfjs = await import('pdfjs-dist');
+        // @ts-ignore
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+        const data = await file.arrayBuffer();
+        const loadingTask = await pdfjs.getDocument({ data });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const txt = await page.getTextContent();
+        const str = txt.items.map((i: any) => i.str || '').join(' ');
+        return str || null;
+      } catch (err) {
+        console.warn('pdfjs date parse failed:', err);
+        return null;
+      }
+    };
+
+    const tryOcr = async (): Promise<string | null> => {
+      if (typeof window === 'undefined') return null;
+      try {
+        const pdfjs = await import('pdfjs-dist');
+        // @ts-ignore
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+        const data = await file.arrayBuffer();
+        const loadingTask = await pdfjs.getDocument({ data });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const { recognize } = await import('tesseract.js');
+        const result = await recognize(canvas, 'eng');
+        return result?.data?.text || null;
+      } catch (err) {
+        console.warn('OCR date parse failed:', err);
+        return null;
+      }
+    };
+
+    const text = await tryPdfJsText();
+    if (text) {
+      const d = parseFromText(text);
+      if (d) return d;
+    }
+
+    const ocrText = await tryOcr();
+    if (ocrText) {
+      const d = parseFromText(ocrText);
+      if (d) return d;
+    }
+
+    return null;
+  };
+
+  const dataUrlToFile = async (dataUrl: string, fileName: string): Promise<File> => {
+    // fetch supports data: urls, and is simpler than manual base64 decoding
+    const res = await fetch(dataUrl);
+    const blob = await res.blob();
+    return new File([blob], fileName || 'vedlegg.pdf', { type: blob.type || 'application/pdf' });
+  };
+
+  const sha256Hex = async (data: ArrayBuffer): Promise<string> => {
+    const digest = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
+  };
+
+  const autoAssignInboundUsingMassLogic = async (items: any[]) => {
+    if (!db) return;
+    if (inboundAutoRunningRef.current) return;
+    inboundAutoRunningRef.current = true;
+    try {
+      const nowIso = new Date().toISOString();
+      const results: any[] = [];
+      const seenHashes = new Set<string>();
+
+      // Process newest first
+      for (const item of (Array.isArray(items) ? items : [])) {
+        const status = String(item?.status || '').toLowerCase();
+        if (!['auto_pending', 'failed', 'pending'].includes(status)) continue;
+
+        const atts = Array.isArray(item.attachments) ? item.attachments : [];
+        const pdfAtt = atts.find((a: any) => a?.isPdf && a?.fileUrl) || atts.find((a: any) => a?.fileUrl);
+        if (!pdfAtt?.fileUrl) {
+          results.push({ status: 'failed', message: 'Ingen PDF-vedlegg', date: item.receivedAt?.split('T')?.[0], fileName: pdfAtt?.fileName || 'Ukjent', inboundId: item.id });
+          continue;
+        }
+
+        const file = await dataUrlToFile(pdfAtt.fileUrl, pdfAtt.fileName || 'SAP.pdf');
+        const buf = await file.arrayBuffer();
+        const hash = await sha256Hex(buf);
+
+        // Dedupe (same PDF content)
+        if (seenHashes.has(hash)) {
+          try { await deleteDoc(doc(db, 'inboundRoutes', item.id)); } catch {}
+          results.push({ status: 'duplicate', message: 'Duplikat PDF (samme innhold) – slettet', fileName: file.name, inboundId: item.id });
+          continue;
+        }
+        seenHashes.add(hash);
+
+        const vehicleDigits = await extractVehicleNumberFromPdf(file);
+        const dateIso = (await extractDateFromPdf(file)) || (item.receivedAt?.split('T')?.[0] || new Date().toISOString().split('T')[0]);
+
+        if (!vehicleDigits) {
+          // Update Firestore status so it can be tracked
+          try {
+            await updateDoc(doc(db, 'inboundRoutes', item.id), {
+              status: 'failed',
+              error: 'Fant ikke bilnummer i PDF (prøvd med OCR)',
+              updatedAt: serverTimestamp(),
+            });
+          } catch {}
+          results.push({ status: 'failed', message: 'Fant ikke bilnummer i PDF', date: dateIso, fileName: file.name, inboundId: item.id });
+          continue;
+        }
+
+        const partner = findPartnerByVehicleNumber(vehicleDigits);
+        if (!partner) {
+          // Update Firestore status so it can be tracked
+          try {
+            await updateDoc(doc(db, 'inboundRoutes', item.id), {
+              status: 'failed',
+              error: `Fant ikke partner for bilnummer ${vehicleDigits}`,
+              updatedAt: serverTimestamp(),
+            });
+          } catch {}
+          results.push({ status: 'failed', message: `Fant ikke partner for bilnummer ${vehicleDigits}`, date: dateIso, fileName: file.name, vehicle: vehicleDigits, inboundId: item.id });
+          continue;
+        }
+
+        // Create assignment exactly like mass route tildeling
+        const uploaded = await uploadFilesToFirebase([file], partner.id);
+        const title = `SAP Rute ${dateIso} (${vehicleDigits})`;
+        const assignmentId = await firebaseService.createRouteAssignment({
+          partnerId: partner.id,
+          partnerName: partner.name,
+          date: dateIso,
+          files: uploaded,
+          title,
+          job: '',
+          users: [],
+        });
+
+        // Archive then delete inbound to keep it clean
+        try {
+          await addDoc(collection(db, 'inboundRoutesArchive'), {
+            ...item,
+            archivedAt: nowIso,
+            processedAt: nowIso,
+            status: 'processed',
+            assignmentId,
+            pdfHash: hash,
+          });
+        } catch {}
+        try { await deleteDoc(doc(db, 'inboundRoutes', item.id)); } catch {}
+
+        results.push({ status: 'sent', message: `Sendt til ${partner.name} (${vehicleDigits})`, date: dateIso, fileName: file.name, vehicle: vehicleDigits, partnerName: partner.name });
+      }
+
+      // Build report for UI
+      const byDate: Record<string, { total: number; sent: number; failed: number }> = {};
+      for (const r of results) {
+        const dk = r.date || 'ukjent';
+        byDate[dk] = byDate[dk] || { total: 0, sent: 0, failed: 0 };
+        byDate[dk].total += 1;
+        if (r.status === 'sent') byDate[dk].sent += 1;
+        else if (r.status !== 'duplicate') byDate[dk].failed += 1;
+      }
+
+      setProcessingReport({
+        total: results.length,
+        sent: results.filter(r => r.status === 'sent').length,
+        failed: results.filter(r => r.status === 'failed').length,
+        byDate,
+        details: results,
+        createdAt: nowIso,
+      });
+
+      // Refresh inbound list
+      try {
+        const res = await fetch('/api/inbound/sap');
+        const text = await res.text();
+        const data = text ? JSON.parse(text) : null;
+        if (data?.success && Array.isArray(data.items)) {
+          setInboundItems(data.items);
+        }
+      } catch {}
+    } finally {
+      inboundAutoRunningRef.current = false;
+    }
   };
 
   const findPartnerByVehicleNumber = (vehicleNumber: string): Partner | null => {
@@ -1954,7 +2272,7 @@ export default function PartnersPage() {
 
             <div style={{ padding: '1rem 1.25rem', overflowY: 'auto', maxHeight: '70vh' }}>
               {/* Rapport (vises alltid hvis den finnes) */}
-              {processingReport && (
+              {displayProcessingReport && (
                 <div style={{
                   marginBottom: '1rem',
                   padding: '0.9rem 1rem',
@@ -1967,23 +2285,23 @@ export default function PartnersPage() {
                       Rapport: Automatisk utsending fra SAP
                     </div>
                     <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
-                      {processingReport.createdAt ? new Date(processingReport.createdAt).toLocaleString('no-NO') : ''}
+                      {displayProcessingReport.createdAt ? new Date(displayProcessingReport.createdAt).toLocaleString('no-NO') : ''}
                     </div>
                   </div>
                   <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <span className="badge" style={{ background: '#1f2937', color: '#e5e7eb', border: '1px solid #334155' }}>
-                      Totalt: {processingReport.total ?? 0}
+                      Totalt: {displayProcessingReport.total ?? 0}
                     </span>
                     <span className="badge" style={{ background: '#064e3b', color: '#10b981', border: '1px solid #065f46' }}>
-                      Sendt: {processingReport.sent ?? processingReport.processed ?? 0}
+                      Sendt: {displayProcessingReport.sent ?? displayProcessingReport.processed ?? 0}
                     </span>
                     <span className="badge" style={{ background: '#7f1d1d', color: '#ef4444', border: '1px solid #991b1b' }}>
-                      Feilet: {processingReport.failed ?? 0}
+                      Feilet: {displayProcessingReport.failed ?? 0}
                     </span>
                   </div>
-                  {processingReport.byDate && (
+                  {displayProcessingReport.byDate && (
                     <div style={{ marginTop: '0.75rem', color: '#cbd5e1', fontSize: '0.9rem' }}>
-                      {Object.entries(processingReport.byDate).map(([date, stats]: any) => {
+                      {Object.entries(displayProcessingReport.byDate).map(([date, stats]: any) => {
                         const total = stats?.total ?? 0;
                         const sent = stats?.sent ?? 0;
                         const failed = stats?.failed ?? 0;
@@ -2009,7 +2327,7 @@ export default function PartnersPage() {
                   color: 'var(--gray-600)',
                   textAlign: 'center'
                 }}>
-                  {processingReport && (processingReport.failed ?? 0) === 0
+                  {displayProcessingReport && (displayProcessingReport.failed ?? 0) === 0
                     ? 'Alt er sendt ✅ (listen blir tom når alt er tildelt)'
                     : 'Ingen innkommende ruter som venter (se rapport over).'}
                 </div>
@@ -2049,8 +2367,19 @@ export default function PartnersPage() {
                             <span style={{ color: '#94a3b8' }}>Ingen vedlegg</span>
                           )}
                         </td>
-                        <td style={{ padding: '0.5rem', color: '#22c55e', fontWeight: 700 }}>
-                          {item.status || 'pending'}
+                        <td
+                          style={{
+                            padding: '0.5rem',
+                            fontWeight: 800,
+                            color:
+                              String(item.status || 'pending').toLowerCase() === 'failed'
+                                ? '#ef4444'
+                                : String(item.status || 'pending').toLowerCase() === 'auto_pending'
+                                ? '#38bdf8'
+                                : '#f59e0b',
+                          }}
+                        >
+                          {String(item.status || 'pending')}
                         </td>
                       </tr>
                     ))}
