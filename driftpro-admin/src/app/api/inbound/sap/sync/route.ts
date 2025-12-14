@@ -178,13 +178,18 @@ const normalizeVehicle = (val: string): string => {
 };
 
 const extractVehicleFromText = (text: string): string | null => {
+  const primary = String(text || '').slice(0, 50000);
+  const corrected = primary.replace(/O/g, '0').replace(/o/g, '0');
   const checks = [
     /NO[_\s-]?O[_\s-]?M0*?(\d{1,4})/i,
     /RESOURCE\s*ID[^A-Za-z0-9]+M0*?(\d{1,4})/i,
     /\bM0*?(\d{1,4})\b/i,
+    // Backup Form / label-based variants (sometimes vehicle is digits-only in mail body)
+    /(?:vehicle|truck|bil)\s*(?:id|no|nr|number|nummer)?\s*[:#\-\s]*M?\s*0*([0-9]{1,4})/i,
+    /(?:resource)\s*id[^A-Za-z0-9]*M?\s*0*([0-9]{1,4})/i,
   ];
   for (const re of checks) {
-    const m = text.match(re);
+    const m = primary.match(re) || corrected.match(re);
     if (m && m[1]) {
       const v = normalizeVehicle(m[1]);
       if (v && v !== 'M000') return v;
@@ -194,6 +199,8 @@ const extractVehicleFromText = (text: string): string | null => {
 };
 
 const extractDateFromText = (text: string): string | null => {
+  const labeledRe =
+    /(?:route\s*date|rute\s*dato|delivery\s*date|leverings\s*dato|date|dato)\s*[:\s-]*((?:\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})|(?:\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}))/i;
   const startDateRe = /start\s*date[:\s-]*((?:\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})|(?:\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}))/i;
   const genericRe = /(\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}|\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/;
   const normalize = (raw: string) => {
@@ -219,6 +226,11 @@ const extractDateFromText = (text: string): string | null => {
     const dd = d < 10 ? `0${d}` : `${d}`;
     return `${y}-${mm}-${dd}`;
   };
+  const labeled = text.match(labeledRe);
+  if (labeled && labeled[1]) {
+    const norm = normalize(labeled[1]);
+    if (norm) return norm;
+  }
   const first = text.match(startDateRe);
   if (first && first[1]) {
     const norm = normalize(first[1]);
@@ -527,6 +539,7 @@ export async function POST(req: NextRequest) {
       // Process EACH PDF (same as mass route upload)
       const createdAssignmentIds: string[] = [];
       let hadFailure = false;
+      const inboundErrors: string[] = [];
 
       for (const pdf of pdfAttachments) {
         const fileUrl = pdf.fileUrl as string;
@@ -539,6 +552,7 @@ export async function POST(req: NextRequest) {
             await deleteDoc(doc(db, 'inboundRoutes', inboundId));
             reportDetails.push({ messageId, inboundId, fileName, date: fallbackDate, status: 'duplicate', error: 'Duplikat PDF (samme innhold)' });
             hadFailure = true;
+            inboundErrors.push('Duplikat PDF (samme innhold)');
             break;
           }
           seenHashes.add(pdfHash);
@@ -549,6 +563,7 @@ export async function POST(req: NextRequest) {
             await deleteDoc(doc(db, 'inboundRoutes', inboundId));
             reportDetails.push({ messageId, inboundId, fileName, date: fallbackDate, status: 'duplicate', error: 'Duplikat (rute allerede opprettet tidligere)' });
             hadFailure = true;
+            inboundErrors.push('Duplikat (allerede opprettet tidligere)');
             break;
           }
         }
@@ -574,6 +589,7 @@ export async function POST(req: NextRequest) {
 
         if (!routeDate) {
           hadFailure = true;
+          inboundErrors.push('Mangler rutedato');
           reportDetails.push({
             messageId,
             inboundId,
@@ -587,6 +603,7 @@ export async function POST(req: NextRequest) {
 
         if (!parsedVehicle) {
           hadFailure = true;
+          inboundErrors.push('Mangler bilnummer');
           reportDetails.push({ messageId, inboundId, fileName, date: routeDate, status: 'no_vehicle', error: 'Fant ikke bilnummer (hverken i PDF-tekst eller e-posttekst)' });
           continue;
         }
@@ -594,6 +611,7 @@ export async function POST(req: NextRequest) {
         const partner = vehicleToPartner.get(parsedVehicle);
         if (!partner) {
           hadFailure = true;
+          inboundErrors.push(`Mangler partner for ${parsedVehicle}`);
           reportDetails.push({ messageId, inboundId, fileName, date: routeDate, vehicle: parsedVehicle, status: 'no_partner', error: `Fant ikke partner for ${parsedVehicle}` });
           continue;
         }
@@ -623,7 +641,7 @@ export async function POST(req: NextRequest) {
       if (hadFailure) {
         await updateDoc(doc(db, 'inboundRoutes', inboundId), {
           status: 'failed',
-          error: 'Auto-prosess feilet: se rapportdetaljer (mangler dato/bil/partner eller duplikat)',
+          error: inboundErrors.length > 0 ? `Auto-prosess feilet: ${Array.from(new Set(inboundErrors)).join(', ')}` : 'Auto-prosess feilet (ukjent årsak)',
           updatedAt: Timestamp.now(),
         });
       } else {

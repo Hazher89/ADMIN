@@ -888,7 +888,15 @@ export default function PartnersPage() {
           parsedCache.set(hash, { vehicleDigits, parsedDateFromPdf });
         }
         const fallbackDate = item.receivedAt?.split('T')?.[0] || new Date().toISOString().split('T')[0];
-        const routeDate = parsedDateFromPdf || fallbackDate;
+        // Accept server-extracted parsedDate (from email body) as a fallback when PDF is image-only.
+        const existingParsedDate =
+          (typeof item?.parsedDate === 'string' && item.parsedDate) ||
+          (typeof item?.parsedDateFromPdf === 'string' && item.parsedDateFromPdf) ||
+          '';
+        const routeDate =
+          parsedDateFromPdf ||
+          (existingParsedDate && /^\d{4}-\d{2}-\d{2}$/.test(existingParsedDate) ? existingParsedDate : '') ||
+          fallbackDate;
 
         if (!vehicleDigits) {
           // Update Firestore status so it can be tracked
@@ -914,7 +922,7 @@ export default function PartnersPage() {
         } catch {}
 
         // We require a PDF route date to avoid misleading groupings / wrong assignments
-        if (!parsedDateFromPdf) {
+        if (!parsedDateFromPdf && !(existingParsedDate && /^\d{4}-\d{2}-\d{2}$/.test(existingParsedDate))) {
           try {
             await updateDoc(doc(db, 'inboundRoutes', item.id), {
               status: 'failed',
