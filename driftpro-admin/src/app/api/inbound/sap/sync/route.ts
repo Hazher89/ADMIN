@@ -7,6 +7,8 @@ import {
   query,
   where,
   getDocs,
+  updateDoc,
+  doc,
 } from 'firebase/firestore';
 
 export const runtime = 'nodejs';
@@ -121,6 +123,108 @@ async function downloadAttachment(attachmentId: string, messageId: string, acces
   }
 }
 
+const normalizeVehicle = (val: string): string => {
+  const m = val.match(/\d+/);
+  if (!m) return '';
+  const n = parseInt(m[0], 10);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  if (n < 10) return `M00${n}`;
+  if (n < 100) return `M0${n}`;
+  return `M${n}`;
+};
+
+const extractVehicleFromText = (text: string): string | null => {
+  const checks = [
+    /NO[_\s-]?O[_\s-]?M0*?(\d{1,4})/i,
+    /RESOURCE\s*ID[^A-Za-z0-9]+M0*?(\d{1,4})/i,
+    /\bM0*?(\d{1,4})\b/i,
+  ];
+  for (const re of checks) {
+    const m = text.match(re);
+    if (m && m[1]) {
+      const v = normalizeVehicle(m[1]);
+      if (v && v !== 'M000') return v;
+    }
+  }
+  return null;
+};
+
+const extractDateFromText = (text: string): string | null => {
+  const startDateRe = /start\s*date[:\s-]*((?:\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2})|(?:\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}))/i;
+  const genericRe = /(\d{4}[.\-/]\d{1,2}[.\-/]\d{1,2}|\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4})/;
+  const normalize = (raw: string) => {
+    const parts = raw.includes('-')
+      ? raw.split('-')
+      : raw.includes('.')
+      ? raw.split('.')
+      : raw.split('/');
+    if (parts.length !== 3) return null;
+    let y: number, m: number, d: number;
+    if (parts[0].length === 4) {
+      y = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10);
+      d = parseInt(parts[2], 10);
+    } else {
+      d = parseInt(parts[0], 10);
+      m = parseInt(parts[1], 10);
+      y = parseInt(parts[2], 10);
+      if (y < 100) y += 2000;
+    }
+    if (!y || !m || !d || m < 1 || m > 12 || d < 1 || d > 31) return null;
+    const mm = m < 10 ? `0${m}` : `${m}`;
+    const dd = d < 10 ? `0${d}` : `${d}`;
+    return `${y}-${mm}-${dd}`;
+  };
+  const first = text.match(startDateRe);
+  if (first && first[1]) {
+    const norm = normalize(first[1]);
+    if (norm) return norm;
+  }
+  const fallback = text.match(genericRe);
+  if (fallback && fallback[1]) {
+    const norm = normalize(fallback[1]);
+    if (norm) return norm;
+  }
+  return null;
+};
+
+async function extractPdfText(fileUrl: string): Promise<string | null> {
+  try {
+    let data: Uint8Array | null = null;
+
+    if (fileUrl.startsWith('data:')) {
+      const idx = fileUrl.indexOf('base64,');
+      if (idx !== -1) {
+        const b64 = fileUrl.slice(idx + 'base64,'.length);
+        data = new Uint8Array(Buffer.from(b64, 'base64'));
+      }
+    } else {
+      const res = await fetch(fileUrl);
+      if (!res.ok) return null;
+      const arrayBuffer = await res.arrayBuffer();
+      data = new Uint8Array(arrayBuffer);
+    }
+
+    if (!data) return null;
+
+    // @ts-ignore
+    const pdfjsLib = await import('pdfjs-dist/legacy/build/pdf');
+    const doc = await pdfjsLib.getDocument({ data }).promise;
+    let text = '';
+    const maxPages = Math.min(doc.numPages, 5);
+    for (let i = 1; i <= maxPages; i++) {
+      const page = await doc.getPage(i);
+      const content = await page.getTextContent();
+      const pageText = (content.items as any[]).map((it: any) => it.str || '').join(' ');
+      text += ' ' + pageText;
+    }
+    return text;
+  } catch (err) {
+    console.error('PDF parse error (sync)', err);
+    return null;
+  }
+}
+
 export async function POST(req: NextRequest) {
   if (!isFirebaseAvailable()) {
     return NextResponse.json(
@@ -196,6 +300,15 @@ export async function POST(req: NextRequest) {
     const processed: string[] = [];
     const skipped: string[] = [];
     const errors: Array<{ messageId: string; error: string }> = [];
+    const reportDetails: Array<{
+      messageId: string;
+      fileName: string;
+      date?: string;
+      vehicle?: string;
+      partnerName?: string;
+      status: 'sent' | 'no_vehicle' | 'no_partner' | 'failed';
+      error?: string;
+    }> = [];
 
     for (const email of emails) {
       const messageId = email.id;
@@ -288,37 +401,168 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      try {
-      const docData = {
-        messageId: messageId,
-        from: email.from?.emailAddress?.address || email.sender?.emailAddress?.address || '',
-        subject: email.subject || '',
-        receivedAt: email.receivedDateTime || new Date().toISOString(),
-        attachments,
-        note: 'Synkronisert fra Microsoft Graph',
-        sourceDomain: fromEmail.split('@')[1] || '',
-        // "Backup Form" e-poster fra SAP skal også behandles automatisk
-        autoProcess: isElkjop || isBackupForm,
-        status: (isElkjop || isBackupForm) ? 'auto_pending' : 'pending',
-        createdAt: Timestamp.fromDate(new Date(email.receivedDateTime || Date.now())),
-        updatedAt: Timestamp.now(),
-      };
+      // Parse bilnummer + dato fra PDF (samme prinsipp som mass rute tildeling)
+      let parsedVehicle: string | null = null;
+      let parsedDate: string | null = null;
+      const firstPdf = attachments.find((a) => a?.isPdf && a?.fileUrl);
+      if (firstPdf?.fileUrl) {
+        const txt = await extractPdfText(firstPdf.fileUrl);
+        if (txt) {
+          parsedVehicle = extractVehicleFromText(txt);
+          parsedDate = extractDateFromText(txt);
+        }
+      }
 
-        await addDoc(collection(db, 'inboundRoutes'), docData);
+      const routeDate = parsedDate || (email.receivedDateTime ? email.receivedDateTime.split('T')[0] : new Date().toISOString().split('T')[0]);
+      const autoProcess = isElkjop || isBackupForm;
+
+      try {
+        const docData: any = {
+          messageId: messageId,
+          from: email.from?.emailAddress?.address || email.sender?.emailAddress?.address || '',
+          subject: email.subject || '',
+          receivedAt: email.receivedDateTime || new Date().toISOString(),
+          attachments,
+          note: 'Synkronisert fra Microsoft Graph',
+          sourceDomain: fromEmail.split('@')[1] || '',
+          autoProcess,
+          status: autoProcess ? 'auto_pending' : 'pending',
+          parsedDate: parsedDate || undefined,
+          parsedVehicle: parsedVehicle || undefined,
+          createdAt: Timestamp.fromDate(new Date(email.receivedDateTime || Date.now())),
+          updatedAt: Timestamp.now(),
+        };
+
+        const inboundRef = await addDoc(collection(db, 'inboundRoutes'), docData);
         processed.push(messageId);
-        console.log(`✅ Prosessert e-post: ${email.subject} (${attachments.length} PDF-vedlegg)`);
+
+        // AUTO-DELING: hvis vi har bilnummer og dato, finn partner og opprett routeAssignment direkte
+        if (autoProcess) {
+          if (!parsedVehicle) {
+            await updateDoc(doc(db, 'inboundRoutes', inboundRef.id), {
+              status: 'failed',
+              error: 'Fant ikke bilnummer i PDF',
+              updatedAt: Timestamp.now(),
+            });
+            reportDetails.push({
+              messageId,
+              fileName: firstPdf?.fileName || attachments?.[0]?.fileName || 'Ukjent',
+              date: routeDate,
+              status: 'no_vehicle',
+              error: 'Fant ikke bilnummer i PDF',
+            });
+          } else {
+            const normalizedVehicle = parsedVehicle;
+
+            // Finn partner ut fra bilnummer
+            const partnersSnap = await getDocs(collection(db, 'partners'));
+            let matchedPartner: { id: string; name: string } | null = null;
+            for (const p of partnersSnap.docs) {
+              const pdata: any = p.data();
+              const vehicles = Array.isArray(pdata.vehicles) ? pdata.vehicles : [];
+              for (const v of vehicles) {
+                const vn = normalizeVehicle(v?.vehicleNumber || v?.registrationNumber || v?.vehicleName || '');
+                if (vn && vn === normalizedVehicle) {
+                  matchedPartner = { id: p.id, name: pdata.name || 'Ukjent' };
+                  break;
+                }
+              }
+              if (matchedPartner) break;
+            }
+
+            if (!matchedPartner) {
+              await updateDoc(doc(db, 'inboundRoutes', inboundRef.id), {
+                status: 'failed',
+                error: `Ingen partner funnet for bilnummer ${normalizedVehicle}`,
+                updatedAt: Timestamp.now(),
+              });
+              reportDetails.push({
+                messageId,
+                fileName: firstPdf?.fileName || attachments?.[0]?.fileName || 'Ukjent',
+                date: routeDate,
+                vehicle: normalizedVehicle,
+                status: 'no_partner',
+                error: `Ingen partner funnet for bilnummer ${normalizedVehicle}`,
+              });
+            } else {
+              const pdfFiles = attachments.filter((a) => a?.isPdf && a?.fileUrl);
+              const title = `SAP Rute ${routeDate} (${normalizedVehicle})`;
+
+              const assignmentRef = await addDoc(collection(db, 'routeAssignments'), {
+                partnerId: matchedPartner.id,
+                partnerName: matchedPartner.name,
+                date: routeDate, // IMPORTANT: YYYY-MM-DD (kalenderen matcher på dette)
+                files: pdfFiles,
+                title,
+                job: '',
+                users: [],
+                source: 'sap_inbound',
+                vehicleNumber: normalizedVehicle,
+                inboundMessageId: messageId,
+                createdAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              });
+
+              await updateDoc(doc(db, 'inboundRoutes', inboundRef.id), {
+                status: 'processed',
+                processedAt: Timestamp.now(),
+                assignmentId: assignmentRef.id,
+                partnerId: matchedPartner.id,
+                partnerName: matchedPartner.name,
+                updatedAt: Timestamp.now(),
+              });
+
+              reportDetails.push({
+                messageId,
+                fileName: firstPdf?.fileName || attachments?.[0]?.fileName || 'Ukjent',
+                date: routeDate,
+                vehicle: normalizedVehicle,
+                partnerName: matchedPartner.name,
+                status: 'sent',
+              });
+            }
+          }
+        }
+
+        console.log(`✅ Prosessert e-post: ${email.subject} (${attachments.length} vedlegg)`);
       } catch (docError: any) {
         console.error(`❌ Feil ved lagring av e-post ${messageId}:`, docError);
         errors.push({ messageId, error: docError?.message || 'Ukjent feil' });
       }
     }
 
+    // Lag en enkel rapport per dato (som du beskrev)
+    const byDate: Record<string, { total: number; sent: number; failed: number }> = {};
+    for (const d of reportDetails) {
+      const dateKey = d.date || 'ukjent';
+      byDate[dateKey] = byDate[dateKey] || { total: 0, sent: 0, failed: 0 };
+      byDate[dateKey].total += 1;
+      if (d.status === 'sent') byDate[dateKey].sent += 1;
+      else byDate[dateKey].failed += 1;
+    }
+
+    const report = {
+      total: reportDetails.length,
+      sent: reportDetails.filter((d) => d.status === 'sent').length,
+      failed: reportDetails.filter((d) => d.status !== 'sent').length,
+      byDate,
+      details: reportDetails,
+      createdAt: new Date().toISOString(),
+    };
+
+    // Lagre "siste rapport" i Firestore så UI kan vise den når man åpner modalen
+    await addDoc(collection(db, 'inboundRouteRuns'), {
+      createdAt: Timestamp.now(),
+      report,
+    });
+
     return NextResponse.json({
       success: true,
       processed: processed.length,
       skipped: skipped.length,
       errors: errors.length,
-      message: `Prosessert ${processed.length} nye e-poster, hoppet over ${skipped.length} duplikater${errors.length > 0 ? `, ${errors.length} feil` : ''}`,
+      report,
+      message: `Synk ferdig: ${processed.length} nye e-poster, ${skipped.length} duplikater${errors.length > 0 ? `, ${errors.length} feil` : ''}. Auto-sending: ${report.sent} sendt, ${report.failed} feilet.`,
       debug: {
         totalEmails: emails.length,
         emailsWithAttachments: emails.filter(e => e.hasAttachments).length,

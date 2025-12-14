@@ -7,6 +7,8 @@ import {
   orderBy,
   query,
   Timestamp,
+  where,
+  limit,
 } from 'firebase/firestore';
 
 export const runtime = 'nodejs';
@@ -132,11 +134,30 @@ export async function GET() {
     );
   }
 
+  // Vis kun ruter som ikke er "sendt/processed" (slik at listen blir tom når alt er sendt)
   const snap = await getDocs(
-    query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'))
+    query(
+      collection(db, 'inboundRoutes'),
+      where('status', 'in', ['pending', 'auto_pending', 'failed']),
+      orderBy('createdAt', 'desc')
+    )
   );
   const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-  return NextResponse.json({ success: true, items });
+
+  // Hent siste rapport (hvis finnes)
+  let latestReport: any = null;
+  try {
+    const runSnap = await getDocs(
+      query(collection(db, 'inboundRouteRuns'), orderBy('createdAt', 'desc'), limit(1))
+    );
+    if (!runSnap.empty) {
+      latestReport = runSnap.docs[0].data()?.report || null;
+    }
+  } catch (e) {
+    // ignore
+  }
+
+  return NextResponse.json({ success: true, items, latestReport });
 }
 
 export async function POST(req: NextRequest) {

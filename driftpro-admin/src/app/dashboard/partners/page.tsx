@@ -186,7 +186,6 @@ export default function PartnersPage() {
   const [inboundItems, setInboundItems] = useState<any[]>([]);
   const [inboundLoading, setInboundLoading] = useState(false);
   const [processingReport, setProcessingReport] = useState<any>(null);
-  const [showProcessReport, setShowProcessReport] = useState(false);
 
   // Job management
   const [showJobManagementModal, setShowJobManagementModal] = useState(false);
@@ -380,6 +379,9 @@ export default function PartnersPage() {
           const syncData = await syncRes.json();
           if (syncData?.success) {
             setSuccess(`Synkronisert! ${syncData.processed} nye e-poster prosessert, ${syncData.skipped} hoppet over.`);
+            if (syncData?.report) {
+              setProcessingReport(syncData.report);
+            }
           } else {
             // VIS feil (tidligere ble dette ofte skjult og det så ut som "tomt")
             console.warn('Sync feilet:', syncData?.error, syncData?.debug);
@@ -401,6 +403,9 @@ export default function PartnersPage() {
           console.log(`  ${idx + 1}. "${item.subject}" fra ${item.from} (${item.attachments?.length || 0} vedlegg)`);
         });
         setInboundItems(data.items);
+        if (data?.latestReport) {
+          setProcessingReport(data.latestReport);
+        }
       } else {
         console.error('❌ Feil ved henting av innkommende ruter:', data);
         setError(data?.error || 'Kunne ikke hente innkommende ruter');
@@ -408,37 +413,6 @@ export default function PartnersPage() {
     } catch (e) {
       console.error('Inbound fetch error', e);
       setError('Kunne ikke hente innkommende ruter');
-    } finally {
-      setInboundLoading(false);
-    }
-  };
-
-  const processInboundRoutes = async () => {
-    // Default til "mavi" dersom companyId mangler, slik at vi alltid kan prosessere
-    const companyId = userProfile?.companyId || 'mavi';
-
-    setInboundLoading(true);
-    try {
-      const res = await fetch('/api/inbound/sap/process', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ companyId }),
-      });
-      
-      const data = await res.json();
-      
-      if (data?.success) {
-        setProcessingReport(data.report);
-        setShowProcessReport(true);
-        setSuccess(`Prosessering fullført! ${data.report.processed} ruter sendt, ${data.report.failed} feilet.`);
-        // Last inn på nytt
-        await loadInbound(false);
-      } else {
-        setError(data?.error || 'Kunne ikke prosessere ruter');
-      }
-    } catch (e) {
-      console.error('Process error', e);
-      setError('Kunne ikke prosessere ruter');
     } finally {
       setInboundLoading(false);
     }
@@ -1910,22 +1884,6 @@ export default function PartnersPage() {
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
-                  onClick={processInboundRoutes}
-                  style={{
-                    padding: '0.6rem 0.9rem',
-                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
-                    border: '1px solid rgba(16,185,129,0.35)',
-                    color: '#fff',
-                    borderRadius: '10px',
-                    cursor: 'pointer',
-                    fontWeight: 700
-                  }}
-                  disabled={inboundLoading}
-                  title="Prosesser pending ruter og del dem automatisk til partnere"
-                >
-                  {inboundLoading ? 'Prosesserer...' : '🤖 Prosesser automatisk'}
-                </button>
-                <button
                   onClick={() => loadInbound(true)}
                   style={{
                     padding: '0.6rem 0.9rem',
@@ -1958,6 +1916,54 @@ export default function PartnersPage() {
             </div>
 
             <div style={{ padding: '1rem 1.25rem', overflowY: 'auto', maxHeight: '70vh' }}>
+              {/* Rapport (vises alltid hvis den finnes) */}
+              {processingReport && (
+                <div style={{
+                  marginBottom: '1rem',
+                  padding: '0.9rem 1rem',
+                  borderRadius: '12px',
+                  border: '1px solid #243042',
+                  background: 'linear-gradient(135deg, rgba(15,23,42,0.9) 0%, rgba(2,6,23,0.9) 100%)'
+                }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+                    <div style={{ color: '#e5e7eb', fontWeight: 800 }}>
+                      Rapport: Automatisk utsending fra SAP
+                    </div>
+                    <div style={{ color: '#94a3b8', fontSize: '0.85rem' }}>
+                      {processingReport.createdAt ? new Date(processingReport.createdAt).toLocaleString('no-NO') : ''}
+                    </div>
+                  </div>
+                  <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                    <span className="badge" style={{ background: '#1f2937', color: '#e5e7eb', border: '1px solid #334155' }}>
+                      Totalt: {processingReport.total ?? 0}
+                    </span>
+                    <span className="badge" style={{ background: '#064e3b', color: '#10b981', border: '1px solid #065f46' }}>
+                      Sendt: {processingReport.sent ?? processingReport.processed ?? 0}
+                    </span>
+                    <span className="badge" style={{ background: '#7f1d1d', color: '#ef4444', border: '1px solid #991b1b' }}>
+                      Feilet: {processingReport.failed ?? 0}
+                    </span>
+                  </div>
+                  {processingReport.byDate && (
+                    <div style={{ marginTop: '0.75rem', color: '#cbd5e1', fontSize: '0.9rem' }}>
+                      {Object.entries(processingReport.byDate).map(([date, stats]: any) => {
+                        const total = stats?.total ?? 0;
+                        const sent = stats?.sent ?? 0;
+                        const failed = stats?.failed ?? 0;
+                        const dateLabel = date !== 'ukjent'
+                          ? new Date(date + 'T00:00:00').toLocaleDateString('no-NO', { weekday: 'long', day: '2-digit', month: '2-digit' })
+                          : 'Ukjent dato';
+                        return (
+                          <div key={date} style={{ marginTop: '0.25rem' }}>
+                            {`Alle rutene for ${dateLabel}: ${sent}/${total} sendt`}{failed > 0 ? `, ${failed} ikke sendt (se under).` : ', ingen ruter mangler ✅'}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </div>
+              )}
+
               {inboundItems.length === 0 ? (
                 <div style={{
                   border: '1px dashed var(--gray-300)',
@@ -1966,7 +1972,9 @@ export default function PartnersPage() {
                   color: 'var(--gray-600)',
                   textAlign: 'center'
                 }}>
-                  Ingen innkommende ruter logget ennå.
+                  {processingReport && (processingReport.failed ?? 0) === 0
+                    ? 'Alt er sendt ✅ (listen blir tom når alt er tildelt)'
+                    : 'Ingen innkommende ruter som venter (se rapport over).'}
                 </div>
               ) : (
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
@@ -2017,147 +2025,6 @@ export default function PartnersPage() {
         </div>
       )}
 
-
-      {/* Process Report Modal */}
-      {showProcessReport && processingReport && (
-        <div style={{
-          position: 'fixed',
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          background: 'rgba(0, 0, 0, 0.65)',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          zIndex: 1300,
-          padding: '1rem'
-        }}>
-          <div data-partners-darkmodal style={{
-            ...(darkModalVars as any),
-            background: 'var(--white)',
-            border: '1px solid var(--gray-200)',
-            borderRadius: '16px',
-            width: '100%',
-            maxWidth: '900px',
-            maxHeight: '90vh',
-            overflow: 'hidden',
-            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
-          }}>
-            <div style={{
-              padding: '1.25rem 1.5rem',
-              borderBottom: '1px solid var(--gray-200)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-              background: 'linear-gradient(135deg, #111827 0%, #0b1220 100%)'
-            }}>
-              <div>
-                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--gray-900)' }}>
-                  📊 Rapport: Automatisk rute-distribusjon
-                </div>
-              </div>
-              <button
-                onClick={() => setShowProcessReport(false)}
-                style={{
-                  padding: '0.6rem 0.9rem',
-                  background: 'rgba(255,255,255,0.06)',
-                  border: '1px solid var(--gray-300)',
-                  color: 'var(--gray-800)',
-                  borderRadius: '10px',
-                  cursor: 'pointer',
-                  fontWeight: 700
-                }}
-              >
-                Lukk
-              </button>
-            </div>
-
-            <div style={{ padding: '1.5rem', overflowY: 'auto', maxHeight: '70vh' }}>
-              <div style={{
-                display: 'grid',
-                gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
-                gap: '1rem',
-                marginBottom: '2rem'
-              }}>
-                <div style={{
-                  padding: '1rem',
-                  background: '#1f2937',
-                  borderRadius: '12px',
-                  border: '1px solid #374151'
-                }}>
-                  <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Totalt</div>
-                  <div style={{ color: '#fff', fontSize: '1.5rem', fontWeight: 700 }}>{processingReport.total}</div>
-                </div>
-                <div style={{
-                  padding: '1rem',
-                  background: '#064e3b',
-                  borderRadius: '12px',
-                  border: '1px solid #065f46'
-                }}>
-                  <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Sendt</div>
-                  <div style={{ color: '#10b981', fontSize: '1.5rem', fontWeight: 700 }}>{processingReport.processed}</div>
-                </div>
-                <div style={{
-                  padding: '1rem',
-                  background: '#7f1d1d',
-                  borderRadius: '12px',
-                  border: '1px solid #991b1b'
-                }}>
-                  <div style={{ color: '#9ca3af', fontSize: '0.875rem', marginBottom: '0.5rem' }}>Feilet</div>
-                  <div style={{ color: '#ef4444', fontSize: '1.5rem', fontWeight: 700 }}>{processingReport.failed}</div>
-                </div>
-              </div>
-
-              <div style={{ marginTop: '2rem' }}>
-                <h3 style={{ color: '#e5e7eb', fontSize: '1rem', fontWeight: 600, marginBottom: '1rem' }}>
-                  Detaljert oversikt
-                </h3>
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--gray-200)', color: '#cbd5e1' }}>
-                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Fil</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Bilnummer</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Dato</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Partner</th>
-                      <th style={{ padding: '0.75rem', textAlign: 'left' }}>Status</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {processingReport.details.map((detail: any, idx: number) => (
-                      <tr key={idx} style={{ borderBottom: '1px solid #1f2937' }}>
-                        <td style={{ padding: '0.75rem', color: '#e5e7eb' }}>{detail.fileName}</td>
-                        <td style={{ padding: '0.75rem', color: '#e5e7eb' }}>{detail.vehicle}</td>
-                        <td style={{ padding: '0.75rem', color: '#e5e7eb' }}>{detail.date || 'N/A'}</td>
-                        <td style={{ padding: '0.75rem', color: '#e5e7eb' }}>{detail.partnerName || 'N/A'}</td>
-                        <td style={{ padding: '0.75rem' }}>
-                          <span style={{
-                            padding: '0.25rem 0.5rem',
-                            borderRadius: '6px',
-                            fontSize: '0.75rem',
-                            fontWeight: 600,
-                            background: detail.status === 'sent' ? '#064e3b' : '#7f1d1d',
-                            color: detail.status === 'sent' ? '#10b981' : '#ef4444'
-                          }}>
-                            {detail.status === 'sent' ? '✅ Sendt' : 
-                             detail.status === 'no_vehicle' ? '❌ Ingen bil' :
-                             detail.status === 'no_partner' ? '❌ Ingen partner' : '❌ Feil'}
-                          </span>
-                          {detail.error && (
-                            <div style={{ fontSize: '0.75rem', color: '#9ca3af', marginTop: '0.25rem' }}>
-                              {detail.error}
-                            </div>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Desktop Page Header */}
       {!isMobile && (

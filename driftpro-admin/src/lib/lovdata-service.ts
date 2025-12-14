@@ -273,6 +273,7 @@ class LovdataService {
 
 export const lovdataService = new LovdataService();
 
+
 // Fetches and displays relevant laws and regulations
 
 export interface LovdataDocument {
