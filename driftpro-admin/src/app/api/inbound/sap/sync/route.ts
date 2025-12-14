@@ -188,6 +188,11 @@ export async function POST(req: NextRequest) {
     const emails = await fetchEmailsFromGraph();
     console.log(`✅ Fant ${emails.length} e-poster`);
     
+    // Log alle e-post emner for debugging
+    emails.forEach((email: any, idx: number) => {
+      console.log(`📨 E-post ${idx + 1}: "${email.subject}" fra ${email.from?.emailAddress?.address || email.sender?.emailAddress?.address}`);
+    });
+    
     const processed: string[] = [];
     const skipped: string[] = [];
     const errors: Array<{ messageId: string; error: string }> = [];
@@ -198,11 +203,14 @@ export async function POST(req: NextRequest) {
       // Hopp over hvis allerede prosessert
       if (existingMessageIds.has(messageId)) {
         skipped.push(messageId);
+        console.log(`⏭️  Hoppet over (allerede prosessert): ${email.subject}`);
         continue;
       }
 
       const fromEmail = (email.from?.emailAddress?.address || email.sender?.emailAddress?.address || '').toLowerCase();
       const isElkjop = fromEmail.includes('@elkjop.no');
+      
+      console.log(`🔄 Prosesserer: "${email.subject}" fra ${fromEmail} (Elkjøp: ${isElkjop})`);
 
       // Hent vedlegg (kan være inkludert i email-objektet eller må hentes separat)
       const attachments: any[] = [];
@@ -229,9 +237,14 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Prosesser alle PDF-vedlegg
+      // Prosesser alle PDF-vedlegg (eller alle vedlegg hvis det er "Backup Form")
+      const isBackupForm = (email.subject || '').toLowerCase().includes('backup form');
+      
       for (const att of emailAttachments) {
-        if (att.contentType === 'application/pdf' || att.name?.toLowerCase().endsWith('.pdf')) {
+        const isPdf = att.contentType === 'application/pdf' || att.name?.toLowerCase().endsWith('.pdf');
+        
+        // Inkluder alle vedlegg for "Backup Form", ikke bare PDF
+        if (isPdf || isBackupForm) {
           let fileUrl = '';
           
           // Hvis attachment har contentBytes, bruk det direkte
@@ -264,29 +277,32 @@ export async function POST(req: NextRequest) {
           }
 
           attachments.push({
-            fileName: att.name || 'vedlegg.pdf',
+            fileName: att.name || (isPdf ? 'vedlegg.pdf' : 'vedlegg'),
             fileUrl: fileUrl,
-            contentType: att.contentType || 'application/pdf',
+            contentType: att.contentType || (isPdf ? 'application/pdf' : 'application/octet-stream'),
             size: att.size || 0,
-            isPdf: true,
+            isPdf: isPdf,
           });
+          
+          console.log(`  ✅ Lagt til vedlegg: ${att.name} (${isPdf ? 'PDF' : att.contentType})`);
         }
       }
 
       try {
-        const docData = {
-          messageId: messageId,
-          from: email.from?.emailAddress?.address || email.sender?.emailAddress?.address || '',
-          subject: email.subject || '',
-          receivedAt: email.receivedDateTime || new Date().toISOString(),
-          attachments,
-          note: 'Synkronisert fra Microsoft Graph',
-          sourceDomain: fromEmail.split('@')[1] || '',
-          autoProcess: isElkjop,
-          status: isElkjop ? 'auto_pending' : 'pending',
-          createdAt: Timestamp.fromDate(new Date(email.receivedDateTime || Date.now())),
-          updatedAt: Timestamp.now(),
-        };
+      const docData = {
+        messageId: messageId,
+        from: email.from?.emailAddress?.address || email.sender?.emailAddress?.address || '',
+        subject: email.subject || '',
+        receivedAt: email.receivedDateTime || new Date().toISOString(),
+        attachments,
+        note: 'Synkronisert fra Microsoft Graph',
+        sourceDomain: fromEmail.split('@')[1] || '',
+        // "Backup Form" e-poster fra SAP skal også behandles automatisk
+        autoProcess: isElkjop || isBackupForm,
+        status: (isElkjop || isBackupForm) ? 'auto_pending' : 'pending',
+        createdAt: Timestamp.fromDate(new Date(email.receivedDateTime || Date.now())),
+        updatedAt: Timestamp.now(),
+      };
 
         await addDoc(collection(db, 'inboundRoutes'), docData);
         processed.push(messageId);

@@ -394,8 +394,14 @@ export default function PartnersPage() {
       const res = await fetch('/api/inbound/sap');
       const data = await res.json();
       if (data?.success && Array.isArray(data.items)) {
+        console.log(`📥 Lastet ${data.items.length} innkommende ruter fra Firestore`);
+        // Log første 5 for debugging
+        data.items.slice(0, 5).forEach((item: any, idx: number) => {
+          console.log(`  ${idx + 1}. "${item.subject}" fra ${item.from} (${item.attachments?.length || 0} vedlegg)`);
+        });
         setInboundItems(data.items);
       } else {
+        console.error('❌ Feil ved henting av innkommende ruter:', data);
         setError(data?.error || 'Kunne ikke hente innkommende ruter');
       }
     } catch (e) {
