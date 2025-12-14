@@ -574,13 +574,23 @@ export async function POST(req: NextRequest) {
           updatedAt: Timestamp.now(),
         });
       } else {
-        await updateDoc(doc(db, 'inboundRoutes', inboundId), {
-          status: 'processed',
-          processedAt: Timestamp.now(),
-          assignmentId: createdAssignmentIds.length === 1 ? createdAssignmentIds[0] : undefined,
-          assignmentIds: createdAssignmentIds,
-          updatedAt: Timestamp.now(),
-        });
+        // Keep system clean: archive, then delete inbound route once it is assigned
+        try {
+          await addDoc(collection(db, 'inboundRoutesArchive'), {
+            ...inboundData,
+            inboundId,
+            status: 'processed',
+            processedAt: Timestamp.now(),
+            assignmentId: createdAssignmentIds.length === 1 ? createdAssignmentIds[0] : undefined,
+            assignmentIds: createdAssignmentIds,
+            archivedAt: Timestamp.now(),
+            updatedAt: Timestamp.now(),
+          });
+        } catch (archiveErr) {
+          // If archive fails, still continue (we prefer cleanup to avoid chaos)
+          console.warn('Failed to archive inbound route before delete:', archiveErr);
+        }
+        await deleteDoc(doc(db, 'inboundRoutes', inboundId));
       }
     }
 
