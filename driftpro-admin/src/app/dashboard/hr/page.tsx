@@ -4318,4 +4318,3 @@ export default function HRPage() {
       )}
     </div>
   );
-}
