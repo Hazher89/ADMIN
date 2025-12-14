@@ -6,6 +6,7 @@ import {
   Timestamp,
   query,
   where,
+  orderBy,
   getDocs,
   updateDoc,
   doc,
@@ -71,7 +72,8 @@ async function fetchEmailsFromGraph(): Promise<any[]> {
   
   try {
     // Hent e-poster fra innboks med attachments inkludert
-    const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(senderEmail)}/messages?$top=50&$orderby=receivedDateTime desc&$expand=attachments&$select=id,subject,from,sender,receivedDateTime,hasAttachments,attachments`;
+    // Include bodyPreview/body so we can extract route date/vehicle even when PDFs are image-based (“Backup Form”).
+    const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(senderEmail)}/messages?$top=50&$orderby=receivedDateTime desc&$expand=attachments&$select=id,subject,from,sender,receivedDateTime,hasAttachments,attachments,bodyPreview,body`;
     console.log(`📧 Fetching emails from: ${url}`);
     
     const response = await fetch(url, {
@@ -95,6 +97,20 @@ async function fetchEmailsFromGraph(): Promise<any[]> {
     throw error; // Re-throw for å få bedre feilmelding i responsen
   }
 }
+
+const stripHtml = (html: string): string => {
+  if (!html) return '';
+  return String(html)
+    .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+    .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+    .replace(/<[^>]+>/g, ' ')
+    .replace(/&nbsp;/gi, ' ')
+    .replace(/&amp;/gi, '&')
+    .replace(/&lt;/gi, '<')
+    .replace(/&gt;/gi, '>')
+    .replace(/\s+/g, ' ')
+    .trim();
+};
 
 async function downloadAttachment(attachmentId: string, messageId: string, accessToken: string): Promise<{ content: string; contentType: string } | null> {
   try {
@@ -443,6 +459,8 @@ export async function POST(req: NextRequest) {
           from: email.from?.emailAddress?.address || email.sender?.emailAddress?.address || '',
           subject: email.subject || '',
           receivedAt: email.receivedDateTime || new Date().toISOString(),
+          bodyPreview: email.bodyPreview || '',
+          body: email.body || null,
           attachments,
           note: 'Synkronisert fra Microsoft Graph',
           sourceDomain: fromEmail.split('@')[1] || '',
@@ -461,7 +479,7 @@ export async function POST(req: NextRequest) {
       }
     }
 
-    // 2) Process ALL existing auto_pending inboundRoutes (super-smart, like mass upload)
+    // 2) Process ALL existing autoProcess inboundRoutes (auto_pending + failed retries)
     const partnersSnap = await getDocs(collection(db, 'partners'));
     const vehicleToPartner = new Map<string, { id: string; name: string }>();
     partnersSnap.docs.forEach((p) => {
@@ -473,25 +491,33 @@ export async function POST(req: NextRequest) {
       }
     });
 
-    const pendingSnap = await getDocs(
-      query(collection(db, 'inboundRoutes'), where('status', '==', 'auto_pending'), limit(250))
+    // Robust query: pull latest N and filter in code (avoids composite-index headaches).
+    const recentSnap = await getDocs(
+      query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'), limit(250))
     );
+    const pendingDocs = recentSnap.docs.filter((d) => {
+      const it: any = d.data();
+      const st = String(it?.status || '').toLowerCase();
+      const auto = !!it?.autoProcess;
+      return auto && (st === 'auto_pending' || st === 'failed');
+    });
 
     const seenHashes = new Set<string>();
 
-    for (const inbound of pendingSnap.docs) {
+    for (const inbound of pendingDocs) {
       const inboundId = inbound.id;
       const inboundData: any = inbound.data();
       const messageId = inboundData.messageId || inboundId;
       const receivedAt = inboundData.receivedAt || '';
       const fallbackDate = receivedAt?.includes('T') ? receivedAt.split('T')[0] : new Date().toISOString().split('T')[0];
+      const emailText = `${inboundData.subject || ''} ${inboundData.bodyPreview || ''} ${stripHtml(inboundData.body?.content || inboundData.body || '')}`;
       const attachments = Array.isArray(inboundData.attachments) ? inboundData.attachments : [];
       const pdfAttachments = attachments.filter((a: any) => a?.isPdf && a?.fileUrl);
 
       if (pdfAttachments.length === 0) {
         await updateDoc(doc(db, 'inboundRoutes', inboundId), {
           status: 'failed',
-          error: 'Ingen PDF-vedlegg funnet',
+          error: 'Ingen PDF-vedlegg funnet (auto-prosess)',
           updatedAt: Timestamp.now(),
         });
         reportDetails.push({ messageId, inboundId, fileName: attachments?.[0]?.fileName || 'Ukjent', date: fallbackDate, status: 'failed', error: 'Ingen PDF-vedlegg funnet' });
@@ -528,13 +554,40 @@ export async function POST(req: NextRequest) {
         }
 
         const txt = await extractPdfText(fileUrl);
-        const parsedVehicle = txt ? extractVehicleFromText(txt) : null;
-        const parsedDate = txt ? extractDateFromText(txt) : null;
-        const routeDate = parsedDate || inboundData.parsedDate || fallbackDate;
+        const combined = `${txt || ''} ${emailText}`.trim();
+
+        // Try PDF text first, then fall back to email subject/body (Backup Form is often image-based PDF).
+        const parsedVehicle = combined ? extractVehicleFromText(combined) : null;
+        const parsedDate = combined ? extractDateFromText(combined) : null;
+        const routeDate = parsedDate || inboundData.parsedDate || null;
+
+        if (parsedVehicle || parsedDate) {
+          // Persist parsed hints for UI/debugging
+          try {
+            await updateDoc(doc(db, 'inboundRoutes', inboundId), {
+              parsedVehicle: parsedVehicle || inboundData.parsedVehicle || undefined,
+              parsedDate: parsedDate || inboundData.parsedDate || undefined,
+              updatedAt: Timestamp.now(),
+            });
+          } catch {}
+        }
+
+        if (!routeDate) {
+          hadFailure = true;
+          reportDetails.push({
+            messageId,
+            inboundId,
+            fileName,
+            date: 'ukjent',
+            status: 'failed',
+            error: 'Fant ikke rutedato (hverken i PDF-tekst eller e-posttekst)',
+          });
+          continue;
+        }
 
         if (!parsedVehicle) {
           hadFailure = true;
-          reportDetails.push({ messageId, inboundId, fileName, date: routeDate, status: 'no_vehicle', error: 'Fant ikke bilnummer i PDF' });
+          reportDetails.push({ messageId, inboundId, fileName, date: routeDate, status: 'no_vehicle', error: 'Fant ikke bilnummer (hverken i PDF-tekst eller e-posttekst)' });
           continue;
         }
 
@@ -570,7 +623,7 @@ export async function POST(req: NextRequest) {
       if (hadFailure) {
         await updateDoc(doc(db, 'inboundRoutes', inboundId), {
           status: 'failed',
-          error: 'En eller flere PDF-er kunne ikke tildeles automatisk',
+          error: 'Auto-prosess feilet: se rapportdetaljer (mangler dato/bil/partner eller duplikat)',
           updatedAt: Timestamp.now(),
         });
       } else {
