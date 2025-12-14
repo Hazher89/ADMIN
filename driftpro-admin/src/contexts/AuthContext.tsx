@@ -21,13 +21,15 @@ interface UserProfile {
   phone?: string;
   departmentId?: string;
   position?: string;
-  role: 'admin' | 'department_leader' | 'employee' | 'super_admin' | 'driver';
+  role: 'admin' | 'department_leader' | 'employee' | 'super_admin' | 'driver' | 'partner_user';
+  partnerId?: string; // For partner portal users
   avatar?: string;
   createdAt: string;
   bio?: string;
   address?: string;
   emergencyContact?: string;
   companyName?: string; // Add company information
+  companyId?: string; // Company ID for GDPR compliance
   passwordSet?: boolean; // Track if password has been set
   permissions?: {
     dashboard?: boolean;
@@ -198,7 +200,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 if (!emailSnapshot.empty) {
                   const fallbackDoc = emailSnapshot.docs[0];
                   const data = fallbackDoc.data() || {};
-                  const mergedData = {
+                  const mergedData: any = {
                     ...data,
                     id: user.uid,
                     uid: user.uid,
@@ -612,4 +614,4 @@ export function useAuth() {
     };
   }
   return context;
-} 
+}

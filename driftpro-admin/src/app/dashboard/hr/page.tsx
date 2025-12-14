@@ -67,6 +67,7 @@ export default function HRPage() {
   // Modal states
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isAddMode, setIsAddMode] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -142,9 +143,9 @@ export default function HRPage() {
       it: false,
       legal: false,
       audit: false,
-      internkontrollOgSamsvar: false, // Legacy
+      internkontrollOgSamsvar: false,
       internrevisjon: false,
-      avvik: false,
+      avvik: true,
       risikovurdering: false,
       oppfølgingstiltak: false,
       kontrollpunkter: false,
@@ -167,10 +168,10 @@ export default function HRPage() {
       // HR faner
       hrAnsatte: false,
       hrVakter: false,
-      hrFravær: false,
-      hrFerie: false,
+      hrFravær: true,
+      hrFerie: true,
       hrAvdelinger: false,
-    },
+    } as any,
     vacationAccess: {
       canRequestVacation: true,
       canApproveVacation: false,
@@ -266,7 +267,12 @@ export default function HRPage() {
         firebaseService.getVacations(createUserAccessContext(userProfile) || undefined, undefined)
       ]);
 
-      setEmployees(employeesData);
+      // Remove duplicates from employeesData before setting
+      const uniqueEmployees = employeesData.filter((employee, index, self) => 
+        index === self.findIndex((e) => e.id === employee.id)
+      );
+      
+      setEmployees(uniqueEmployees);
       setDepartments(departmentsData);
       setShifts(shiftsData);
       setAbsences(absencesData);
@@ -378,7 +384,12 @@ export default function HRPage() {
 
   // Filter functions
   const getFilteredEmployees = () => {
-    return employees.filter(employee => {
+    // Remove duplicates based on employee.id
+    const uniqueEmployees = employees.filter((employee, index, self) => 
+      index === self.findIndex((e) => e.id === employee.id)
+    );
+    
+    return uniqueEmployees.filter(employee => {
       const matchesSearch = employee.displayName?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            employee.email?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                            employee.position?.toLowerCase().includes(searchTerm.toLowerCase());
@@ -608,49 +619,74 @@ export default function HRPage() {
     }
   };
 
+  // Unified save handler for edit modal (add or update)
+  const handleSaveEmployee = async () => {
+    if (isAddMode) {
+      await handleAddEmployee(selectedEmployee);
+      setShowEditModal(false);
+      setIsAddMode(false);
+      setSelectedEmployee(null);
+    } else {
+      await handleUpdateEmployee();
+    }
+  };
+
   // Department handlers
   // Handler functions for adding employees and departments
-  const handleAddEmployee = async () => {
+  // Helper: build employee payload from a source (new or selected)
+  const buildEmployeePayload = (source: any) => {
+    const payload: any = {
+      displayName: source.displayName?.trim() || '',
+      email: source.email?.trim() || '',
+      role: source.role as 'admin' | 'department_leader' | 'employee',
+      status: source.status as 'active' | 'inactive' | 'on_leave',
+      hireDate: source.hireDate || new Date().toISOString(),
+    };
+
+    if (source.phone?.trim()) payload.phone = source.phone.trim();
+    if (source.birthDate) payload.birthDate = source.birthDate;
+    if (source.employeeNumber?.trim()) payload.employeeNumber = source.employeeNumber.trim();
+    if (source.taxId?.trim()) payload.taxId = source.taxId.trim();
+    if (source.address?.trim()) payload.address = source.address.trim();
+    if (source.emergencyContact?.trim()) payload.emergencyContact = source.emergencyContact.trim();
+    if (source.bio?.trim()) payload.bio = source.bio.trim();
+    if (source.education?.trim()) payload.education = source.education.trim();
+    if (source.workExperience?.trim()) payload.workExperience = source.workExperience.trim();
+    if (source.skills && source.skills.length > 0) payload.skills = source.skills;
+    if (source.certifications && source.certifications.length > 0) payload.certifications = source.certifications;
+    if (source.salary) payload.salary = Number(source.salary);
+    if (source.managerId?.trim()) payload.managerId = source.managerId.trim();
+    if (source.bankAccount?.trim()) payload.bankAccount = source.bankAccount.trim();
+    if (source.insuranceNumber?.trim()) payload.insuranceNumber = source.insuranceNumber.trim();
+    if (source.avatar?.trim()) payload.avatar = source.avatar.trim();
+    if (source.departmentId?.trim()) payload.departmentId = source.departmentId.trim();
+    if (source.position?.trim()) payload.position = source.position.trim();
+
+    // Permissions and extras
+    if (source.permissions) payload.permissions = source.permissions;
+    if (source.vacationAccess) payload.vacationAccess = source.vacationAccess;
+    if (source.leadership) payload.leadership = source.leadership;
+
+    return payload;
+  };
+
+  const handleAddEmployee = async (sourceOverride?: any) => {
 
     // Validate required fields
-    if (!newEmployee.displayName.trim()) {
+    const src = sourceOverride || newEmployee;
+
+    if (!src.displayName?.trim()) {
       alert('Navn er påkrevd');
       return;
     }
 
-    if (!newEmployee.email.trim()) {
+    if (!src.email?.trim()) {
       alert('E-post er påkrevd');
       return;
     }
 
     try {
-      const employeeData: any = {
-        displayName: newEmployee.displayName.trim(),
-        email: newEmployee.email.trim(),
-        role: newEmployee.role as 'admin' | 'department_leader' | 'employee',
-        status: newEmployee.status as 'active' | 'inactive' | 'on_leave',
-        hireDate: newEmployee.hireDate || new Date().toISOString(),
-      };
-      
-      // Add optional fields only if they have values
-      if (newEmployee.phone?.trim()) employeeData.phone = newEmployee.phone.trim();
-      if (newEmployee.birthDate) employeeData.birthDate = newEmployee.birthDate;
-      if (newEmployee.employeeNumber?.trim()) employeeData.employeeNumber = newEmployee.employeeNumber.trim();
-      if (newEmployee.taxId?.trim()) employeeData.taxId = newEmployee.taxId.trim();
-      if (newEmployee.address?.trim()) employeeData.address = newEmployee.address.trim();
-      if (newEmployee.emergencyContact?.trim()) employeeData.emergencyContact = newEmployee.emergencyContact.trim();
-      if (newEmployee.bio?.trim()) employeeData.bio = newEmployee.bio.trim();
-      if (newEmployee.education?.trim()) employeeData.education = newEmployee.education.trim();
-      if (newEmployee.workExperience?.trim()) employeeData.workExperience = newEmployee.workExperience.trim();
-      if (newEmployee.skills && newEmployee.skills.length > 0) employeeData.skills = newEmployee.skills;
-      if (newEmployee.certifications && newEmployee.certifications.length > 0) employeeData.certifications = newEmployee.certifications;
-      if (newEmployee.salary) employeeData.salary = Number(newEmployee.salary);
-      if (newEmployee.managerId?.trim()) employeeData.managerId = newEmployee.managerId.trim();
-      if (newEmployee.bankAccount?.trim()) employeeData.bankAccount = newEmployee.bankAccount.trim();
-      if (newEmployee.insuranceNumber?.trim()) employeeData.insuranceNumber = newEmployee.insuranceNumber.trim();
-      if (newEmployee.avatar?.trim()) employeeData.avatar = newEmployee.avatar.trim();
-      if (newEmployee.departmentId?.trim()) employeeData.departmentId = newEmployee.departmentId.trim();
-      if (newEmployee.position?.trim()) employeeData.position = newEmployee.position.trim();
+      const employeeData = buildEmployeePayload(src);
       
       // Set default permissions based on role
       const defaultPermissions: any = {
@@ -714,9 +750,16 @@ export default function HRPage() {
         defaultVacationAccess.canViewAllVacations = true;
       }
 
-      employeeData.permissions = defaultPermissions;
-      employeeData.vacationAccess = defaultVacationAccess;
-      employeeData.leadership = newEmployee.leadership || {};
+      // Merge defaults with chosen permissions so admin-valg lagres umiddelbart
+      employeeData.permissions = {
+        ...defaultPermissions,
+        ...(src.permissions || {}),
+      };
+      employeeData.vacationAccess = {
+        ...defaultVacationAccess,
+        ...(src.vacationAccess || {}),
+      };
+      employeeData.leadership = src.leadership || newEmployee.leadership || {};
 
       const userContext = createUserAccessContext(userProfile);
       const employeeResult = await firebaseService.createEmployee(employeeData, userContext || undefined);
@@ -1016,8 +1059,7 @@ export default function HRPage() {
   };
   
   // Get filtered time entries (placeholder implementation)
-  const getFilteredTimeEntries = () => {
-    // Return empty array if time entries are not implemented
+  const getFilteredTimeEntries = (): any[] => {
     return [];
   };
   
@@ -1419,7 +1461,47 @@ export default function HRPage() {
               </select>
             )}
             <button 
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+                setActiveTab('employees');
+                const blank: any = {
+                  id: '',
+                  displayName: '',
+                  email: '',
+                  phone: '',
+                  departmentId: '',
+                  position: '',
+                  role: 'employee',
+                  status: 'active',
+                  permissions: {
+                    dashboard: true,
+                    notifications: true,
+                    calendar: true,
+                    avvik: true,
+                    hrFerie: true,
+                    hrFravær: true,
+                  },
+                  vacationAccess: {
+                    canRequestVacation: true,
+                    canApproveVacation: false,
+                    canViewAllVacations: false,
+                    vacationDaysPerYear: 25,
+                    managerApprovalRequired: true,
+                  },
+                  leadership: {
+                    isManager: false,
+                    managesDepartments: [],
+                    managesEmployees: [],
+                    reportsTo: '',
+                    canApproveExpenses: false,
+                    canApprovePurchases: false,
+                    budgetLimit: 0,
+                  },
+                };
+                setSelectedEmployee(blank);
+                setIsAddMode(true);
+                setShowEditModal(true);
+                setShowAddModal(false);
+              }}
               className="btn btn-primary"
               style={{ 
                 display: 'flex', 
@@ -3009,6 +3091,75 @@ export default function HRPage() {
               {activeTab === 'employees' ? (
                 // Add Employee Form
                 <>
+                {/* TILGANGSOVERSIKT - Vises øverst i modalen */}
+                <div style={{ 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+                  padding: '1.5rem', 
+                  borderRadius: '12px', 
+                  marginBottom: '2rem',
+                  border: '3px solid #4f46e5',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                  position: 'relative',
+                  zIndex: 10
+                }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.75rem', color: '#ffffff' }}>
+                    🔐 Tilgangskontroll - Standard tilganger
+                  </h3>
+                  <p style={{ color: '#f3f4f6', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.6', fontWeight: '500' }}>
+                    <strong style={{ color: '#ffffff' }}>Standard tilganger for nye ansatte:</strong> Avvik, Ferie og Fravær. Du kan legge til flere tilganger nedenfor via Permissions Manager.
+                  </p>
+                  
+                  {/* Visuell oversikt over standardtilganger */}
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem' }}>
+                    <div>
+                      <strong style={{ color: '#10b981', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', fontWeight: '700' }}>
+                        <span style={{ fontSize: '1.5rem' }}>✓</span>
+                        Har tilgang til (standard):
+                      </strong>
+                      <div style={{ 
+                        background: '#ffffff',
+                        padding: '1rem',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        lineHeight: '2',
+                        border: '2px solid #10b981',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                      }}>
+                        <div style={{ color: '#065f46', fontWeight: '600' }}>✓ Avvik (se og sende inn)</div>
+                        <div style={{ color: '#065f46', fontWeight: '600' }}>✓ Ferie (se og sende inn)</div>
+                        <div style={{ color: '#065f46', fontWeight: '600' }}>✓ Fravær (se og sende inn)</div>
+                        <div style={{ color: '#065f46', fontWeight: '600' }}>✓ Dashboard</div>
+                        <div style={{ color: '#065f46', fontWeight: '600' }}>✓ Varsler</div>
+                        <div style={{ color: '#065f46', fontWeight: '600' }}>✓ Kalender</div>
+                      </div>
+                    </div>
+                    <div>
+                      <strong style={{ color: '#ef4444', fontSize: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem', fontWeight: '700' }}>
+                        <span style={{ fontSize: '1.5rem' }}>✗</span>
+                        Har IKKE tilgang til (standard):
+                      </strong>
+                      <div style={{ 
+                        background: '#ffffff',
+                        padding: '1rem',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        lineHeight: '2',
+                        border: '2px solid #ef4444',
+                        boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                      }}>
+                        <div style={{ color: '#991b1b', fontWeight: '600' }}>✗ Se andre ansatte</div>
+                        <div style={{ color: '#991b1b', fontWeight: '600' }}>✗ Avdelinger</div>
+                        <div style={{ color: '#991b1b', fontWeight: '600' }}>✗ Dokumenter</div>
+                        <div style={{ color: '#991b1b', fontWeight: '600' }}>✗ Rapporter</div>
+                        <div style={{ color: '#991b1b', fontWeight: '600' }}>✗ Innstillinger</div>
+                        <div style={{ color: '#991b1b', fontWeight: '600' }}>✗ Finans</div>
+                        <div style={{ color: '#991b1b', fontWeight: '600' }}>✗ HR-administrasjon</div>
+                        <div style={{ color: '#991b1b', fontWeight: '600' }}>✗ Logistikk</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                
                 <div className="form-grid">
                   <div className="form-group">
                     <label className="form-label">Navn *</label>
@@ -3273,7 +3424,7 @@ export default function HRPage() {
             </div>
             <div className="modal-footer">
               <button onClick={() => setShowViewModal(false)} className="btn btn-secondary">Lukk</button>
-              <button onClick={() => { setShowViewModal(false); handleEditEmployee(selectedEmployee); }} className="btn btn-primary">
+              <button onClick={() => { setShowViewModal(false); setIsAddMode(false); setShowEditModal(true); }} className="btn btn-primary">
                 <Edit size={16} style={{ marginRight: '0.5rem' }} />
                 Rediger
               </button>
@@ -3282,13 +3433,13 @@ export default function HRPage() {
         </div>
       )}
 
-      {/* Edit Employee Modal */}
+      {/* Edit/Add Employee Modal */}
       {showEditModal && selectedEmployee && (
-        <div className="modal-overlay" onClick={() => setShowEditModal(false)}>
+        <div className="modal-overlay" onClick={() => { setShowEditModal(false); setIsAddMode(false); setSelectedEmployee(null); }}>
           <div className="modal-content" style={{ maxWidth: '1200px', maxHeight: '90vh', overflowY: 'auto' }} onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
-              <h2 className="modal-title">Rediger ansatt</h2>
-              <button onClick={() => setShowEditModal(false)} className="modal-close">×</button>
+              <h2 className="modal-title">{isAddMode ? 'Legg til ny ansatt' : 'Rediger ansatt'}</h2>
+              <button onClick={() => { setShowEditModal(false); setIsAddMode(false); setSelectedEmployee(null); }} className="modal-close">×</button>
             </div>
             <div className="modal-body">
               <div className="form-grid">
@@ -3842,7 +3993,7 @@ export default function HRPage() {
                     fontSize: '0.75rem', 
                     marginTop: '0.25rem' 
                   }}>
-                    {selectedEmployee?.uid 
+                    {selectedEmployee?.id 
                       ? 'Ansatt får en e-post med link for å sette passordet (brukeren har allerede en konto)'
                       : 'Ansatt kan logge inn med dette passordet med en gang'}
                   </small>
@@ -3916,8 +4067,214 @@ export default function HRPage() {
             </div>
 
             <div className="modal-footer">
-              <button onClick={() => setShowEditModal(false)} className="btn btn-secondary">Avbryt</button>
-              <button onClick={handleUpdateEmployee} className="btn btn-primary">Lagre endringer</button>
+              <button onClick={() => { setShowEditModal(false); setIsAddMode(false); setSelectedEmployee(null); }} className="btn btn-secondary">Avbryt</button>
+              <button onClick={() => { if (isAddMode) { handleAddEmployee(selectedEmployee); setShowEditModal(false); setIsAddMode(false); setSelectedEmployee(null); } else { handleUpdateEmployee(); } }} className="btn btn-primary">
+                {isAddMode ? 'Legg til ansatt' : 'Lagre endringer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Employee Confirmation Modal */}
+      {showDeleteEmployeeConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteEmployeeConfirm(null)}>
+          <div className="modal-content" style={{ maxWidth: '500px' }} onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2 className="modal-title">Bekreft sletting</h2>
+              <button onClick={() => setShowDeleteEmployeeConfirm(null)} className="modal-close">×</button>
+            </div>
+            <div className="modal-body">
+              <p>Er du sikker på at du vil slette denne ansatten? Denne handlingen kan ikke angres.</p>
+              {employees.find(emp => emp.id === showDeleteEmployeeConfirm) && (
+                <div style={{ marginTop: '1rem', padding: '1rem', background: 'var(--gray-50)', borderRadius: '0.5rem' }}>
+                  <strong>{employees.find(emp => emp.id === showDeleteEmployeeConfirm)?.displayName}</strong>
+                  <br />
+                  <span style={{ color: 'var(--gray-600)', fontSize: '0.875rem' }}>
+                    {employees.find(emp => emp.id === showDeleteEmployeeConfirm)?.email}
+                  </span>
+                </div>
+              )}
+            </div>
+            <div className="modal-footer">
+              <button onClick={() => setShowDeleteEmployeeConfirm(null)} className="btn btn-secondary">Avbryt</button>
+              <button onClick={confirmDeleteEmployee} className="btn btn-danger" disabled={deletingEmployeeId === showDeleteEmployeeConfirm}>
+                {deletingEmployeeId === showDeleteEmployeeConfirm ? (
+                  <>
+                    <Loader2 size={16} className="animate-spin" style={{ marginRight: '0.5rem' }} />
+                    Sletter...
+                  </>
+                ) : (
+                  'Slett ansatt'
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+              }}>
+                <Key style={{ width: '18px', height: '18px' }} />
+                Passordhåndtering
+              </h3>
+              
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                {/* Option 1: Set password directly */}
+                <div>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-700)',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Sett nytt passord direkte
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="password"
+                      id="hrNewPasswordInput"
+                      placeholder="Skriv inn nytt passord (min. 6 tegn)"
+                      className="form-input"
+                      style={{ flex: 1 }}
+                      minLength={6}
+                    />
+                    <button
+                      onClick={async () => {
+                        const passwordInput = document.getElementById('hrNewPasswordInput') as HTMLInputElement;
+                        const newPassword = passwordInput?.value;
+                        
+                        if (!newPassword || newPassword.length < 6) {
+                          alert('Passordet må være minst 6 tegn langt');
+                          return;
+                        }
+
+                        if (!selectedEmployee?.id) {
+                          alert('Ingen ansatt valgt');
+                          return;
+                        }
+
+                        try {
+                          const response = await fetch('/api/admin/update-employee-password', {
+                            method: 'POST',
+                            headers: {
+                              'Content-Type': 'application/json',
+                            },
+                            body: JSON.stringify({
+                              employeeId: selectedEmployee.id,
+                              newPassword: newPassword,
+                            }),
+                          });
+
+                          const data = await response.json();
+
+                          if (response.ok) {
+                            if (data.message && data.message.includes('link sent')) {
+                              alert('✅ Passordoppsett-link sendt på e-post! Ansatt kan bruke linken for å sette passordet.');
+                            } else {
+                              alert('✅ Passord oppdatert! Ansatt kan nå logge inn med det nye passordet.');
+                            }
+                            if (passwordInput) passwordInput.value = '';
+                          } else {
+                            alert(`❌ Feil: ${data.error || 'Kunne ikke oppdatere passord'}`);
+                          }
+                        } catch (error) {
+                          console.error('Error updating password:', error);
+                          alert('❌ Feil ved oppdatering av passord');
+                        }
+                      }}
+                      className="btn btn-primary"
+                      style={{ whiteSpace: 'nowrap' }}
+                    >
+                      Sett passord
+                    </button>
+                  </div>
+                  <small style={{ 
+                    display: 'block', 
+                    color: 'var(--gray-500)', 
+                    fontSize: '0.75rem', 
+                    marginTop: '0.25rem' 
+                  }}>
+                    {selectedEmployee?.id 
+                      ? 'Ansatt får en e-post med link for å sette passordet (brukeren har allerede en konto)'
+                      : 'Ansatt kan logge inn med dette passordet med en gang'}
+                  </small>
+                </div>
+
+                {/* Option 2: Send password setup link */}
+                <div style={{ 
+                  paddingTop: '1rem', 
+                  borderTop: '1px solid var(--border-color)' 
+                }}>
+                  <label style={{ 
+                    display: 'block', 
+                    fontSize: '0.875rem', 
+                    fontWeight: '500', 
+                    color: 'var(--gray-700)',
+                    marginBottom: '0.5rem'
+                  }}>
+                    Send link for passordoppsett
+                  </label>
+                  <button
+                    onClick={async () => {
+                      if (!selectedEmployee?.id || !selectedEmployee?.email) {
+                        alert('Ansatt mangler ID eller e-post');
+                        return;
+                      }
+
+                      if (!confirm(`Send passordoppsett-link til ${selectedEmployee.email}?`)) {
+                        return;
+                      }
+
+                      try {
+                        const response = await fetch('/api/send-password-setup', {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                          },
+                          body: JSON.stringify({
+                            employeeId: selectedEmployee.id,
+                            employeeEmail: selectedEmployee.email,
+                          }),
+                        });
+
+                        const data = await response.json();
+
+                        if (response.ok) {
+                          alert('✅ Passordoppsett-link sendt på e-post!');
+                        } else {
+                          alert(`❌ Feil: ${data.error || 'Kunne ikke sende e-post'}`);
+                        }
+                      } catch (error) {
+                        console.error('Error sending password setup email:', error);
+                        alert('❌ Feil ved sending av e-post');
+                      }
+                    }}
+                    className="btn btn-secondary"
+                    style={{ width: '100%' }}
+                  >
+                    <Key style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                    Send passordoppsett-link på e-post
+                  </button>
+                  <small style={{ 
+                    display: 'block', 
+                    color: 'var(--gray-500)', 
+                    fontSize: '0.75rem', 
+                    marginTop: '0.25rem' 
+                  }}>
+                    Ansatt får en e-post med unikt passord som de kan endre selv
+                  </small>
+                </div>
+              </div>
+            </div>
+
+            <div className="modal-footer">
+              <button onClick={() => { setShowEditModal(false); setIsAddMode(false); setSelectedEmployee(null); }} className="btn btn-secondary">Avbryt</button>
+              <button onClick={() => { if (isAddMode) { handleAddEmployee(selectedEmployee); setShowEditModal(false); setIsAddMode(false); setSelectedEmployee(null); } else { handleUpdateEmployee(); } }} className="btn btn-primary">
+                {isAddMode ? 'Legg til ansatt' : 'Lagre endringer'}
+              </button>
             </div>
           </div>
         </div>

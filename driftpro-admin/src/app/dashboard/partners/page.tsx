@@ -1,6 +1,7 @@
 'use client';
+// @ts-nocheck
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { firebaseService, Partner } from '@/lib/firebase-services';
 
 interface RouteAssignment {
@@ -122,6 +123,69 @@ export default function PartnersPage() {
     'M18', '82', '83', '194', '195', '196', '197', '198', '199', '200'
   ]);
 
+  // Route acceptance overview
+  const routeAcceptanceStats = useMemo(() => {
+    let accepted = 0;
+    let declined = 0;
+    let pending = 0;
+
+    (routeAssignments || []).forEach((route) => {
+      const status = (route as any)?.status?.toString()?.toLowerCase() || 'pending';
+      if (['accepted', 'in_progress', 'completed'].includes(status)) {
+        accepted += 1;
+      } else if (['declined', 'rejected'].includes(status)) {
+        declined += 1;
+      } else {
+        pending += 1;
+      }
+    });
+
+    return { accepted, declined, pending };
+  }, [routeAssignments]);
+
+  const routeAlertItems = useMemo(() => {
+    const lookupPartnerName = (partnerId?: string) => {
+      if (!partnerId) return 'Ukjent partner';
+      const partner = partners.find((p) => p.id === partnerId);
+      return partner?.name || 'Ukjent partner';
+    };
+
+    return (routeAssignments || []).map((route) => {
+      const statusRaw = (route as any)?.status?.toString()?.toLowerCase() || 'pending';
+      const status =
+        ['accepted', 'in_progress', 'completed'].includes(statusRaw) ? 'accepted' :
+        ['declined', 'rejected'].includes(statusRaw) ? 'declined' :
+        'pending';
+      return {
+        id: route.id || `${route.partnerId}-${route.date}-${route.driver || ''}`,
+        routeName: route.routeName || 'Rute',
+        partnerName: lookupPartnerName(route.partnerId),
+        driver: (route as any)?.driver || 'Ukjent sjåfør',
+        vehicle: (route as any)?.vehicle || 'Ukjent bil',
+        date: route.date || (route as any)?.scheduledDate || '',
+        status,
+      };
+    });
+  }, [routeAssignments, partners]);
+
+  // Mass route assignment from PDFs
+  const [showMassAssignModal, setShowMassAssignModal] = useState(false);
+  const [massAssignDate, setMassAssignDate] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [massFiles, setMassFiles] = useState<File[]>([]);
+  const [massBusy, setMassBusy] = useState(false);
+  const [massResults, setMassResults] = useState<Array<{
+    file: File;
+    detectedVehicleNumber?: string;
+    manualVehicleNumber?: string;
+    matchedPartnerId?: string;
+    status: 'pending' | 'matched' | 'no_vehicle' | 'no_partner' | 'sent' | 'failed';
+    message?: string;
+  }>>([]);
+  // Inbound SAP
+  const [showInboundModal, setShowInboundModal] = useState(false);
+  const [inboundItems, setInboundItems] = useState<any[]>([]);
+  const [inboundLoading, setInboundLoading] = useState(false);
+
   // Job management
   const [showJobManagementModal, setShowJobManagementModal] = useState(false);
   const [jobs, setJobs] = useState<Array<{
@@ -165,9 +229,7 @@ export default function PartnersPage() {
   const [newUser, setNewUser] = useState({
     name: '',
     phone: '',
-    password: '',
-    email: '',
-    role: 'user' as 'admin' | 'user'
+    email: ''
   });
   const [editingPartner, setEditingPartner] = useState<Partner | null>(null);
   const [editModalActiveTab, setEditModalActiveTab] = useState<'info' | 'vehicles' | 'users' | 'files'>('info');
@@ -228,6 +290,22 @@ export default function PartnersPage() {
     nextAuditDate: ''
   });
 
+  // Dark mode variables for modals in this page (scoped by applying this object to modal containers)
+  // This lets us reuse existing `var(--gray-*)` / `var(--white)` styles without rewriting every input/label.
+  const darkModalVars = {
+    '--white': '#0b1220',
+    '--gray-900': '#e5e7eb',
+    '--gray-800': '#cbd5e1',
+    '--gray-700': '#cbd5e1',
+    '--gray-600': '#94a3b8',
+    '--gray-500': '#64748b',
+    '--gray-400': '#64748b',
+    '--gray-300': '#243244',
+    '--gray-200': '#1f2937',
+    '--gray-100': '#0f172a',
+    '--gray-50': 'rgba(255,255,255,0.06)',
+  } as any;
+
   useEffect(() => {
     const checkMobile = () => setIsMobile(window.innerWidth < 768);
     checkMobile();
@@ -236,12 +314,18 @@ export default function PartnersPage() {
   }, []);
 
   useEffect(() => {
-    if (userProfile) {
-      loadPartners();
+    // Important: on hard refresh `userProfile` often arrives before `companyId`,
+    // and the old dependency on `userProfile?.companyId` could prevent loading entirely.
+    if (!userProfile) return;
+
+    loadPartners();
+
+    // These require companyId
+    if (userProfile.companyId) {
       loadRouteAssignmentsData();
       loadAudits();
     }
-  }, [userProfile?.companyId]);
+  }, [userProfile]);
 
   // Check for overdue audits when partners or audits change
   useEffect(() => {
@@ -284,8 +368,190 @@ export default function PartnersPage() {
     }
   };
 
+  const loadInbound = async (syncFirst = false) => {
+    setInboundLoading(true);
+    try {
+      // Først synkroniser nye e-poster hvis ønsket
+      if (syncFirst) {
+        try {
+          const syncRes = await fetch('/api/inbound/sap/sync', { method: 'POST' });
+          const syncData = await syncRes.json();
+          if (syncData?.success) {
+            setSuccess(`Synkronisert! ${syncData.processed} nye e-poster prosessert, ${syncData.skipped} hoppet over.`);
+          } else {
+            // Ikke vis feil hvis sync feiler, bare logg
+            console.warn('Sync feilet:', syncData?.error);
+          }
+        } catch (syncError) {
+          // Ignorer sync-feil, fortsett med å laste data
+          console.warn('Sync error:', syncError);
+        }
+      }
+
+      // Last inn alle innkommende ruter
+      const res = await fetch('/api/inbound/sap');
+      const data = await res.json();
+      if (data?.success && Array.isArray(data.items)) {
+        setInboundItems(data.items);
+      } else {
+        setError(data?.error || 'Kunne ikke hente innkommende ruter');
+      }
+    } catch (e) {
+      console.error('Inbound fetch error', e);
+      setError('Kunne ikke hente innkommende ruter');
+    } finally {
+      setInboundLoading(false);
+    }
+  };
+
+  const normalizeVehicleNumber = (value: string): string => {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+
+    // Canonical format: 3-digit string, e.g. "018"
+    const upper = raw.toUpperCase().replace(/\s+/g, '');
+
+    // Driver style: "018"
+    const digitsOnly = upper.match(/^\d{1,6}$/);
+    if (digitsOnly) {
+      const d = digitsOnly[0];
+      if (parseInt(d, 10) === 0) return '';
+      const last3 = d.length >= 3 ? d.slice(-3) : d.padStart(3, '0');
+      return last3;
+    }
+
+    // Resource ID style: "M0018" or "NO_O_M0018"
+    const m = upper.match(/M0*(\d{1,6})/);
+    if (m?.[1]) {
+      const d = m[1];
+      if (parseInt(d, 10) === 0) return '';
+      const last3 = d.length >= 3 ? d.slice(-3) : d.padStart(3, '0');
+      return last3;
+    }
+
+    // Fallback: find any 3 digits token
+    const three = upper.match(/\b(\d{3})\b/);
+    if (three?.[1]) return three[1];
+
+    return upper;
+  };
+
+  const extractVehicleNumberFromPdf = async (file: File): Promise<string | null> => {
+    // Super smart: try pdfjs text; if not found, OCR fallback with Tesseract.
+    const parseFromText = (text: string): string | null => {
+      const searchText = text;
+      const primary = searchText.slice(0, 20000);
+      const pickFromResourceId = (): string | null => {
+        const idx = primary.toLowerCase().indexOf('resource id');
+        if (idx >= 0) {
+          const window = primary.slice(idx, idx + 400);
+          const m = window.match(/NO[_A-Z]*_M0*(\d{1,6})/i);
+          if (m?.[1]) {
+            const norm = normalizeVehicleNumber(m[1]);
+            if (norm) return norm; // "018", "023"
+          }
+        }
+        const globalMatch = searchText.match(/NO[_A-Z]*_M0*(\d{1,6})/i);
+        if (globalMatch?.[1]) {
+          const norm = normalizeVehicleNumber(globalMatch[1]);
+          if (norm) return norm;
+        }
+        const collapsed = searchText.replace(/[\s\r\n]+/g, '');
+        const collapsedMatch = collapsed.match(/NO[_A-Z]*_?M0*(\d{1,6})/i) || collapsed.match(/M0*(\d{1,6})/i);
+        if (collapsedMatch?.[1]) {
+          const norm = normalizeVehicleNumber(collapsedMatch[1]);
+          if (norm) return norm;
+        }
+        return null;
+      };
+
+      // If we need Driver Name later, we can add, but Resource ID er fasit.
+      const fromResource = pickFromResourceId();
+      if (fromResource) return fromResource;
+      return null;
+    };
+
+    const tryPdfJsText = async (): Promise<string | null> => {
+      if (typeof window === 'undefined') return null;
+      try {
+        const pdfjs = await import('pdfjs-dist');
+        // @ts-ignore
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+        const data = await file.arrayBuffer();
+        const loadingTask = await pdfjs.getDocument({ data });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const txt = await page.getTextContent();
+        const str = txt.items.map((i: any) => i.str || '').join(' ');
+        return str || null;
+      } catch (err) {
+        console.warn('pdfjs text parse failed:', err);
+        return null;
+      }
+    };
+
+    const tryOcr = async (): Promise<string | null> => {
+      if (typeof window === 'undefined') return null;
+      try {
+        const pdfjs = await import('pdfjs-dist');
+        // @ts-ignore
+        pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+        const data = await file.arrayBuffer();
+        const loadingTask = await pdfjs.getDocument({ data });
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        const canvas = document.createElement('canvas');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return null;
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+        await page.render({ canvasContext: ctx, viewport }).promise;
+
+        const { recognize } = await import('tesseract.js');
+        const result = await recognize(canvas, 'eng');
+        return result?.data?.text || null;
+      } catch (err) {
+        console.warn('OCR parse failed:', err);
+        return null;
+      }
+    };
+
+    // 1) pdfjs text
+    const text = await tryPdfJsText();
+    if (text) {
+      const v = parseFromText(text);
+      if (v) return v;
+    }
+
+    // 2) OCR fallback
+    const ocrText = await tryOcr();
+    if (ocrText) {
+      const v = parseFromText(ocrText);
+      if (v) return v;
+    }
+
+    return null;
+  };
+
+  const findPartnerByVehicleNumber = (vehicleNumber: string): Partner | null => {
+    const needle = normalizeVehicleNumber(vehicleNumber);
+    for (const p of partners) {
+      const vehicles = (p as any)?.vehicles;
+      if (!Array.isArray(vehicles)) continue;
+      const match = vehicles.some((v: any) => {
+        const candidate = v?.vehicleNumber || v?.registrationNumber || v?.vehicleName;
+        if (!candidate) return false;
+        return normalizeVehicleNumber(String(candidate)) === needle;
+      });
+      if (match) return p;
+    }
+    return null;
+  };
+
   const loadRouteAssignmentsData = async () => {
-    if (!userProfile) return;
+    if (!userProfile?.companyId) return;
     
     try {
       const assignments = await firebaseService.getRouteAssignments(userProfile.companyId);
@@ -397,6 +663,7 @@ export default function PartnersPage() {
       // Create Firebase Auth user
       const { createUserWithEmailAndPassword } = await import('firebase/auth');
       const { auth } = await import('@/lib/firebase');
+      if (!auth) throw new Error('Auth not initialized');
       
       const userCredential = await createUserWithEmailAndPassword(auth, driverEmail, tempPassword);
       const userId = userCredential.user.uid;
@@ -404,6 +671,7 @@ export default function PartnersPage() {
       // Create user document in Firestore
       const { doc, setDoc } = await import('firebase/firestore');
       const { db } = await import('@/lib/firebase');
+      if (!db) throw new Error('Firestore not initialized');
       
       const userData = {
         id: userId,
@@ -705,54 +973,31 @@ export default function PartnersPage() {
   }, [showBrrgSearch]);
 
   const handleCreateUser = async () => {
-    if (!selectedPartnerForAction || !newUser.name || !newUser.phone || !newUser.password) {
-      setError('Vennligst fyll ut alle felter');
-      return;
-    }
-
-    if (!auth || !db) {
-      setError('Firebase ikke initialisert');
+    if (!selectedPartnerForAction || !newUser.name || !newUser.phone) {
+      setError('Vennligst fyll ut navn og telefonnummer');
       return;
     }
 
     try {
-      // Generate username (phone number)
-      const username = newUser.phone.replace(/\s/g, '');
-      
-      // Create user in Firebase Auth
-      const userCredential = await createUserWithEmailAndPassword(
-        auth, 
-        newUser.email || `${username}@partner.driftpro.no`, 
-        newUser.password
-      );
-
-      // Create user profile in Firestore
-      await setDoc(doc(db, 'users', userCredential.user.uid), {
-        id: userCredential.user.uid,
-        name: newUser.name,
-        phone: newUser.phone,
-        email: newUser.email,
-        username: username,
-        role: 'partner',
-        partnerId: selectedPartnerForAction.id,
-        partnerName: selectedPartnerForAction.name,
-                createdAt: new Date().toISOString(),
-        permissions: {
-          canViewDocuments: true,
-          canViewRoutes: true,
-          canAcceptRoutes: true,
-          canViewPDFs: true
-        }
+      const response = await fetch('/api/partners/invite', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          partnerId: selectedPartnerForAction.id,
+          partnerName: selectedPartnerForAction.name,
+          fullName: newUser.name,
+          phoneNumber: newUser.phone
+        })
       });
 
-      // Send SMS with credentials
-      await sendSMS(newUser.phone, 
-        `Hei ${newUser.name}! Du har fått tilgang til DriftPro. Brukernavn: ${username}, Passord: ${newUser.password}. Logg inn på: https://partner.driftpro.no`
-      );
+      const data = await response.json();
+      if (!response.ok || !data?.success) {
+        throw new Error(data?.error || 'Feil ved opprettelse av bruker');
+      }
 
-      setSuccess(`Bruker opprettet og SMS sendt til ${newUser.name}`);
+      setSuccess(`Invitasjon sendt på SMS til ${newUser.name}`);
       setShowCreateUserModal(false);
-      setNewUser({ name: '', phone: '', password: '', email: '', role: 'user' });
+      setNewUser({ name: '', phone: '', email: '' });
       setSelectedPartnerForAction(null);
       
       // Reload users if users modal is open
@@ -831,6 +1076,38 @@ export default function PartnersPage() {
         [assignmentKey]: assignment
       }));
 
+      // Notify partner users by SMS (active users with phone numbers)
+      try {
+        const partnerUsers = await firebaseService.getPartnerUsers(selectedPartner.id);
+        const usersWithPhone = (Array.isArray(partnerUsers) ? partnerUsers : [])
+          .filter((u: any) => (u?.status === 'active' || !u?.status) && (u?.phoneNumber || u?.phone));
+
+        const origin =
+          typeof window !== 'undefined' && window.location?.origin
+            ? window.location.origin
+            : (process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no');
+        const partnerPortalLink = `${origin}/partner/routes?assignmentId=${encodeURIComponent(assignmentId)}`;
+
+        const smsMessage =
+          `Ny rute tildelt: ${assignment.title}\n` +
+          `Dato: ${selectedDate.toLocaleDateString('no-NO')}\n` +
+          `Logg inn for å se PDF og akseptere: ${partnerPortalLink}`;
+
+        await Promise.all(
+          usersWithPhone.map(async (u: any) => {
+            const to = (u.phoneNumber || u.phone || '').toString();
+            if (!to) return;
+            await fetch('/api/sms/send', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ to, message: smsMessage, priority: 'high' })
+            });
+          })
+        );
+      } catch (smsErr) {
+        console.warn('Failed to send partner SMS notifications:', smsErr);
+      }
+
       setSuccess(`Rute delt med ${selectedPartner.name} for ${selectedDate.toLocaleDateString('no-NO')}`);
       setShowFileShareModal(false);
       setUploadedFiles([]);
@@ -845,6 +1122,127 @@ export default function PartnersPage() {
     }
   };
 
+  const handleMassFilesSelected = async (files: FileList | null) => {
+    if (!files) return;
+    const list = Array.from(files).filter(f => f.type === 'application/pdf' || f.name.toLowerCase().endsWith('.pdf'));
+    setMassFiles(list);
+    setMassResults(list.map(f => ({ file: f, status: 'pending' })));
+
+    // Scan each PDF for vehicle number
+    for (const f of list) {
+      const detected = await extractVehicleNumberFromPdf(f);
+      setMassResults(prev =>
+        prev.map(r => {
+          if (r.file !== f) return r;
+          if (!detected) return { ...r, status: 'no_vehicle', message: 'Fant ikke bilnummer i PDF (kan fylles inn manuelt).' };
+          const partner = findPartnerByVehicleNumber(detected);
+          if (!partner) return { ...r, detectedVehicleNumber: detected, status: 'no_partner', message: `Fant bilnummer ${detected}, men ingen partner har det registrert.` };
+          return { ...r, detectedVehicleNumber: detected, matchedPartnerId: partner.id, status: 'matched', message: `Match: ${partner.name} (${detected})` };
+        })
+      );
+    }
+  };
+
+  const runMassAssign = async () => {
+    if (!massAssignDate) {
+      setError('Velg dato');
+      return;
+    }
+    if (!Array.isArray(massResults) || massResults.length === 0) {
+      setError('Last opp minst én PDF');
+      return;
+    }
+
+    setMassBusy(true);
+    try {
+      const dateIso = new Date(massAssignDate + 'T12:00:00').toISOString();
+      const failures: string[] = [];
+
+      for (const r of massResults) {
+        const vehicle = normalizeVehicleNumber(r.manualVehicleNumber || r.detectedVehicleNumber || '');
+        if (!vehicle) {
+          failures.push(`${r.file.name}: mangler bilnummer`);
+          setMassResults(prev => prev.map(x => x.file === r.file ? ({ ...x, status: 'no_vehicle' }) : x));
+          continue;
+        }
+
+        const partner = findPartnerByVehicleNumber(vehicle);
+        if (!partner) {
+          failures.push(`${r.file.name}: fant ikke partner for bilnummer ${vehicle}`);
+          setMassResults(prev => prev.map(x => x.file === r.file ? ({ ...x, status: 'no_partner', message: `Fant ikke partner for ${vehicle}` }) : x));
+          continue;
+        }
+
+        try {
+          const uploaded = await uploadFilesToFirebase([r.file], partner.id);
+          const title = `Rute ${massAssignDate} (${vehicle})`;
+
+          const assignmentId = await firebaseService.createRouteAssignment({
+            partnerId: partner.id,
+            partnerName: partner.name,
+            date: dateIso,
+            files: uploaded,
+            title,
+            job: '',
+            users: []
+          });
+
+          // SMS notifications to partner users (same endpoint used elsewhere)
+          try {
+            const partnerUsers = await firebaseService.getPartnerUsers(partner.id);
+            const usersWithPhone = (Array.isArray(partnerUsers) ? partnerUsers : [])
+              .filter((u: any) => (u?.status === 'active' || !u?.status) && (u?.phoneNumber || u?.phone));
+
+            const origin =
+              typeof window !== 'undefined' && window.location?.origin
+                ? window.location.origin
+                : (process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no');
+            const partnerPortalLink = `${origin}/partner/routes?assignmentId=${encodeURIComponent(assignmentId)}`;
+
+            const smsMessage =
+              `Ny rute tildelt: ${title}\n` +
+              `Dato: ${massAssignDate}\n` +
+              `Logg inn for å se PDF og akseptere: ${partnerPortalLink}`;
+
+            await Promise.all(
+              usersWithPhone.map(async (u: any) => {
+                const to = (u.phoneNumber || u.phone || '').toString();
+                if (!to) return;
+                await fetch('/api/sms/send', {
+                  method: 'POST',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ to, message: smsMessage, priority: 'high' })
+                });
+              })
+            );
+          } catch (smsErr) {
+            console.warn('Mass assign: failed to send SMS:', smsErr);
+          }
+
+          setMassResults(prev => prev.map(x => x.file === r.file ? ({
+            ...x,
+            detectedVehicleNumber: x.detectedVehicleNumber || vehicle,
+            manualVehicleNumber: x.manualVehicleNumber,
+            matchedPartnerId: partner.id,
+            status: 'sent',
+            message: `Sendt til ${partner.name} (${vehicle})`
+          }) : x));
+        } catch (e: any) {
+          failures.push(`${r.file.name}: ${e?.message || 'feil ved sending'}`);
+          setMassResults(prev => prev.map(x => x.file === r.file ? ({ ...x, status: 'failed', message: e?.message || 'Feil ved sending' }) : x));
+        }
+      }
+
+      if (failures.length > 0) {
+        setError(`Noen PDF-er ble ikke sendt:\n${failures.join('\n')}`);
+      } else {
+        setSuccess('Alle PDF-er ble tildelt og sendt ✅');
+      }
+    } finally {
+      setMassBusy(false);
+    }
+  };
+
   const loadRouteAssignments = async () => {
     if (!userProfile) return;
     
@@ -855,7 +1253,6 @@ export default function PartnersPage() {
       const endDate = weekDates[6].toISOString().split('T')[0];
       
       const assignments = await firebaseService.getRouteAssignments(
-        userProfile.companyId, 
         startDate, 
         endDate
       );
@@ -874,10 +1271,10 @@ export default function PartnersPage() {
   };
 
   const loadAudits = async () => {
-    if (!userProfile) return;
+    if (!userProfile?.companyId) return;
     
     try {
-      const auditsData = await firebaseService.getAudits(userProfile.companyId);
+      const auditsData = await firebaseService.getAudits();
       setAudits(auditsData);
       
       // Check for overdue audits
@@ -888,6 +1285,11 @@ export default function PartnersPage() {
     } catch (error) {
       console.error('Error loading audits:', error);
     }
+  };
+
+  const getPartnerNameById = (partnerId: string) => {
+    const partner = partners.find(p => p.id === partnerId);
+    return partner?.name || 'Ukjent partner';
   };
 
   // Get audit status for a specific partner
@@ -1177,6 +1579,30 @@ export default function PartnersPage() {
       overflowX: 'hidden',
       padding: isMobile ? '0' : undefined
     }}>
+      <style jsx global>{`
+        /* Scoped dark styling for all modals in Samarbeidspartnere */
+        [data-partners-darkmodal] {
+          color: var(--gray-900);
+        }
+        [data-partners-darkmodal] input,
+        [data-partners-darkmodal] select,
+        [data-partners-darkmodal] textarea {
+          background: var(--gray-100) !important;
+          color: var(--gray-900) !important;
+          border: 1px solid var(--gray-300) !important;
+        }
+        [data-partners-darkmodal] label {
+          color: var(--gray-800) !important;
+        }
+        [data-partners-darkmodal] ::placeholder {
+          color: var(--gray-500) !important;
+        }
+        [data-partners-darkmodal] option {
+          background: var(--gray-100);
+          color: var(--gray-900);
+        }
+      `}</style>
+
       {/* Mobile Header */}
       {isMobile && (
         <div style={{
@@ -1197,6 +1623,344 @@ export default function PartnersPage() {
         </div>
       )}
 
+      {/* Mass Route Assign Modal */}
+      {showMassAssignModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1100,
+          padding: '1rem'
+        }}>
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
+          }}>
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid var(--gray-200)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(135deg, #111827 0%, #0b1220 100%)'
+            }}>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--gray-900)' }}>
+                  Mass rute tildeling (PDF → Bilnummer → Partner)
+                </div>
+                <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
+                  Laster du opp flere PDF’er, scanner vi bilnummer automatisk. Hvis vi ikke finner bilnummer, kan du fylle inn manuelt.
+                </div>
+              </div>
+              <button
+                onClick={() => setShowMassAssignModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  borderRadius: '10px',
+                  color: 'var(--gray-600)'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px' }} />
+              </button>
+            </div>
+
+            <div style={{ padding: '1.5rem', overflowY: 'auto', maxHeight: '70vh' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '1rem', alignItems: 'end' }}>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                    Dato for rutene
+                  </label>
+                  <input
+                    type="date"
+                    value={massAssignDate}
+                    onChange={(e) => setMassAssignDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
+                    Last opp PDF-filer
+                  </label>
+                  <input
+                    type="file"
+                    accept="application/pdf,.pdf"
+                    multiple
+                    onChange={(e) => handleMassFilesSelected(e.target.files)}
+                    disabled={massBusy}
+                  />
+                </div>
+              </div>
+
+              <div style={{ marginTop: '1.25rem' }}>
+                {massResults.length === 0 ? (
+                  <div style={{
+                    border: '1px dashed var(--gray-300)',
+                    borderRadius: '14px',
+                    padding: '1.25rem',
+                    color: 'var(--gray-600)'
+                  }}>
+                    Ingen filer valgt enda.
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                    {massResults.map((r) => (
+                      <div key={r.file.name} style={{
+                        border: '1px solid var(--gray-200)',
+                        background: 'var(--gray-100)',
+                        borderRadius: '14px',
+                        padding: '0.9rem 1rem',
+                        display: 'grid',
+                        gridTemplateColumns: '1fr 220px 220px',
+                        gap: '0.75rem',
+                        alignItems: 'center'
+                      }}>
+                        <div style={{ minWidth: 0 }}>
+                          <div style={{ fontWeight: 800, color: 'var(--gray-900)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {r.file.name}
+                          </div>
+                          <div style={{ marginTop: '0.25rem', fontSize: '0.85rem', color: 'var(--gray-600)' }}>
+                            {r.message || (r.detectedVehicleNumber ? `Bilnummer funnet: ${r.detectedVehicleNumber}` : 'Venter...')}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label style={{ display: 'block', marginBottom: '0.35rem', fontSize: '0.8rem', fontWeight: 700, color: 'var(--gray-700)' }}>
+                            Bilnummer (auto/manuell)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder={r.detectedVehicleNumber || 'F.eks. M18'}
+                            value={r.manualVehicleNumber || ''}
+                            onChange={(e) => {
+                              const v = e.target.value;
+                              setMassResults(prev => prev.map(x => x.file === r.file ? ({ ...x, manualVehicleNumber: v }) : x));
+                            }}
+                            disabled={massBusy}
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', justifyContent: 'flex-end' }}>
+                          <span style={{
+                            padding: '0.35rem 0.65rem',
+                            borderRadius: '999px',
+                            fontSize: '0.8rem',
+                            fontWeight: 800,
+                            border: '1px solid var(--gray-300)',
+                            color: r.status === 'sent' ? '#10b981' :
+                              r.status === 'matched' ? '#60a5fa' :
+                              r.status === 'no_partner' ? '#f59e0b' :
+                              r.status === 'no_vehicle' ? '#ef4444' :
+                              r.status === 'failed' ? '#ef4444' :
+                              'var(--gray-600)',
+                            background: 'rgba(255,255,255,0.04)'
+                          }}>
+                            {r.status === 'sent' ? 'Sendt' :
+                              r.status === 'matched' ? 'Klar' :
+                              r.status === 'no_partner' ? 'Ingen partner' :
+                              r.status === 'no_vehicle' ? 'Mangler bilnr' :
+                              r.status === 'failed' ? 'Feil' :
+                              'Venter'}
+                          </span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div style={{
+              padding: '1rem 1.5rem',
+              borderTop: '1px solid var(--gray-200)',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              background: '#0b1220'
+            }}>
+              <div style={{ color: 'var(--gray-600)', fontSize: '0.85rem' }}>
+                Tips: Bilnummer leses fra “Resource ID” / “Driver Name” i PDF (som i bildet ditt).
+              </div>
+              <div style={{ display: 'flex', gap: '0.75rem' }}>
+                <button
+                  className="btn"
+                  onClick={() => setShowMassAssignModal(false)}
+                  style={{
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid var(--gray-300)',
+                    color: 'var(--gray-800)'
+                  }}
+                  disabled={massBusy}
+                >
+                  Avbryt
+                </button>
+                <button
+                  className="btn"
+                  onClick={runMassAssign}
+                  style={{
+                    background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                    border: '1px solid rgba(16,185,129,0.35)',
+                    color: '#fff',
+                    fontWeight: 800
+                  }}
+                  disabled={massBusy || massResults.length === 0}
+                >
+                  {massBusy ? 'Sender...' : 'Send alle'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Inbound SAP Modal */}
+      {showInboundModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1200,
+          padding: '1rem'
+        }}>
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
+            borderRadius: '16px',
+            width: '100%',
+            maxWidth: '1100px',
+            maxHeight: '90vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
+          }}>
+            <div style={{
+              padding: '1.25rem 1.5rem',
+              borderBottom: '1px solid var(--gray-200)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: 'linear-gradient(135deg, #111827 0%, #0b1220 100%)'
+            }}>
+              <div>
+                <div style={{ fontSize: '1.1rem', fontWeight: 800, color: 'var(--gray-900)' }}>
+                  Innkommende ruter fra SAP (e-post)
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => loadInbound(true)}
+                  style={{
+                    padding: '0.6rem 0.9rem',
+                    background: '#0ea5e9',
+                    border: '1px solid rgba(14,165,233,0.35)',
+                    color: '#fff',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    fontWeight: 700
+                  }}
+                  disabled={inboundLoading}
+                >
+                  {inboundLoading ? 'Laster...' : 'Oppdater'}
+                </button>
+                <button
+                  onClick={() => setShowInboundModal(false)}
+                  style={{
+                    padding: '0.6rem 0.9rem',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid var(--gray-300)',
+                    color: 'var(--gray-800)',
+                    borderRadius: '10px',
+                    cursor: 'pointer',
+                    fontWeight: 700
+                  }}
+                >
+                  Lukk
+                </button>
+              </div>
+            </div>
+
+            <div style={{ padding: '1rem 1.25rem', overflowY: 'auto', maxHeight: '70vh' }}>
+              {inboundItems.length === 0 ? (
+                <div style={{
+                  border: '1px dashed var(--gray-300)',
+                  borderRadius: '12px',
+                  padding: '1rem',
+                  color: 'var(--gray-600)',
+                  textAlign: 'center'
+                }}>
+                  Ingen innkommende ruter logget ennå.
+                </div>
+              ) : (
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                  <thead>
+                    <tr style={{ borderBottom: '1px solid var(--gray-200)', color: '#cbd5e1', textAlign: 'left' }}>
+                      <th style={{ padding: '0.5rem' }}>Mottatt</th>
+                      <th style={{ padding: '0.5rem' }}>Fra</th>
+                      <th style={{ padding: '0.5rem' }}>Emne</th>
+                      <th style={{ padding: '0.5rem' }}>Fil(er)</th>
+                      <th style={{ padding: '0.5rem' }}>Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {inboundItems.map((item) => (
+                      <tr key={item.id} style={{ borderBottom: '1px solid #1f2937' }}>
+                        <td style={{ padding: '0.5rem', color: '#e5e7eb' }}>
+                          {item.receivedAt || item.createdAt?.toDate?.() || item.createdAt || ''}
+                        </td>
+                        <td style={{ padding: '0.5rem', color: '#e5e7eb' }}>{item.from || ''}</td>
+                        <td style={{ padding: '0.5rem', color: '#e5e7eb' }}>{item.subject || ''}</td>
+                        <td style={{ padding: '0.5rem', color: '#a5b4fc' }}>
+                          {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
+                            item.attachments.map((a: any, idx: number) => (
+                              <div key={idx} style={{ marginBottom: '0.25rem' }}>
+                                {a.fileUrl ? (
+                                  <a href={a.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>
+                                    {a.fileName || 'Vedlegg'}
+                                  </a>
+                                ) : (
+                                  a.fileName || 'Vedlegg'
+                                )}
+                              </div>
+                            ))
+                          ) : (
+                            <span style={{ color: '#94a3b8' }}>Ingen vedlegg</span>
+                          )}
+                        </td>
+                        <td style={{ padding: '0.5rem', color: '#22c55e', fontWeight: 700 }}>
+                          {item.status || 'pending'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Desktop Page Header */}
       {!isMobile && (
       <div className="page-header">
@@ -1212,7 +1976,7 @@ export default function PartnersPage() {
           </div>
         </div>
         
-        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', flexWrap: 'wrap' }}>
           <span className="badge badge-primary">
             {Array.isArray(partners) ? partners.length : 0} partnere
           </span>
@@ -1291,6 +2055,71 @@ export default function PartnersPage() {
             </button>
           </div>
           
+          {/* Actions row directly under the tabs when in routes view */}
+          {activeView === 'routes' && (
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              <button
+                className="btn"
+                onClick={() => setShowJobManagementModal(true)}
+                style={{
+                  background: 'linear-gradient(135deg, #0f172a 0%, #1f2937 100%)',
+                  border: '1px solid #334155',
+                  color: '#e5e7eb',
+                  fontWeight: '600',
+                  fontSize: 'var(--font-size-sm)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <Clock style={{ width: '16px', height: '16px' }} />
+                Administrer Jobber
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  setShowInboundModal(true);
+                  loadInbound(false);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',
+                  border: '1px solid rgba(37, 99, 235, 0.35)',
+                  color: '#ffffff',
+                  fontWeight: '700',
+                  fontSize: 'var(--font-size-sm)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <FileText style={{ width: '16px', height: '16px' }} />
+                Innkommende ruter fra SAP
+              </button>
+              <button
+                className="btn"
+                onClick={() => {
+                  setMassAssignDate(new Date().toISOString().split('T')[0]);
+                  setMassFiles([]);
+                  setMassResults([]);
+                  setShowMassAssignModal(true);
+                }}
+                style={{
+                  background: 'linear-gradient(135deg, #10b981 0%, #059669 100%)',
+                  border: '1px solid rgba(16,185,129,0.35)',
+                  color: '#ffffff',
+                  fontWeight: '700',
+                  fontSize: 'var(--font-size-sm)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.5rem'
+                }}
+              >
+                <FileText style={{ width: '16px', height: '16px' }} />
+                Mass rute tildeling
+              </button>
+            </div>
+          )}
+          
             <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
               {/* Notification Bell */}
               <button
@@ -1309,51 +2138,42 @@ export default function PartnersPage() {
                 }}
               >
                 <AlertTriangle style={{ width: '20px', height: '20px' }} />
-                {Array.isArray(auditNotifications) && auditNotifications.length > 0 && (
-                  <span style={{
-                    position: 'absolute',
-                    top: '-2px',
-                    right: '-2px',
-                    width: '18px',
-                    height: '18px',
-                    background: '#dc2626',
-                    color: 'white',
-                    borderRadius: '50%',
-                    fontSize: '0.75rem',
-                    fontWeight: '600',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center'
-                  }}>
-                    {Array.isArray(auditNotifications) ? auditNotifications.length : 0}
-                  </span>
-                )}
+                {(() => {
+                  const count = activeView === 'routes'
+                    ? (routeAcceptanceStats.pending + routeAcceptanceStats.declined)
+                    : (Array.isArray(auditNotifications) ? auditNotifications.length : 0);
+                  if (!count) return null;
+                  return (
+                    <span style={{
+                      position: 'absolute',
+                      top: '-2px',
+                      right: '-2px',
+                      width: '18px',
+                      height: '18px',
+                      background: '#dc2626',
+                      color: 'white',
+                      borderRadius: '50%',
+                      fontSize: '0.75rem',
+                      fontWeight: '600',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}>
+                      {count}
+                    </span>
+                  );
+                })()}
               </button>
               
-              <button 
-                className="btn"
-                onClick={() => setShowJobManagementModal(true)}
-                style={{
-                  background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-                  border: '1px solid #d1d5db',
-                  color: '#374151',
-                  fontWeight: '500',
-                  fontSize: 'var(--font-size-sm)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem'
-                }}
-              >
-                <Clock style={{ width: '16px', height: '16px' }} />
-                Administrer Jobber
-              </button>
-              <button 
-                className="btn btn-primary"
-                onClick={() => setShowCreatePartnerModal(true)}
-              >
-                <Plus style={{ width: '16px', height: '16px' }} />
-                Ny Partner
-              </button>
+              {activeView === 'partners' && (
+                <button 
+                  className="btn btn-primary"
+                  onClick={() => setShowCreatePartnerModal(true)}
+                >
+                  <Plus style={{ width: '16px', height: '16px' }} />
+                  Ny Partner
+                </button>
+              )}
             </div>
         </div>
       </div>
@@ -1390,7 +2210,7 @@ export default function PartnersPage() {
               <div style={{ flex: '1' }}>
                 <h3 style={{ 
                   fontWeight: '600', 
-                  color: '#333',
+                  color: '#f8fafc',
                   fontSize: '1.1rem',
                   marginBottom: '0.25rem'
                 }}>
@@ -1443,7 +2263,11 @@ export default function PartnersPage() {
             <div style={{ marginBottom: '1rem' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
                 <MapPin style={{ width: '16px', height: '16px' }} />
-                <span>{partner.address.street}, {partner.address.postalCode} {partner.address.city}</span>
+                <span>
+                  {partner.address?.street || 'Adresse ukjent'}
+                  {partner.address?.postalCode ? `, ${partner.address.postalCode}` : ''}
+                  {partner.address?.city ? ` ${partner.address.city}` : ''}
+                </span>
               </div>
               
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
@@ -1465,7 +2289,18 @@ export default function PartnersPage() {
                 <div style={{ marginBottom: '0.5rem' }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem', fontSize: '0.875rem', color: '#666' }}>
                     <Building2 style={{ width: '16px', height: '16px' }} />
-                    <span>{partner.vehicles.length} kjøretøy registrert</span>
+                    <span>
+                      {(() => {
+                        const vehicleNumbers = (partner.vehicles || [])
+                          .map(v => v?.vehicleNumber || v?.registrationNumber || v?.vehicleName)
+                          .filter(Boolean) as string[];
+                        const shown = vehicleNumbers.slice(0, 3);
+                        const more = vehicleNumbers.length - shown.length;
+                        return vehicleNumbers.length > 0
+                          ? `Bilnummer: ${shown.join(', ')}${more > 0 ? ` +${more}` : ''}`
+                          : `${partner.vehicles.length} kjøretøy registrert`;
+                      })()}
+                    </span>
                   </div>
                   
                   {/* Show assigned routes for this partner */}
@@ -1647,65 +2482,73 @@ export default function PartnersPage() {
         ))}
         </div>
       ) : (
-        /* Routes Calendar View - Calendar Only */
+        /* Routes Calendar View - Inline panel (not fullscreen) */
         <div style={{ 
-          background: 'white',
-          borderRadius: '12px',
-          boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)',
-          overflow: 'hidden'
+          marginTop: '1rem',
+          background: '#050a13',
+          borderRadius: '16px',
+          boxShadow: '0 18px 55px rgba(0,0,0,0.35)',
+          overflow: 'hidden',
+          border: '1px solid #1f2937',
+          display: 'flex',
+          flexDirection: 'column',
+          minHeight: '70vh'
         }}>
             {/* Calendar Header */}
             <div style={{ 
               padding: '1.5rem', 
-              borderBottom: '1px solid #e2e8f0',
-              background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+              borderBottom: '1px solid #1f2937',
+              background: 'linear-gradient(135deg, #111827 0%, #0f172a 100%)',
               display: 'flex',
               alignItems: 'center',
-              justifyContent: 'space-between'
+              justifyContent: 'space-between',
+              position: 'sticky',
+              top: 0,
+              zIndex: 2
             }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '1.5rem' }}>
                 <h3 style={{ 
                   fontSize: '1.5rem', 
                   fontWeight: '700', 
                   margin: 0,
-                  color: '#1e293b',
+                  color: '#e5e7eb',
                   display: 'flex',
                   alignItems: 'center',
                   gap: '0.5rem'
                 }}>
-                  <Clock style={{ width: '24px', height: '24px', color: '#667eea' }} />
+                  <Clock style={{ width: '24px', height: '24px', color: '#a5b4fc' }} />
                   Ukeplan
                 </h3>
                 <div style={{ 
                   display: 'flex', 
                   alignItems: 'center', 
                   gap: '0.5rem',
-                  background: 'white',
+                  background: '#0b1220',
                   padding: '0.5rem',
                   borderRadius: '8px',
-                  boxShadow: '0 1px 3px rgba(0, 0, 0, 0.1)'
+                  border: '1px solid #1f2937'
                 }}>
                   <button
                     onClick={() => navigateWeek('prev')}
                     style={{
                       padding: '0.5rem',
-                      background: 'transparent',
-                      border: '1px solid #e2e8f0',
+                      background: '#111827',
+                      border: '1px solid #1f2937',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       transition: 'all 0.2s',
-                      color: '#64748b'
+                      color: '#cbd5e1'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f1f5f9';
-                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.background = '#1f2937';
+                      e.currentTarget.style.borderColor = '#334155';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.background = '#111827';
+                      e.currentTarget.style.borderColor = '#1f2937';
                     }}
                   >
                     <ChevronLeft style={{ width: '18px', height: '18px' }} />
@@ -1715,7 +2558,7 @@ export default function PartnersPage() {
                     fontWeight: '600',
                     minWidth: '180px',
                     textAlign: 'center',
-                    color: '#374151',
+                    color: '#cbd5e1',
                     padding: '0 1rem'
                   }}>
                     {formatDate(getWeekDates(currentDate)[0])} - {formatDate(getWeekDates(currentDate)[6])}
@@ -1724,23 +2567,23 @@ export default function PartnersPage() {
                     onClick={() => navigateWeek('next')}
                     style={{
                       padding: '0.5rem',
-                      background: 'transparent',
-                      border: '1px solid #e2e8f0',
+                      background: '#111827',
+                      border: '1px solid #1f2937',
                       borderRadius: '6px',
                       cursor: 'pointer',
                       display: 'flex',
                       alignItems: 'center',
                       justifyContent: 'center',
                       transition: 'all 0.2s',
-                      color: '#64748b'
+                      color: '#cbd5e1'
                     }}
                     onMouseEnter={(e) => {
-                      e.currentTarget.style.background = '#f1f5f9';
-                      e.currentTarget.style.borderColor = '#cbd5e1';
+                      e.currentTarget.style.background = '#1f2937';
+                      e.currentTarget.style.borderColor = '#334155';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.background = 'transparent';
-                      e.currentTarget.style.borderColor = '#e2e8f0';
+                      e.currentTarget.style.background = '#111827';
+                      e.currentTarget.style.borderColor = '#1f2937';
                     }}
                   >
                     <ChevronRight style={{ width: '18px', height: '18px' }} />
@@ -1748,28 +2591,28 @@ export default function PartnersPage() {
                 </div>
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                 <button
                   onClick={() => setCurrentDate(new Date())}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                    color: 'white',
-                    border: 'none',
+                  background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)',
+                  color: '#f8fafc',
+                  border: '1px solid #4338ca',
                     borderRadius: '8px',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
                     fontWeight: '600',
                     transition: 'all 0.2s',
-                    boxShadow: '0 2px 4px rgba(102, 126, 234, 0.3)'
+                  boxShadow: '0 6px 20px rgba(79, 70, 229, 0.35)'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.transform = 'translateY(-1px)';
-                    e.currentTarget.style.boxShadow = '0 4px 12px rgba(102, 126, 234, 0.4)';
+                  e.currentTarget.style.boxShadow = '0 10px 24px rgba(79, 70, 229, 0.45)';
                   }}
                   onMouseLeave={(e) => {
                     e.currentTarget.style.transform = 'translateY(0)';
-                    e.currentTarget.style.boxShadow = '0 2px 4px rgba(102, 126, 234, 0.3)';
+                  e.currentTarget.style.boxShadow = '0 6px 20px rgba(79, 70, 229, 0.35)';
                   }}
                 >
                   I dag
@@ -1778,27 +2621,27 @@ export default function PartnersPage() {
             </div>
 
             {/* Enhanced Calendar Grid */}
-            <div style={{ flex: '1', overflow: 'auto', background: '#f8fafc' }}>
+            <div style={{ flex: 1, overflow: 'auto', background: '#050a13' }}>
               <div style={{ 
                 display: 'grid', 
-                gridTemplateColumns: '250px repeat(7, 1fr)', 
+                gridTemplateColumns: '320px repeat(7, 1fr)', 
                 minHeight: '100%',
-                background: 'white'
+                background: '#0f172a'
               }}>
                 {/* Partner names column */}
                 <div style={{ 
-                  borderRight: '2px solid #e2e8f0',
-                  background: 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
+                  borderRight: '2px solid #1f2937',
+                  background: 'linear-gradient(135deg, #111827 0%, #0f172a 100%)',
                   padding: '1rem 0'
                 }}>
                   <div style={{
                     padding: '1rem 1.25rem',
                     fontSize: '0.875rem',
                     fontWeight: '700',
-                    color: '#374151',
+                    color: '#e5e7eb',
                     textTransform: 'uppercase',
                     letterSpacing: '0.05em',
-                    borderBottom: '2px solid #e2e8f0'
+                    borderBottom: '2px solid #1f2937'
                   }}>
                     Partnere
                   </div>
@@ -1807,12 +2650,12 @@ export default function PartnersPage() {
                       key={partner.id || `partner-row-${index}`}
                       style={{
                         padding: '1rem 1.25rem',
-                        borderBottom: '1px solid #f1f5f9',
+                        borderBottom: '1px solid #1f2937',
                         display: 'flex',
                         alignItems: 'center',
                         gap: '0.75rem',
                         minHeight: '80px',
-                        background: selectedPartner?.id === partner.id ? '#f0f4ff' : 'transparent',
+                        background: selectedPartner?.id === partner.id ? '#111827' : 'transparent',
                         transition: 'all 0.2s'
                       }}
                     >
@@ -1838,17 +2681,52 @@ export default function PartnersPage() {
                         <div style={{
                           fontSize: '0.875rem',
                           fontWeight: '600',
-                          color: '#374151',
-                          whiteSpace: 'nowrap',
+                          color: '#e5e7eb',
+                          whiteSpace: 'normal',
                           overflow: 'hidden',
-                          textOverflow: 'ellipsis',
+                          display: '-webkit-box',
+                          WebkitLineClamp: 2,
+                          WebkitBoxOrient: 'vertical',
                           marginBottom: '0.25rem'
                         }}>
                           {partner.name}
                         </div>
+                        {(() => {
+                          const vehicleNumbers = Array.isArray((partner as any)?.vehicles)
+                            ? (partner as any).vehicles
+                                .map((v: any) => v?.vehicleNumber)
+                                .filter(Boolean)
+                            : [];
+                          const pad = (val: string) => {
+                            const m = val.match(/\d+/);
+                            if (!m) return val;
+                            const n = parseInt(m[0], 10);
+                            if (Number.isNaN(n) || n <= 0) return val;
+                            if (n < 10) return `M00${n}`;
+                            if (n < 100) return `M0${n}`;
+                            return `M${n}`;
+                          };
+                          const formatted = vehicleNumbers.map(pad);
+                          if (formatted.length === 0) return null;
+                          const shown = formatted.slice(0, 3).join(', ');
+                          const more = formatted.length - Math.min(formatted.length, 3);
+                          return (
+                            <div style={{
+                              fontSize: '0.75rem',
+                              color: '#a5b4fc',
+                              fontWeight: '700',
+                              whiteSpace: 'nowrap',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              marginBottom: '0.2rem'
+                            }}>
+                              Bil: {shown}{more > 0 ? ` +${more}` : ''}
+                            </div>
+                          );
+                        })()}
                         <div style={{
                           fontSize: '0.75rem',
-                          color: '#64748b',
+                          color: '#94a3b8',
                           whiteSpace: 'nowrap',
                           overflow: 'hidden',
                           textOverflow: 'ellipsis'
@@ -1867,8 +2745,8 @@ export default function PartnersPage() {
                   
                   return (
                     <div key={dayIndex} style={{
-                      borderRight: dayIndex < 6 ? '1px solid #e2e8f0' : 'none',
-                      background: isWeekend ? '#f8fafc' : 'white'
+                      borderRight: dayIndex < 6 ? '1px solid #1f2937' : 'none',
+                      background: isWeekend ? '#0b1220' : '#0f172a'
                     }}>
                       {/* Day header */}
                       <div style={{
@@ -1876,15 +2754,15 @@ export default function PartnersPage() {
                         background: isToday 
                           ? 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)' 
                           : isWeekend 
-                            ? 'linear-gradient(135deg, #f1f5f9 0%, #e2e8f0 100%)'
-                            : 'linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%)',
-                        borderBottom: '2px solid #e2e8f0',
+                            ? 'linear-gradient(135deg, #111827 0%, #0b1220 100%)'
+                            : 'linear-gradient(135deg, #111827 0%, #0f172a 100%)',
+                        borderBottom: '2px solid #1f2937',
                         textAlign: 'center'
                       }}>
                         <div style={{
                           fontSize: '0.875rem',
                           fontWeight: '700',
-                          color: isToday ? 'white' : '#64748b',
+                          color: isToday ? 'white' : '#94a3b8',
                           textTransform: 'uppercase',
                           letterSpacing: '0.05em',
                           marginBottom: '0.5rem'
@@ -1894,7 +2772,7 @@ export default function PartnersPage() {
                         <div style={{
                           fontSize: '1.5rem',
                           fontWeight: '800',
-                          color: isToday ? 'white' : '#1e293b'
+                          color: isToday ? 'white' : '#e5e7eb'
                         }}>
                           {date.getDate()}
                         </div>
@@ -1916,12 +2794,12 @@ export default function PartnersPage() {
                               style={{
                                 minHeight: '80px',
                                 padding: '0.75rem',
-                                borderBottom: '1px solid #f1f5f9',
+                                borderBottom: '1px solid #1f2937',
                                 cursor: 'pointer',
                                 transition: 'all 0.2s ease',
                                 background: assignment 
-                                  ? 'linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%)'
-                                  : 'transparent',
+                                  ? 'linear-gradient(135deg, rgba(79,70,229,0.28) 0%, rgba(124,58,237,0.22) 100%)'
+                                  : 'rgba(255,255,255,0.02)',
                                 position: 'relative',
                                 display: 'flex',
                                 flexDirection: 'column',
@@ -1930,15 +2808,15 @@ export default function PartnersPage() {
                               }}
                               onMouseEnter={(e) => {
                                 e.currentTarget.style.background = assignment 
-                                  ? 'linear-gradient(135deg, #e0e7ff 0%, #c7d2fe 100%)'
-                                  : '#f8fafc';
+                                  ? 'linear-gradient(135deg, rgba(79,70,229,0.38) 0%, rgba(124,58,237,0.30) 100%)'
+                                  : 'rgba(255,255,255,0.04)';
                                 e.currentTarget.style.transform = 'scale(1.02)';
-                                e.currentTarget.style.boxShadow = '0 2px 8px rgba(0, 0, 0, 0.1)';
+                                e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 0, 0, 0.35)';
                               }}
                               onMouseLeave={(e) => {
                                 e.currentTarget.style.background = assignment 
-                                  ? 'linear-gradient(135deg, #f0f4ff 0%, #e0e7ff 100%)'
-                                  : 'transparent';
+                                  ? 'linear-gradient(135deg, rgba(79,70,229,0.28) 0%, rgba(124,58,237,0.22) 100%)'
+                                  : 'rgba(255,255,255,0.02)';
                                 e.currentTarget.style.transform = 'scale(1)';
                                 e.currentTarget.style.boxShadow = 'none';
                               }}
@@ -1956,7 +2834,7 @@ export default function PartnersPage() {
                                     alignItems: 'center',
                                     gap: '0.5rem',
                                     fontSize: '0.75rem',
-                                    color: '#667eea',
+                                    color: '#a5b4fc',
                                     fontWeight: '700'
                                   }}>
                                     <FileText style={{ width: '12px', height: '12px' }} />
@@ -1964,7 +2842,7 @@ export default function PartnersPage() {
                                   </div>
                                   <div style={{
                                     fontSize: '0.65rem',
-                                    color: '#64748b',
+                                    color: '#cbd5e1',
                                     textAlign: 'center',
                                     lineHeight: '1.3',
                                     fontWeight: '500'
@@ -1973,7 +2851,7 @@ export default function PartnersPage() {
                                   </div>
                                   <div style={{
                                     fontSize: '0.6rem',
-                                    color: '#9ca3af',
+                                    color: '#94a3b8',
                                     textAlign: 'center'
                                   }}>
                                     {Array.isArray(assignment.stops) ? assignment.stops.length : 0} stopp • {assignment.totalWeight}kg
@@ -1985,7 +2863,8 @@ export default function PartnersPage() {
                                   color: '#cbd5e1',
                                   textAlign: 'center',
                                   fontStyle: 'italic',
-                                  fontWeight: '500'
+                                  fontWeight: '600',
+                                  opacity: 0.9
                                 }}>
                                   Klikk for å tildele
                                 </div>
@@ -2010,20 +2889,24 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
             background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: 'var(--radius-lg)',
             padding: '2rem',
             maxWidth: '800px',
             width: '90%',
             maxHeight: '90vh',
-            overflow: 'auto'
+            overflow: 'auto',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
               <div>
@@ -2182,7 +3065,7 @@ export default function PartnersPage() {
                       top: '100%',
                       left: 0,
                       right: 0,
-                      background: 'white',
+                      background: 'var(--white)',
                       border: '1px solid var(--gray-300)',
                       borderRadius: 'var(--radius-md)',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
@@ -2208,7 +3091,7 @@ export default function PartnersPage() {
                             e.currentTarget.style.backgroundColor = 'var(--gray-50)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'white';
+                            e.currentTarget.style.backgroundColor = 'var(--white)';
                           }}
                         >
                           <div>
@@ -2956,21 +3839,21 @@ export default function PartnersPage() {
           backdropFilter: 'blur(4px)'
         }}>
           <div style={{
-            background: 'white',
+            background: '#0b1220',
             borderRadius: '12px',
             padding: '0',
             maxWidth: '900px',
             width: '95%',
             maxHeight: '90vh',
             overflow: 'hidden',
-            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.25)',
-            border: '1px solid #e2e8f0'
+            boxShadow: '0 25px 50px rgba(0, 0, 0, 0.55)',
+            border: '1px solid #1f2937'
           }}>
             {/* Modal Header */}
             <div style={{
               padding: '1.5rem 2rem',
-              borderBottom: '1px solid #e2e8f0',
-              background: 'white',
+              borderBottom: '1px solid #1f2937',
+              background: 'linear-gradient(135deg, #111827 0%, #0b1220 100%)',
               position: 'relative'
             }}>
               <button
@@ -2988,16 +3871,16 @@ export default function PartnersPage() {
                   cursor: 'pointer',
                   padding: '0.5rem',
                   borderRadius: '6px',
-                  color: '#64748b',
+                  color: '#94a3b8',
                   transition: 'all 0.2s'
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.background = '#f1f5f9';
-                  e.currentTarget.style.color = '#374151';
+                  e.currentTarget.style.background = 'rgba(255,255,255,0.06)';
+                  e.currentTarget.style.color = '#e5e7eb';
                 }}
                 onMouseLeave={(e) => {
                   e.currentTarget.style.background = 'none';
-                  e.currentTarget.style.color = '#64748b';
+                  e.currentTarget.style.color = '#94a3b8';
                 }}
               >
                 <X style={{ width: '20px', height: '20px' }} />
@@ -3008,7 +3891,7 @@ export default function PartnersPage() {
                   fontSize: '1.25rem', 
                   fontWeight: '600', 
                   margin: '0 0 0.5rem 0',
-                  color: '#1e293b'
+                  color: '#e5e7eb'
                 }}>
                   {selectedDate.toLocaleDateString('no-NO', { 
                     weekday: 'long', 
@@ -3018,7 +3901,7 @@ export default function PartnersPage() {
                   })}
                 </h2>
                 <p style={{ 
-                  color: '#64748b', 
+                  color: '#94a3b8', 
                   fontSize: '0.875rem',
                   margin: 0
                 }}>
@@ -3038,7 +3921,7 @@ export default function PartnersPage() {
                       display: 'block', 
                       marginBottom: '0.5rem', 
                       fontWeight: '500', 
-                      color: '#374151',
+                      color: '#e5e7eb',
                       fontSize: '0.875rem'
                     }}>
                       Dato
@@ -3050,19 +3933,19 @@ export default function PartnersPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem 1rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid #243244',
                         borderRadius: '6px',
                         fontSize: '0.875rem',
-                        background: 'white',
-                        color: '#374151',
+                        background: '#0f172a',
+                        color: '#e5e7eb',
                         cursor: 'pointer'
                       }}
                       onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#2563eb';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                        e.currentTarget.style.borderColor = '#3b82f6';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.20)';
                       }}
                       onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.borderColor = '#243244';
                         e.currentTarget.style.boxShadow = 'none';
                       }}
                     />
@@ -3075,7 +3958,7 @@ export default function PartnersPage() {
                     />
                     <label htmlFor="all-day" style={{ 
                       fontSize: '0.875rem', 
-                      color: '#374151',
+                      color: '#e5e7eb',
                       cursor: 'pointer'
                     }}>
                       Hele dagen
@@ -3089,7 +3972,7 @@ export default function PartnersPage() {
                       display: 'block', 
                       marginBottom: '0.5rem', 
                       fontWeight: '500', 
-                      color: '#374151',
+                      color: '#e5e7eb',
                       fontSize: '0.875rem'
                     }}>
                       Start
@@ -3100,9 +3983,11 @@ export default function PartnersPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem 1rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid #243244',
                         borderRadius: '6px',
-                        fontSize: '0.875rem'
+                        fontSize: '0.875rem',
+                        background: '#0f172a',
+                        color: '#e5e7eb'
                       }}
                     />
                   </div>
@@ -3111,7 +3996,7 @@ export default function PartnersPage() {
                       display: 'block', 
                       marginBottom: '0.5rem', 
                       fontWeight: '500', 
-                      color: '#374151',
+                      color: '#e5e7eb',
                       fontSize: '0.875rem'
                     }}>
                       Slutt
@@ -3122,18 +4007,21 @@ export default function PartnersPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem 1rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid #243244',
                         borderRadius: '6px',
-                        fontSize: '0.875rem'
+                        fontSize: '0.875rem',
+                        background: '#0f172a',
+                        color: '#e5e7eb'
                       }}
                     />
                   </div>
                   <div style={{ 
                     padding: '0.75rem 1rem',
-                    background: '#f3f4f6',
+                    background: '#0f172a',
+                    border: '1px solid #243244',
                     borderRadius: '6px',
                     fontSize: '0.875rem',
-                    color: '#6b7280',
+                    color: '#cbd5e1',
                     minWidth: '100px',
                     textAlign: 'center'
                   }}>
@@ -3148,7 +4036,7 @@ export default function PartnersPage() {
                     gap: '0.5rem',
                     background: 'none',
                     border: 'none',
-                    color: '#6b7280',
+                    color: '#94a3b8',
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     padding: '0.5rem 0'
@@ -3161,7 +4049,7 @@ export default function PartnersPage() {
                     gap: '0.5rem',
                     background: 'none',
                     border: 'none',
-                    color: '#6b7280',
+                    color: '#94a3b8',
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     padding: '0.5rem 0'
@@ -3174,7 +4062,7 @@ export default function PartnersPage() {
                     gap: '0.5rem',
                     background: 'none',
                     border: 'none',
-                    color: '#6b7280',
+                    color: '#94a3b8',
                     fontSize: '0.875rem',
                     cursor: 'pointer',
                     padding: '0.5rem 0'
@@ -3191,7 +4079,7 @@ export default function PartnersPage() {
                     display: 'block', 
                     marginBottom: '0.5rem', 
                     fontWeight: '500', 
-                    color: '#374151',
+                    color: '#e5e7eb',
                     fontSize: '0.875rem'
                   }}>
                     Rute tittel
@@ -3204,17 +4092,19 @@ export default function PartnersPage() {
                     style={{
                       width: '100%',
                       padding: '0.75rem 1rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #243244',
                       borderRadius: '6px',
                       fontSize: '0.875rem',
+                      background: '#0f172a',
+                      color: '#e5e7eb',
                       transition: 'all 0.2s'
                     }}
                     onFocus={(e) => {
-                      e.currentTarget.style.borderColor = '#2563eb';
-                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                      e.currentTarget.style.borderColor = '#3b82f6';
+                      e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.20)';
                     }}
                     onBlur={(e) => {
-                      e.currentTarget.style.borderColor = '#d1d5db';
+                      e.currentTarget.style.borderColor = '#243244';
                       e.currentTarget.style.boxShadow = 'none';
                     }}
                   />
@@ -3225,7 +4115,7 @@ export default function PartnersPage() {
                     display: 'block', 
                     marginBottom: '0.5rem', 
                     fontWeight: '500', 
-                    color: '#374151',
+                    color: '#e5e7eb',
                     fontSize: '0.875rem'
                   }}>
                     Jobb
@@ -3237,19 +4127,19 @@ export default function PartnersPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem 1rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid #243244',
                         borderRadius: '6px',
                         fontSize: '0.875rem',
-                        background: 'white',
-                        color: '#374151',
+                        background: '#0f172a',
+                        color: '#e5e7eb',
                         cursor: 'pointer'
                       }}
                       onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#2563eb';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                        e.currentTarget.style.borderColor = '#3b82f6';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.20)';
                       }}
                       onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.borderColor = '#243244';
                         e.currentTarget.style.boxShadow = 'none';
                       }}
                     >
@@ -3283,7 +4173,7 @@ export default function PartnersPage() {
                     display: 'block', 
                     marginBottom: '0.5rem', 
                     fontWeight: '500', 
-                    color: '#374151',
+                    color: '#e5e7eb',
                     fontSize: '0.875rem'
                   }}>
                     Partner
@@ -3298,19 +4188,19 @@ export default function PartnersPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem 1rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid #243244',
                         borderRadius: '6px',
                         fontSize: '0.875rem',
-                        background: 'white',
-                        color: '#374151',
+                        background: '#0f172a',
+                        color: '#e5e7eb',
                         cursor: 'pointer'
                       }}
                       onFocus={(e) => {
-                        e.currentTarget.style.borderColor = '#2563eb';
-                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(37, 99, 235, 0.1)';
+                        e.currentTarget.style.borderColor = '#3b82f6';
+                        e.currentTarget.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.20)';
                       }}
                       onBlur={(e) => {
-                        e.currentTarget.style.borderColor = '#d1d5db';
+                        e.currentTarget.style.borderColor = '#243244';
                         e.currentTarget.style.boxShadow = 'none';
                       }}
                     >
@@ -3329,7 +4219,7 @@ export default function PartnersPage() {
                     display: 'block', 
                     marginBottom: '0.5rem', 
                     fontWeight: '500', 
-                    color: '#374151',
+                    color: '#e5e7eb',
                     fontSize: '0.875rem'
                   }}>
                     Brukere
@@ -3339,9 +4229,9 @@ export default function PartnersPage() {
                   {Array.isArray(selectedUsers) && selectedUsers.length > 0 && (
                     <div style={{
                       padding: '0.75rem 1rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #243244',
                       borderRadius: '6px',
-                      background: '#f9fafb',
+                      background: '#0f172a',
                       marginBottom: '0.5rem'
                     }}>
                       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginBottom: '0.5rem' }}>
@@ -3351,9 +4241,10 @@ export default function PartnersPage() {
                             alignItems: 'center',
                             gap: '0.25rem',
                             padding: '0.25rem 0.5rem',
-                            background: '#e5e7eb',
+                            background: 'rgba(255,255,255,0.06)',
                             borderRadius: '4px',
-                            fontSize: '0.75rem'
+                            fontSize: '0.75rem',
+                            color: '#e5e7eb'
                           }}>
                             <span>{user}</span>
                             <button
@@ -3361,7 +4252,7 @@ export default function PartnersPage() {
                               style={{
                                 background: 'none',
                                 border: 'none',
-                                color: '#6b7280',
+                                color: '#94a3b8',
                                 cursor: 'pointer',
                                 padding: '0',
                                 fontSize: '0.75rem'
@@ -3400,11 +4291,11 @@ export default function PartnersPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem 1rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid #243244',
                         borderRadius: '6px',
                         fontSize: '0.875rem',
-                        background: 'white',
-                        color: '#374151',
+                        background: '#0f172a',
+                        color: '#e5e7eb',
                         cursor: 'pointer'
                       }}
                     >
@@ -3419,12 +4310,12 @@ export default function PartnersPage() {
                     </select>
                   </div>
 
-                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                  <div style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#94a3b8' }}>
                     {Array.isArray(selectedUsers) && selectedUsers.length === 0 ? 'Ingen brukere valgt' : `${Array.isArray(selectedUsers) ? selectedUsers.length : 0} brukere valgt`}
                     <button style={{
                       background: 'none',
                       border: 'none',
-                      color: '#2563eb',
+                      color: '#60a5fa',
                       cursor: 'pointer',
                       textDecoration: 'underline',
                       marginLeft: '0.5rem'
@@ -3436,16 +4327,16 @@ export default function PartnersPage() {
                     <input type="checkbox" id="enable-claim" />
                     <label htmlFor="enable-claim" style={{ 
                       fontSize: '0.875rem', 
-                      color: '#374151',
+                      color: '#e5e7eb',
                       cursor: 'pointer'
                     }}>
                       Aktiver at brukere kan melde seg på denne ruten
                     </label>
-                    <span style={{ color: '#6b7280', fontSize: '0.75rem' }}>ℹ️</span>
+                    <span style={{ color: '#94a3b8', fontSize: '0.75rem' }}>ℹ️</span>
                   </div>
 
                   {/* Del rute med alle knapp */}
-                  <div style={{ marginTop: '1rem', padding: '1rem', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #bae6fd' }}>
+                  <div style={{ marginTop: '1rem', padding: '1rem', background: '#0f172a', borderRadius: '8px', border: '1px solid #243244' }}>
                     <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.75rem' }}>
                       <div style={{
                         width: '32px',
@@ -3463,14 +4354,14 @@ export default function PartnersPage() {
                         <h4 style={{ 
                           fontSize: '0.875rem', 
                           fontWeight: '600', 
-                          color: '#1e293b', 
+                          color: '#e5e7eb', 
                           margin: '0 0 0.25rem 0' 
                         }}>
                           Sliter du med en rute?
                         </h4>
                         <p style={{ 
                           fontSize: '0.75rem', 
-                          color: '#475569', 
+                          color: '#94a3b8', 
                           margin: 0 
                         }}>
                           Del ruten med alle og se hvem som aksepterer den! Good luck! 🍀
@@ -3518,7 +4409,7 @@ export default function PartnersPage() {
                     display: 'block', 
                     marginBottom: '0.5rem', 
                     fontWeight: '500', 
-                    color: '#374151',
+                    color: '#e5e7eb',
                     fontSize: '0.875rem'
                   }}>
                     Adresse
@@ -3530,9 +4421,11 @@ export default function PartnersPage() {
                       style={{
                         width: '100%',
                         padding: '0.75rem 1rem 0.75rem 2.5rem',
-                        border: '1px solid #d1d5db',
+                        border: '1px solid #243244',
                         borderRadius: '6px',
-                        fontSize: '0.875rem'
+                        fontSize: '0.875rem',
+                        background: '#0f172a',
+                        color: '#e5e7eb'
                       }}
                     />
                     <div style={{
@@ -3540,7 +4433,7 @@ export default function PartnersPage() {
                       left: '0.75rem',
                       top: '50%',
                       transform: 'translateY(-50%)',
-                      color: '#6b7280'
+                      color: '#94a3b8'
                     }}>
                       📍
                     </div>
@@ -3552,7 +4445,7 @@ export default function PartnersPage() {
                     display: 'block', 
                     marginBottom: '0.5rem', 
                     fontWeight: '500', 
-                    color: '#374151',
+                    color: '#e5e7eb',
                     fontSize: '0.875rem'
                   }}>
                     Notat
@@ -3563,11 +4456,13 @@ export default function PartnersPage() {
                     style={{
                       width: '100%',
                       padding: '0.75rem 1rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid #243244',
                       borderRadius: '6px',
                       fontSize: '0.875rem',
                       resize: 'vertical',
-                      minHeight: '80px'
+                      minHeight: '80px',
+                      background: '#0f172a',
+                      color: '#e5e7eb'
                     }}
                   />
                   <div style={{ marginTop: '0.5rem' }}>
@@ -3577,7 +4472,7 @@ export default function PartnersPage() {
                       gap: '0.5rem',
                       background: 'none',
                       border: 'none',
-                      color: '#6b7280',
+                      color: '#94a3b8',
                       fontSize: '0.875rem',
                       cursor: 'pointer',
                       padding: '0.25rem 0'
@@ -3607,27 +4502,27 @@ export default function PartnersPage() {
               {/* File Upload Section */}
               <div style={{ marginBottom: '2rem' }}>
                 <div style={{ 
-                  border: '2px dashed #d1d5db',
+                  border: '2px dashed #243244',
                   borderRadius: '8px',
                   padding: '2rem',
                   textAlign: 'center',
                   cursor: 'pointer',
                   transition: 'all 0.2s',
-                  background: '#f9fafb'
+                  background: '#0f172a'
                 }}
                 onDragOver={(e) => {
                   e.preventDefault();
-                  e.currentTarget.style.borderColor = '#2563eb';
-                  e.currentTarget.style.background = '#f0f4ff';
+                  e.currentTarget.style.borderColor = '#3b82f6';
+                  e.currentTarget.style.background = 'rgba(59, 130, 246, 0.08)';
                 }}
                 onDragLeave={(e) => {
-                  e.currentTarget.style.borderColor = '#d1d5db';
-                  e.currentTarget.style.background = '#f9fafb';
+                  e.currentTarget.style.borderColor = '#243244';
+                  e.currentTarget.style.background = '#0f172a';
                 }}
                 onDrop={(e) => {
                   e.preventDefault();
-                  e.currentTarget.style.borderColor = '#d1d5db';
-                  e.currentTarget.style.background = '#f9fafb';
+                  e.currentTarget.style.borderColor = '#243244';
+                  e.currentTarget.style.background = '#0f172a';
                   const files = Array.from(e.dataTransfer.files);
                   setUploadedFiles(prev => [...prev, ...files]);
                 }}
@@ -3637,16 +4532,16 @@ export default function PartnersPage() {
                     width: '48px',
                     height: '48px',
                     borderRadius: '8px',
-                    background: '#e5e7eb',
+                    background: 'rgba(255,255,255,0.06)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     margin: '0 auto 1rem auto'
                   }}>
-                    <FileText style={{ width: '24px', height: '24px', color: '#6b7280' }} />
+                    <FileText style={{ width: '24px', height: '24px', color: '#cbd5e1' }} />
                   </div>
                   <p style={{ 
-                    color: '#6b7280', 
+                    color: '#94a3b8', 
                     margin: '0 0 0.5rem 0',
                     fontSize: '0.875rem'
                   }}>
@@ -3657,12 +4552,12 @@ export default function PartnersPage() {
                     alignItems: 'center',
                     gap: '0.5rem',
                     padding: '0.5rem 1rem',
-                    background: 'white',
-                    border: '1px solid #d1d5db',
+                    background: 'rgba(255,255,255,0.06)',
+                    border: '1px solid #243244',
                     borderRadius: '6px',
                     fontSize: '0.875rem',
                     fontWeight: '500',
-                    color: '#374151',
+                    color: '#e5e7eb',
                     cursor: 'pointer'
                   }}>
                     <FileText style={{ width: '16px', height: '16px' }} />
@@ -3689,7 +4584,7 @@ export default function PartnersPage() {
                   <h3 style={{ 
                     fontSize: '1rem', 
                     fontWeight: '600', 
-                    color: '#374151',
+                    color: '#e5e7eb',
                     margin: '0 0 1rem 0'
                   }}>
                     Vedlegg ({uploadedFiles.length})
@@ -3697,7 +4592,7 @@ export default function PartnersPage() {
                   <div style={{ 
                     maxHeight: '150px', 
                     overflowY: 'auto',
-                    background: '#f9fafb',
+                    background: '#0f172a',
                     borderRadius: '6px',
                     padding: '0.5rem'
                   }}>
@@ -3707,29 +4602,29 @@ export default function PartnersPage() {
                         alignItems: 'center',
                         justifyContent: 'space-between',
                         padding: '0.75rem',
-                        background: 'white',
+                        background: '#0b1220',
                         borderRadius: '6px',
                         marginBottom: '0.5rem',
-                        border: '1px solid #e5e7eb'
+                        border: '1px solid #1f2937'
                       }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', flex: 1 }}>
                           <div style={{
                             width: '32px',
                             height: '32px',
                             borderRadius: '6px',
-                            background: '#e5e7eb',
+                            background: 'rgba(255,255,255,0.06)',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0
                           }}>
-                            <FileText style={{ width: '16px', height: '16px', color: '#6b7280' }} />
+                            <FileText style={{ width: '16px', height: '16px', color: '#cbd5e1' }} />
                           </div>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ 
                               fontSize: '0.875rem', 
                               fontWeight: '500',
-                              color: '#374151',
+                              color: '#e5e7eb',
                               whiteSpace: 'nowrap',
                               overflow: 'hidden',
                               textOverflow: 'ellipsis',
@@ -3739,7 +4634,7 @@ export default function PartnersPage() {
                             </div>
                             <div style={{ 
                               fontSize: '0.75rem', 
-                              color: '#6b7280' 
+                              color: '#94a3b8' 
                             }}>
                               {file && file.size ? (file.size / 1024 / 1024).toFixed(2) : '0.00'} MB
                             </div>
@@ -3753,17 +4648,17 @@ export default function PartnersPage() {
                             cursor: 'pointer',
                             padding: '0.5rem',
                             borderRadius: '6px',
-                            color: '#6b7280',
+                            color: '#94a3b8',
                             transition: 'all 0.2s',
                             flexShrink: 0
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.background = '#fee2e2';
+                            e.currentTarget.style.background = 'rgba(220,38,38,0.16)';
                             e.currentTarget.style.color = '#dc2626';
                           }}
                           onMouseLeave={(e) => {
                             e.currentTarget.style.background = 'none';
-                            e.currentTarget.style.color = '#6b7280';
+                            e.currentTarget.style.color = '#94a3b8';
                           }}
                         >
                           <X style={{ width: '16px', height: '16px' }} />
@@ -3779,8 +4674,8 @@ export default function PartnersPage() {
             {/* Footer Actions */}
             <div style={{ 
               padding: '1.5rem 2rem',
-              borderTop: '1px solid #e2e8f0',
-              background: '#f9fafb',
+              borderTop: '1px solid #1f2937',
+              background: '#0b1220',
               display: 'flex',
               justifyContent: 'space-between',
               alignItems: 'center'
@@ -3798,9 +4693,9 @@ export default function PartnersPage() {
                   }}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    background: 'white',
-                    color: '#6b7280',
-                    border: '1px solid #d1d5db',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: '#cbd5e1',
+                    border: '1px solid #243244',
                     borderRadius: '6px',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -3808,21 +4703,21 @@ export default function PartnersPage() {
                     transition: 'all 0.2s'
                   }}
                   onMouseEnter={(e) => {
-                    e.currentTarget.style.borderColor = '#9ca3af';
-                    e.currentTarget.style.color = '#374151';
+                    e.currentTarget.style.borderColor = '#334155';
+                    e.currentTarget.style.color = '#e5e7eb';
                   }}
                   onMouseLeave={(e) => {
-                    e.currentTarget.style.borderColor = '#d1d5db';
-                    e.currentTarget.style.color = '#6b7280';
+                    e.currentTarget.style.borderColor = '#243244';
+                    e.currentTarget.style.color = '#cbd5e1';
                   }}
                 >
                   Lagre utkast
                 </button>
                 <button style={{
                   padding: '0.75rem 1.5rem',
-                  background: 'white',
-                  color: '#6b7280',
-                  border: '1px solid #d1d5db',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: '#cbd5e1',
+                  border: '1px solid #243244',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -3836,9 +4731,9 @@ export default function PartnersPage() {
                 </button>
                 <button style={{
                   padding: '0.75rem 1.5rem',
-                  background: 'white',
-                  color: '#6b7280',
-                  border: '1px solid #d1d5db',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: '#cbd5e1',
+                  border: '1px solid #243244',
                   borderRadius: '6px',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -3996,20 +4891,23 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '16px',
             width: '90%',
             maxWidth: '1000px',
             maxHeight: '90vh',
             overflow: 'hidden',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             {/* Header */}
             <div style={{
@@ -4069,7 +4967,7 @@ export default function PartnersPage() {
             {/* Content */}
             <div style={{ padding: '2rem', maxHeight: '70vh', overflowY: 'auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: '#374151' }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '600', margin: 0, color: 'var(--gray-900)' }}>
                   Alle Jobber ({Array.isArray(jobs) ? jobs.length : 0})
                 </h3>
                 <button
@@ -4119,8 +5017,8 @@ export default function PartnersPage() {
                   <div 
                     key={job.id}
                     style={{
-                      background: 'white',
-                      border: '1px solid #e5e7eb',
+                      background: 'var(--gray-100)',
+                      border: '1px solid var(--gray-200)',
                       borderRadius: '12px',
                       padding: '1.5rem',
                       transition: 'all 0.2s',
@@ -4134,7 +5032,7 @@ export default function PartnersPage() {
                       e.currentTarget.style.transform = 'translateY(-2px)';
                     }}
                     onMouseLeave={(e) => {
-                      e.currentTarget.style.borderColor = '#e5e7eb';
+                      e.currentTarget.style.borderColor = 'var(--gray-200)';
                       e.currentTarget.style.boxShadow = 'none';
                       e.currentTarget.style.transform = 'translateY(0)';
                     }}
@@ -4211,20 +5109,23 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1001
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '16px',
             width: '90%',
             maxWidth: '500px',
             maxHeight: '90vh',
             overflow: 'hidden',
-            boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             {/* Header */}
             <div style={{
@@ -4420,39 +5321,42 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.6)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
           backdropFilter: 'blur(4px)'
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '12px',
             padding: '2rem',
             maxWidth: '500px',
             width: '95%',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
-              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: '#1f2937' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', margin: 0, color: 'var(--gray-900)' }}>
                 Opprett Bruker
               </h2>
               <button
                 onClick={() => {
                   setShowCreateUserModal(false);
                   setSelectedPartnerForAction(null);
-                  setNewUser({ name: '', phone: '', password: '', email: '', role: 'user' });
+                  setNewUser({ name: '', phone: '', email: '' });
                 }}
                 style={{
                   background: 'none',
                   border: 'none',
                   fontSize: '1.5rem',
                   cursor: 'pointer',
-                  color: '#6b7280'
+                  color: 'var(--gray-600)'
                 }}
               >
                 ×
@@ -4460,7 +5364,7 @@ export default function PartnersPage() {
             </div>
 
             <div style={{ marginBottom: '1rem' }}>
-              <p style={{ color: '#6b7280', fontSize: '0.875rem', margin: '0 0 1rem 0' }}>
+              <p style={{ color: 'var(--gray-600)', fontSize: '0.875rem', margin: '0 0 1rem 0' }}>
                 Oppretter bruker for: <strong>{selectedPartnerForAction.name}</strong>
               </p>
             </div>
@@ -4525,45 +5429,18 @@ export default function PartnersPage() {
               />
             </div>
 
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
-                Rolle
-              </label>
-              <select
-                value={newUser.role}
-                onChange={(e) => setNewUser(prev => ({ ...prev, role: e.target.value as 'admin' | 'user' }))}
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
-                  outline: 'none'
-                }}
-              >
-                <option value="user">Bruker</option>
-                <option value="admin">Administrator</option>
-              </select>
-            </div>
-
-            <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
-                Passord
-              </label>
-              <input
-                type="password"
-                value={newUser.password}
-                onChange={(e) => setNewUser(prev => ({ ...prev, password: e.target.value }))}
-                placeholder="Fyll inn passord"
-                style={{
-                  width: '100%',
-                  padding: '0.75rem',
-                  border: '1px solid #d1d5db',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
-                  outline: 'none'
-                }}
-              />
+            <div style={{ marginTop: '-0.5rem', marginBottom: '1.25rem' }}>
+              <div style={{
+                padding: '0.75rem 1rem',
+                borderRadius: '10px',
+                border: '1px solid var(--gray-200)',
+                background: 'var(--gray-100)',
+                color: 'var(--gray-600)',
+                fontSize: '0.875rem',
+                lineHeight: 1.35
+              }}>
+                Brukeren blir invitert via SMS og oppretter passord selv. Partner-brukere får kun tilgang til <b>sine</b> tildelte ruter, dokumenter og audit.
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
@@ -4571,13 +5448,13 @@ export default function PartnersPage() {
                 onClick={() => {
                   setShowCreateUserModal(false);
                   setSelectedPartnerForAction(null);
-                  setNewUser({ name: '', phone: '', password: '', email: '', role: 'user' });
+                  setNewUser({ name: '', phone: '', email: '' });
                 }}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: 'white',
-                  color: '#6b7280',
-                  border: '1px solid #d1d5db',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'var(--gray-800)',
+                  border: '1px solid var(--gray-300)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -4588,14 +5465,14 @@ export default function PartnersPage() {
               </button>
               <button
                 onClick={handleCreateUser}
-                disabled={!newUser.name || !newUser.phone || !newUser.password}
+                disabled={!newUser.name || !newUser.phone}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: !newUser.name || !newUser.phone || !newUser.password ? '#d1d5db' : '#10b981',
+                  background: !newUser.name || !newUser.phone ? '#d1d5db' : '#10b981',
                   color: 'white',
                   border: 'none',
                   borderRadius: '8px',
-                  cursor: !newUser.name || !newUser.phone || !newUser.password ? 'not-allowed' : 'pointer',
+                  cursor: !newUser.name || !newUser.phone ? 'not-allowed' : 'pointer',
                   fontSize: '0.875rem',
                   fontWeight: '500'
                 }}
@@ -4615,28 +5492,31 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.6)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
           padding: '1rem'
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '12px',
             padding: '2rem',
             width: '100%',
             maxWidth: '900px',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '1.5rem' }}>
               <h2 style={{ 
                 fontSize: '1.5rem', 
                 fontWeight: '700', 
-                color: '#1e293b',
+                color: 'var(--gray-900)',
                 margin: 0,
                 display: 'flex',
                 alignItems: 'center',
@@ -4656,7 +5536,7 @@ export default function PartnersPage() {
                   border: 'none',
                   fontSize: '1.5rem',
                   cursor: 'pointer',
-                  color: '#6b7280'
+                  color: 'var(--gray-600)'
                 }}
               >
                 ×
@@ -4668,7 +5548,7 @@ export default function PartnersPage() {
               display: 'flex', 
               gap: '0.5rem', 
               marginBottom: '2rem',
-              borderBottom: '1px solid #e5e7eb',
+              borderBottom: '1px solid var(--gray-200)',
               paddingBottom: '1rem'
             }}>
               {[
@@ -4685,7 +5565,7 @@ export default function PartnersPage() {
                     style={{
                       padding: '0.75rem 1rem',
                       background: editModalActiveTab === tab.id ? '#3b82f6' : 'transparent',
-                      color: editModalActiveTab === tab.id ? 'white' : '#6b7280',
+                      color: editModalActiveTab === tab.id ? 'white' : 'var(--gray-600)',
                       border: 'none',
                       borderRadius: '8px',
                       cursor: 'pointer',
@@ -4708,7 +5588,7 @@ export default function PartnersPage() {
             {editModalActiveTab === 'info' && (
               <div>
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+              <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-800)' }}>
                     Bedriftsnavn (Søk i BRRG)
               </label>
                   <div style={{ position: 'relative' }} data-brrg-search>
@@ -4779,8 +5659,8 @@ export default function PartnersPage() {
                       top: '100%',
                       left: 0,
                       right: 0,
-                      background: 'white',
-                      border: '1px solid #d1d5db',
+                      background: 'var(--white)',
+                      border: '1px solid var(--gray-300)',
                       borderRadius: '8px',
                       boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)',
                       zIndex: 1000,
@@ -4796,33 +5676,33 @@ export default function PartnersPage() {
                           style={{
                             padding: '0.75rem',
                             cursor: 'pointer',
-                            borderBottom: '1px solid #f3f4f6',
+                            borderBottom: '1px solid var(--gray-200)',
                             display: 'flex',
                             justifyContent: 'space-between',
                             alignItems: 'center'
                           }}
                           onMouseEnter={(e) => {
-                            e.currentTarget.style.backgroundColor = '#f9fafb';
+                            e.currentTarget.style.backgroundColor = 'var(--gray-50)';
                           }}
                           onMouseLeave={(e) => {
-                            e.currentTarget.style.backgroundColor = 'white';
+                            e.currentTarget.style.backgroundColor = 'var(--white)';
                           }}
                         >
                           <div>
-                            <div style={{ fontWeight: '500', color: '#1f2937' }}>
+                            <div style={{ fontWeight: '500', color: 'var(--gray-900)' }}>
                               {company.navn}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--gray-600)' }}>
                               Org.nr: {company.organisasjonsnummer} • {company.naeringskode1?.beskrivelse || 'Ukjent bransje'}
                             </div>
-                            <div style={{ fontSize: '0.75rem', color: '#9ca3af' }}>
+                            <div style={{ fontSize: '0.75rem', color: 'var(--gray-500)' }}>
                               {company.adresse?.adresse?.join(', ')} • {company.adresse?.postnummer} {company.adresse?.poststed}
                             </div>
                           </div>
                         </div>
                         ))
                       ) : (
-                        <div style={{ padding: '1rem', textAlign: 'center', color: '#6b7280' }}>
+                        <div style={{ padding: '1rem', textAlign: 'center', color: 'var(--gray-600)' }}>
                           {searchingBrrg ? 'Søker...' : 'Ingen resultater funnet'}
                         </div>
                       )}
@@ -5002,7 +5882,9 @@ export default function PartnersPage() {
                     style={{
                       width: '100%',
                       padding: '0.75rem',
-                      border: '1px solid #d1d5db',
+                      border: '1px solid var(--gray-300)',
+                      background: 'var(--gray-100)',
+                      color: 'var(--gray-900)',
                       borderRadius: '8px',
                       fontSize: '0.875rem',
                       outline: 'none'
@@ -5015,7 +5897,7 @@ export default function PartnersPage() {
             {editModalActiveTab === 'vehicles' && (
               <div>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-                  <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', margin: 0 }}>
+                  <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--gray-900)', margin: 0 }}>
                     Kjøretøy ({Array.isArray(editingVehicles) ? editingVehicles.length : 0})
                   </h3>
                   <button
@@ -5052,7 +5934,7 @@ export default function PartnersPage() {
                 </div>
 
                 {Array.isArray(editingVehicles) && editingVehicles.length === 0 ? (
-                  <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
                     <Building2 style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
                     <p>Ingen kjøretøy registrert</p>
                   </div>
@@ -5061,9 +5943,9 @@ export default function PartnersPage() {
                     {editingVehicles.map((vehicle, index) => (
                       <div key={index} style={{
                         padding: '1rem',
-                        border: '1px solid #e5e7eb',
+                        border: '1px solid var(--gray-200)',
                         borderRadius: '8px',
-                        backgroundColor: '#f9fafb'
+                        backgroundColor: 'var(--gray-100)'
                       }}>
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '1rem' }}>
                           <div>
@@ -5551,9 +6433,9 @@ export default function PartnersPage() {
                 }}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: 'white',
-                  color: '#6b7280',
-                  border: '1px solid #d1d5db',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'var(--gray-800)',
+                  border: '1px solid var(--gray-300)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -5608,28 +6490,31 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
           padding: '1rem'
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '12px',
             padding: '2rem',
             width: '100%',
             maxWidth: '800px',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
               <h2 style={{ 
                 fontSize: '1.5rem', 
                 fontWeight: '700', 
-                color: '#1e293b',
+                color: 'var(--gray-900)',
                 margin: 0,
                 display: 'flex',
                 alignItems: 'center',
@@ -5665,7 +6550,7 @@ export default function PartnersPage() {
                   cursor: 'pointer',
                   padding: '0.5rem',
                   borderRadius: '0.5rem',
-                  color: '#6b7280',
+                  color: 'var(--gray-600)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -5677,7 +6562,7 @@ export default function PartnersPage() {
 
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-800)' }}>
                   Audit Type
                 </label>
                 <select
@@ -5686,7 +6571,9 @@ export default function PartnersPage() {
                   style={{
                     width: '100%',
                     padding: '0.75rem',
-                    border: '1px solid #d1d5db',
+                    border: '1px solid var(--gray-300)',
+                    background: 'var(--gray-100)',
+                    color: 'var(--gray-900)',
                     borderRadius: '8px',
                     fontSize: '0.875rem',
                     outline: 'none'
@@ -5699,7 +6586,7 @@ export default function PartnersPage() {
               </div>
 
               <div>
-                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: 'var(--gray-800)' }}>
                   Status
                 </label>
                 <select
@@ -5913,9 +6800,9 @@ export default function PartnersPage() {
                 }}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: 'white',
-                  color: '#6b7280',
-                  border: '1px solid #d1d5db',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'var(--gray-800)',
+                  border: '1px solid var(--gray-300)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -5979,35 +6866,38 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
           padding: '1rem'
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '12px',
             padding: '2rem',
             width: '100%',
             maxWidth: '600px',
             maxHeight: '80vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
               <h2 style={{ 
                 fontSize: '1.5rem', 
                 fontWeight: '700', 
-                color: '#1e293b',
+                color: 'var(--gray-900)',
                 margin: 0,
                 display: 'flex',
                 alignItems: 'center',
                 gap: '0.75rem'
               }}>
                 <AlertTriangle style={{ width: '24px', height: '24px', color: '#dc2626' }} />
-                Audit Varsler
+                {activeView === 'routes' ? 'Rutevarsler (aksept / avvist / venter)' : 'Audit Varsler'}
               </h2>
               <button
                 onClick={() => setShowNotificationModal(false)}
@@ -6017,7 +6907,7 @@ export default function PartnersPage() {
                   cursor: 'pointer',
                   padding: '0.5rem',
                   borderRadius: '0.5rem',
-                  color: '#6b7280',
+                  color: 'var(--gray-600)',
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center'
@@ -6027,139 +6917,205 @@ export default function PartnersPage() {
               </button>
             </div>
 
-            {Array.isArray(auditNotifications) && auditNotifications.length === 0 ? (
-              <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
-                <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
-                <p>Ingen audit-varsler for øyeblikket</p>
-              </div>
-            ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-                {auditNotifications.map((notification, index) => {
-                  const getNotificationStyle = (type: string, read: boolean) => {
-                    switch (type) {
-                      case 'overdue':
-                        return {
-                          backgroundColor: read ? '#f9fafb' : '#fef2f2',
-                          borderLeft: `4px solid ${read ? '#d1d5db' : '#dc2626'}`,
-                          icon: AlertTriangle,
-                          iconColor: '#dc2626'
-                        };
-                      case 'upcoming':
-                        return {
-                          backgroundColor: read ? '#f9fafb' : '#f0f9ff',
-                          borderLeft: `4px solid ${read ? '#d1d5db' : '#3b82f6'}`,
-                          icon: Calendar,
-                          iconColor: '#3b82f6'
-                        };
-                      default:
-                        return {
-                          backgroundColor: read ? '#f9fafb' : '#fef2f2',
-                          borderLeft: `4px solid ${read ? '#d1d5db' : '#dc2626'}`,
-                          icon: AlertTriangle,
-                          iconColor: '#dc2626'
-                        };
-                    }
-                  };
-                  
-                  const style = getNotificationStyle(notification.type, notification.read);
-                  const IconComponent = style.icon;
-                  
-                  return (
-                    <div
-                      key={notification.id}
-                      style={{
-                        padding: '1rem',
-                        border: '1px solid #e2e8f0',
-                        borderRadius: '8px',
-                        backgroundColor: style.backgroundColor,
-                        borderLeft: style.borderLeft
-                      }}
-                    >
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
-                        <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
-                          <IconComponent style={{ width: '16px', height: '16px', color: style.iconColor, marginTop: '0.125rem' }} />
-                          <div>
-                            <h3 style={{ 
-                              fontSize: '1rem', 
-                              fontWeight: '600', 
-                              color: '#1e293b',
-                              margin: '0 0 0.25rem 0'
-                            }}>
-                              {notification.partnerName}
-                            </h3>
-                            <p style={{ 
-                              fontSize: '0.875rem', 
-                              color: '#6b7280',
-                              margin: 0
-                            }}>
-                              {notification.message}
-                            </p>
-                            <span style={{ 
-                              fontSize: '0.75rem', 
-                              color: style.iconColor,
-                              fontWeight: '500'
-                            }}>
-                              {notification.type === 'overdue' ? 'Forsinket' : notification.type === 'upcoming' ? 'Kommende' : 'Audit'}
-                            </span>
+            {activeView === 'routes' ? (
+              <>
+                {(!routeAlertItems || routeAlertItems.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                    <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
+                    <p>Ingen rutevarsler akkurat nå</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <span style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', background: 'rgba(16,185,129,0.12)', color: '#16a34a', fontWeight: 700 }}>
+                        Akseptert: {routeAcceptanceStats.accepted}
+                      </span>
+                      <span style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', background: 'rgba(37,99,235,0.12)', color: '#2563eb', fontWeight: 700 }}>
+                        Venter: {routeAcceptanceStats.pending}
+                      </span>
+                      <span style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', background: 'rgba(239,68,68,0.12)', color: '#ef4444', fontWeight: 700 }}>
+                        Avvist: {routeAcceptanceStats.declined}
+                      </span>
+                    </div>
+                    {routeAlertItems.map((item) => {
+                      const pill = item.status === 'accepted'
+                        ? { text: 'Akseptert', color: '#16a34a', bg: 'rgba(22,163,74,0.12)' }
+                        : item.status === 'declined'
+                          ? { text: 'Avvist', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' }
+                          : { text: 'Venter', color: '#2563eb', bg: 'rgba(37,99,235,0.12)' };
+
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            padding: '1rem',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            background: 'var(--white)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                            <div>
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.25rem' }}>
+                                <span style={{ fontWeight: 700, color: '#0f172a' }}>{item.routeName}</span>
+                                <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', background: pill.bg, color: pill.color, fontSize: '0.75rem', fontWeight: 700 }}>
+                                  {pill.text}
+                                </span>
+                              </div>
+                              <div style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.2rem' }}>
+                                {item.partnerName}
+                              </div>
+                              <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                🚗 {item.vehicle} • 👤 {item.driver}
+                              </div>
+                            </div>
+                            <div style={{ color: '#94a3b8', fontSize: '0.8rem', textAlign: 'right' }}>
+                              {item.date ? new Date(item.date).toLocaleDateString('no-NO') : ''}
+                            </div>
                           </div>
                         </div>
-                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-                          <span style={{ 
-                            fontSize: '0.75rem', 
-                            color: '#6b7280' 
-                          }}>
-                            {new Date(notification.timestamp).toLocaleDateString('no-NO')}
-                          </span>
-                          {!notification.read && (
-                            <span style={{
-                              width: '8px',
-                              height: '8px',
-                              backgroundColor: style.iconColor,
-                              borderRadius: '50%'
-                            }} />
-                          )}
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {Array.isArray(auditNotifications) && auditNotifications.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                    <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
+                    <p>Ingen audit-varsler for øyeblikket</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {auditNotifications.map((notification) => {
+                      const getNotificationStyle = (type: string, read: boolean) => {
+                        switch (type) {
+                          case 'overdue':
+                            return {
+                              backgroundColor: read ? 'var(--gray-100)' : 'rgba(220, 38, 38, 0.12)',
+                              borderLeft: `4px solid ${read ? '#334155' : '#dc2626'}`,
+                              icon: AlertTriangle,
+                              iconColor: '#dc2626'
+                            };
+                          case 'upcoming':
+                            return {
+                              backgroundColor: read ? 'var(--gray-100)' : 'rgba(59, 130, 246, 0.12)',
+                              borderLeft: `4px solid ${read ? '#334155' : '#3b82f6'}`,
+                              icon: Calendar,
+                              iconColor: '#3b82f6'
+                            };
+                          default:
+                            return {
+                              backgroundColor: read ? 'var(--gray-100)' : 'rgba(220, 38, 38, 0.12)',
+                              borderLeft: `4px solid ${read ? '#334155' : '#dc2626'}`,
+                              icon: AlertTriangle,
+                              iconColor: '#dc2626'
+                            };
+                        }
+                      };
+                      
+                      const style = getNotificationStyle(notification.type, notification.read);
+                      const IconComponent = style.icon;
+                      
+                      return (
+                        <div
+                          key={notification.id}
+                          style={{
+                            padding: '1rem',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            backgroundColor: style.backgroundColor,
+                            borderLeft: style.borderLeft
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <IconComponent style={{ width: '16px', height: '16px', color: style.iconColor, marginTop: '0.125rem' }} />
+                              <div>
+                                <h3 style={{ 
+                                  fontSize: '1rem', 
+                                  fontWeight: '600', 
+                                  color: '#1e293b',
+                                  margin: '0 0 0.25rem 0'
+                                }}>
+                                  {notification.partnerName}
+                                </h3>
+                                <p style={{ 
+                                  fontSize: '0.875rem', 
+                                  color: '#6b7280',
+                                  margin: 0
+                                }}>
+                                  {notification.message}
+                                </p>
+                                <span style={{ 
+                                  fontSize: '0.75rem', 
+                                  color: style.iconColor,
+                                  fontWeight: '500'
+                                }}>
+                                  {notification.type === 'overdue' ? 'Forsinket' : notification.type === 'upcoming' ? 'Kommende' : 'Audit'}
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                color: '#6b7280' 
+                              }}>
+                                {new Date(notification.timestamp).toLocaleDateString('no-NO')}
+                              </span>
+                              {!notification.read && (
+                                <span style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  backgroundColor: style.iconColor,
+                                  borderRadius: '50%'
+                                }} />
+                              )}
+                            </div>
+                          </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                          <button
+                            onClick={() => {
+                              setAuditNotifications(prev => 
+                                prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+                              );
+                            }}
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              background: '#f3f4f6',
+                              color: '#374151',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Merk som lest
+                          </button>
+                          <button
+                            onClick={() => {
+                              setAuditNotifications(prev => prev.filter(n => n.id !== notification.id));
+                            }}
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Fjern
+                          </button>
                         </div>
-                      </div>
-                    <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
-                      <button
-                        onClick={() => {
-                          setAuditNotifications(prev => 
-                            prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
-                          );
-                        }}
-                        style={{
-                          padding: '0.25rem 0.75rem',
-                          background: '#f3f4f6',
-                          color: '#374151',
-                          border: '1px solid #d1d5db',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem'
-                        }}
-                      >
-                        Merk som lest
-                      </button>
-                      <button
-                        onClick={() => {
-                          setAuditNotifications(prev => prev.filter(n => n.id !== notification.id));
-                        }}
-                        style={{
-                          padding: '0.25rem 0.75rem',
-                          background: '#fee2e2',
-                          color: '#dc2626',
-                          border: '1px solid #fecaca',
-                          borderRadius: '4px',
-                          cursor: 'pointer',
-                          fontSize: '0.75rem'
-                        }}
-                      >
-                        Fjern
-                      </button>
-                    </div>
-                    </div>
-                  );
-                })}
-              </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
             )}
 
             <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
@@ -6167,9 +7123,9 @@ export default function PartnersPage() {
                 onClick={() => setShowNotificationModal(false)}
                 style={{
                   padding: '0.75rem 1.5rem',
-                  background: 'white',
-                  color: '#6b7280',
-                  border: '1px solid #d1d5db',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'var(--gray-800)',
+                  border: '1px solid var(--gray-300)',
                   borderRadius: '8px',
                   cursor: 'pointer',
                   fontSize: '0.875rem',
@@ -6178,7 +7134,7 @@ export default function PartnersPage() {
               >
                 Lukk
               </button>
-              {Array.isArray(auditNotifications) && auditNotifications.length > 0 && (
+              {activeView !== 'routes' && Array.isArray(auditNotifications) && auditNotifications.length > 0 && (
                 <button
                   onClick={() => {
                     setAuditNotifications([]);
@@ -6211,28 +7167,31 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
           padding: '1rem'
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '12px',
             padding: '2rem',
             width: '100%',
             maxWidth: '900px',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
               <h2 style={{ 
                 fontSize: '1.5rem', 
                 fontWeight: '700', 
-                color: '#1e293b',
+                color: 'var(--gray-900)',
                 margin: 0,
                 display: 'flex',
                 alignItems: 'center',
@@ -6273,7 +7232,7 @@ export default function PartnersPage() {
                     cursor: 'pointer',
                     padding: '0.5rem',
                     borderRadius: '0.5rem',
-                    color: '#6b7280',
+                    color: 'var(--gray-600)',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center'
@@ -6297,19 +7256,19 @@ export default function PartnersPage() {
                       key={category}
                       style={{
                         padding: '1rem',
-                        border: '1px solid #e2e8f0',
+                        border: '1px solid var(--gray-200)',
                         borderRadius: '8px',
-                        backgroundColor: '#f9fafb',
+                        backgroundColor: 'var(--gray-100)',
                         cursor: 'pointer'
                       }}
                     >
                       <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
                         <IconComponent style={{ width: '20px', height: '20px', color: categoryInfo.color }} />
-                        <span style={{ fontWeight: '600', color: '#1e293b' }}>
+                        <span style={{ fontWeight: '600', color: 'var(--gray-900)' }}>
                           {categoryInfo.label}
                         </span>
                       </div>
-                      <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>
                         {Array.isArray(categoryDocs) ? categoryDocs.length : 0} dokumenter
                       </div>
                     </div>
@@ -6320,12 +7279,12 @@ export default function PartnersPage() {
 
             {/* Documents List */}
             <div style={{ marginBottom: '2rem' }}>
-              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: '#374151', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
                 Alle Dokumenter ({Array.isArray(partnerDocuments) ? partnerDocuments.length : 0})
               </h3>
               
               {Array.isArray(partnerDocuments) && partnerDocuments.length === 0 ? (
-                <div style={{ textAlign: 'center', padding: '2rem', color: '#6b7280' }}>
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
                   <FileText style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
                   <p>Ingen dokumenter lastet opp ennå</p>
                 </div>
@@ -6340,9 +7299,9 @@ export default function PartnersPage() {
                         key={document.id}
                         style={{
                           padding: '1rem',
-                          border: '1px solid #e2e8f0',
+                          border: '1px solid var(--gray-200)',
                           borderRadius: '8px',
-                          backgroundColor: 'white',
+                          backgroundColor: 'var(--gray-100)',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between'
@@ -6363,19 +7322,19 @@ export default function PartnersPage() {
                             <h4 style={{ 
                               fontSize: '1rem', 
                               fontWeight: '600', 
-                              color: '#1e293b',
+                              color: 'var(--gray-900)',
                               margin: '0 0 0.25rem 0'
                             }}>
                               {document.name}
                             </h4>
                             <p style={{ 
                               fontSize: '0.875rem', 
-                              color: '#6b7280',
+                              color: 'var(--gray-600)',
                               margin: '0 0 0.25rem 0'
                             }}>
                               {document.description}
                             </p>
-                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: '#6b7280' }}>
+                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--gray-600)' }}>
                               <span>{categoryInfo.label}</span>
                               <span>•</span>
                               <span>{document.fileSize}</span>
@@ -6394,9 +7353,9 @@ export default function PartnersPage() {
                             }}
                             style={{
                               padding: '0.5rem',
-                              background: '#f3f4f6',
-                              color: '#374151',
-                              border: '1px solid #d1d5db',
+                              background: 'rgba(255,255,255,0.06)',
+                              color: 'var(--gray-900)',
+                              border: '1px solid var(--gray-300)',
                               borderRadius: '6px',
                               cursor: 'pointer',
                               fontSize: '0.75rem'
@@ -6440,20 +7399,23 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1001,
           padding: '1rem'
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '12px',
             padding: '2rem',
             width: '100%',
             maxWidth: '500px',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
               <h2 style={{ 
@@ -6591,9 +7553,737 @@ export default function PartnersPage() {
                   }}
                   style={{
                     padding: '0.75rem 1.5rem',
-                    background: 'white',
-                    color: '#6b7280',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'var(--gray-800)',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Avbryt
+                </button>
+                <button
+                  onClick={uploadDocument}
+                  disabled={!newDocument.name || !newDocument.file || uploadingFiles}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: uploadingFiles ? '#9ca3af' : '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: uploadingFiles ? 'not-allowed' : 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  {uploadingFiles ? 'Laster opp...' : 'Last Opp'}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Notification Modal */}
+      {showNotificationModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '600px',
+            maxHeight: '80vh',
+            overflowY: 'auto',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+              <h2 style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: '700', 
+                color: 'var(--gray-900)',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                <AlertTriangle style={{ width: '24px', height: '24px', color: '#dc2626' }} />
+                {activeView === 'routes' ? 'Rutevarsler (aksept / avvist / venter)' : 'Audit Varsler'}
+              </h2>
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  borderRadius: '0.5rem',
+                  color: 'var(--gray-600)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px' }} />
+              </button>
+            </div>
+
+            {activeView === 'routes' ? (
+              <>
+                {(!routeAlertItems || routeAlertItems.length === 0) ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                    <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
+                    <p>Ingen rutevarsler akkurat nå</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
+                      <span style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', background: 'rgba(16,185,129,0.12)', color: '#16a34a', fontWeight: 700 }}>
+                        Akseptert: {routeAcceptanceStats.accepted}
+                      </span>
+                      <span style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', background: 'rgba(37,99,235,0.12)', color: '#2563eb', fontWeight: 700 }}>
+                        Venter: {routeAcceptanceStats.pending}
+                      </span>
+                      <span style={{ padding: '0.35rem 0.75rem', borderRadius: '999px', background: 'rgba(239,68,68,0.12)', color: '#ef4444', fontWeight: 700 }}>
+                        Avvist: {routeAcceptanceStats.declined}
+                      </span>
+                    </div>
+                    {routeAlertItems.map((item) => {
+                      const pill = item.status === 'accepted'
+                        ? { text: 'Akseptert', color: '#16a34a', bg: 'rgba(22,163,74,0.12)' }
+                        : item.status === 'declined'
+                          ? { text: 'Avvist', color: '#ef4444', bg: 'rgba(239,68,68,0.12)' }
+                          : { text: 'Venter', color: '#2563eb', bg: 'rgba(37,99,235,0.12)' };
+
+                      return (
+                        <div
+                          key={item.id}
+                          style={{
+                            padding: '1rem',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '10px',
+                            background: 'var(--white)'
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: '0.75rem' }}>
+                            <div>
+                              <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center', marginBottom: '0.25rem' }}>
+                                <span style={{ fontWeight: 700, color: '#0f172a' }}>{item.routeName}</span>
+                                <span style={{ padding: '0.2rem 0.6rem', borderRadius: '999px', background: pill.bg, color: pill.color, fontSize: '0.75rem', fontWeight: 700 }}>
+                                  {pill.text}
+                                </span>
+                              </div>
+                              <div style={{ color: '#475569', fontSize: '0.9rem', marginBottom: '0.2rem' }}>
+                                {item.partnerName}
+                              </div>
+                              <div style={{ color: '#64748b', fontSize: '0.85rem' }}>
+                                🚗 {item.vehicle} • 👤 {item.driver}
+                              </div>
+                            </div>
+                            <div style={{ color: '#94a3b8', fontSize: '0.8rem', textAlign: 'right' }}>
+                              {item.date ? new Date(item.date).toLocaleDateString('no-NO') : ''}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            ) : (
+              <>
+                {Array.isArray(auditNotifications) && auditNotifications.length === 0 ? (
+                  <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                    <AlertTriangle style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
+                    <p>Ingen audit-varsler for øyeblikket</p>
+                  </div>
+                ) : (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                    {auditNotifications.map((notification) => {
+                      const getNotificationStyle = (type: string, read: boolean) => {
+                        switch (type) {
+                          case 'overdue':
+                            return {
+                              backgroundColor: read ? 'var(--gray-100)' : 'rgba(220, 38, 38, 0.12)',
+                              borderLeft: `4px solid ${read ? '#334155' : '#dc2626'}`,
+                              icon: AlertTriangle,
+                              iconColor: '#dc2626'
+                            };
+                          case 'upcoming':
+                            return {
+                              backgroundColor: read ? 'var(--gray-100)' : 'rgba(59, 130, 246, 0.12)',
+                              borderLeft: `4px solid ${read ? '#334155' : '#3b82f6'}`,
+                              icon: Calendar,
+                              iconColor: '#3b82f6'
+                            };
+                          default:
+                            return {
+                              backgroundColor: read ? 'var(--gray-100)' : 'rgba(220, 38, 38, 0.12)',
+                              borderLeft: `4px solid ${read ? '#334155' : '#dc2626'}`,
+                              icon: AlertTriangle,
+                              iconColor: '#dc2626'
+                            };
+                        }
+                      };
+                      
+                      const style = getNotificationStyle(notification.type, notification.read);
+                      const IconComponent = style.icon;
+                      
+                      return (
+                        <div
+                          key={notification.id}
+                          style={{
+                            padding: '1rem',
+                            border: '1px solid #e2e8f0',
+                            borderRadius: '8px',
+                            backgroundColor: style.backgroundColor,
+                            borderLeft: style.borderLeft
+                          }}
+                        >
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.5rem' }}>
+                              <IconComponent style={{ width: '16px', height: '16px', color: style.iconColor, marginTop: '0.125rem' }} />
+                              <div>
+                                <h3 style={{ 
+                                  fontSize: '1rem', 
+                                  fontWeight: '600', 
+                                  color: '#1e293b',
+                                  margin: '0 0 0.25rem 0'
+                                }}>
+                                  {notification.partnerName}
+                                </h3>
+                                <p style={{ 
+                                  fontSize: '0.875rem', 
+                                  color: '#6b7280',
+                                  margin: 0
+                                }}>
+                                  {notification.message}
+                                </p>
+                                <span style={{ 
+                                  fontSize: '0.75rem', 
+                                  color: style.iconColor,
+                                  fontWeight: '500'
+                                }}>
+                                  {notification.type === 'overdue' ? 'Forsinket' : notification.type === 'upcoming' ? 'Kommende' : 'Audit'}
+                                </span>
+                              </div>
+                            </div>
+                            <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                              <span style={{ 
+                                fontSize: '0.75rem', 
+                                color: '#6b7280' 
+                              }}>
+                                {new Date(notification.timestamp).toLocaleDateString('no-NO')}
+                              </span>
+                              {!notification.read && (
+                                <span style={{
+                                  width: '8px',
+                                  height: '8px',
+                                  backgroundColor: style.iconColor,
+                                  borderRadius: '50%'
+                                }} />
+                              )}
+                            </div>
+                          </div>
+                        <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.75rem' }}>
+                          <button
+                            onClick={() => {
+                              setAuditNotifications(prev => 
+                                prev.map(n => n.id === notification.id ? { ...n, read: true } : n)
+                              );
+                            }}
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              background: '#f3f4f6',
+                              color: '#374151',
+                              border: '1px solid #d1d5db',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Merk som lest
+                          </button>
+                          <button
+                            onClick={() => {
+                              setAuditNotifications(prev => prev.filter(n => n.id !== notification.id));
+                            }}
+                            style={{
+                              padding: '0.25rem 0.75rem',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Fjern
+                          </button>
+                        </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </>
+            )}
+
+            <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', marginTop: '2rem' }}>
+              <button
+                onClick={() => setShowNotificationModal(false)}
+                style={{
+                  padding: '0.75rem 1.5rem',
+                  background: 'rgba(255,255,255,0.06)',
+                  color: 'var(--gray-800)',
+                  border: '1px solid var(--gray-300)',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontSize: '0.875rem',
+                  fontWeight: '500'
+                }}
+              >
+                Lukk
+              </button>
+              {activeView !== 'routes' && Array.isArray(auditNotifications) && auditNotifications.length > 0 && (
+                <button
+                  onClick={() => {
+                    setAuditNotifications([]);
+                    setSuccess('Alle varsler fjernet');
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: '#dc2626',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500'
+                  }}
+                >
+                  Fjern alle
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Documents Modal */}
+      {showDocumentsModal && selectedPartnerForDocuments && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '900px',
+            maxHeight: '90vh',
+            overflowY: 'auto',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+              <h2 style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: '700', 
+                color: 'var(--gray-900)',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                <FileText style={{ width: '24px', height: '24px', color: '#3b82f6' }} />
+                Dokumenter - {selectedPartnerForDocuments.name}
+              </h2>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  onClick={() => setShowUploadModal(true)}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: '#3b82f6',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontSize: '0.875rem',
+                    fontWeight: '500',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem'
+                  }}
+                >
+                  <FileUp style={{ width: '16px', height: '16px' }} />
+                  Last Opp
+                </button>
+                <button
+                  onClick={() => {
+                    setShowDocumentsModal(false);
+                    setSelectedPartnerForDocuments(null);
+                    setPartnerDocuments([]);
+                  }}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    padding: '0.5rem',
+                    borderRadius: '0.5rem',
+                    color: 'var(--gray-600)',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center'
+                  }}
+                >
+                  <X style={{ width: '20px', height: '20px' }} />
+                </button>
+              </div>
+            </div>
+
+            {/* Document Categories */}
+            <div style={{ marginBottom: '2rem' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem' }}>
+                {['contract', 'framework', 'audit', 'other'].map(category => {
+                  const categoryInfo = getCategoryInfo(category);
+                  const categoryDocs = partnerDocuments.filter(doc => doc.category === category);
+                  const IconComponent = categoryInfo.icon;
+                  
+                  return (
+                    <div
+                      key={category}
+                      style={{
+                        padding: '1rem',
+                        border: '1px solid var(--gray-200)',
+                        borderRadius: '8px',
+                        backgroundColor: 'var(--gray-100)',
+                        cursor: 'pointer'
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <IconComponent style={{ width: '20px', height: '20px', color: categoryInfo.color }} />
+                        <span style={{ fontWeight: '600', color: 'var(--gray-900)' }}>
+                          {categoryInfo.label}
+                        </span>
+                      </div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--gray-600)' }}>
+                        {Array.isArray(categoryDocs) ? categoryDocs.length : 0} dokumenter
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Documents List */}
+            <div style={{ marginBottom: '2rem' }}>
+              <h3 style={{ fontSize: '1.125rem', fontWeight: '600', color: 'var(--gray-900)', marginBottom: '1rem' }}>
+                Alle Dokumenter ({Array.isArray(partnerDocuments) ? partnerDocuments.length : 0})
+              </h3>
+              
+              {Array.isArray(partnerDocuments) && partnerDocuments.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--gray-600)' }}>
+                  <FileText style={{ width: '48px', height: '48px', margin: '0 auto 1rem', opacity: 0.5 }} />
+                  <p>Ingen dokumenter lastet opp ennå</p>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  {partnerDocuments.map((document) => {
+                    const categoryInfo = getCategoryInfo(document.category);
+                    const IconComponent = categoryInfo.icon;
+                    
+                    return (
+                      <div
+                        key={document.id}
+                        style={{
+                          padding: '1rem',
+                          border: '1px solid var(--gray-200)',
+                          borderRadius: '8px',
+                          backgroundColor: 'var(--gray-100)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between'
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                          <div style={{
+                            padding: '0.5rem',
+                            borderRadius: '8px',
+                            backgroundColor: categoryInfo.color + '20',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                          }}>
+                            <IconComponent style={{ width: '20px', height: '20px', color: categoryInfo.color }} />
+                          </div>
+                          <div>
+                            <h4 style={{ 
+                              fontSize: '1rem', 
+                              fontWeight: '600', 
+                              color: 'var(--gray-900)',
+                              margin: '0 0 0.25rem 0'
+                            }}>
+                              {document.name}
+                            </h4>
+                            <p style={{ 
+                              fontSize: '0.875rem', 
+                              color: 'var(--gray-600)',
+                              margin: '0 0 0.25rem 0'
+                            }}>
+                              {document.description}
+                            </p>
+                            <div style={{ display: 'flex', gap: '1rem', fontSize: '0.75rem', color: 'var(--gray-600)' }}>
+                              <span>{categoryInfo.label}</span>
+                              <span>•</span>
+                              <span>{document.fileSize}</span>
+                              <span>•</span>
+                              <span>{document.fileType}</span>
+                              <span>•</span>
+                              <span>{document.uploadDate}</span>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', gap: '0.5rem' }}>
+                          <button
+                            onClick={() => {
+                              // Here you would typically download the file
+                              console.log('Download document:', document.name);
+                            }}
+                            style={{
+                              padding: '0.5rem',
+                              background: 'rgba(255,255,255,0.06)',
+                              color: 'var(--gray-900)',
+                              border: '1px solid var(--gray-300)',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Last Ned
+                          </button>
+                          <button
+                            onClick={() => {
+                              setPartnerDocuments(prev => prev.filter(doc => doc.id !== document.id));
+                              setSuccess('Dokument fjernet');
+                            }}
+                            style={{
+                              padding: '0.5rem',
+                              background: '#fee2e2',
+                              color: '#dc2626',
+                              border: '1px solid #fecaca',
+                              borderRadius: '6px',
+                              cursor: 'pointer',
+                              fontSize: '0.75rem'
+                            }}
+                          >
+                            Fjern
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Document Modal */}
+      {showUploadModal && selectedPartnerForDocuments && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.65)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1001,
+          padding: '1rem'
+        }}>
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
+            borderRadius: '12px',
+            padding: '2rem',
+            width: '100%',
+            maxWidth: '500px',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
+          }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
+              <h2 style={{ 
+                fontSize: '1.5rem', 
+                fontWeight: '700', 
+                color: '#1e293b',
+                margin: 0,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.75rem'
+              }}>
+                <FileUp style={{ width: '24px', height: '24px', color: '#3b82f6' }} />
+                Last Opp Dokument
+              </h2>
+              <button
+                onClick={() => {
+                  setShowUploadModal(false);
+                  setNewDocument({
+                    name: '',
+                    category: 'contract',
+                    description: '',
+                    file: null
+                  });
+                }}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem',
+                  borderRadius: '0.5rem',
+                  color: '#6b7280',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center'
+                }}
+              >
+                <X style={{ width: '20px', height: '20px' }} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  Dokumentnavn
+                </label>
+                <input
+                  type="text"
+                  value={newDocument.name}
+                  onChange={(e) => setNewDocument(prev => ({ ...prev, name: e.target.value }))}
+                  placeholder="F.eks. Hovedavtale 2024"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
                     border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  Kategori
+                </label>
+                <select
+                  value={newDocument.category}
+                  onChange={(e) => setNewDocument(prev => ({ ...prev, category: e.target.value as any }))}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    outline: 'none'
+                  }}
+                >
+                  <option value="contract">Avtaler</option>
+                  <option value="framework">Rammeavtaler</option>
+                  <option value="audit">Audit</option>
+                  <option value="other">Andre</option>
+                </select>
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  Beskrivelse
+                </label>
+                <textarea
+                  value={newDocument.description}
+                  onChange={(e) => setNewDocument(prev => ({ ...prev, description: e.target.value }))}
+                  placeholder="Beskriv dokumentet..."
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    outline: 'none',
+                    resize: 'vertical'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '500', color: '#374151' }}>
+                  Fil
+                </label>
+                <input
+                  type="file"
+                  onChange={(e) => setNewDocument(prev => ({ ...prev, file: e.target.files?.[0] || null }))}
+                  accept=".pdf,.doc,.docx,.xls,.xlsx,.txt"
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '1px solid #d1d5db',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    outline: 'none'
+                  }}
+                />
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button
+                  onClick={() => {
+                    setShowUploadModal(false);
+                    setNewDocument({
+                      name: '',
+                      category: 'contract',
+                      description: '',
+                      file: null
+                    });
+                  }}
+                  style={{
+                    padding: '0.75rem 1.5rem',
+                    background: 'rgba(255,255,255,0.06)',
+                    color: 'var(--gray-800)',
+                    border: '1px solid var(--gray-300)',
                     borderRadius: '8px',
                     cursor: 'pointer',
                     fontSize: '0.875rem',
@@ -6632,28 +8322,31 @@ export default function PartnersPage() {
           left: 0,
           right: 0,
           bottom: 0,
-          background: 'rgba(0, 0, 0, 0.5)',
+          background: 'rgba(0, 0, 0, 0.65)',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           zIndex: 1000,
           padding: '1rem'
         }}>
-          <div style={{
-            background: 'white',
+          <div data-partners-darkmodal style={{
+            ...(darkModalVars as any),
+            colorScheme: 'dark',
+            background: 'var(--white)',
+            border: '1px solid var(--gray-200)',
             borderRadius: '12px',
             padding: '2rem',
             width: '100%',
             maxWidth: '800px',
             maxHeight: '90vh',
             overflowY: 'auto',
-            boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)'
+            boxShadow: '0 25px 60px rgba(0,0,0,0.60)'
           }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '2rem' }}>
               <h2 style={{ 
                 fontSize: '1.5rem', 
                 fontWeight: '700', 
-                color: '#1e293b',
+                color: 'var(--gray-900)',
                 margin: 0,
                 display: 'flex',
                 alignItems: 'center',

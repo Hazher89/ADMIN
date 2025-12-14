@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService, DashboardStats, Activity } from '@/lib/firebase-services';
+import { firebaseService, DashboardStats, Activity, createUserAccessContext } from '@/lib/firebase-services';
 import { 
   Users, 
   Calendar, 
@@ -20,6 +20,8 @@ import {
   X
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import RealtimeUpdateListener from '@/components/RealtimeUpdateListener';
+import GDPRConsentManager from '@/components/GDPRConsentManager';
 
 export default function DashboardPage() {
   const { userProfile } = useAuth();
@@ -60,10 +62,13 @@ export default function DashboardPage() {
       if (!userProfile) return;
       
       try {
+        const userContext = createUserAccessContext(userProfile);
         const [dashboardStats, recentActivities] = await Promise.all([
           firebaseService.getDashboardStats(),
-          firebaseService.getActivities(userProfile.companyId, 5)
+          firebaseService.getActivities(userContext || undefined, 5)
         ]);
+        // Filter to recent 5 activities
+        const filteredActivities = recentActivities.slice(0, 5);
         
         setStats(dashboardStats);
         setActivities(recentActivities);
@@ -77,15 +82,9 @@ export default function DashboardPage() {
     loadDashboardData();
 
     // Set up real-time listeners
-    const unsubscribeStats = firebaseService.subscribeToDashboardStats(
-      userProfile.companyId,
-      setStats
-    );
-
-    const unsubscribeActivities = firebaseService.subscribeToActivities(
-      userProfile.companyId,
-      setActivities
-    );
+    const userContext = createUserAccessContext(userProfile);
+    const unsubscribeStats = firebaseService.subscribeToDashboardStats(setStats);
+    const unsubscribeActivities = firebaseService.subscribeToActivities(userContext || undefined, setActivities);
 
     return () => {
       unsubscribeStats();
@@ -154,7 +153,9 @@ export default function DashboardPage() {
   }
 
   return (
-    <div className="min-h-screen" style={{ background: 'var(--background-color)', width: '100%', overflowX: 'hidden' }}>
+    <>
+      <RealtimeUpdateListener autoRefresh={true} />
+      <div className="min-h-screen" style={{ background: 'var(--background-color)', width: '100%', overflowX: 'hidden' }}>
       {/* Mobile Header */}
       {isMobile && (
         <div style={{ 
@@ -715,7 +716,20 @@ export default function DashboardPage() {
             </div>
           </div>
         )}
+
+        {/* GDPR Consent (only show for non-admin users) */}
+        {userProfile && userProfile.role !== 'super_admin' && userProfile.role !== 'admin' && (
+          <div style={{ marginTop: isMobile ? '1rem' : '2rem' }}>
+            <div className="card">
+              <h2 style={{ fontSize: '1.5rem', fontWeight: '600', marginBottom: '1.5rem', color: '#333' }}>
+                Personvern og samtykke
+              </h2>
+              <GDPRConsentManager readOnly={false} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
+    </>
   );
 } 

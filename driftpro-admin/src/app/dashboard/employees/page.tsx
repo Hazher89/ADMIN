@@ -42,6 +42,7 @@ export default function EmployeesPage() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showEditModal, setShowEditModal] = useState(false);
+  const [isEditingMode, setIsEditingMode] = useState(false);
   const [showViewModal, setShowViewModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
@@ -168,6 +169,99 @@ export default function EmployeesPage() {
 
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
+
+  // Smart function to set default permissions based on role
+  const getDefaultPermissionsForRole = (role: 'employee' | 'department_leader' | 'admin' | 'super_admin'): any => {
+    const basePermissions: any = {
+      notifications: true,
+      calendar: true,
+    };
+
+    switch (role) {
+      case 'employee':
+        return {
+          ...basePermissions,
+          dashboard: true,
+          avvik: true,
+          hrFerie: true,
+          hrFravær: true,
+        };
+      
+      case 'department_leader':
+        return {
+          ...basePermissions,
+          dashboard: true,
+          avvik: true,
+          hrFerie: true,
+          hrFravær: true,
+          hrAnsatte: true,
+          hrAvdelinger: true,
+          hrVakter: true,
+          documents: true,
+          reports: true,
+        };
+      
+      case 'admin':
+        return {
+          ...basePermissions,
+          dashboard: true,
+          employees: true,
+          departments: true,
+          hr: true,
+          hrAnsatte: true,
+          hrVakter: true,
+          hrFravær: true,
+          hrFerie: true,
+          hrAvdelinger: true,
+          documents: true,
+          reports: true,
+          analytics: true,
+          settings: true,
+          avvik: true,
+          internrevisjon: true,
+          internkontrollRapporter: true,
+          compliance: true,
+          finance: true,
+          invoicing: true,
+          payments: true,
+        };
+      
+      default:
+        return basePermissions;
+    }
+  };
+
+  // Update permissions when role changes - AUTO SMART
+  const handleRoleChange = (newRole: 'employee' | 'department_leader' | 'admin') => {
+    const defaultPermissions = getDefaultPermissionsForRole(newRole);
+    setNewEmployee({
+      ...newEmployee,
+      role: newRole,
+      permissions: {
+        ...newEmployee.permissions,
+        ...defaultPermissions,
+      },
+      departmentId: newRole === 'employee' ? newEmployee.departmentId : '',
+      leadership: {
+        ...newEmployee.leadership,
+        managesDepartments: newRole === 'department_leader' ? newEmployee.leadership.managesDepartments : [],
+        isManager: newRole === 'department_leader',
+      },
+      vacationAccess: newRole === 'department_leader' ? {
+        canRequestVacation: true,
+        canApproveVacation: true,
+        canViewAllVacations: true,
+        vacationDaysPerYear: 30,
+        managerApprovalRequired: false,
+      } : {
+        canRequestVacation: true,
+        canApproveVacation: false,
+        canViewAllVacations: false,
+        vacationDaysPerYear: 25,
+        managerApprovalRequired: true,
+      },
+    });
+  };
 
   useEffect(() => {
     console.log('Employees useEffect triggered, userProfile:', userProfile);
@@ -390,8 +484,8 @@ export default function EmployeesPage() {
         defaultVacationAccess.canViewAllVacations = true;
       }
 
-      // Admin/super_admin get all permissions (but these are set in edit modal)
-      if (newEmployee.role === 'admin' || newEmployee.role === 'super_admin') {
+      // Admin get all permissions (but these are set in edit modal)
+      if (newEmployee.role === 'admin') {
         // Admins get all permissions - but these should be set in edit modal
         // For now, just give them basic access
       }
@@ -556,7 +650,31 @@ export default function EmployeesPage() {
           legal: false,
           audit: false,
           internkontrollOgSamsvar: false,
-        },
+          internrevisjon: false,
+          avvik: true,
+          risikovurdering: false,
+          oppfølgingstiltak: false,
+          kontrollpunkter: false,
+          internkontrollRapporter: false,
+          chat: false,
+          emailSystem: false,
+          smsLogs: false,
+          partners: false,
+          logistikkBudPriser: false,
+          logistikkLevering: false,
+          logistikkPlanlegging: false,
+          logistikkKunder: false,
+          logistikkLeverandorer: false,
+          logistikkProdukter: false,
+          logistikkLager: false,
+          logistikkFakturering: false,
+          logistikkFinans: false,
+          hrAnsatte: false,
+          hrVakter: false,
+          hrFravær: true,
+          hrFerie: true,
+          hrAvdelinger: false,
+        } as any,
         vacationAccess: {
           canRequestVacation: true,
           canApproveVacation: false,
@@ -591,81 +709,88 @@ export default function EmployeesPage() {
   };
 
   const handleEditEmployee = async () => {
-    if (!selectedEmployee) return;
-
     if (!userProfile) {
       console.error('No company ID found');
       alert('Ingen bedrift funnet. Vennligst logg inn på nytt.');
       return;
     }
 
+    // Determine if we're editing existing or adding new
+    const isNewEmployee = !isEditingMode || !selectedEmployee || !selectedEmployee.id;
+    const employeeData = isNewEmployee ? newEmployee : selectedEmployee;
+
     // Validate required fields
-    if (!selectedEmployee.displayName?.trim()) {
+    if (!employeeData?.displayName?.trim()) {
       alert('Navn er påkrevd');
       return;
     }
 
-    if (!selectedEmployee.email?.trim()) {
+    if (!employeeData?.email?.trim()) {
       alert('E-post er påkrevd');
       return;
     }
 
     try {
-      // Prepare update data
-      const updateData: Partial<Employee> = {
-        displayName: selectedEmployee.displayName,
-        email: selectedEmployee.email,
-        phone: selectedEmployee.phone || undefined,
-        role: selectedEmployee.role,
-        status: selectedEmployee.status,
-        position: selectedEmployee.position || undefined,
-        departmentId: selectedEmployee.departmentId || undefined,
-        birthDate: selectedEmployee.birthDate || undefined,
-        employeeNumber: selectedEmployee.employeeNumber || undefined,
-        taxId: selectedEmployee.taxId || undefined,
-        address: selectedEmployee.address || undefined,
-        emergencyContact: selectedEmployee.emergencyContact || undefined,
-        bio: selectedEmployee.bio || undefined,
-        education: selectedEmployee.education || undefined,
-        workExperience: selectedEmployee.workExperience || undefined,
-        skills: selectedEmployee.skills || undefined,
-        certifications: selectedEmployee.certifications || undefined,
-        salary: selectedEmployee.salary ? Number(selectedEmployee.salary) : undefined,
-        managerId: selectedEmployee.managerId || undefined,
-        bankAccount: selectedEmployee.bankAccount || undefined,
-        insuranceNumber: selectedEmployee.insuranceNumber || undefined,
-        avatar: selectedEmployee.avatar || undefined,
-        // Include permissions, vacationAccess, and leadership if they exist
-        permissions: (selectedEmployee as any).permissions || newEmployee.permissions,
-        vacationAccess: (selectedEmployee as any).vacationAccess || newEmployee.vacationAccess,
-        leadership: (selectedEmployee as any).leadership || newEmployee.leadership,
-      };
+      if (isNewEmployee) {
+        // Use handleAddEmployee logic
+        await handleAddEmployee();
+      } else {
+        // Prepare update data
+        const updateData: Partial<Employee> = {
+          displayName: selectedEmployee.displayName,
+          email: selectedEmployee.email,
+          phone: selectedEmployee.phone || undefined,
+          role: selectedEmployee.role,
+          status: selectedEmployee.status,
+          position: selectedEmployee.position || undefined,
+          departmentId: selectedEmployee.departmentId || undefined,
+          birthDate: selectedEmployee.birthDate || undefined,
+          employeeNumber: selectedEmployee.employeeNumber || undefined,
+          taxId: selectedEmployee.taxId || undefined,
+          address: selectedEmployee.address || undefined,
+          emergencyContact: selectedEmployee.emergencyContact || undefined,
+          bio: selectedEmployee.bio || undefined,
+          education: selectedEmployee.education || undefined,
+          workExperience: selectedEmployee.workExperience || undefined,
+          skills: selectedEmployee.skills || undefined,
+          certifications: selectedEmployee.certifications || undefined,
+          salary: selectedEmployee.salary ? Number(selectedEmployee.salary) : undefined,
+          managerId: selectedEmployee.managerId || undefined,
+          bankAccount: selectedEmployee.bankAccount || undefined,
+          insuranceNumber: selectedEmployee.insuranceNumber || undefined,
+          avatar: selectedEmployee.avatar || undefined,
+          permissions: (selectedEmployee as any).permissions || newEmployee.permissions,
+          vacationAccess: (selectedEmployee as any).vacationAccess || newEmployee.vacationAccess,
+          leadership: (selectedEmployee as any).leadership || newEmployee.leadership,
+        };
 
-      const userContext = createUserAccessContext(userProfile);
-      await firebaseService.updateEmployee(selectedEmployee.id, updateData, userContext || undefined);
+        const userContext = createUserAccessContext(userProfile);
+        await firebaseService.updateEmployee(selectedEmployee.id, updateData, userContext || undefined);
 
-      // If the edited employee is the currently logged-in user, refresh local profile
-      if (userProfile?.id === selectedEmployee.id && updateUserProfile) {
-        await updateUserProfile({
-          displayName: updateData.displayName,
-          email: updateData.email,
-          phone: updateData.phone,
-          departmentId: updateData.departmentId,
-          position: updateData.position,
-          role: updateData.role,
-          status: updateData.status,
-          permissions: updateData.permissions,
-          vacationAccess: updateData.vacationAccess,
-          leadership: (updateData as any).leadership,
-        } as any);
+        // If the edited employee is the currently logged-in user, refresh local profile
+        if (userProfile?.id === selectedEmployee.id && updateUserProfile) {
+          await updateUserProfile({
+            displayName: updateData.displayName,
+            email: updateData.email,
+            phone: updateData.phone,
+            departmentId: updateData.departmentId,
+            position: updateData.position,
+            role: updateData.role,
+            status: updateData.status,
+            permissions: updateData.permissions,
+            vacationAccess: updateData.vacationAccess,
+            leadership: (updateData as any).leadership,
+          } as any);
+        }
+        setShowEditModal(false);
+        setSelectedEmployee(null);
+        setIsEditingMode(false);
+        loadEmployees();
+        alert('Ansatt ble oppdatert!');
       }
-      setShowEditModal(false);
-      setSelectedEmployee(null);
-      loadEmployees();
-      alert('Ansatt ble oppdatert!');
     } catch (error) {
-      console.error('Error updating employee:', error);
-      alert(`Feil ved oppdatering av ansatt: ${error instanceof Error ? error.message : 'Ukjent feil'}`);
+      console.error('Error saving employee:', error);
+      alert(`Feil ved lagring av ansatt: ${error instanceof Error ? error.message : 'Ukjent feil'}`);
     }
   };
 
@@ -911,7 +1036,60 @@ export default function EmployeesPage() {
               </p>
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+              // Reset newEmployee to defaults
+              setNewEmployee({
+                displayName: '',
+                email: '',
+                phone: '',
+                departmentId: '',
+                position: '',
+                role: 'employee' as 'admin' | 'department_leader' | 'employee',
+                status: 'active' as 'active' | 'inactive' | 'on_leave',
+                birthDate: '',
+                employeeNumber: '',
+                taxId: '',
+                address: '',
+                emergencyContact: '',
+                bio: '',
+                education: '',
+                workExperience: '',
+                skills: [] as string[],
+                certifications: [] as string[],
+                hireDate: '',
+                salary: '',
+                managerId: '',
+                bankAccount: '',
+                insuranceNumber: '',
+                avatar: '',
+                permissions: {
+                  dashboard: true,
+                  avvik: true,
+                  hrFerie: true,
+                  hrFravær: true,
+                  notifications: true,
+                  calendar: true,
+                } as any,
+                vacationAccess: {
+                  canRequestVacation: true,
+                  canApproveVacation: false,
+                  canViewAllVacations: false,
+                  vacationDaysPerYear: 25,
+                  managerApprovalRequired: true,
+                },
+                leadership: {
+                  isManager: false,
+                  managesDepartments: [] as string[],
+                  managesEmployees: [] as string[],
+                  reportsTo: '',
+                  canApproveExpenses: false,
+                  canApprovePurchases: false,
+                  budgetLimit: 0,
+                },
+              });
+              setIsEditingMode(false);
+              setShowEditModal(true);
+            }}
               style={{
                 padding: '0.625rem',
                 borderRadius: '0.625rem',
@@ -943,7 +1121,60 @@ export default function EmployeesPage() {
               </p>
             </div>
             <button
-              onClick={() => setShowAddModal(true)}
+              onClick={() => {
+              // Reset newEmployee to defaults
+              setNewEmployee({
+                displayName: '',
+                email: '',
+                phone: '',
+                departmentId: '',
+                position: '',
+                role: 'employee' as 'admin' | 'department_leader' | 'employee',
+                status: 'active' as 'active' | 'inactive' | 'on_leave',
+                birthDate: '',
+                employeeNumber: '',
+                taxId: '',
+                address: '',
+                emergencyContact: '',
+                bio: '',
+                education: '',
+                workExperience: '',
+                skills: [] as string[],
+                certifications: [] as string[],
+                hireDate: '',
+                salary: '',
+                managerId: '',
+                bankAccount: '',
+                insuranceNumber: '',
+                avatar: '',
+                permissions: {
+                  dashboard: true,
+                  avvik: true,
+                  hrFerie: true,
+                  hrFravær: true,
+                  notifications: true,
+                  calendar: true,
+                } as any,
+                vacationAccess: {
+                  canRequestVacation: true,
+                  canApproveVacation: false,
+                  canViewAllVacations: false,
+                  vacationDaysPerYear: 25,
+                  managerApprovalRequired: true,
+                },
+                leadership: {
+                  isManager: false,
+                  managesDepartments: [] as string[],
+                  managesEmployees: [] as string[],
+                  reportsTo: '',
+                  canApproveExpenses: false,
+                  canApprovePurchases: false,
+                  budgetLimit: 0,
+                },
+              });
+              setIsEditingMode(false);
+              setShowEditModal(true);
+            }}
               className="btn btn-primary"
             >
               <UserPlus className="w-4 h-4 mr-2" />
@@ -1230,6 +1461,7 @@ export default function EmployeesPage() {
                   }}
                   onClick={() => {
                     setSelectedEmployee(employee);
+                    setIsEditingMode(true);
                     setShowEditModal(true);
                   }}
                 >
@@ -1286,7 +1518,60 @@ export default function EmployeesPage() {
           </p>
           <button 
             className="btn btn-primary"
-            onClick={() => setShowAddModal(true)}
+            onClick={() => {
+              // Reset newEmployee to defaults
+              setNewEmployee({
+                displayName: '',
+                email: '',
+                phone: '',
+                departmentId: '',
+                position: '',
+                role: 'employee' as 'admin' | 'department_leader' | 'employee',
+                status: 'active' as 'active' | 'inactive' | 'on_leave',
+                birthDate: '',
+                employeeNumber: '',
+                taxId: '',
+                address: '',
+                emergencyContact: '',
+                bio: '',
+                education: '',
+                workExperience: '',
+                skills: [] as string[],
+                certifications: [] as string[],
+                hireDate: '',
+                salary: '',
+                managerId: '',
+                bankAccount: '',
+                insuranceNumber: '',
+                avatar: '',
+                permissions: {
+                  dashboard: true,
+                  avvik: true,
+                  hrFerie: true,
+                  hrFravær: true,
+                  notifications: true,
+                  calendar: true,
+                } as any,
+                vacationAccess: {
+                  canRequestVacation: true,
+                  canApproveVacation: false,
+                  canViewAllVacations: false,
+                  vacationDaysPerYear: 25,
+                  managerApprovalRequired: true,
+                },
+                leadership: {
+                  isManager: false,
+                  managesDepartments: [] as string[],
+                  managesEmployees: [] as string[],
+                  reportsTo: '',
+                  canApproveExpenses: false,
+                  canApprovePurchases: false,
+                  budgetLimit: 0,
+                },
+              });
+              setIsEditingMode(false);
+              setShowEditModal(true);
+            }}
           >
             <Plus style={{ width: '16px', height: '16px' }} />
             Legg til din første ansatt
@@ -1320,6 +1605,145 @@ export default function EmployeesPage() {
               </button>
             </div>
             <div className="modal-body">
+              {/* Interaktiv Tilgangsoversikt - AUTO SMART basert på rolle */}
+              <div style={{ 
+                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+                padding: '1.5rem', 
+                borderRadius: '12px', 
+                marginBottom: '2rem',
+                border: '3px solid #4f46e5',
+                boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                position: 'relative',
+                zIndex: 10
+              }}>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.5rem', color: '#ffffff' }}>
+                  🔐 Tilgangskontroll
+                </h3>
+                <p style={{ color: '#f3f4f6', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.6', fontWeight: '500' }}>
+                  <strong style={{ color: '#ffffff' }}>
+                    Standard tilganger for {newEmployee.role === 'employee' ? 'ansatte' : newEmployee.role === 'department_leader' ? 'avdelingsledere' : 'admins'}
+                  </strong> settes automatisk. Du kan justere tilganger nedenfor.
+                </p>
+                
+                {/* Viktigste tilganger - Interaktive checkboxes */}
+                <div style={{ 
+                  background: '#ffffff',
+                  padding: '1.25rem',
+                  borderRadius: '8px',
+                  border: '2px solid rgba(255,255,255,0.3)',
+                  boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                }}>
+                  <div style={{ 
+                    display: 'grid', 
+                    gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                    gap: '0.75rem',
+                    fontSize: '0.875rem'
+                  }}>
+                    {[
+                      { key: 'dashboard', label: 'Dashboard', icon: '📊' },
+                      { key: 'avvik', label: 'Avvik', icon: '⚠️' },
+                      { key: 'hrFerie', label: 'Ferie', icon: '🏖️' },
+                      { key: 'hrFravær', label: 'Fravær', icon: '🏥' },
+                      { key: 'hrAnsatte', label: 'Se ansatte', icon: '👥' },
+                      { key: 'documents', label: 'Dokumenter', icon: '📄' },
+                      { key: 'reports', label: 'Rapporter', icon: '📈' },
+                      { key: 'settings', label: 'Innstillinger', icon: '⚙️' },
+                    ].map((perm) => {
+                      const hasAccess = newEmployee.permissions[perm.key as keyof typeof newEmployee.permissions] || false;
+                      return (
+                        <div
+                          key={perm.key}
+                          style={{ 
+                            display: 'flex', 
+                            alignItems: 'center', 
+                            gap: '0.5rem',
+                            cursor: 'pointer',
+                            padding: '0.75rem',
+                            borderRadius: '6px',
+                            transition: 'all 0.2s',
+                            backgroundColor: hasAccess ? '#d1fae5' : '#fee2e2',
+                            border: `2px solid ${hasAccess ? '#10b981' : '#ef4444'}`,
+                            userSelect: 'none'
+                          }}
+                          onClick={(e) => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            const newValue = !hasAccess;
+                            setNewEmployee({
+                              ...newEmployee,
+                              permissions: {
+                                ...newEmployee.permissions,
+                                [perm.key]: newValue,
+                              } as any,
+                            });
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.transform = 'scale(1.02)';
+                            e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = 'none';
+                          }}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={hasAccess}
+                            onChange={(e) => {
+                              e.stopPropagation();
+                              setNewEmployee({
+                                ...newEmployee,
+                                permissions: {
+                                  ...newEmployee.permissions,
+                                  [perm.key]: e.target.checked,
+                                } as any,
+                              });
+                            }}
+                            onClick={(e) => e.stopPropagation()}
+                            style={{ 
+                              width: '20px', 
+                              height: '20px', 
+                              cursor: 'pointer',
+                              accentColor: hasAccess ? '#10b981' : '#ef4444',
+                              pointerEvents: 'auto',
+                              flexShrink: 0
+                            }}
+                          />
+                          <span style={{ 
+                            fontSize: '1.1rem',
+                            marginRight: '0.25rem',
+                            flexShrink: 0
+                          }}>{perm.icon}</span>
+                          <span style={{ 
+                            color: hasAccess ? '#065f46' : '#991b1b',
+                            fontWeight: '600',
+                            flex: 1,
+                            fontSize: '0.9rem'
+                          }}>{perm.label}</span>
+                          {hasAccess && (
+                            <span style={{ color: '#10b981', fontSize: '1rem', fontWeight: 'bold' }}>✓</span>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <div style={{ 
+                    marginTop: '1rem', 
+                    paddingTop: '1rem', 
+                    borderTop: '1px solid #e5e7eb',
+                    textAlign: 'center'
+                  }}>
+                    <span style={{ 
+                      color: '#6b7280', 
+                      fontSize: '0.75rem',
+                      fontStyle: 'italic'
+                    }}>
+                      💡 Se alle tilganger nedenfor i Permissions Manager for full kontroll
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <div className="form-grid">
                 {/* Grunnleggende informasjon */}
                 <div className="form-group">
@@ -1381,16 +1805,7 @@ export default function EmployeesPage() {
                     value={newEmployee.role}
                     onChange={(e) => {
                       const newRole = e.target.value as "admin" | "department_leader" | "employee";
-                      setNewEmployee({
-                        ...newEmployee, 
-                        role: newRole,
-                        // Nullstill avdeling-relaterte felt når rolle endres
-                        departmentId: newRole === 'employee' ? newEmployee.departmentId : '',
-                        leadership: {
-                          ...newEmployee.leadership,
-                          managesDepartments: newRole === 'department_leader' ? newEmployee.leadership.managesDepartments : []
-                        }
-                      });
+                      handleRoleChange(newRole);
                     }}
                     className="form-input"
                     required
@@ -1580,7 +1995,7 @@ export default function EmployeesPage() {
                   onChange={(updatedPermissions) => {
                     setNewEmployee({
                       ...newEmployee,
-                      permissions: updatedPermissions
+                      permissions: updatedPermissions as any
                     });
                   }}
                   role={newEmployee.role}
@@ -1606,29 +2021,181 @@ export default function EmployeesPage() {
         </div>
       )}
 
-      {/* Edit Employee Modal */}
-      {showEditModal && selectedEmployee && (
+      {/* Edit/Add Employee Modal - Brukes både for redigering og opprettelse */}
+      {showEditModal && (selectedEmployee || !isEditingMode) && (
         <div className="modal-overlay" style={{ zIndex: 1000 }}>
           <div className="modal-content" style={{ maxWidth: '95vw', maxHeight: '95vh', width: '1400px', overflowY: 'auto' }}>
             <div className="modal-header">
-              <h2 className="modal-title">Rediger ansatt</h2>
+              <h2 className="modal-title">{isEditingMode && selectedEmployee ? 'Rediger ansatt' : 'Legg til ny ansatt'}</h2>
               <button
-                onClick={() => setShowEditModal(false)}
+                onClick={() => {
+                  setShowEditModal(false);
+                  setIsEditingMode(false);
+                  setSelectedEmployee(null);
+                }}
                 className="modal-close"
               >
                 ×
               </button>
             </div>
             <div className="modal-body">
+              {/* Interaktiv Tilgangsoversikt - Vises ved opprettelse */}
+              {!isEditingMode && (
+                <div style={{ 
+                  background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)', 
+                  padding: '1.5rem', 
+                  borderRadius: '12px', 
+                  marginBottom: '2rem',
+                  border: '3px solid #4f46e5',
+                  boxShadow: '0 10px 25px rgba(0,0,0,0.2)',
+                  position: 'relative',
+                  zIndex: 10
+                }}>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '0.5rem', color: '#ffffff' }}>
+                    🔐 Tilgangskontroll
+                  </h3>
+                  <p style={{ color: '#f3f4f6', marginBottom: '1.5rem', fontSize: '0.9rem', lineHeight: '1.6', fontWeight: '500' }}>
+                    <strong style={{ color: '#ffffff' }}>
+                      Standard tilganger for {newEmployee.role === 'employee' ? 'ansatte' : newEmployee.role === 'department_leader' ? 'avdelingsledere' : 'admins'}
+                    </strong> settes automatisk. Du kan justere tilganger nedenfor.
+                  </p>
+                  
+                  {/* Viktigste tilganger - Interaktive checkboxes */}
+                  <div style={{ 
+                    background: '#ffffff',
+                    padding: '1.25rem',
+                    borderRadius: '8px',
+                    border: '2px solid rgba(255,255,255,0.3)',
+                    boxShadow: '0 4px 6px rgba(0,0,0,0.1)'
+                  }}>
+                    <div style={{ 
+                      display: 'grid', 
+                      gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', 
+                      gap: '0.75rem',
+                      fontSize: '0.875rem'
+                    }}>
+                      {[
+                        { key: 'dashboard', label: 'Dashboard', icon: '📊' },
+                        { key: 'avvik', label: 'Avvik', icon: '⚠️' },
+                        { key: 'hrFerie', label: 'Ferie', icon: '🏖️' },
+                        { key: 'hrFravær', label: 'Fravær', icon: '🏥' },
+                        { key: 'hrAnsatte', label: 'Se ansatte', icon: '👥' },
+                        { key: 'documents', label: 'Dokumenter', icon: '📄' },
+                        { key: 'reports', label: 'Rapporter', icon: '📈' },
+                        { key: 'settings', label: 'Innstillinger', icon: '⚙️' },
+                      ].map((perm) => {
+                        const hasAccess = newEmployee.permissions[perm.key as keyof typeof newEmployee.permissions] || false;
+                        return (
+                          <div
+                            key={perm.key}
+                            style={{ 
+                              display: 'flex', 
+                              alignItems: 'center', 
+                              gap: '0.5rem',
+                              cursor: 'pointer',
+                              padding: '0.75rem',
+                              borderRadius: '6px',
+                              transition: 'all 0.2s',
+                              backgroundColor: hasAccess ? '#d1fae5' : '#fee2e2',
+                              border: `2px solid ${hasAccess ? '#10b981' : '#ef4444'}`,
+                              userSelect: 'none'
+                            }}
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              const newValue = !hasAccess;
+                              setNewEmployee({
+                                ...newEmployee,
+                                permissions: {
+                                  ...newEmployee.permissions,
+                                  [perm.key]: newValue,
+                                } as any,
+                              });
+                            }}
+                            onMouseEnter={(e) => {
+                              e.currentTarget.style.transform = 'scale(1.02)';
+                              e.currentTarget.style.boxShadow = '0 2px 4px rgba(0,0,0,0.1)';
+                            }}
+                            onMouseLeave={(e) => {
+                              e.currentTarget.style.transform = 'scale(1)';
+                              e.currentTarget.style.boxShadow = 'none';
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={hasAccess}
+                              onChange={(e) => {
+                                e.stopPropagation();
+                                setNewEmployee({
+                                  ...newEmployee,
+                                  permissions: {
+                                    ...newEmployee.permissions,
+                                    [perm.key]: e.target.checked,
+                                  } as any,
+                                });
+                              }}
+                              onClick={(e) => e.stopPropagation()}
+                              style={{ 
+                                width: '20px', 
+                                height: '20px', 
+                                cursor: 'pointer',
+                                accentColor: hasAccess ? '#10b981' : '#ef4444',
+                                pointerEvents: 'auto',
+                                flexShrink: 0
+                              }}
+                            />
+                            <span style={{ 
+                              fontSize: '1.1rem',
+                              marginRight: '0.25rem',
+                              flexShrink: 0
+                            }}>{perm.icon}</span>
+                            <span style={{ 
+                              color: hasAccess ? '#065f46' : '#991b1b',
+                              fontWeight: '600',
+                              flex: 1,
+                              fontSize: '0.9rem'
+                            }}>{perm.label}</span>
+                            {hasAccess && (
+                              <span style={{ color: '#10b981', fontSize: '1rem', fontWeight: 'bold' }}>✓</span>
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div style={{ 
+                      marginTop: '1rem', 
+                      paddingTop: '1rem', 
+                      borderTop: '1px solid #e5e7eb',
+                      textAlign: 'center'
+                    }}>
+                      <span style={{ 
+                        color: '#6b7280', 
+                        fontSize: '0.75rem',
+                        fontStyle: 'italic'
+                      }}>
+                        💡 Se alle tilganger nedenfor i Permissions Manager for full kontroll
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
               <div className="form-grid">
                 {/* Grunnleggende informasjon */}
                 <div className="form-group">
                   <label className="form-label">Navn *</label>
                   <input
                     type="text"
-                    value={selectedEmployee.displayName || ''}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, displayName: e.target.value})}
+                    value={isEditingMode && selectedEmployee ? (selectedEmployee.displayName || '') : newEmployee.displayName}
+                    onChange={(e) => {
+                      if (isEditingMode && selectedEmployee) {
+                        setSelectedEmployee({...selectedEmployee, displayName: e.target.value} as any);
+                      } else {
+                        setNewEmployee({...newEmployee, displayName: e.target.value});
+                      }
+                    }}
                     className="form-input"
+                    placeholder="Fornavn Etternavn"
                     required
                   />
                 </div>
@@ -1636,9 +2203,16 @@ export default function EmployeesPage() {
                   <label className="form-label">E-post *</label>
                   <input
                     type="email"
-                    value={selectedEmployee.email || ''}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, email: e.target.value})}
+                    value={isEditingMode && selectedEmployee ? (selectedEmployee.email || '') : newEmployee.email}
+                    onChange={(e) => {
+                      if (isEditingMode && selectedEmployee) {
+                        setSelectedEmployee({...selectedEmployee, email: e.target.value} as any);
+                      } else {
+                        setNewEmployee({...newEmployee, email: e.target.value});
+                      }
+                    }}
                     className="form-input"
+                    placeholder="ansatt@bedrift.no"
                     required
                   />
                 </div>
@@ -1646,17 +2220,30 @@ export default function EmployeesPage() {
                   <label className="form-label">Telefon</label>
                   <input
                     type="tel"
-                    value={selectedEmployee.phone || ''}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, phone: e.target.value})}
+                    value={isEditingMode && selectedEmployee ? (selectedEmployee.phone || '') : newEmployee.phone}
+                    onChange={(e) => {
+                      if (isEditingMode && selectedEmployee) {
+                        setSelectedEmployee({...selectedEmployee, phone: e.target.value} as any);
+                      } else {
+                        setNewEmployee({...newEmployee, phone: e.target.value});
+                      }
+                    }}
                     className="form-input"
+                    placeholder="+47 123 45 678"
                   />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Fødselsdato</label>
                   <input
                     type="date"
-                    value={(selectedEmployee as any).birthDate || ''}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, birthDate: e.target.value} as any)}
+                    value={isEditingMode && selectedEmployee ? ((selectedEmployee as any).birthDate || '') : newEmployee.birthDate}
+                    onChange={(e) => {
+                      if (isEditingMode && selectedEmployee) {
+                        setSelectedEmployee({...selectedEmployee, birthDate: e.target.value} as any);
+                      } else {
+                        setNewEmployee({...newEmployee, birthDate: e.target.value});
+                      }
+                    }}
                     className="form-input"
                   />
                 </div>
@@ -1666,36 +2253,46 @@ export default function EmployeesPage() {
                   <label className="form-label">Stilling</label>
                   <input
                     type="text"
-                    value={selectedEmployee.position || ''}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, position: e.target.value})}
+                    value={isEditingMode && selectedEmployee ? (selectedEmployee.position || '') : newEmployee.position}
+                    onChange={(e) => {
+                      if (isEditingMode && selectedEmployee) {
+                        setSelectedEmployee({...selectedEmployee, position: e.target.value} as any);
+                      } else {
+                        setNewEmployee({...newEmployee, position: e.target.value});
+                      }
+                    }}
                     className="form-input"
+                    placeholder="Stilling"
                   />
                 </div>
                 <div className="form-group">
                   <label className="form-label">Rolle *</label>
                   <select
-                    value={selectedEmployee.role}
+                    value={isEditingMode && selectedEmployee ? selectedEmployee.role : newEmployee.role}
                     onChange={(e) => {
                       const newRole = e.target.value as "admin" | "department_leader" | "employee";
-                      const currentLeadership = (selectedEmployee as any).leadership || {
-                        isManager: false,
-                        managesDepartments: [] as string[],
-                        managesEmployees: [] as string[],
-                        reportsTo: '',
-                        canApproveExpenses: false,
-                        canApprovePurchases: false,
-                        budgetLimit: 0,
-                      };
-                      setSelectedEmployee({
-                        ...selectedEmployee, 
-                        role: newRole,
-                        // Nullstill avdeling-relaterte felt når rolle endres
-                        departmentId: newRole === 'employee' ? selectedEmployee.departmentId : '',
-                        leadership: {
-                          ...currentLeadership,
-                          managesDepartments: newRole === 'department_leader' ? currentLeadership.managesDepartments : []
-                        }
-                      } as any);
+                      if (isEditingMode && selectedEmployee) {
+                        const currentLeadership = (selectedEmployee as any).leadership || {
+                          isManager: false,
+                          managesDepartments: [] as string[],
+                          managesEmployees: [] as string[],
+                          reportsTo: '',
+                          canApproveExpenses: false,
+                          canApprovePurchases: false,
+                          budgetLimit: 0,
+                        };
+                        setSelectedEmployee({
+                          ...selectedEmployee, 
+                          role: newRole,
+                          departmentId: newRole === 'employee' ? selectedEmployee.departmentId : '',
+                          leadership: {
+                            ...currentLeadership,
+                            managesDepartments: newRole === 'department_leader' ? currentLeadership.managesDepartments : []
+                          }
+                        } as any);
+                      } else {
+                        handleRoleChange(newRole);
+                      }
                     }}
                     className="form-input"
                     required
@@ -1705,12 +2302,18 @@ export default function EmployeesPage() {
                     <option value="admin">Administrator</option>
                   </select>
                 </div>
-                {selectedEmployee.role === 'employee' && (
+                {(isEditingMode && selectedEmployee ? selectedEmployee.role : newEmployee.role) === 'employee' && (
                   <div className="form-group">
                     <label className="form-label">Avdeling *</label>
                     <select
-                      value={selectedEmployee.departmentId || ''}
-                      onChange={(e) => setSelectedEmployee({...selectedEmployee, departmentId: e.target.value})}
+                      value={isEditingMode && selectedEmployee ? (selectedEmployee.departmentId || '') : newEmployee.departmentId}
+                      onChange={(e) => {
+                        if (isEditingMode && selectedEmployee) {
+                          setSelectedEmployee({...selectedEmployee, departmentId: e.target.value});
+                        } else {
+                          setNewEmployee({...newEmployee, departmentId: e.target.value});
+                        }
+                      }}
                       className="form-input"
                       required
                     >
@@ -1726,32 +2329,45 @@ export default function EmployeesPage() {
                     </small>
                   </div>
                 )}
-                {selectedEmployee.role === 'department_leader' && (
+                {(isEditingMode && selectedEmployee ? selectedEmployee.role : newEmployee.role) === 'department_leader' && (
                   <div className="form-group">
                     <label className="form-label">Leder for avdeling *</label>
                     <select
-                      value={((selectedEmployee as any).leadership?.managesDepartments?.[0] || selectedEmployee.departmentId || '')}
+                      value={isEditingMode && selectedEmployee 
+                        ? (((selectedEmployee as any).leadership?.managesDepartments?.[0] || selectedEmployee.departmentId || ''))
+                        : (newEmployee.leadership.managesDepartments[0] || newEmployee.departmentId || '')}
                       onChange={(e) => {
                         const selectedDeptId = e.target.value;
-                        const currentLeadership = (selectedEmployee as any).leadership || {
-                          isManager: false,
-                          managesDepartments: [] as string[],
-                          managesEmployees: [] as string[],
-                          reportsTo: '',
-                          canApproveExpenses: false,
-                          canApprovePurchases: false,
-                          budgetLimit: 0,
-                        };
-                        setSelectedEmployee({
-                          ...selectedEmployee,
-                          leadership: {
-                            ...currentLeadership,
-                            managesDepartments: selectedDeptId ? [selectedDeptId] : [],
-                            isManager: true
-                          },
-                          // Sett også departmentId til den avdelingen de leder
-                          departmentId: selectedDeptId
-                        } as any);
+                        if (isEditingMode && selectedEmployee) {
+                          const currentLeadership = (selectedEmployee as any).leadership || {
+                            isManager: false,
+                            managesDepartments: [] as string[],
+                            managesEmployees: [] as string[],
+                            reportsTo: '',
+                            canApproveExpenses: false,
+                            canApprovePurchases: false,
+                            budgetLimit: 0,
+                          };
+                          setSelectedEmployee({
+                            ...selectedEmployee,
+                            leadership: {
+                              ...currentLeadership,
+                              managesDepartments: selectedDeptId ? [selectedDeptId] : [],
+                              isManager: true
+                            },
+                            departmentId: selectedDeptId
+                          } as any);
+                        } else {
+                          setNewEmployee({
+                            ...newEmployee,
+                            leadership: {
+                              ...newEmployee.leadership,
+                              managesDepartments: selectedDeptId ? [selectedDeptId] : [],
+                              isManager: true
+                            },
+                            departmentId: selectedDeptId
+                          });
+                        }
                       }}
                       className="form-input"
                       required
@@ -1768,18 +2384,20 @@ export default function EmployeesPage() {
                     </small>
                   </div>
                 )}
-                <div className="form-group">
-                  <label className="form-label">Status</label>
-                  <select
-                    value={selectedEmployee.status || 'active'}
-                    onChange={(e) => setSelectedEmployee({...selectedEmployee, status: e.target.value as "active" | "inactive" | "on_leave"})}
-                    className="form-input"
-                  >
-                    <option value="active">Aktiv</option>
-                    <option value="inactive">Inaktiv</option>
-                    <option value="on_leave">Permisjon</option>
-                  </select>
-                </div>
+                {isEditingMode && selectedEmployee && (
+                  <div className="form-group">
+                    <label className="form-label">Status</label>
+                    <select
+                      value={selectedEmployee.status || 'active'}
+                      onChange={(e) => setSelectedEmployee({...selectedEmployee, status: e.target.value as "active" | "inactive" | "on_leave"})}
+                      className="form-input"
+                    >
+                      <option value="active">Aktiv</option>
+                      <option value="inactive">Inaktiv</option>
+                      <option value="on_leave">Permisjon</option>
+                    </select>
+                  </div>
+                )}
                 <div className="form-group">
                   <label className="form-label">Ansattnummer</label>
                   <input
@@ -1899,7 +2517,7 @@ export default function EmployeesPage() {
                       permissions: updatedPermissions
                     } as any);
                   }}
-                  role={selectedEmployee.role}
+                  role={isEditingMode && selectedEmployee ? selectedEmployee.role : newEmployee.role}
                   readOnly={false}
                 />
               </div>
@@ -1964,7 +2582,7 @@ export default function EmployeesPage() {
                       </label>
                       <input
                         type="number"
-                        value={(selectedEmployee as any).vacationAccess?.vacationDaysPerYear ?? 25}
+                        value={isEditingMode && selectedEmployee ? ((selectedEmployee as any).vacationAccess?.vacationDaysPerYear ?? 25) : (newEmployee.vacationAccess?.vacationDaysPerYear ?? 25)}
                         onChange={(e) => setSelectedEmployee({
                           ...selectedEmployee,
                           vacationAccess: {
@@ -2039,11 +2657,11 @@ export default function EmployeesPage() {
                         style={{ width: '100%', padding: '0.5rem' }}
                       >
                         <option value="">Velg leder</option>
-                        {employees.filter(emp => emp.id !== selectedEmployee.id && (emp.role === 'department_leader' || emp.role === 'admin')).map(emp => (
+                        {isEditingMode && selectedEmployee ? employees.filter(emp => emp.id !== selectedEmployee.id && (emp.role === 'department_leader' || emp.role === 'admin')).map(emp => (
                           <option key={emp.id} value={emp.id}>
                             {emp.displayName} ({emp.role === 'admin' ? 'Administrator' : 'Avdelingsleder'})
                           </option>
-                        ))}
+                        )) : null}
                       </select>
                     </div>
                   </div>
@@ -2201,7 +2819,7 @@ export default function EmployeesPage() {
                     fontSize: '0.75rem', 
                     marginTop: '0.25rem' 
                   }}>
-                    {selectedEmployee?.uid 
+                    {selectedEmployee?.id 
                       ? 'Ansatt får en e-post med link for å sette passordet (brukeren har allerede en konto)'
                       : 'Ansatt kan logge inn med dette passordet med en gang'}
                   </small>
@@ -2538,6 +3156,494 @@ export default function EmployeesPage() {
                             <div style={{ fontWeight: '500' }}>Barn sykt</div>
                             <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>12. januar 2024</div>
                             <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Datter (8 år) - forkjølelse</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span className="badge badge-purple">Sykt barn</span>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>100% lønn</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.375rem' }}>
+                          <div>
+                            <div style={{ fontWeight: '500' }}>Ikke møtt opp</div>
+                            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>8. januar 2024</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Ingen melding gitt</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span className="badge badge-warning">Uforklarlig</span>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>0% lønn</div>
+                          </div>
+                        </div>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.375rem' }}>
+                          <div>
+                            <div style={{ fontWeight: '500' }}>Hodepine</div>
+                            <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>5. januar 2024</div>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280' }}>Egenmelding dag 1</div>
+                          </div>
+                          <div style={{ textAlign: 'right' }}>
+                            <span className="badge badge-error">Egenmelding</span>
+                            <div style={{ fontSize: '0.75rem', color: '#6b7280', marginTop: '0.25rem' }}>100% lønn</div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                                    {/* Arbeidstilsynets regler */}
+                  <div style={{ background: '#f0fdf4', padding: '1.5rem', borderRadius: '0.5rem', border: '1px solid #bbf7d0', marginBottom: '1.5rem' }}>
+                    <h5 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '1rem', color: '#166534' }}>
+                      ⚖️ Norske arbeidsrettigheter og lover
+                    </h5>
+                    <div style={{ fontSize: '0.875rem', color: '#374151', marginBottom: '1rem', padding: '0.75rem', background: '#ecfdf5', borderRadius: '0.375rem', border: '1px solid #a7f3d0' }}>
+                      <strong>📋 Lovhjemmel:</strong> Arbeidsmiljøloven (AML), Ferieloven, Folketrygdloven, Barnetrygdloven, og forskrifter fra Arbeidstilsynet
+                    </div>
+                    
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1.5rem' }}>
+                      <div>
+                        <h6 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          🏖️ Ferie-rettigheter (Ferieloven §3-4)
+                        </h6>
+                        <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: '1.6' }}>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Grunnferie:</strong> 25 feriedager per kalenderår (5 ukers ferie). Ferie må tas innen 30. september året etter ferieåret.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Feriepenger:</strong> Utbetales i juni måned. Beløpet er 10,2% av årslønnen for året ferien er opptjent.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Ferieavkorting:</strong> Ferie kan IKKE avkortes ved sykefravær. Sykefravær påvirker ikke ferierettighetene.
+                          </p>
+                          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic' }}>
+                            §3: "Arbeidstaker har rett til grunnferie på 25 dager per kalenderår"
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h6 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          🏥 Sykefravær (Folketrygdloven §8-2)
+                        </h6>
+                        <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: '1.6' }}>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Egenmelding:</strong> 16 dager per kalenderår. Arbeidsgiver betaler 100% lønn dag 1-16. Ingen legeerklæring kreves.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Sykepenger:</strong> Fra dag 17 betaler NAV sykepenger (100% av grunnbeløpet). Maksimalt 52 uker per sykdomsforløp.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Dokumentasjon:</strong> Legeerklæring kreves fra dag 4 ved sykefravær over 3 dager. Arbeidsgiver kan kreve legeerklæring fra dag 1.
+                          </p>
+                          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic' }}>
+                            §8-2: "Sykepenger ytes for arbeidstakere som er arbeidsufør på grunn av sykdom"
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h6 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          👶 Sykt barn (Barnetrygdloven §9-1)
+                        </h6>
+                        <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: '1.6' }}>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Barn under 12 år:</strong> 10 dager per kalenderår per barn. 100% lønn betalt av arbeidsgiver.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Barn 12-18 år:</strong> 15 dager per kalenderår per barn. 100% lønn betalt av arbeidsgiver.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Dokumentasjon:</strong> Legeerklæring kreves fra dag 4. Kan brukes for syke barn, omsorg og legebesøk.
+                          </p>
+                          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic' }}>
+                            §9-1: "Foreldre har rett til permisjon ved barns sykdom"
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h6 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          ⏰ Arbeidstid (AML §10-1)
+                        </h6>
+                        <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: '1.6' }}>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Normal arbeidstid:</strong> Maksimalt 40 timer per uke, 9 timer per dag. 8 timer per dag for nattarbeid.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Hviletid:</strong> Minst 11 timer sammenhengende hviletid per døgn. 35 timer sammenhengende hviletid per uke.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Pauser:</strong> Minst 30 minutter pause ved arbeid over 5,5 timer. Pause kan deles i to pauser på minst 15 minutter hver.
+                          </p>
+                          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic' }}>
+                            §10-1: "Arbeidstid skal ikke overstige 40 timer per uke"
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h6 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          💰 Overtid (AML §10-6)
+                        </h6>
+                        <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: '1.6' }}>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Overtidsgrense:</strong> Maksimalt 200 timer overtid per kalenderår. 10 timer per uke i opptil 25 uker.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Overtidsbetaling:</strong> 40% tillegg til normal lønn. 100% tillegg på søndager og helligdager.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Avspasering:</strong> Overtid kan avlønnes som avspasering. 1,5 time avspasering per overtidsøkt.
+                          </p>
+                          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic' }}>
+                            §10-6: "Overtid skal avlønnes med minst 40 prosent tillegg"
+                          </p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <h6 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.75rem', color: '#166534', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                          🛡️ Sikkerhet og vern (AML §4-1)
+                        </h6>
+                        <div style={{ fontSize: '0.875rem', color: '#374151', lineHeight: '1.6' }}>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Arbeidsgivers ansvar:</strong> Skal sikre at arbeidsmiljøet er tilfredsstillende. Skal forebygge sykdom og ulykker.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Arbeidstakers rettigheter:</strong> Rett til å nekte farlig arbeid. Rett til å melde fra om brudd på loven.
+                          </p>
+                          <p style={{ marginBottom: '0.75rem' }}>
+                            <strong>Verneombud:</strong> Valgt av arbeidstakerne. Har rett til å stoppe farlig arbeid. Skal konsulteres i sikkerhetssaker.
+                          </p>
+                          <p style={{ fontSize: '0.8rem', color: '#6b7280', fontStyle: 'italic' }}>
+                            §4-1: "Arbeidsgiver skal sikre at arbeidsmiljøet er tilfredsstillende"
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div style={{ marginTop: '1.5rem', padding: '1rem', background: '#fef3c7', borderRadius: '0.375rem', border: '1px solid #fde68a' }}>
+                      <h6 style={{ fontSize: '0.875rem', fontWeight: '600', marginBottom: '0.5rem', color: '#92400e' }}>
+                        ⚠️ Viktige påminnelser
+                      </h6>
+                      <ul style={{ fontSize: '0.875rem', color: '#374151', margin: 0, paddingLeft: '1rem', lineHeight: '1.5' }}>
+                        <li>Arbeidsgiver må dokumentere arbeidstid for alle ansatte</li>
+                        <li>Arbeidstaker kan kreve skriftlig arbeidsavtale innen 1 måned</li>
+                        <li>Oppsigelse må være skriftlig og begrunnet</li>
+                        <li>Arbeidstaker har rett til 3 måneders oppsigelsestid etter 5 års ansiennitet</li>
+                        <li>Arbeidsgiver kan ikke diskriminere på grunn av sykefravær</li>
+                      </ul>
+                    </div>
+                  </div>
+                  
+                  {/* Feriehistorikk */}
+                  <div>
+                    <h5 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                      📅 Feriehistorikk
+                    </h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.375rem' }}>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>Sommerferie 2024</div>
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>15. juli - 2. august 2024 (19 dager)</div>
+                        </div>
+                        <span className="badge badge-success">Godkjent</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.375rem' }}>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>Vinterferie 2024</div>
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>19. februar - 23. februar 2024 (5 dager)</div>
+                        </div>
+                        <span className="badge badge-success">Godkjent</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.375rem' }}>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>Juleferie 2023</div>
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>23. desember - 1. januar 2024 (10 dager)</div>
+                        </div>
+                        <span className="badge badge-success">Godkjent</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Avvik-rapporter - Full bredde */}
+                <div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem', color: '#333' }}>
+                    ⚠️ Avvik-rapporter
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: '1rem', marginBottom: '1rem' }}>
+                    <div style={{ background: '#fef2f2', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #fecaca' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <AlertTriangle style={{ width: '16px', height: '16px', color: '#dc2626' }} />
+                        <strong style={{ color: '#dc2626' }}>Kritiske</strong>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#991b1b' }}>0</div>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>rapporter</div>
+                    </div>
+                    <div style={{ background: '#fffbeb', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #fed7aa' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <AlertTriangle style={{ width: '16px', height: '16px', color: '#ea580c' }} />
+                        <strong style={{ color: '#ea580c' }}>Høye</strong>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#c2410c' }}>2</div>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>rapporter</div>
+                    </div>
+                    <div style={{ background: '#f0f9ff', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #bae6fd' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <AlertTriangle style={{ width: '16px', height: '16px', color: '#0284c7' }} />
+                        <strong style={{ color: '#0284c7' }}>Middels</strong>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#0369a1' }}>5</div>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>rapporter</div>
+                    </div>
+                    <div style={{ background: '#f0fdf4', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #bbf7d0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <AlertTriangle style={{ width: '16px', height: '16px', color: '#16a34a' }} />
+                        <strong style={{ color: '#16a34a' }}>Lave</strong>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#15803d' }}>8</div>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>rapporter</div>
+                    </div>
+                  </div>
+
+                  {/* Siste avvik-rapporter */}
+                  <div>
+                    <h5 style={{ fontSize: '1rem', fontWeight: '600', marginBottom: '0.75rem', color: '#374151' }}>
+                      Siste avvik-rapporter
+                    </h5>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.375rem' }}>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>Sikkerhetsbrudd i produksjon</div>
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Rapportert 15. januar 2024</div>
+                        </div>
+                        <span className="badge badge-warning">Høy</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.375rem' }}>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>Kvalitetsavvik i batch #1234</div>
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Rapportert 8. januar 2024</div>
+                        </div>
+                        <span className="badge badge-primary">Middels</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '0.75rem', background: '#f9fafb', borderRadius: '0.375rem' }}>
+                        <div>
+                          <div style={{ fontWeight: '500' }}>Problemer med maskin A-15</div>
+                          <div style={{ fontSize: '0.875rem', color: '#6b7280' }}>Rapportert 2. januar 2024</div>
+                        </div>
+                        <span className="badge badge-success">Lav</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Arbeidstid og oppmøte - Full bredde */}
+                <div>
+                  <h4 style={{ fontSize: '1.1rem', fontWeight: '600', marginBottom: '1rem', color: '#333' }}>
+                    ⏰ Arbeidstid og oppmøte
+                  </h4>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem' }}>
+                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <Clock style={{ width: '16px', height: '16px', color: '#3b82f6' }} />
+                        <strong style={{ color: '#3b82f6' }}>Denne måneden</strong>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#1e40af' }}>168</div>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>timer</div>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <Clock style={{ width: '16px', height: '16px', color: '#10b981' }} />
+                        <strong style={{ color: '#10b981' }}>Overtid</strong>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#059669' }}>12</div>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>timer</div>
+                    </div>
+                    <div style={{ background: '#f8fafc', padding: '1rem', borderRadius: '0.5rem', border: '1px solid #e2e8f0' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                        <Clock style={{ width: '16px', height: '16px', color: '#f59e0b' }} />
+                        <strong style={{ color: '#f59e0b' }}>Oppmøte</strong>
+                      </div>
+                      <div style={{ fontSize: '1.5rem', fontWeight: '700', color: '#d97706' }}>95%</div>
+                      <div style={{ fontSize: '0.875rem', color: '#64748b' }}>denne måneden</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowViewModal(false)}
+                className="btn btn-secondary"
+              >
+                Lukk
+              </button>
+              <button
+                onClick={() => {
+                  setShowViewModal(false);
+                  setShowEditModal(true);
+                }}
+                className="btn btn-primary"
+              >
+                Rediger
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Employee Settings Modal */}
+      {showSettingsModal && selectedEmployee && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Innstillinger for {selectedEmployee.displayName}</h2>
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="modal-close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', border: '1px solid #e5e7eb', borderRadius: '0.5rem' }}>
+                  <div className="user-avatar" style={{ width: '40px', height: '40px' }}>
+                    {(selectedEmployee.displayName?.charAt(0) || 'U').toUpperCase()}
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontWeight: '600' }}>{selectedEmployee.displayName}</h4>
+                    <p style={{ margin: 0, color: '#666', fontSize: '0.875rem' }}>{selectedEmployee.email}</p>
+                  </div>
+                </div>
+
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
+                  <button
+                    onClick={() => handleResetPassword(selectedEmployee.id)}
+                    className="btn btn-secondary"
+                    style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+                  >
+                    <Key style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                    Tilbakestill passord
+                  </button>
+
+                  {selectedEmployee.status === 'active' ? (
+                    <button
+                      onClick={() => handleDeactivateEmployee(selectedEmployee.id)}
+                      className="btn btn-warning"
+                      style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+                    >
+                      <UserX style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                      Deaktiver ansatt
+                    </button>
+                  ) : (
+                    <button
+                      onClick={() => handleActivateEmployee(selectedEmployee.id)}
+                      className="btn btn-success"
+                      style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+                    >
+                      <UserCheck style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                      Aktiver ansatt
+                    </button>
+                  )}
+
+                  <button
+                    onClick={() => handleDeleteEmployee(selectedEmployee.id)}
+                    className="btn btn-danger"
+                    style={{ justifyContent: 'flex-start', textAlign: 'left' }}
+                  >
+                    <Trash2 style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                    Slett ansatt
+                  </button>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowSettingsModal(false)}
+                className="btn btn-secondary"
+              >
+                Lukk
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirmation Modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay">
+          <div className="modal-content" style={{ maxWidth: '500px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Bekreft sletting</h2>
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="modal-close"
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', padding: '1rem', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '0.5rem' }}>
+                  <div style={{ width: '48px', height: '48px', borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                    <AlertTriangle style={{ width: '24px', height: '24px', color: '#dc2626' }} />
+                  </div>
+                  <div>
+                    <h4 style={{ margin: 0, fontWeight: '600', color: '#991b1b' }}>Advarsel!</h4>
+                    <p style={{ margin: '0.25rem 0 0 0', color: '#7f1d1d', fontSize: '0.875rem' }}>
+                      Denne handlingen kan ikke angres
+                    </p>
+                  </div>
+                </div>
+
+                <p style={{ color: 'var(--gray-700)', lineHeight: '1.6' }}>
+                  Er du sikker på at du vil slette <strong>{employees.find(e => e.id === showDeleteConfirm)?.displayName || 'denne ansatten'}</strong>?
+                </p>
+
+                <div style={{ padding: '1rem', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem' }}>
+                  <p style={{ margin: 0, fontSize: '0.875rem', color: '#92400e', fontWeight: '500', marginBottom: '0.5rem' }}>
+                    Dette vil:
+                  </p>
+                  <ul style={{ margin: 0, paddingLeft: '1.25rem', fontSize: '0.875rem', color: '#78350f', lineHeight: '1.6' }}>
+                    <li>Slette alle ansattdata permanent</li>
+                    <li>Fjerne tilgang til systemet</li>
+                    <li>Ikke kunne gjenopprettes</li>
+                  </ul>
+                </div>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button
+                onClick={() => setShowDeleteConfirm(null)}
+                className="btn btn-secondary"
+                disabled={deletingEmployeeId !== null}
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={confirmDeleteEmployee}
+                className="btn btn-danger"
+                disabled={deletingEmployeeId !== null}
+                style={{ opacity: deletingEmployeeId !== null ? 0.5 : 1 }}
+              >
+                {deletingEmployeeId ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white inline-block mr-2"></div>
+                    Sletter...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 style={{ width: '16px', height: '16px', marginRight: '0.5rem' }} />
+                    Ja, slett ansatt
+                  </>
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+} 
                           </div>
                           <div style={{ textAlign: 'right' }}>
                             <span className="badge badge-purple">Sykt barn</span>
