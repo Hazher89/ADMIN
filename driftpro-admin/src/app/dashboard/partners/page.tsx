@@ -187,6 +187,16 @@ export default function PartnersPage() {
   const [inboundLoading, setInboundLoading] = useState(false);
   const [processingReport, setProcessingReport] = useState<any>(null);
 
+  // Auto-refresh inbound while modal is open (keeps it "instant" without DevTools)
+  useEffect(() => {
+    if (!showInboundModal) return;
+    const id = setInterval(() => {
+      loadInbound(true);
+    }, 120000); // every 2 min
+    return () => clearInterval(id);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [showInboundModal]);
+
   // Job management
   const [showJobManagementModal, setShowJobManagementModal] = useState(false);
   const [jobs, setJobs] = useState<Array<{
@@ -372,11 +382,22 @@ export default function PartnersPage() {
   const loadInbound = async (syncFirst = false) => {
     setInboundLoading(true);
     try {
+      const safeReadJson = async (response: Response) => {
+        // Avoid crashing on: "Unexpected end of JSON input"
+        const text = await response.text();
+        if (!text) return { __empty: true };
+        try {
+          return JSON.parse(text);
+        } catch (err) {
+          return { __invalidJson: true, __raw: text.slice(0, 500) };
+        }
+      };
+
       // Først synkroniser nye e-poster hvis ønsket
       if (syncFirst) {
         try {
           const syncRes = await fetch('/api/inbound/sap/sync', { method: 'POST' });
-          const syncData = await syncRes.json();
+          const syncData: any = await safeReadJson(syncRes);
           if (syncData?.success) {
             setSuccess(`Synkronisert! ${syncData.processed} nye e-poster prosessert, ${syncData.skipped} hoppet over.`);
             if (syncData?.report) {
@@ -384,8 +405,16 @@ export default function PartnersPage() {
             }
           } else {
             // VIS feil (tidligere ble dette ofte skjult og det så ut som "tomt")
-            console.warn('Sync feilet:', syncData?.error, syncData?.debug);
-            setError(syncData?.error || 'Synk feilet. Sjekk Graph/Firebase konfig.');
+            console.warn('Sync feilet:', syncData?.error, syncData?.debug, syncData);
+            if (!syncRes.ok) {
+              setError(`Synk feilet (${syncRes.status}). ${syncData?.error || 'Ukjent feil'}`);
+            } else if (syncData?.__empty) {
+              setError('Synk feilet: tomt svar fra server (timeout/feil i function).');
+            } else if (syncData?.__invalidJson) {
+              setError(`Synk feilet: ugyldig svar fra server. (${String(syncData?.__raw || '').slice(0, 120)})`);
+            } else {
+              setError(syncData?.error || 'Synk feilet. Sjekk Graph/Firebase konfig.');
+            }
           }
         } catch (syncError) {
           console.warn('Sync error:', syncError);
@@ -395,7 +424,7 @@ export default function PartnersPage() {
 
       // Last inn alle innkommende ruter
       const res = await fetch('/api/inbound/sap');
-      const data = await res.json();
+      const data: any = await safeReadJson(res);
       if (data?.success && Array.isArray(data.items)) {
         console.log(`📥 Lastet ${data.items.length} innkommende ruter fra Firestore`);
         // Log første 5 for debugging
@@ -408,7 +437,15 @@ export default function PartnersPage() {
         }
       } else {
         console.error('❌ Feil ved henting av innkommende ruter:', data);
-        setError(data?.error || 'Kunne ikke hente innkommende ruter');
+        if (!res.ok) {
+          setError(`Kunne ikke hente innkommende ruter (${res.status}). ${data?.error || 'Ukjent feil'}`);
+        } else if (data?.__empty) {
+          setError('Kunne ikke hente innkommende ruter: tomt svar fra server.');
+        } else if (data?.__invalidJson) {
+          setError(`Kunne ikke hente innkommende ruter: ugyldig svar fra server. (${String(data?.__raw || '').slice(0, 120)})`);
+        } else {
+          setError(data?.error || 'Kunne ikke hente innkommende ruter');
+        }
       }
     } catch (e) {
       console.error('Inbound fetch error', e);
@@ -2144,7 +2181,8 @@ export default function PartnersPage() {
                 className="btn"
                 onClick={() => {
                   setShowInboundModal(true);
-                  loadInbound(false);
+                  // Sync + auto-tildel hver gang modalen åpnes (så det føles "automatisk")
+                  loadInbound(true);
                 }}
                 style={{
                   background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)',

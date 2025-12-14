@@ -7,7 +7,6 @@ import {
   orderBy,
   query,
   Timestamp,
-  where,
   limit,
 } from 'firebase/firestore';
 
@@ -134,15 +133,14 @@ export async function GET() {
     );
   }
 
-  // Vis kun ruter som ikke er "sendt/processed" (slik at listen blir tom når alt er sendt)
+  // Robust: hent siste N og filtrer i kode (unngår Firestore composite-index problemer)
   const snap = await getDocs(
-    query(
-      collection(db, 'inboundRoutes'),
-      where('status', 'in', ['pending', 'auto_pending', 'failed']),
-      orderBy('createdAt', 'desc')
-    )
+    query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'), limit(250))
   );
-  const items = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+  const allItems = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
+  const items = allItems.filter((it) =>
+    ['pending', 'auto_pending', 'failed'].includes((it as any)?.status)
+  );
 
   // Hent siste rapport (hvis finnes)
   let latestReport: any = null;
