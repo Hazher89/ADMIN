@@ -434,6 +434,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       
       const userDoc = userSnapshot.docs[0];
       const userData = userDoc.data();
+
+      // Ensure companyId exists (DriftPro is single-company: Mavi)
+      if (!userData.companyId) {
+        console.warn('⚠️ companyId mangler på bruker, setter til "mavi"');
+        await updateDoc(userDoc.ref, { companyId: 'mavi', updatedAt: new Date().toISOString() });
+        userData.companyId = 'mavi';
+      }
       
       // Note: companyId check removed - DriftPro is now only for Mavi Logistikk
       // All users automatically belong to Mavi Logistikk
