@@ -195,7 +195,7 @@ export default function LoginPage() {
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             borderRadius: isMobile ? '0' : 'var(--radius-2xl)',
-            padding: isMobile ? '2rem 1.5rem' : '2rem 2rem',
+            padding: isMobile ? '1.5rem 1.25rem 2rem' : '2rem 2rem',
             boxShadow: isMobile ? 'none' : 'var(--shadow-xl), 0 0 0 1px var(--border-color)',
             border: isMobile ? 'none' : '1px solid var(--border-color)',
             overflow: 'visible',
