@@ -217,60 +217,70 @@ export default function LoginPage() {
           ></div>
 
           {/* Logo & Brand Section */}
-          <div style={{ textAlign: 'center', marginBottom: '1.5rem', position: 'relative', zIndex: 10 }}>
+          <div style={{ 
+            textAlign: 'center', 
+            marginBottom: isMobile ? '2rem' : '1.5rem', 
+            position: 'relative', 
+            zIndex: 10,
+            paddingTop: isMobile ? '1rem' : '0'
+          }}>
             {/* Logo with advanced glow effects */}
             <div 
               style={{
                 display: 'inline-flex',
                 alignItems: 'center',
                 justifyContent: 'center',
-                marginBottom: '1rem',
+                marginBottom: isMobile ? '0.75rem' : '1rem',
                 position: 'relative',
-                filter: 'drop-shadow(0 0 40px rgba(6, 182, 212, 0.4))'
+                filter: isMobile ? 'none' : 'drop-shadow(0 0 40px rgba(6, 182, 212, 0.4))'
               }}
             >
-              {/* Outer glow ring */}
-              <div 
-                style={{
-                  position: 'absolute',
-                  inset: '-20px',
-                  borderRadius: 'var(--radius-2xl)',
-                  opacity: 0.6,
-                  filter: 'blur(50px)',
-                  background: 'var(--gradient-primary)',
-                  animation: 'pulse-glow 3s ease-in-out infinite',
-                  transform: 'scale(1.4)'
-                }}
-              ></div>
-              
-              {/* Middle glow ring */}
-              <div 
-                style={{
-                  position: 'absolute',
-                  inset: '-10px',
-                  borderRadius: 'var(--radius-xl)',
-                  opacity: 0.4,
-                  filter: 'blur(30px)',
-                  background: 'var(--gradient-primary)',
-                  animation: 'pulse-glow 2.5s ease-in-out infinite',
-                  animationDelay: '0.5s',
-                  transform: 'scale(1.2)'
-                }}
-              ></div>
-              
-              {/* Inner glow */}
-              <div 
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  borderRadius: 'var(--radius-xl)',
-                  opacity: 0.3,
-                  filter: 'blur(20px)',
-                  background: 'var(--gradient-primary)',
-                  animation: 'pulse-glow 2s ease-in-out infinite',
-                  animationDelay: '1s'
-                }}
-              ></div>
+              {/* Outer glow ring - only on desktop */}
+              {!isMobile && (
+                <>
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      inset: '-20px',
+                      borderRadius: 'var(--radius-2xl)',
+                      opacity: 0.6,
+                      filter: 'blur(50px)',
+                      background: 'var(--gradient-primary)',
+                      animation: 'pulse-glow 3s ease-in-out infinite',
+                      transform: 'scale(1.4)'
+                    }}
+                  ></div>
+                  
+                  {/* Middle glow ring */}
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      inset: '-10px',
+                      borderRadius: 'var(--radius-xl)',
+                      opacity: 0.4,
+                      filter: 'blur(30px)',
+                      background: 'var(--gradient-primary)',
+                      animation: 'pulse-glow 2.5s ease-in-out infinite',
+                      animationDelay: '0.5s',
+                      transform: 'scale(1.2)'
+                    }}
+                  ></div>
+                  
+                  {/* Inner glow */}
+                  <div 
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      borderRadius: 'var(--radius-xl)',
+                      opacity: 0.3,
+                      filter: 'blur(20px)',
+                      background: 'var(--gradient-primary)',
+                      animation: 'pulse-glow 2s ease-in-out infinite',
+                      animationDelay: '1s'
+                    }}
+                  ></div>
+                </>
+              )}
               
               {/* Logo container with border glow - MOBIL OPTIMALISERT */}
               <div 
@@ -279,10 +289,10 @@ export default function LoginPage() {
                   zIndex: 10,
                   padding: isMobile ? '0.5rem' : '1rem',
                   borderRadius: 'var(--radius-xl)',
-                  background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%)',
-                  border: '2px solid',
-                  borderImage: 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(14, 165, 233, 0.3)) 1',
-                  boxShadow: `
+                  background: isMobile ? 'transparent' : 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%)',
+                  border: isMobile ? 'none' : '2px solid',
+                  borderImage: isMobile ? 'none' : 'linear-gradient(135deg, rgba(6, 182, 212, 0.3), rgba(14, 165, 233, 0.3)) 1',
+                  boxShadow: isMobile ? 'none' : `
                     0 0 30px rgba(6, 182, 212, 0.3),
                     inset 0 0 20px rgba(6, 182, 212, 0.1),
                     0 0 0 1px rgba(255, 255, 255, 0.05)
@@ -290,8 +300,8 @@ export default function LoginPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: isMobile ? '140px' : '280px',
-                  height: isMobile ? '140px' : '280px',
+                  width: isMobile ? '100px' : '280px',
+                  height: isMobile ? '100px' : '280px',
                   overflow: 'visible',
                   margin: '0 auto'
                 }}
@@ -303,13 +313,13 @@ export default function LoginPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  filter: 'drop-shadow(0 0 20px rgba(6, 182, 212, 0.5))'
+                  filter: isMobile ? 'none' : 'drop-shadow(0 0 20px rgba(6, 182, 212, 0.5))'
                 }}>
                   <div 
                     className="animated-logo-container"
                     style={{ 
-                      width: isMobile ? '120px' : '260px', 
-                      height: isMobile ? '120px' : '260px', 
+                      width: isMobile ? '80px' : '260px', 
+                      height: isMobile ? '80px' : '260px', 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center'
@@ -317,7 +327,7 @@ export default function LoginPage() {
                   >
                     <DriftProLogo 
                       variant="icon" 
-                      size={isMobile ? 120 : 260}
+                      size={isMobile ? 80 : 260}
                       className="driftpro-login-logo"
                     />
                   </div>
@@ -688,17 +698,17 @@ export default function LoginPage() {
           </div>
 
             {/* Forgot Password */}
-            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: '0.125rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: isMobile ? '0.5rem' : '0.125rem', marginBottom: isMobile ? '1rem' : '0' }}>
             <a 
               href="/forgot-password" 
                 style={{
-                  fontSize: '0.9375rem',
+                  fontSize: isMobile ? '1rem' : '0.9375rem',
                   fontWeight: 500,
                   transition: 'color 0.2s',
                   color: 'var(--primary)',
                   textDecoration: 'none',
-                  padding: '0.5rem',
-                  minHeight: '44px',
+                  padding: isMobile ? '0.75rem' : '0.5rem',
+                  minHeight: isMobile ? '48px' : '44px',
                   display: 'inline-flex',
                   alignItems: 'center',
                   touchAction: 'manipulation',
