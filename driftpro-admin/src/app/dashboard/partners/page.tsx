@@ -187,6 +187,7 @@ export default function PartnersPage() {
   const [inboundItems, setInboundItems] = useState<any[]>([]);
   const [inboundLoading, setInboundLoading] = useState(false);
   const [processingReport, setProcessingReport] = useState<any>(null);
+  const [viewingPdf, setViewingPdf] = useState<{ url: string; fileName: string } | null>(null);
 
   // UI helper: keep counters consistent with what's shown in the table
   // (latestReport can legitimately be 0 if there were no auto_pending in the last run,
@@ -266,6 +267,15 @@ export default function PartnersPage() {
     return () => clearInterval(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showInboundModal]);
+
+  // Cleanup blob URLs when component unmounts or PDF viewer closes
+  useEffect(() => {
+    return () => {
+      if (viewingPdf?.url.startsWith('blob:')) {
+        URL.revokeObjectURL(viewingPdf.url);
+      }
+    };
+  }, [viewingPdf]);
 
   // Job management
   const [showJobManagementModal, setShowJobManagementModal] = useState(false);
@@ -2488,17 +2498,45 @@ export default function PartnersPage() {
                         </td>
                         <td style={{ padding: '0.5rem', color: '#a5b4fc' }}>
                           {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
-                            item.attachments.map((a: any, idx: number) => (
-                              <div key={idx} style={{ marginBottom: '0.25rem' }}>
-                                {a.fileUrl ? (
-                                  <a href={a.fileUrl} target="_blank" rel="noreferrer" style={{ color: '#60a5fa' }}>
-                                    {a.fileName || 'Vedlegg'}
-                                  </a>
-                                ) : (
-                                  a.fileName || 'Vedlegg'
-                                )}
-                              </div>
-                            ))
+                            item.attachments.map((a: any, idx: number) => {
+                              const handlePdfClick = (e: React.MouseEvent) => {
+                                e.preventDefault();
+                                if (a.fileUrl) {
+                                  // For data URLs, create a blob URL for better browser support
+                                  if (a.fileUrl.startsWith('data:')) {
+                                    try {
+                                      const base64 = a.fileUrl.split(',')[1];
+                                      const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+                                      const blob = new Blob([bytes], { type: 'application/pdf' });
+                                      const blobUrl = URL.createObjectURL(blob);
+                                      setViewingPdf({ url: blobUrl, fileName: a.fileName || 'vedlegg.pdf' });
+                                    } catch (err) {
+                                      console.error('Error creating blob URL:', err);
+                                      // Fallback: try direct open
+                                      window.open(a.fileUrl, '_blank');
+                                    }
+                                  } else {
+                                    // Regular URL - open directly
+                                    window.open(a.fileUrl, '_blank');
+                                  }
+                                }
+                              };
+                              return (
+                                <div key={idx} style={{ marginBottom: '0.25rem' }}>
+                                  {a.fileUrl ? (
+                                    <a
+                                      href={a.fileUrl}
+                                      onClick={handlePdfClick}
+                                      style={{ color: '#60a5fa', cursor: 'pointer', textDecoration: 'underline' }}
+                                    >
+                                      {a.fileName || 'Vedlegg'}
+                                    </a>
+                                  ) : (
+                                    a.fileName || 'Vedlegg'
+                                  )}
+                                </div>
+                              );
+                            })
                           ) : (
                             <span style={{ color: '#94a3b8' }}>Ingen vedlegg</span>
                           )}
@@ -2532,6 +2570,109 @@ export default function PartnersPage() {
         </div>
       )}
 
+      {/* PDF Viewer Modal */}
+      {viewingPdf && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0, 0, 0, 0.85)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1300,
+          padding: '1rem'
+        }} onClick={() => {
+          if (viewingPdf?.url.startsWith('blob:')) {
+            URL.revokeObjectURL(viewingPdf.url);
+          }
+          setViewingPdf(null);
+        }}>
+          <div style={{
+            background: '#1f2937',
+            borderRadius: '12px',
+            width: '100%',
+            maxWidth: '95vw',
+            maxHeight: '95vh',
+            overflow: 'hidden',
+            boxShadow: '0 25px 60px rgba(0,0,0,0.8)',
+            display: 'flex',
+            flexDirection: 'column'
+          }} onClick={(e) => e.stopPropagation()}>
+            <div style={{
+              padding: '1rem 1.5rem',
+              borderBottom: '1px solid #374151',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+              background: '#111827'
+            }}>
+              <div style={{ color: '#e5e7eb', fontWeight: 700, fontSize: '1rem' }}>
+                {viewingPdf.fileName}
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <a
+                  href={viewingPdf.url}
+                  download={viewingPdf.fileName}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: '#0ea5e9',
+                    color: '#fff',
+                    borderRadius: '8px',
+                    textDecoration: 'none',
+                    fontWeight: 600,
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  Last ned
+                </a>
+                <button
+                  onClick={() => {
+                    if (viewingPdf.url.startsWith('blob:')) {
+                      URL.revokeObjectURL(viewingPdf.url);
+                    }
+                    setViewingPdf(null);
+                  }}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid #374151',
+                    color: '#e5e7eb',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  Lukk
+                </button>
+              </div>
+            </div>
+            <div style={{
+              flex: 1,
+              overflow: 'auto',
+              padding: '1rem',
+              background: '#0f172a',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}>
+              <iframe
+                src={viewingPdf.url}
+                style={{
+                  width: '100%',
+                  height: '100%',
+                  minHeight: '600px',
+                  border: 'none',
+                  borderRadius: '8px'
+                }}
+                title={viewingPdf.fileName}
+              />
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Desktop Page Header */}
       {!isMobile && (
