@@ -1097,9 +1097,9 @@ export default function AdvancedAbsencePage() {
               }}
             >
               <option value="all">Alle typer</option>
-              <option value="sick">Syk</option>
-              <option value="sickChild">Sykebarn</option>
-              <option value="personal">Personlig</option>
+              <option value="sick">Egenmelding</option>
+              <option value="sickChild">Sykt barn</option>
+              <option value="personal">Flyttedag</option>
               <option value="other">Annet</option>
             </select>
 
