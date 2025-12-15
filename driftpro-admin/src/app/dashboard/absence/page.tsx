@@ -26,6 +26,7 @@ import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { firebaseService, createUserAccessContext, Employee, Absence } from '@/lib/firebase-services';
 import { notificationService } from '@/lib/notification-service';
+import { globalEmailService } from '@/lib/global-email-service';
 import { 
   AlertTriangle, 
   Plus, 
@@ -711,6 +712,14 @@ export default function AdvancedAbsencePage() {
       e.role === 'admin' || e.role === 'super_admin'
     );
     
+    const typeLabels: Record<string, string> = {
+      'sick': 'Egenmelding',
+      'sickChild': 'Sykt barn',
+      'personal': 'Flyttedag',
+      'other': 'Annet',
+      'vacation': 'Ferie'
+    };
+    
     let title = '';
     let message = '';
     let recipients: string[] = [];
@@ -718,20 +727,52 @@ export default function AdvancedAbsencePage() {
     switch (event) {
       case 'created':
         title = 'Ny fraværsforespørsel';
-        message = `${employee.name || employee.displayName} har sendt inn en fraværsforespørsel (${absence.type}) fra ${formatDate(absence.startDate)} til ${formatDate(absence.endDate)}`;
+        message = `${employee.name || employee.displayName} har sendt inn en ${typeLabels[absence.type] || absence.type} fra ${formatDate(absence.startDate)} til ${formatDate(absence.endDate)}`;
         recipients = [
           ...departmentLeaders.map(l => l.id),
           ...admins.map(a => a.id)
         ];
+        
+        // Send email to all admins
+        for (const admin of admins) {
+          if (admin.email) {
+            try {
+              await globalEmailService.sendEmail({
+                to: admin.email,
+                subject: `🔔 ${title} - ${employee.name || employee.displayName}`,
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #dc2626;">${title}</h2>
+                    <p>Hei ${admin.name || admin.displayName || 'Admin'},</p>
+                    <p><strong>${employee.name || employee.displayName}</strong> har sendt inn en ${typeLabels[absence.type] || absence.type}:</p>
+                    <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #dc2626;">
+                      <p><strong>Type:</strong> ${typeLabels[absence.type] || absence.type}</p>
+                      <p><strong>Fra dato:</strong> ${formatDate(absence.startDate)}</p>
+                      <p><strong>Til dato:</strong> ${formatDate(absence.endDate)}</p>
+                      <p><strong>Antall dager:</strong> ${calculateDaysBetween(absence.startDate, absence.endDate)}</p>
+                      ${absence.reason ? `<p><strong>Årsak:</strong> ${absence.reason}</p>` : ''}
+                      ${absence.notes ? `<p><strong>Notater:</strong> ${absence.notes}</p>` : ''}
+                    </div>
+                    <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://driftpro.no'}/dashboard/absence?absenceId=${absenceId}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">Se detaljer i DriftPro</a></p>
+                    <br>
+                    <p>Med vennlig hilsen,<br>DriftPro-systemet</p>
+                  </div>
+                `
+              });
+            } catch (emailError) {
+              console.error('Error sending email to admin:', emailError);
+            }
+          }
+        }
         break;
       case 'approved':
         title = 'Fraværsforespørsel godkjent';
-        message = `Din fraværsforespørsel (${absence.type}) fra ${formatDate(absence.startDate)} til ${formatDate(absence.endDate)} er godkjent`;
+        message = `Din ${typeLabels[absence.type] || absence.type} fra ${formatDate(absence.startDate)} til ${formatDate(absence.endDate)} er godkjent`;
         recipients = [absence.employeeId];
         break;
       case 'rejected':
         title = 'Fraværsforespørsel avslått';
-        message = `Din fraværsforespørsel (${absence.type}) fra ${formatDate(absence.startDate)} til ${formatDate(absence.endDate)} er avslått`;
+        message = `Din ${typeLabels[absence.type] || absence.type} fra ${formatDate(absence.startDate)} til ${formatDate(absence.endDate)} er avslått`;
         recipients = [absence.employeeId];
         break;
     }
@@ -1006,12 +1047,15 @@ export default function AdvancedAbsencePage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: isMobile ? '1rem 1rem 1rem 3rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
-                  fontSize: isMobile ? '16px' : '0.875rem',
-                  minHeight: isMobile ? '56px' : 'auto',
-                  borderRadius: isMobile ? '12px' : '8px',
-                  border: '2px solid #e5e7eb',
-                  outline: 'none'
+                  padding: isMobile ? '1.25rem 1.25rem 1.25rem 3.5rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
+                  fontSize: isMobile ? '18px' : '0.875rem',
+                  minHeight: isMobile ? '64px' : 'auto',
+                  borderRadius: isMobile ? '16px' : '8px',
+                  border: '3px solid #e5e7eb',
+                  outline: 'none',
+                  touchAction: 'manipulation',
+                  WebkitAppearance: 'none',
+                  appearance: 'none'
                 }}
               />
             </div>
@@ -1021,13 +1065,17 @@ export default function AdvancedAbsencePage() {
               value={selectedStatus}
               onChange={(e) => setSelectedStatus(e.target.value as any)}
               style={{
-                padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
-                border: '2px solid #e5e7eb',
-                borderRadius: isMobile ? '12px' : '8px',
-                fontSize: isMobile ? '16px' : '0.875rem',
+                padding: isMobile ? '1.25rem 1.5rem' : '0.75rem 1rem',
+                border: '3px solid #e5e7eb',
+                borderRadius: isMobile ? '16px' : '8px',
+                fontSize: isMobile ? '18px' : '0.875rem',
                 minWidth: isMobile ? '100%' : '150px',
-                minHeight: isMobile ? '56px' : 'auto',
-                outline: 'none'
+                minHeight: isMobile ? '64px' : 'auto',
+                outline: 'none',
+                touchAction: 'manipulation',
+                WebkitAppearance: 'none',
+                appearance: 'none',
+                backgroundImage: 'none'
               }}
             >
               <option value="all">Alle statuser</option>
@@ -1434,9 +1482,9 @@ export default function AdvancedAbsencePage() {
                     fontSize: '0.875rem'
                   }}
                 >
-                  <option value="sick">Syk</option>
-                  <option value="sickChild">Sykebarn</option>
-                  <option value="personal">Personlig</option>
+                  <option value="sick">Egenmelding</option>
+                  <option value="sickChild">Sykt barn</option>
+                  <option value="personal">Flyttedag</option>
                   <option value="other">Annet</option>
                 </select>
               </div>

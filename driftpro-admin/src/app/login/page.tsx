@@ -515,7 +515,7 @@ export default function LoginPage() {
                 <div 
                   style={{ 
                     position: 'absolute',
-                    left: '1rem',
+                    left: isMobile ? '1.25rem' : '1rem',
                     top: '50%',
                     transform: `translateY(-50%) ${focusedField === 'email' ? 'scale(1.1)' : 'scale(1)'}`,
                     transition: 'all 0.2s',
@@ -523,7 +523,7 @@ export default function LoginPage() {
                     color: focusedField === 'email' ? 'var(--primary)' : 'var(--gray-400)'
                   }}
                 >
-                  <Mail size={20} />
+                  <Mail size={isMobile ? 24 : 20} />
               </div>
               <input
                 id="email"
@@ -535,26 +535,28 @@ export default function LoginPage() {
                 required
                   style={{
                     width: '100%',
-                    paddingLeft: '3.5rem',
-                    paddingRight: '1.5rem',
-                    paddingTop: '1.25rem',
-                    paddingBottom: '1.25rem',
-                    minHeight: '56px', // Minimum touch target size
+                    paddingLeft: isMobile ? '3.75rem' : '3.5rem',
+                    paddingRight: isMobile ? '1.75rem' : '1.5rem',
+                    paddingTop: isMobile ? '1.5rem' : '1.25rem',
+                    paddingBottom: isMobile ? '1.5rem' : '1.25rem',
+                    minHeight: isMobile ? '64px' : '56px', // Larger on mobile
                     borderRadius: 'var(--radius-xl)',
                     transition: 'all 0.2s',
                     outline: 'none',
-                    fontSize: '16px', // Minimum 16px to prevent zoom on iOS
+                    fontSize: isMobile ? '18px' : '16px', // Larger font on mobile
                     WebkitAppearance: 'none',
                     appearance: 'none',
                     background: 'var(--gray-200)',
-                    border: `2px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}`,
+                    border: `3px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}`,
                     color: 'var(--text-color)',
                     boxShadow: focusedField === 'email' 
-                      ? '0 0 0 4px rgba(6, 182, 212, 0.1), 0 4px 12px rgba(6, 182, 212, 0.1)' 
+                      ? '0 0 0 4px rgba(6, 182, 212, 0.15), 0 4px 12px rgba(6, 182, 212, 0.15)' 
                       : '0 2px 4px rgba(0, 0, 0, 0.05)',
                     transform: focusedField === 'email' ? 'translateY(-2px)' : 'translateY(0)',
                     touchAction: 'manipulation',
-                    WebkitTapHighlightColor: 'transparent'
+                    WebkitTapHighlightColor: 'transparent',
+                    WebkitUserSelect: 'text',
+                    userSelect: 'text'
                   }}
                   placeholder="navn@bedrift.no"
                   autoComplete="email"
@@ -586,7 +588,7 @@ export default function LoginPage() {
                 <div 
                   style={{ 
                     position: 'absolute',
-                    left: '1rem',
+                    left: isMobile ? '1.25rem' : '1rem',
                     top: '50%',
                     transform: `translateY(-50%) ${focusedField === 'password' ? 'scale(1.1)' : 'scale(1)'}`,
                     transition: 'all 0.2s',
@@ -594,7 +596,7 @@ export default function LoginPage() {
                     color: focusedField === 'password' ? 'var(--primary)' : 'var(--gray-400)'
                   }}
                 >
-                  <Lock size={20} />
+                  <Lock size={isMobile ? 24 : 20} />
               </div>
               <input
                 id="password"
@@ -606,26 +608,28 @@ export default function LoginPage() {
                 required
                   style={{
                     width: '100%',
-                    paddingLeft: '3.5rem',
-                    paddingRight: '3.5rem',
-                    paddingTop: '1.25rem',
-                    paddingBottom: '1.25rem',
-                    minHeight: '56px', // Minimum touch target size
+                    paddingLeft: isMobile ? '3.75rem' : '3.5rem',
+                    paddingRight: isMobile ? '3.75rem' : '3.5rem',
+                    paddingTop: isMobile ? '1.5rem' : '1.25rem',
+                    paddingBottom: isMobile ? '1.5rem' : '1.25rem',
+                    minHeight: isMobile ? '64px' : '56px', // Larger on mobile
                     borderRadius: 'var(--radius-xl)',
                     transition: 'all 0.2s',
                     outline: 'none',
-                    fontSize: '16px', // Minimum 16px to prevent zoom on iOS
+                    fontSize: isMobile ? '18px' : '16px', // Larger font on mobile
                     WebkitAppearance: 'none',
                     appearance: 'none',
                     background: 'var(--gray-200)',
-                    border: `2px solid ${focusedField === 'password' ? 'var(--primary)' : 'var(--border-color)'}`,
+                    border: `3px solid ${focusedField === 'password' ? 'var(--primary)' : 'var(--border-color)'}`,
                     color: 'var(--text-color)',
                     boxShadow: focusedField === 'password' 
-                      ? '0 0 0 4px rgba(6, 182, 212, 0.1), 0 4px 12px rgba(6, 182, 212, 0.1)' 
+                      ? '0 0 0 4px rgba(6, 182, 212, 0.15), 0 4px 12px rgba(6, 182, 212, 0.15)' 
                       : '0 2px 4px rgba(0, 0, 0, 0.05)',
                     transform: focusedField === 'password' ? 'translateY(-2px)' : 'translateY(0)',
                     touchAction: 'manipulation',
-                    WebkitTapHighlightColor: 'transparent'
+                    WebkitTapHighlightColor: 'transparent',
+                    WebkitUserSelect: 'text',
+                    userSelect: 'text'
                   }}
                 placeholder="••••••••"
                 autoComplete="current-password"
@@ -635,12 +639,12 @@ export default function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
-                    right: '0.75rem',
+                    right: isMobile ? '1rem' : '0.75rem',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    padding: '0.75rem',
-                    minWidth: '44px',
-                    minHeight: '44px',
+                    padding: isMobile ? '1rem' : '0.75rem',
+                    minWidth: isMobile ? '56px' : '44px',
+                    minHeight: isMobile ? '56px' : '44px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -672,7 +676,7 @@ export default function LoginPage() {
                     }, 200);
                   }}
                 >
-                  {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
+                  {showPassword ? <EyeOff size={isMobile ? 26 : 22} /> : <Eye size={isMobile ? 26 : 22} />}
               </button>
             </div>
           </div>
@@ -711,15 +715,15 @@ export default function LoginPage() {
             disabled={loading}
             style={{
                 width: '100%',
-                paddingTop: '1.5rem',
-                paddingBottom: '1.5rem',
-                paddingLeft: '1.5rem',
-                paddingRight: '1.5rem',
-                minHeight: '56px', // Minimum touch target size
+                paddingTop: isMobile ? '1.75rem' : '1.5rem',
+                paddingBottom: isMobile ? '1.75rem' : '1.5rem',
+                paddingLeft: isMobile ? '1.75rem' : '1.5rem',
+                paddingRight: isMobile ? '1.75rem' : '1.5rem',
+                minHeight: isMobile ? '64px' : '56px', // Larger on mobile
                 borderRadius: 'var(--radius-xl)',
                 color: '#ffffff',
                 fontWeight: 700,
-                fontSize: '1.125rem', // Larger font for mobile
+                fontSize: isMobile ? '1.25rem' : '1.125rem', // Larger font on mobile
                 boxShadow: loading 
                   ? 'none' 
                   : '0 10px 25px -5px rgba(6, 182, 212, 0.4), 0 0 0 1px rgba(6, 182, 212, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)',

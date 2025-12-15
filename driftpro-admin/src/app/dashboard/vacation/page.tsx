@@ -639,6 +639,36 @@ export default function AdvancedVacationPage() {
           ...departmentLeaders.map(l => l.id),
           ...admins.map(a => a.id)
         ];
+        
+        // Send email to all admins
+        for (const admin of admins) {
+          if (admin.email) {
+            try {
+              await globalEmailService.sendEmail({
+                to: admin.email,
+                subject: `🔔 ${title} - ${employee.name || employee.displayName}`,
+                html: `
+                  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                    <h2 style="color: #2563eb;">${title}</h2>
+                    <p>Hei ${admin.name || admin.displayName || 'Admin'},</p>
+                    <p><strong>${employee.name || employee.displayName}</strong> har sendt inn en ferieansøkning:</p>
+                    <div style="background: #f3f4f6; padding: 15px; border-radius: 8px; margin: 20px 0; border-left: 4px solid #2563eb;">
+                      <p><strong>Fra dato:</strong> ${formatDate(vacation.startDate)}</p>
+                      <p><strong>Til dato:</strong> ${formatDate(vacation.endDate)}</p>
+                      <p><strong>Antall dager:</strong> ${vacation.days || calculateDaysBetween(vacation.startDate, vacation.endDate)}</p>
+                      ${vacation.notes ? `<p><strong>Notater:</strong> ${vacation.notes}</p>` : ''}
+                    </div>
+                    <p><a href="${process.env.NEXT_PUBLIC_APP_URL || 'https://driftpro.no'}/dashboard/vacation?vacationId=${vacationId}" style="background: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin-top: 20px;">Se detaljer i DriftPro</a></p>
+                    <br>
+                    <p>Med vennlig hilsen,<br>DriftPro-systemet</p>
+                  </div>
+                `
+              });
+            } catch (emailError) {
+              console.error('Error sending email to admin:', emailError);
+            }
+          }
+        }
         break;
       case 'approved':
         title = 'Ferie forespørsel godkjent';
@@ -826,12 +856,15 @@ export default function AdvancedVacationPage() {
             }}
             style={{
               width: '100%',
-              padding: isMobile ? '1rem 1.25rem' : '0.75rem',
-              border: '2px solid #e5e7eb',
-              borderRadius: isMobile ? '12px' : '8px',
-              fontSize: isMobile ? '16px' : '0.875rem',
-              minHeight: isMobile ? '56px' : 'auto',
-              outline: 'none'
+              padding: isMobile ? '1.25rem 1.5rem' : '0.75rem',
+              border: '3px solid #e5e7eb',
+              borderRadius: isMobile ? '16px' : '8px',
+              fontSize: isMobile ? '18px' : '0.875rem',
+              minHeight: isMobile ? '64px' : 'auto',
+              outline: 'none',
+              touchAction: 'manipulation',
+              WebkitAppearance: 'none',
+              appearance: 'none'
             }}
           >
             <option value="">-- Velg ansatt --</option>

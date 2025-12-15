@@ -955,7 +955,18 @@ export default function HMSPage() {
                   <select
                     value={selectedStatus}
                     onChange={(e) => setSelectedStatus(e.target.value)}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)' }}
+                    style={{ 
+                      width: '100%', 
+                      padding: isMobile ? '1.25rem 1.5rem' : '0.75rem', 
+                      border: isMobile ? '3px solid var(--gray-300)' : '1px solid var(--gray-300)', 
+                      borderRadius: isMobile ? '16px' : 'var(--radius-lg)', 
+                      fontSize: isMobile ? '18px' : 'var(--font-size-base)',
+                      minHeight: isMobile ? '64px' : 'auto',
+                      touchAction: 'manipulation',
+                      WebkitAppearance: 'none',
+                      appearance: 'none',
+                      backgroundImage: 'none'
+                    }}
                   >
                     <option value="all">Alle statuser</option>
                     <option value="reported">Rapportert</option>
@@ -966,7 +977,18 @@ export default function HMSPage() {
                   <select
                     value={selectedType}
                     onChange={(e) => setSelectedType(e.target.value)}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)' }}
+                    style={{ 
+                      width: '100%', 
+                      padding: isMobile ? '1.25rem 1.5rem' : '0.75rem', 
+                      border: isMobile ? '3px solid var(--gray-300)' : '1px solid var(--gray-300)', 
+                      borderRadius: isMobile ? '16px' : 'var(--radius-lg)', 
+                      fontSize: isMobile ? '18px' : 'var(--font-size-base)',
+                      minHeight: isMobile ? '64px' : 'auto',
+                      touchAction: 'manipulation',
+                      WebkitAppearance: 'none',
+                      appearance: 'none',
+                      backgroundImage: 'none'
+                    }}
                   >
                     <option value="all">Alle typer</option>
                     <option value="safety">Sikkerhet</option>
@@ -978,7 +1000,18 @@ export default function HMSPage() {
                   <select
                     value={selectedSeverity}
                     onChange={(e) => setSelectedSeverity(e.target.value)}
-                    style={{ width: '100%', padding: '0.75rem', border: '1px solid var(--gray-300)', borderRadius: 'var(--radius-lg)', fontSize: 'var(--font-size-base)' }}
+                    style={{ 
+                      width: '100%', 
+                      padding: isMobile ? '1.25rem 1.5rem' : '0.75rem', 
+                      border: isMobile ? '3px solid var(--gray-300)' : '1px solid var(--gray-300)', 
+                      borderRadius: isMobile ? '16px' : 'var(--radius-lg)', 
+                      fontSize: isMobile ? '18px' : 'var(--font-size-base)',
+                      minHeight: isMobile ? '64px' : 'auto',
+                      touchAction: 'manipulation',
+                      WebkitAppearance: 'none',
+                      appearance: 'none',
+                      backgroundImage: 'none'
+                    }}
                   >
                     <option value="all">Alle alvorlighetsgrader</option>
                     <option value="low">Lav</option>

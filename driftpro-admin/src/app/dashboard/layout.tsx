@@ -55,6 +55,7 @@ import {
 import { notificationService } from '@/lib/notification-service';
 import { firebaseService } from '@/lib/firebase-services';
 import DriftProLogo from '@/components/DriftProLogo';
+import MobileLayout from '@/components/MobileLayout';
 
 interface SidebarItem {
   name: string;
@@ -322,6 +323,15 @@ export default function DashboardLayout({
   }, [pathname]);
 
   const isLogisticsPage = pathname === '/dashboard/logistikk-system';
+
+  // Use MobileLayout for employees and department leaders on mobile
+  const shouldUseMobileLayout = isMobile && 
+    (userProfile?.role === 'employee' || userProfile?.role === 'department_leader');
+
+  // If mobile and employee/department leader, use MobileLayout
+  if (shouldUseMobileLayout) {
+    return <MobileLayout>{children}</MobileLayout>;
+  }
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
