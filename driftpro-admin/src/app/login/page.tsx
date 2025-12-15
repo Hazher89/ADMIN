@@ -78,20 +78,21 @@ export default function LoginPage() {
   return (
       <div 
       style={{
-        position: 'fixed',
+        position: isMobile ? 'relative' : 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
         width: '100vw',
-        height: '100vh',
+        minHeight: '100vh',
+        height: isMobile ? 'auto' : '100vh',
         display: 'flex',
-        alignItems: 'center',
+        alignItems: isMobile ? 'flex-start' : 'center',
         justifyContent: 'center',
         background: 'var(--background-color)',
         color: 'var(--text-color)',
-        padding: isMobile ? '0.75rem' : '1rem',
-        overflow: 'hidden',
+        padding: isMobile ? '0' : '1rem',
+        overflow: isMobile ? 'auto' : 'hidden',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain'
       }}
@@ -178,11 +179,12 @@ export default function LoginPage() {
           zIndex: 10,
           width: '100%',
           maxWidth: '520px',
-          maxHeight: '100vh',
-          margin: 'auto',
+          minHeight: isMobile ? '100vh' : 'auto',
+          margin: isMobile ? '0' : 'auto',
           display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center'
+          alignItems: isMobile ? 'flex-start' : 'center',
+          justifyContent: 'center',
+          padding: isMobile ? '1rem' : '0'
         }}
       >
         <div 
@@ -192,14 +194,14 @@ export default function LoginPage() {
             background: 'var(--card-background)',
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
-            borderRadius: 'var(--radius-2xl)',
-            padding: isMobile ? '1.5rem 1.25rem' : '2rem 2rem',
-            boxShadow: 'var(--shadow-xl), 0 0 0 1px var(--border-color)',
-            border: '1px solid var(--border-color)',
-            overflow: 'hidden',
-            maxHeight: '95vh',
-            overflowY: 'auto',
-            WebkitOverflowScrolling: 'touch'
+            borderRadius: isMobile ? '0' : 'var(--radius-2xl)',
+            padding: isMobile ? '2rem 1.5rem' : '2rem 2rem',
+            boxShadow: isMobile ? 'none' : 'var(--shadow-xl), 0 0 0 1px var(--border-color)',
+            border: isMobile ? 'none' : '1px solid var(--border-color)',
+            overflow: 'visible',
+            minHeight: isMobile ? '100vh' : 'auto',
+            display: 'flex',
+            flexDirection: 'column'
           }}
         >
 
@@ -275,7 +277,7 @@ export default function LoginPage() {
                 style={{
                   position: 'relative',
                   zIndex: 10,
-                  padding: isMobile ? '0.75rem' : '1rem',
+                  padding: isMobile ? '0.5rem' : '1rem',
                   borderRadius: 'var(--radius-xl)',
                   background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%)',
                   border: '2px solid',
@@ -288,8 +290,8 @@ export default function LoginPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: isMobile ? '200px' : '280px',
-                  height: isMobile ? '200px' : '280px',
+                  width: isMobile ? '140px' : '280px',
+                  height: isMobile ? '140px' : '280px',
                   overflow: 'visible',
                   margin: '0 auto'
                 }}
@@ -515,7 +517,7 @@ export default function LoginPage() {
                 <div 
                   style={{ 
                     position: 'absolute',
-                    left: isMobile ? '1.25rem' : '1rem',
+                    left: isMobile ? '1.5rem' : '1rem',
                     top: '50%',
                     transform: `translateY(-50%) ${focusedField === 'email' ? 'scale(1.1)' : 'scale(1)'}`,
                     transition: 'all 0.2s',
@@ -523,7 +525,7 @@ export default function LoginPage() {
                     color: focusedField === 'email' ? 'var(--primary)' : 'var(--gray-400)'
                   }}
                 >
-                  <Mail size={isMobile ? 24 : 20} />
+                  <Mail size={isMobile ? 28 : 20} />
               </div>
               <input
                 id="email"
@@ -588,7 +590,7 @@ export default function LoginPage() {
                 <div 
                   style={{ 
                     position: 'absolute',
-                    left: isMobile ? '1.25rem' : '1rem',
+                    left: isMobile ? '1.5rem' : '1rem',
                     top: '50%',
                     transform: `translateY(-50%) ${focusedField === 'password' ? 'scale(1.1)' : 'scale(1)'}`,
                     transition: 'all 0.2s',
@@ -596,7 +598,7 @@ export default function LoginPage() {
                     color: focusedField === 'password' ? 'var(--primary)' : 'var(--gray-400)'
                   }}
                 >
-                  <Lock size={isMobile ? 24 : 20} />
+                  <Lock size={isMobile ? 28 : 20} />
               </div>
               <input
                 id="password"
@@ -608,19 +610,19 @@ export default function LoginPage() {
                 required
                   style={{
                     width: '100%',
-                    paddingLeft: isMobile ? '3.75rem' : '3.5rem',
-                    paddingRight: isMobile ? '3.75rem' : '3.5rem',
-                    paddingTop: isMobile ? '1.5rem' : '1.25rem',
-                    paddingBottom: isMobile ? '1.5rem' : '1.25rem',
-                    minHeight: isMobile ? '64px' : '56px', // Larger on mobile
-                    borderRadius: 'var(--radius-xl)',
+                    paddingLeft: isMobile ? '4rem' : '3.5rem',
+                    paddingRight: isMobile ? '4rem' : '3.5rem',
+                    paddingTop: isMobile ? '1.75rem' : '1.25rem',
+                    paddingBottom: isMobile ? '1.75rem' : '1.25rem',
+                    minHeight: isMobile ? '72px' : '56px', // Even larger on mobile
+                    borderRadius: isMobile ? '16px' : 'var(--radius-xl)',
                     transition: 'all 0.2s',
                     outline: 'none',
-                    fontSize: isMobile ? '18px' : '16px', // Larger font on mobile
+                    fontSize: isMobile ? '20px' : '16px', // Even larger font on mobile
                     WebkitAppearance: 'none',
                     appearance: 'none',
                     background: 'var(--gray-200)',
-                    border: `3px solid ${focusedField === 'password' ? 'var(--primary)' : 'var(--border-color)'}`,
+                    border: isMobile ? `4px solid ${focusedField === 'password' ? 'var(--primary)' : 'var(--border-color)'}` : `3px solid ${focusedField === 'password' ? 'var(--primary)' : 'var(--border-color)'}`,
                     color: 'var(--text-color)',
                     boxShadow: focusedField === 'password' 
                       ? '0 0 0 4px rgba(6, 182, 212, 0.15), 0 4px 12px rgba(6, 182, 212, 0.15)' 
@@ -629,7 +631,8 @@ export default function LoginPage() {
                     touchAction: 'manipulation',
                     WebkitTapHighlightColor: 'transparent',
                     WebkitUserSelect: 'text',
-                    userSelect: 'text'
+                    userSelect: 'text',
+                    marginBottom: isMobile ? '1.5rem' : '1rem'
                   }}
                 placeholder="••••••••"
                 autoComplete="current-password"
@@ -639,12 +642,12 @@ export default function LoginPage() {
                 onClick={() => setShowPassword(!showPassword)}
                   style={{
                     position: 'absolute',
-                    right: isMobile ? '1rem' : '0.75rem',
+                    right: isMobile ? '1.25rem' : '0.75rem',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    padding: isMobile ? '1rem' : '0.75rem',
-                    minWidth: isMobile ? '56px' : '44px',
-                    minHeight: isMobile ? '56px' : '44px',
+                    padding: isMobile ? '1.25rem' : '0.75rem',
+                    minWidth: isMobile ? '64px' : '44px',
+                    minHeight: isMobile ? '64px' : '44px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
@@ -676,7 +679,7 @@ export default function LoginPage() {
                     }, 200);
                   }}
                 >
-                  {showPassword ? <EyeOff size={isMobile ? 26 : 22} /> : <Eye size={isMobile ? 26 : 22} />}
+                  {showPassword ? <EyeOff size={isMobile ? 30 : 22} /> : <Eye size={isMobile ? 30 : 22} />}
               </button>
             </div>
           </div>
@@ -715,15 +718,16 @@ export default function LoginPage() {
             disabled={loading}
             style={{
                 width: '100%',
-                paddingTop: isMobile ? '1.75rem' : '1.5rem',
-                paddingBottom: isMobile ? '1.75rem' : '1.5rem',
-                paddingLeft: isMobile ? '1.75rem' : '1.5rem',
-                paddingRight: isMobile ? '1.75rem' : '1.5rem',
-                minHeight: isMobile ? '64px' : '56px', // Larger on mobile
-                borderRadius: 'var(--radius-xl)',
+                paddingTop: isMobile ? '2rem' : '1.5rem',
+                paddingBottom: isMobile ? '2rem' : '1.5rem',
+                paddingLeft: isMobile ? '2rem' : '1.5rem',
+                paddingRight: isMobile ? '2rem' : '1.5rem',
+                minHeight: isMobile ? '72px' : '56px', // Even larger on mobile
+                borderRadius: isMobile ? '16px' : 'var(--radius-xl)',
                 color: '#ffffff',
                 fontWeight: 700,
-                fontSize: isMobile ? '1.25rem' : '1.125rem', // Larger font on mobile
+                fontSize: isMobile ? '1.375rem' : '1.125rem', // Even larger font on mobile
+                marginTop: isMobile ? '2rem' : '1rem',
                 boxShadow: loading 
                   ? 'none' 
                   : '0 10px 25px -5px rgba(6, 182, 212, 0.4), 0 0 0 1px rgba(6, 182, 212, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
