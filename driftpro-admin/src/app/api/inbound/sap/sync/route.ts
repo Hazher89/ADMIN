@@ -73,25 +73,49 @@ async function fetchEmailsFromGraph(): Promise<any[]> {
   try {
     // Hent e-poster fra innboks med attachments inkludert
     // Include bodyPreview/body so we can extract route date/vehicle even when PDFs are image-based (“Backup Form”).
-    const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(senderEmail)}/messages?$top=50&$orderby=receivedDateTime desc&$expand=attachments&$select=id,subject,from,sender,receivedDateTime,hasAttachments,attachments,bodyPreview,body`;
-    console.log(`📧 Fetching emails from: ${url}`);
+    // Hent e-poster med paginering for å støtte opptil 200+ ruter
+    let allEmails: any[] = [];
+    let skip = 0;
+    const pageSize = 100; // Microsoft Graph max is 999, but 100 is safer
+    const maxEmails = 200; // Support up to 200 routes
+    let hasMore = true;
     
-    const response = await fetch(url, {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    });
+    while (hasMore && allEmails.length < maxEmails) {
+      const url = `https://graph.microsoft.com/v1.0/users/${encodeURIComponent(senderEmail)}/messages?$top=${pageSize}&$skip=${skip}&$orderby=receivedDateTime desc&$expand=attachments&$select=id,subject,from,sender,receivedDateTime,hasAttachments,attachments,bodyPreview,body`;
+      console.log(`📧 Fetching emails (batch ${Math.floor(skip / pageSize) + 1}): ${url}`);
+      
+      const response = await fetch(url, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
 
-    if (!response.ok) {
-      const errorText = await response.text();
-      console.error(`❌ Failed to fetch emails (${response.status} ${response.statusText}):`, errorText);
-      throw new Error(`Graph API feil: ${response.status} ${response.statusText} - ${errorText}`);
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error(`❌ Failed to fetch emails (${response.status} ${response.statusText}):`, errorText);
+        throw new Error(`Graph API feil: ${response.status} ${response.statusText} - ${errorText}`);
+      }
+
+      const data = await response.json();
+      const emails = data.value || [];
+      
+      if (emails.length === 0) {
+        hasMore = false;
+      } else {
+        allEmails = [...allEmails, ...emails];
+        skip += pageSize;
+        
+        // If we got fewer emails than requested, we've reached the end
+        if (emails.length < pageSize) {
+          hasMore = false;
+        }
+      }
+      
+      console.log(`📧 Hentet ${emails.length} e-poster i denne batchen (totalt: ${allEmails.length})`);
     }
-
-    const data = await response.json();
-    const emails = data.value || [];
-    console.log(`✅ Hentet ${emails.length} e-poster fra Graph API`);
-    return emails;
+    
+    console.log(`✅ Hentet totalt ${allEmails.length} e-poster fra Graph API`);
+    return allEmails;
   } catch (error: any) {
     console.error('❌ Error fetching emails:', error);
     throw error; // Re-throw for å få bedre feilmelding i responsen
@@ -195,26 +219,90 @@ const extractDriverNameFromText = (text: string): string | null => {
 };
 
 const extractVehicleFromText = (text: string): string | null => {
-  const primary = String(text || '').slice(0, 50000);
-  const corrected = primary.replace(/O/g, '0').replace(/o/g, '0');
-  const checks = [
-    /NO[_A-Z\s-]*M0*?(\d{1,4})/i,
-    /RESOURCE\s*ID[^A-Za-z0-9]+M0*?(\d{1,4})/i,
-    /\bM0*?(\d{1,4})\b/i,
-    // Backup Form / label-based variants (sometimes vehicle is digits-only in mail body)
-    /(?:vehicle|truck|bil|kjøretøy)\s*(?:id|no|nr|number|nummer)?\s*[:#\-\s]*M?\s*0*([0-9]{1,4})/i,
-    /(?:resource)\s*id[^A-Za-z0-9]*M?\s*0*([0-9]{1,4})/i,
-    // Standalone 3-4 digit numbers that could be vehicle numbers (context-aware)
-    /\b(?:vehicle|bil|truck|kjøretøy)[^0-9]*([0-9]{3,4})\b/i,
-    /\b([0-9]{3,4})\s*(?:vehicle|bil|truck|kjøretøy)\b/i,
+  // Use FULL text, not just first 50000 chars
+  const fullText = String(text || '');
+  
+  // Strategy 1: Resource ID patterns (most reliable)
+  const resourceIdPatterns = [
+    /resource\s*id[^A-Za-z0-9]*NO[_A-Z\s-]*M0*(\d{1,6})/gi,
+    /resource\s*id[^A-Za-z0-9]*M0*(\d{1,6})/gi,
+    /NO[_A-Z\s-]*M0*(\d{1,6})/gi,
   ];
-  for (const re of checks) {
-    const m = primary.match(re) || corrected.match(re);
-    if (m && m[1]) {
-      const v = normalizeVehicle(m[1]);
+  
+  for (const pattern of resourceIdPatterns) {
+    const matches = fullText.matchAll(pattern);
+    for (const match of matches) {
+      if (match[1]) {
+        const v = normalizeVehicle(match[1]);
+        if (v && v !== 'M000') return v;
+      }
+    }
+  }
+  
+  // Strategy 2: Label-based patterns
+  const labelPatterns = [
+    /(?:vehicle|truck|bil|kjøretøy|resource|ressurs)\s*(?:id|no|nr|number|nummer|nummeret)?\s*[:#\-\s=]*M?\s*0*([0-9]{1,6})/gi,
+    /(?:resource|ressurs)\s*id[^A-Za-z0-9]*M?\s*0*([0-9]{1,6})/gi,
+    /\bM\s*0*([0-9]{1,6})\b/gi,
+    /(?:bil|vehicle|truck|kjøretøy)[\s:]*M?0*([0-9]{1,6})/gi,
+    /\b(?:vehicle|bil|truck|kjøretøy|resource|ressurs)[^0-9]*([0-9]{3,4})\b/gi,
+    /\b([0-9]{3,4})\s*(?:vehicle|bil|truck|kjøretøy|resource|ressurs)\b/gi,
+    /(?:bil|vehicle|truck)[^0-9]{0,20}([0-9]{3,4})/gi,
+    /([0-9]{3,4})[^0-9]{0,20}(?:bil|vehicle|truck)/gi,
+  ];
+  
+  for (const re of labelPatterns) {
+    const matches = fullText.matchAll(re);
+    for (const match of matches) {
+      if (match[1]) {
+        const v = normalizeVehicle(match[1]);
+        if (v && v !== 'M000') return v;
+      }
+    }
+  }
+  
+  // Strategy 3: OCR corrections (O->0, I->1, S->5, l->1)
+  const corrections = [
+    { from: /O/g, to: '0' },
+    { from: /o/g, to: '0' },
+    { from: /I/g, to: '1' },
+    { from: /l/g, to: '1' },
+    { from: /S/g, to: '5' },
+  ];
+  
+  let corrected = fullText;
+  for (const corr of corrections) {
+    corrected = corrected.replace(corr.from, corr.to);
+  }
+  
+  for (const re of labelPatterns) {
+    const matches = corrected.matchAll(re);
+    for (const match of matches) {
+      if (match[1]) {
+        const v = normalizeVehicle(match[1]);
+        if (v && v !== 'M000') return v;
+      }
+    }
+  }
+  
+  // Strategy 4: Context-aware standalone numbers
+  const numberPattern = /\b([0-9]{3,4})\b/g;
+  const numberMatches = fullText.matchAll(numberPattern);
+  
+  for (const match of numberMatches) {
+    const num = match[1];
+    const startIdx = match.index || 0;
+    const context = fullText.slice(Math.max(0, startIdx - 50), Math.min(fullText.length, startIdx + num.length + 50)).toLowerCase();
+    
+    const vehicleKeywords = ['bil', 'vehicle', 'truck', 'kjøretøy', 'resource', 'ressurs', 'm0', 'm00', 'm000'];
+    const hasVehicleContext = vehicleKeywords.some(keyword => context.includes(keyword));
+    
+    if (hasVehicleContext) {
+      const v = normalizeVehicle(num);
       if (v && v !== 'M000') return v;
     }
   }
+  
   return null;
 };
 
@@ -554,8 +642,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Robust query: pull latest N and filter in code (avoids composite-index headaches).
+    // Increased limit to 200 to support up to 150 routes (with some buffer for filtering)
     const recentSnap = await getDocs(
-      query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'), limit(250))
+      query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'), limit(200))
     );
     const pendingDocs = recentSnap.docs.filter((d) => {
       const it: any = d.data();

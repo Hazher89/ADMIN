@@ -57,20 +57,38 @@ export default function NotificationBell() {
         return () => {};
       }
 
-      // Filter notifications by user and company
+      // Filter notifications by user
+      // Note: We filter by department in memory to support department leaders seeing only their department's notifications
       const notificationsQuery = query(
         collection(db, 'notifications'),
-        where('userId', '==', user.uid),
-        where('companyId', '==', userProfile.companyId)
+        where('userId', '==', user.uid)
       );
       
       const unsubscribe = onSnapshot(notificationsQuery, (snapshot) => {
         const notificationsData: Notification[] = [];
+        const userRole = userProfile?.role || 'employee';
+        const userDepartmentId = userProfile?.departmentId;
+        const userCompanyId = userProfile?.companyId;
 
         snapshot.forEach((doc) => {
           const data = doc.data();
           
           try {
+            // Filter by company
+            if (userCompanyId && data.metadata?.companyId && data.metadata.companyId !== userCompanyId) {
+              return; // Skip notifications from other companies
+            }
+
+            // Filter by department for department leaders
+            if (userRole === 'department_leader' && userDepartmentId) {
+              // Department leaders should only see notifications from their department
+              if (data.metadata?.departmentId && data.metadata.departmentId !== userDepartmentId) {
+                return; // Skip notifications from other departments
+              }
+            }
+
+            // Employees should only see their own notifications (already filtered by userId in query)
+
             // Handle timestamps
             let createdAt = new Date().toISOString();
             if (data.createdAt?.toDate) {
@@ -111,7 +129,7 @@ export default function NotificationBell() {
               readAt,
               archivedAt,
               metadata: data.metadata || {},
-                          };
+            };
             
             notificationsData.push(notification);
           } catch (error) {
@@ -133,7 +151,7 @@ export default function NotificationBell() {
       console.error('Error setting up notifications listener:', error);
       return () => {};
     }
-  }, [user?.uid, userProfile?.companyId]);
+  }, [user?.uid, userProfile?.companyId, userProfile?.role, userProfile?.departmentId]);
 
   const markAsRead = useCallback(async (notificationId: string) => {
     if (!db) return;

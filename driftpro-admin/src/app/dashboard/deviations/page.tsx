@@ -33,8 +33,22 @@ import {
   X,
   Users,
   List,
-  Star
+  Star,
+  Image,
+  Video,
+  Upload,
+  XCircle,
+  Play,
+  File,
+  Tag,
+  Bell,
+  Send,
+  History,
+  BarChart
 } from 'lucide-react';
+import { DeviationMediaService } from '@/lib/deviation-media-service';
+import { notificationService } from '@/lib/notification-service';
+import { globalEmailService } from '@/lib/global-email-service';
 
 export default function HMSPage() {
   const { userProfile } = useAuth();
@@ -65,6 +79,7 @@ export default function HMSPage() {
   const [newDeviation, setNewDeviation] = useState({
     title: '',
     description: '',
+    richDescription: '',
     type: 'safety' as 'safety' | 'quality' | 'security' | 'process' | 'environmental' | 'health' | 'other',
     severity: 'medium' as 'low' | 'medium' | 'high' | 'critical',
     departmentId: '',
@@ -79,8 +94,17 @@ export default function HMSPage() {
     attachments: [] as string[],
     witnesses: [] as string[],
     investigationRequired: false,
-    regulatoryReport: false
+    regulatoryReport: false,
+    priority: 'normal' as 'low' | 'normal' | 'high' | 'urgent',
+    tags: [] as string[],
+    dueDate: ''
   });
+  
+  // Media upload state
+  const [uploadingMedia, setUploadingMedia] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState(0);
+  const [selectedMediaFiles, setSelectedMediaFiles] = useState<File[]>([]);
+  const [uploadedMedia, setUploadedMedia] = useState<any[]>([]);
 
   // Risk Assessment state
   const [riskAssessments, setRiskAssessments] = useState<any[]>([]);
@@ -199,22 +223,69 @@ export default function HMSPage() {
   };
 
   const handleAddDeviation = async () => {
-    if (!userProfile) return;
+    if (!userProfile || !userProfile.companyId) return;
+
+    if (!newDeviation.title || !newDeviation.description) {
+      alert('Vennligst fyll ut tittel og beskrivelse');
+      return;
+    }
 
     try {
+      setUploadingMedia(true);
+      setUploadProgress(0);
+
+      // Upload media files first
+      let media: any[] = [];
+      if (selectedMediaFiles.length > 0) {
+        try {
+          // Create a temporary deviation ID for media upload
+          const tempDeviationId = `temp_${Date.now()}`;
+          
+          media = await DeviationMediaService.uploadMultipleMedia(
+            selectedMediaFiles,
+            tempDeviationId,
+            userProfile.companyId,
+            userProfile.id,
+            (progress) => setUploadProgress(progress)
+          );
+        } catch (mediaError) {
+          console.error('Error uploading media:', mediaError);
+          alert('Kunne ikke laste opp alle filer. Prøv igjen.');
+          setUploadingMedia(false);
+          return;
+        }
+      }
+
+      // Create deviation with media
       const deviationData = {
         ...newDeviation,
-                reportedBy: userProfile.id,
+        reportedBy: userProfile.id,
+        reportedByName: userProfile.displayName || userProfile.name || 'Ukjent',
         status: 'reported' as const,
+        media: media,
         createdAt: new Date().toISOString(),
         updatedAt: new Date().toISOString()
       };
 
-      await firebaseService.createDeviation(deviationData);
+      const userContext = createUserAccessContext(userProfile);
+      const deviationId = await firebaseService.createDeviation(deviationData, userContext || undefined);
+
+      // Update media paths with actual deviation ID (if needed)
+      if (media.length > 0 && deviationId) {
+        // Media is already uploaded, just update the deviation with the correct ID reference
+        await firebaseService.updateDeviation(deviationId, {
+          media: media.map(m => ({ ...m, deviationId }))
+        });
+      }
+
+      // Send smart notifications
+      await sendSmartNotifications(deviationId, deviationData);
+
       setShowAddModal(false);
       setNewDeviation({
         title: '',
         description: '',
+        richDescription: '',
         type: 'safety',
         severity: 'medium',
         departmentId: '',
@@ -229,11 +300,139 @@ export default function HMSPage() {
         attachments: [],
         witnesses: [],
         investigationRequired: false,
-        regulatoryReport: false
+        regulatoryReport: false,
+        priority: 'normal',
+        tags: [],
+        dueDate: ''
       });
+      setSelectedMediaFiles([]);
+      setUploadedMedia([]);
+      setUploadProgress(0);
+      setUploadingMedia(false);
       loadDeviations();
+      
+      alert('Avvik opprettet og varsler sendt!');
     } catch (error) {
       console.error('Error adding deviation:', error);
+      alert('Feil ved opprettelse av avvik: ' + (error instanceof Error ? error.message : 'Ukjent feil'));
+      setUploadingMedia(false);
+    }
+  };
+
+  // Smart notification system
+  const sendSmartNotifications = async (deviationId: string, deviationData: any) => {
+    if (!userProfile || !userProfile.companyId) return;
+
+    try {
+      // Get relevant recipients based on deviation type and severity
+      const recipients: Employee[] = [];
+
+      // Always notify admins
+      const admins = managersAndAdmins.filter(emp => 
+        emp.role === 'admin' || emp.role === 'super_admin'
+      );
+      recipients.push(...admins);
+
+      // Notify department leaders if department is specified
+      if (deviationData.departmentId) {
+        const deptLeaders = managersAndAdmins.filter(emp =>
+          emp.role === 'department_leader' && emp.departmentId === deviationData.departmentId
+        );
+        recipients.push(...deptLeaders);
+      }
+
+      // For high/critical severity, notify all managers
+      if (deviationData.severity === 'high' || deviationData.severity === 'critical') {
+        const allManagers = managersAndAdmins.filter(emp =>
+          emp.role === 'department_leader' || emp.role === 'admin'
+        );
+        recipients.push(...allManagers);
+      }
+
+      // Remove duplicates
+      const uniqueRecipients = recipients.filter((emp, index, self) =>
+        index === self.findIndex(e => e.id === emp.id)
+      );
+
+      // Send notifications
+      for (const recipient of uniqueRecipients) {
+        if (!recipient.email) continue;
+
+        // In-app notification
+        await notificationService.createNotification({
+          userId: recipient.id,
+          title: `🚨 Nytt avvik: ${deviationData.title}`,
+          message: `${deviationData.type} - ${deviationData.severity} alvorlighetsgrad`,
+          type: 'deviation',
+          priority: deviationData.severity === 'critical' ? 'urgent' : 
+                   deviationData.severity === 'high' ? 'high' : 'medium',
+          actionUrl: `/dashboard/deviations?id=${deviationId}`,
+          actionText: 'Se avvik',
+          metadata: {
+            deviationId,
+            type: deviationData.type,
+            severity: deviationData.severity,
+            title: deviationData.title
+          },
+          sendEmail: true,
+          departmentId: deviationData.departmentId,
+          companyId: userProfile.companyId
+        });
+
+        // Enhanced email notification with media preview
+        try {
+          const mediaPreview = deviationData.media && deviationData.media.length > 0
+            ? `<p><strong>Vedlegg:</strong> ${deviationData.media.length} fil(er) vedlagt</p>`
+            : '';
+
+          const emailHtml = `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #f8fafc; padding: 20px;">
+              <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 2rem; text-align: center; color: white; border-radius: 10px 10px 0 0;">
+                <h1 style="margin: 0; font-size: 2rem;">⚠️ DriftPro</h1>
+                <p style="margin: 0.5rem 0 0 0; font-size: 1.1rem;">Nytt HMS-avvik rapportert</p>
+              </div>
+              
+              <div style="background-color: white; padding: 2rem; border-radius: 0 0 10px 10px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);">
+                <h2 style="color: #1f2937; margin-top: 0;">${deviationData.title}</h2>
+                
+                <div style="background-color: #fef2f2; border: 1px solid #dc2626; border-radius: 8px; padding: 1.5rem; margin: 1.5rem 0;">
+                  <h3 style="color: #991b1b; margin-top: 0;">🚨 Avviksdetaljer:</h3>
+                  <ul style="color: #991b1b; margin: 0; padding-left: 1.5rem;">
+                    <li><strong>Type:</strong> ${deviationData.type}</li>
+                    <li><strong>Alvorlighetsgrad:</strong> ${deviationData.severity}</li>
+                    <li><strong>Beskrivelse:</strong> ${deviationData.description}</li>
+                    <li><strong>Rapportert av:</strong> ${deviationData.reportedByName || 'Ukjent'}</li>
+                    <li><strong>Rapportert:</strong> ${new Date().toLocaleDateString('nb-NO')}</li>
+                    ${deviationData.location ? `<li><strong>Sted:</strong> ${deviationData.location}</li>` : ''}
+                  </ul>
+                  ${mediaPreview}
+                </div>
+                
+                <div style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid #e5e7eb; text-align: center;">
+                  <a href="${typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no'}/dashboard/deviations?id=${deviationId}" 
+                     style="display: inline-block; padding: 12px 24px; background: #dc2626; color: white; text-decoration: none; border-radius: 8px; font-weight: 600; margin: 10px;">
+                    Se avvik i systemet
+                  </a>
+                </div>
+                
+                <p style="color: #6b7280; font-size: 0.9rem; margin-top: 30px;">
+                  Dette er en automatisk varsel fra DriftPro-systemet.
+                </p>
+              </div>
+            </div>
+          `;
+
+          await globalEmailService.sendEmail({
+            to: recipient.email,
+            subject: `⚠️ Nytt HMS-avvik: ${deviationData.title}`,
+            html: emailHtml
+          });
+        } catch (emailError) {
+          console.error('Error sending email notification:', emailError);
+        }
+      }
+    } catch (error) {
+      console.error('Error sending smart notifications:', error);
     }
   };
 
@@ -250,6 +449,29 @@ export default function HMSPage() {
       loadDeviations();
     } catch (error) {
       console.error('Error updating deviation:', error);
+    }
+  };
+
+  // Handle file selection
+  const handleFileSelect = (files: File[]) => {
+    const validFiles: File[] = [];
+    const errors: string[] = [];
+
+    files.forEach(file => {
+      const validation = DeviationMediaService.validateFile(file);
+      if (validation.valid) {
+        validFiles.push(file);
+      } else {
+        errors.push(`${file.name}: ${validation.error}`);
+      }
+    });
+
+    if (errors.length > 0) {
+      alert('Noen filer kunne ikke legges til:\n' + errors.join('\n'));
+    }
+
+    if (validFiles.length > 0) {
+      setSelectedMediaFiles([...selectedMediaFiles, ...validFiles]);
     }
   };
 
@@ -1009,11 +1231,204 @@ export default function HMSPage() {
                     placeholder="0"
                   />
                 </div>
+                
+                {/* Media Upload Section */}
+                <div className="form-field" style={{ gridColumn: '1 / -1' }}>
+                  <label className="form-label">
+                    <Image size={16} style={{ display: 'inline', marginRight: '8px' }} />
+                    Vedlegg (bilder, video, dokumenter)
+                  </label>
+                  <div style={{
+                    border: '2px dashed #d1d5db',
+                    borderRadius: '8px',
+                    padding: '1.5rem',
+                    textAlign: 'center',
+                    backgroundColor: '#f9fafb',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s'
+                  }}
+                  onDragOver={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.borderColor = '#3b82f6';
+                    e.currentTarget.style.backgroundColor = '#eff6ff';
+                  }}
+                  onDragLeave={(e) => {
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                  }}
+                  onDrop={(e) => {
+                    e.preventDefault();
+                    e.currentTarget.style.borderColor = '#d1d5db';
+                    e.currentTarget.style.backgroundColor = '#f9fafb';
+                    const files = Array.from(e.dataTransfer.files);
+                    handleFileSelect(files);
+                  }}
+                  onClick={() => {
+                    const input = document.createElement('input');
+                    input.type = 'file';
+                    input.multiple = true;
+                    input.accept = 'image/*,video/*,application/pdf,.doc,.docx,.txt';
+                    input.onchange = (e) => {
+                      const target = e.target as HTMLInputElement;
+                      if (target.files) {
+                        handleFileSelect(Array.from(target.files));
+                      }
+                    };
+                    input.click();
+                  }}>
+                    {selectedMediaFiles.length === 0 ? (
+                      <div>
+                        <Upload size={32} style={{ color: '#9ca3af', marginBottom: '0.5rem' }} />
+                        <p style={{ color: '#6b7280', margin: '0.5rem 0' }}>
+                          Klikk eller dra filer hit for å laste opp
+                        </p>
+                        <p style={{ color: '#9ca3af', fontSize: '0.875rem', margin: 0 }}>
+                          Støtter bilder, videoer og dokumenter (maks 50MB per fil)
+                        </p>
+                      </div>
+                    ) : (
+                      <div style={{ textAlign: 'left' }}>
+                        <p style={{ margin: '0 0 1rem 0', fontWeight: '600' }}>
+                          {selectedMediaFiles.length} fil(er) valgt
+                        </p>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(120px, 1fr))', gap: '0.75rem' }}>
+                          {selectedMediaFiles.map((file, index) => (
+                            <div key={index} style={{
+                              position: 'relative',
+                              border: '1px solid #e5e7eb',
+                              borderRadius: '8px',
+                              padding: '0.5rem',
+                              backgroundColor: 'white'
+                            }}>
+                              {file.type.startsWith('image/') ? (
+                                <img
+                                  src={URL.createObjectURL(file)}
+                                  alt={file.name}
+                                  style={{ width: '100%', height: '80px', objectFit: 'cover', borderRadius: '4px' }}
+                                />
+                              ) : file.type.startsWith('video/') ? (
+                                <div style={{
+                                  width: '100%',
+                                  height: '80px',
+                                  backgroundColor: '#1f2937',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: '4px'
+                                }}>
+                                  <Video size={24} style={{ color: 'white' }} />
+                                </div>
+                              ) : (
+                                <div style={{
+                                  width: '100%',
+                                  height: '80px',
+                                  backgroundColor: '#f3f4f6',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  borderRadius: '4px'
+                                }}>
+                                  <File size={24} style={{ color: '#6b7280' }} />
+                                </div>
+                              )}
+                              <p style={{
+                                fontSize: '0.75rem',
+                                margin: '0.25rem 0 0 0',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                whiteSpace: 'nowrap',
+                                color: '#374151'
+                              }}>
+                                {file.name.length > 15 ? file.name.substring(0, 15) + '...' : file.name}
+                              </p>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  const newFiles = selectedMediaFiles.filter((_, i) => i !== index);
+                                  setSelectedMediaFiles(newFiles);
+                                }}
+                                style={{
+                                  position: 'absolute',
+                                  top: '4px',
+                                  right: '4px',
+                                  background: 'rgba(0, 0, 0, 0.6)',
+                                  border: 'none',
+                                  borderRadius: '50%',
+                                  width: '24px',
+                                  height: '24px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  cursor: 'pointer',
+                                  color: 'white'
+                                }}
+                              >
+                                <X size={14} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                  
+                  {uploadingMedia && (
+                    <div style={{ marginTop: '1rem' }}>
+                      <div style={{
+                        width: '100%',
+                        height: '8px',
+                        backgroundColor: '#e5e7eb',
+                        borderRadius: '4px',
+                        overflow: 'hidden'
+                      }}>
+                        <div style={{
+                          width: `${uploadProgress}%`,
+                          height: '100%',
+                          backgroundColor: '#3b82f6',
+                          transition: 'width 0.3s'
+                        }} />
+                      </div>
+                      <p style={{ margin: '0.5rem 0 0 0', fontSize: '0.875rem', color: '#6b7280' }}>
+                        Laster opp... {uploadProgress}%
+                      </p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Priority and Tags */}
+                <div className="form-field">
+                  <label className="form-label">Prioritet</label>
+                  <select
+                    value={newDeviation.priority}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, priority: e.target.value as 'low' | 'normal' | 'high' | 'urgent' })}
+                    className="form-select-modal"
+                  >
+                    <option value="low">Lav</option>
+                    <option value="normal">Normal</option>
+                    <option value="high">Høy</option>
+                    <option value="urgent">Haster</option>
+                  </select>
+                </div>
+                <div className="form-field">
+                  <label className="form-label">Forfallsdato (valgfritt)</label>
+                  <input
+                    type="date"
+                    value={newDeviation.dueDate}
+                    onChange={(e) => setNewDeviation({ ...newDeviation, dueDate: e.target.value })}
+                    className="form-input-modal"
+                  />
+                </div>
               </div>
             </div>
             <div className="modal-footer">
               <button onClick={() => setShowAddModal(false)} className="btn btn-secondary">Avbryt</button>
-              <button onClick={handleAddDeviation} className="btn btn-primary">Rapporter avvik</button>
+              <button 
+                onClick={handleAddDeviation} 
+                className="btn btn-primary"
+                disabled={uploadingMedia}
+              >
+                {uploadingMedia ? 'Laster opp...' : 'Rapporter avvik'}
+              </button>
             </div>
           </div>
         </div>

@@ -702,6 +702,630 @@ export default function Topbar() {
 				.dp-burst-dot {
 					animation: dp-burst-dot-bounce 1.2s ease-in-out infinite;
 				}
+				
+				/* ============================================
+				   ADVANCED LOGO ANIMATIONS - Quantum System
+				   ============================================ */
+				
+				/* Quantum Field Pulse */
+				@keyframes quantum-field-pulse {
+					0%, 100% {
+						opacity: 0.15;
+						transform: scale(1);
+					}
+					50% {
+						opacity: 0.25;
+						transform: scale(1.1);
+					}
+				}
+				
+				/* Orbital Ring Rotations */
+				@keyframes orbital-ring-1-rotate {
+					from {
+						transform: rotate(0deg) scaleX(1) scaleY(1);
+					}
+					25% {
+						transform: rotate(90deg) scaleX(1.2) scaleY(0.8);
+					}
+					50% {
+						transform: rotate(180deg) scaleX(1) scaleY(1);
+					}
+					75% {
+						transform: rotate(270deg) scaleX(0.8) scaleY(1.2);
+					}
+					to {
+						transform: rotate(360deg) scaleX(1) scaleY(1);
+					}
+				}
+				
+				@keyframes orbital-ring-2-rotate {
+					from {
+						transform: rotate(0deg) scaleX(1) scaleY(1);
+					}
+					25% {
+						transform: rotate(-90deg) scaleX(0.8) scaleY(1.2);
+					}
+					50% {
+						transform: rotate(-180deg) scaleX(1) scaleY(1);
+					}
+					75% {
+						transform: rotate(-270deg) scaleX(1.2) scaleY(0.8);
+					}
+					to {
+						transform: rotate(-360deg) scaleX(1) scaleY(1);
+					}
+				}
+				
+				@keyframes orbital-ring-3-rotate {
+					from {
+						transform: rotate(0deg) scaleX(1) scaleY(1);
+					}
+					33% {
+						transform: rotate(120deg) scaleX(1.15) scaleY(0.85);
+					}
+					66% {
+						transform: rotate(240deg) scaleX(0.85) scaleY(1.15);
+					}
+					to {
+						transform: rotate(360deg) scaleX(1) scaleY(1);
+					}
+				}
+				
+				/* Hexagonal Core Animations */
+				@keyframes hex-outer-rotate {
+					from { transform: rotate(0deg); }
+					to { transform: rotate(360deg); }
+				}
+				
+				@keyframes hex-middle-rotate {
+					from { transform: rotate(0deg); }
+					to { transform: rotate(-360deg); }
+				}
+				
+				@keyframes hex-inner-pulse {
+					0%, 100% {
+						transform: scale(1) rotate(0deg);
+						opacity: 0.6;
+					}
+					25% {
+						transform: scale(1.1) rotate(60deg);
+						opacity: 0.8;
+					}
+					50% {
+						transform: scale(1.15) rotate(120deg);
+						opacity: 1;
+					}
+					75% {
+						transform: scale(1.1) rotate(180deg);
+						opacity: 0.8;
+					}
+				}
+				
+				@keyframes morph-hex-morph {
+					0%, 100% {
+						transform: scale(1) rotate(0deg);
+						opacity: 0.9;
+					}
+					16.66% {
+						transform: scale(1.1) rotate(60deg);
+						opacity: 1;
+					}
+					33.33% {
+						transform: scale(1.15) rotate(120deg);
+						opacity: 1;
+					}
+					50% {
+						transform: scale(1.1) rotate(180deg);
+						opacity: 1;
+					}
+					66.66% {
+						transform: scale(1.15) rotate(240deg);
+						opacity: 1;
+					}
+					83.33% {
+						transform: scale(1.1) rotate(300deg);
+						opacity: 1;
+					}
+				}
+				
+				@keyframes core-glow-pulse {
+					0%, 100% {
+						opacity: 0.8;
+						transform: scale(1);
+					}
+					50% {
+						opacity: 1;
+						transform: scale(1.2);
+					}
+				}
+				
+				@keyframes core-pulse-intense {
+					0%, 100% {
+						transform: scale(1);
+						opacity: 0.95;
+					}
+					25% {
+						transform: scale(1.3);
+						opacity: 0.9;
+					}
+					50% {
+						transform: scale(1.5);
+						opacity: 0.85;
+					}
+					75% {
+						transform: scale(1.2);
+						opacity: 0.9;
+					}
+				}
+				
+				@keyframes core-center-rotate {
+					from { transform: rotate(0deg); }
+					to { transform: rotate(360deg); }
+				}
+				
+				@keyframes quantum-particle-orbit {
+					0% {
+						transform: rotate(0deg) translateX(22px) rotate(0deg) scale(1);
+						opacity: 0.9;
+					}
+					25% {
+						transform: rotate(90deg) translateX(22px) rotate(-90deg) scale(1.1);
+						opacity: 1;
+					}
+					50% {
+						transform: rotate(180deg) translateX(22px) rotate(-180deg) scale(1);
+						opacity: 0.95;
+					}
+					75% {
+						transform: rotate(270deg) translateX(22px) rotate(-270deg) scale(1.1);
+						opacity: 1;
+					}
+					100% {
+						transform: rotate(360deg) translateX(22px) rotate(-360deg) scale(1);
+						opacity: 0.9;
+					}
+				}
+				
+				@keyframes orbital-particle-rotate {
+					from { transform: rotate(0deg); }
+					to { transform: rotate(360deg); }
+				}
+				
+				@keyframes particle-connection-flow {
+					0% {
+						stroke-dashoffset: 0;
+						opacity: 0.15;
+					}
+					50% {
+						stroke-dashoffset: -8;
+						opacity: 0.3;
+					}
+					100% {
+						stroke-dashoffset: -16;
+						opacity: 0.15;
+					}
+				}
+				
+				@keyframes wave-ring-expand {
+					0% {
+						transform: scale(0.8);
+						opacity: 0.2;
+						stroke-width: 1;
+					}
+					50% {
+						transform: scale(1.5);
+						opacity: 0.1;
+						stroke-width: 0.8;
+					}
+					100% {
+						transform: scale(2.2);
+						opacity: 0;
+						stroke-width: 0.5;
+					}
+				}
+				
+				@keyframes energy-beam-pulse {
+					0%, 100% {
+						stroke-opacity: 0.4;
+						stroke-width: 1.5;
+					}
+					50% {
+						stroke-opacity: 0.8;
+						stroke-width: 2.5;
+					}
+				}
+				
+				@keyframes beam-node-pulse {
+					0%, 100% {
+						transform: scale(1);
+						opacity: 0.8;
+					}
+					50% {
+						transform: scale(1.3);
+						opacity: 1;
+					}
+				}
+				
+				@keyframes data-particle-float {
+					0%, 100% {
+						transform: translate(0, 0) scale(1);
+						opacity: 0.9;
+					}
+					25% {
+						transform: translate(2px, -3px) scale(1.2);
+						opacity: 1;
+					}
+					50% {
+						transform: translate(-2px, -4px) scale(1.1);
+						opacity: 0.95;
+					}
+					75% {
+						transform: translate(1px, -2px) scale(1.15);
+						opacity: 1;
+					}
+				}
+				
+				@keyframes morph-triangle-morph {
+					0%, 100% {
+						transform: scale(1) rotate(0deg);
+						opacity: 0.5;
+					}
+					33% {
+						transform: scale(1.2) rotate(120deg);
+						opacity: 0.7;
+					}
+					66% {
+						transform: scale(1.1) rotate(240deg);
+						opacity: 0.6;
+					}
+				}
+				
+				/* Apply Advanced Animations */
+				.quantum-field {
+					animation: quantum-field-pulse 4s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.orbital-ring-1 {
+					animation: orbital-ring-1-rotate 20s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.orbital-ring-2 {
+					animation: orbital-ring-2-rotate 25s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.orbital-ring-3 {
+					animation: orbital-ring-3-rotate 30s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.hex-outer {
+					animation: hex-outer-rotate 15s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.hex-middle {
+					animation: hex-middle-rotate 12s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.hex-inner {
+					animation: hex-inner-pulse 3s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.morph-hex {
+					animation: morph-hex-morph 4s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.core-glow {
+					animation: core-glow-pulse 2s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.core-pulse {
+					animation: core-pulse-intense 1.5s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.core-center {
+					animation: core-center-rotate 3s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.quantum-particle-group {
+					animation: quantum-particle-orbit 8s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.orbital-particle {
+					animation: orbital-particle-rotate 4s linear infinite;
+					transform-origin: 0 0;
+				}
+				
+				.particle-connection {
+					animation: particle-connection-flow 3s linear infinite;
+				}
+				
+				.wave-ring {
+					animation: wave-ring-expand 3s ease-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.energy-beam {
+					animation: energy-beam-pulse 2s ease-in-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.beam-node {
+					animation: beam-node-pulse 1.5s ease-in-out infinite;
+					transform-origin: 0 0;
+				}
+				
+				.data-particle {
+					animation: data-particle-float 3s ease-in-out infinite;
+				}
+				
+				.morph-triangle {
+					animation: morph-triangle-morph 4s ease-in-out infinite;
+				}
+				
+				.advanced-logo-container {
+					transform-origin: 32px 32px;
+				}
+				
+				.advanced-logo:hover .quantum-field {
+					animation-duration: 2s;
+				}
+				
+				.advanced-logo:hover .orbital-particle {
+					animation-duration: 2s;
+				}
+				
+				.advanced-logo:hover .morph-hex {
+					animation-duration: 2s;
+				}
+				
+				/* Additional Animations for New Elements */
+				@keyframes circular-ring-rotate {
+					from {
+						transform: rotate(0deg);
+						stroke-dashoffset: 0;
+					}
+					to {
+						transform: rotate(360deg);
+						stroke-dashoffset: -20;
+					}
+				}
+				
+				@keyframes secondary-wave-expand {
+					0% {
+						transform: scale(0.9);
+						opacity: 0.15;
+					}
+					50% {
+						transform: scale(1.3);
+						opacity: 0.08;
+					}
+					100% {
+						transform: scale(1.8);
+						opacity: 0;
+					}
+				}
+				
+				@keyframes secondary-particle-float {
+					0%, 100% {
+						transform: translate(0, 0) scale(1);
+						opacity: 0.7;
+					}
+					25% {
+						transform: translate(1.5px, -2px) scale(1.3);
+						opacity: 0.9;
+					}
+					50% {
+						transform: translate(-1.5px, -3px) scale(1.1);
+						opacity: 0.8;
+					}
+					75% {
+						transform: translate(1px, -1.5px) scale(1.2);
+						opacity: 0.85;
+					}
+				}
+				
+				@keyframes morph-square-rotate {
+					from {
+						transform: rotate(0deg) scale(1);
+						opacity: 0.4;
+					}
+					50% {
+						transform: rotate(180deg) scale(1.2);
+						opacity: 0.6;
+					}
+					to {
+						transform: rotate(360deg) scale(1);
+						opacity: 0.4;
+					}
+				}
+				
+				@keyframes morph-diamond-morph {
+					0%, 100% {
+						transform: rotate(0deg) scale(1);
+						opacity: 0.45;
+					}
+					25% {
+						transform: rotate(90deg) scale(1.15);
+						opacity: 0.6;
+					}
+					50% {
+						transform: rotate(180deg) scale(1.1);
+						opacity: 0.55;
+					}
+					75% {
+						transform: rotate(270deg) scale(1.15);
+						opacity: 0.6;
+					}
+				}
+				
+				@keyframes connection-line-flow {
+					0% {
+						stroke-dashoffset: 0;
+						opacity: 0.1;
+					}
+					50% {
+						stroke-dashoffset: -5;
+						opacity: 0.2;
+					}
+					100% {
+						stroke-dashoffset: -10;
+						opacity: 0.1;
+					}
+				}
+				
+				@keyframes glow-particle-pulse {
+					0%, 100% {
+						transform: scale(1);
+						opacity: 0.6;
+					}
+					50% {
+						transform: scale(1.5);
+						opacity: 0.9;
+					}
+				}
+				
+				@keyframes logo-container-float {
+					0%, 100% {
+						transform: translate(0, 0) scale(1);
+					}
+					25% {
+						transform: translate(1px, -1px) scale(1.01);
+					}
+					50% {
+						transform: translate(0, -1.5px) scale(1);
+					}
+					75% {
+						transform: translate(-1px, -1px) scale(1.01);
+					}
+				}
+				
+				/* Apply Faster Animations */
+				.circular-ring-1 {
+					animation: circular-ring-rotate 12s linear infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.circular-ring-2 {
+					animation: circular-ring-rotate 10s linear infinite reverse;
+					transform-origin: 32px 32px;
+				}
+				
+				.secondary-wave {
+					animation: secondary-wave-expand 2s ease-out infinite;
+					transform-origin: 32px 32px;
+				}
+				
+				.secondary-particle {
+					animation: secondary-particle-float 2s ease-in-out infinite;
+				}
+				
+				.morph-square {
+					animation: morph-square-rotate 4s linear infinite;
+				}
+				
+				.morph-diamond {
+					animation: morph-diamond-morph 3.5s ease-in-out infinite;
+				}
+				
+				.connection-line {
+					animation: connection-line-flow 2s linear infinite;
+				}
+				
+				.glow-particle {
+					animation: glow-particle-pulse 2s ease-in-out infinite;
+				}
+				
+				.advanced-logo-container {
+					animation: logo-container-float 8s ease-in-out infinite;
+				}
+				
+				/* Faster speeds */
+				.quantum-field {
+					animation-duration: 3s;
+				}
+				
+				.orbital-ring-1 {
+					animation-duration: 15s;
+				}
+				
+				.orbital-ring-2 {
+					animation-duration: 18s;
+				}
+				
+				.orbital-ring-3 {
+					animation-duration: 22s;
+				}
+				
+				.hex-outer {
+					animation-duration: 12s;
+				}
+				
+				.hex-middle {
+					animation-duration: 10s;
+				}
+				
+				.hex-inner {
+					animation-duration: 2.5s;
+				}
+				
+				.morph-hex {
+					animation-duration: 3s;
+				}
+				
+				.core-glow {
+					animation-duration: 1.5s;
+				}
+				
+				.core-pulse {
+					animation-duration: 1.2s;
+				}
+				
+				.core-center {
+					animation-duration: 2.5s;
+				}
+				
+				.quantum-particle-group {
+					animation-duration: 6s;
+				}
+				
+				.orbital-particle {
+					animation-duration: 3s;
+				}
+				
+				.particle-connection {
+					animation-duration: 2.5s;
+				}
+				
+				.wave-ring {
+					animation-duration: 2.5s;
+				}
+				
+				.energy-beam {
+					animation-duration: 1.5s;
+				}
+				
+				.beam-node {
+					animation-duration: 1.2s;
+				}
+				
+				.data-particle {
+					animation-duration: 2.5s;
+				}
+				
+				.morph-triangle {
+					animation-duration: 3s;
+				}
 
 				@keyframes text-glow {
 					0%, 100% {

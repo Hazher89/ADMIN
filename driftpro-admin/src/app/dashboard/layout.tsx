@@ -54,6 +54,7 @@ import {
 } from 'lucide-react';
 import { notificationService } from '@/lib/notification-service';
 import { firebaseService } from '@/lib/firebase-services';
+import DriftProLogo from '@/components/DriftProLogo';
 
 interface SidebarItem {
   name: string;
@@ -391,14 +392,10 @@ export default function DashboardLayout({
             e.currentTarget.style.boxShadow = 'var(--shadow-md)';
           }}
         >
-          <img 
-            src="/logo.svg?v=5" 
-            alt="MAVI Logistikk AS" 
-            style={{
-              width: isMobile ? '36px' : '32px',
-              height: isMobile ? '36px' : '32px',
-              objectFit: 'contain'
-            }}
+          <DriftProLogo 
+            variant="icon" 
+            size={isMobile ? 36 : 32}
+            className=""
           />
         </div>
 
@@ -458,7 +455,8 @@ export default function DashboardLayout({
                       href={item.href}
                       style={{
                         width: isMobile ? '100%' : '48px',
-                        height: '48px',
+                        height: isMobile ? '56px' : '48px',
+                        minHeight: isMobile ? '56px' : '48px',
                         borderRadius: '12px',
                         display: 'flex',
                         alignItems: 'center',
@@ -469,8 +467,12 @@ export default function DashboardLayout({
                         transition: 'all var(--transition-normal)',
                         position: 'relative',
                         border: isActive ? 'none' : '1px solid transparent',
-                        padding: isMobile ? '0 1rem' : '0',
-                        gap: isMobile ? '0.75rem' : '0'
+                        padding: isMobile ? '0 1.25rem' : '0',
+                        gap: isMobile ? '1rem' : '0',
+                        touchAction: 'manipulation',
+                        WebkitTapHighlightColor: 'rgba(6, 182, 212, 0.2)',
+                        userSelect: 'none',
+                        WebkitUserSelect: 'none'
                       }}
                       onClick={() => {
                         setSidebarOpen(false);
@@ -479,15 +481,26 @@ export default function DashboardLayout({
                           setTimeout(() => setSidebarOpen(false), 100);
                         }
                       }}
+                      onTouchStart={(e) => {
+                        e.currentTarget.style.opacity = '0.8';
+                        e.currentTarget.style.transform = 'scale(0.98)';
+                      }}
+                      onTouchEnd={(e) => {
+                        setTimeout(() => {
+                          e.currentTarget.style.opacity = '1';
+                          e.currentTarget.style.transform = 'scale(1)';
+                        }, 150);
+                      }}
                     >
                       {item.icon}
                       
                       {/* Item name for mobile */}
                       {isMobile && (
                         <span style={{
-                          fontSize: '0.875rem',
-                          fontWeight: '500',
-                          whiteSpace: 'nowrap'
+                          fontSize: '0.9375rem',
+                          fontWeight: isActive ? '600' : '500',
+                          whiteSpace: 'nowrap',
+                          flex: 1
                         }}>
                           {item.name}
                         </span>
@@ -536,13 +549,16 @@ export default function DashboardLayout({
       )}
 
       {/* Main Content */}
-      <div style={{
-        flex: 1,
-        marginLeft: cockpitActive ? 0 : (isMobile ? '0' : '80px'),
-        minHeight: '100vh',
-        background: 'var(--gray-50)',
-        transition: 'margin-left var(--transition-normal)'
-      }}>
+        <div style={{
+          flex: 1,
+          marginLeft: cockpitActive ? 0 : (isMobile ? '0' : '80px'),
+          marginBottom: isMobile ? '70px' : '0', // Space for bottom navigation
+          minHeight: isMobile ? 'calc(100vh - 70px)' : '100vh',
+          background: 'var(--gray-50)',
+          transition: 'margin-left var(--transition-normal)',
+          paddingBottom: isMobile ? '1rem' : '0',
+          WebkitOverflowScrolling: 'touch'
+        }}>
         {/* Mobile Header */}
         {isMobile && (
           <div style={{
@@ -550,26 +566,46 @@ export default function DashboardLayout({
             top: 0,
             background: 'var(--card-background)',
             borderBottom: '1px solid var(--border-color)',
-            padding: '1rem',
+            padding: '1rem 1.25rem',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'space-between',
-            zIndex: 100
+            zIndex: 100,
+            minHeight: '64px',
+            backdropFilter: 'blur(20px)',
+            WebkitBackdropFilter: 'blur(20px)'
           }}>
-            {/* Mobile Menu Button */}
+            {/* Mobile Menu Button - STOR TOUCH TARGET */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               style={{
-                background: 'none',
-                border: 'none',
+                background: 'var(--gray-200)',
+                border: '1px solid var(--border-color)',
                 fontSize: '1.5rem',
-                color: 'var(--gray-600)',
+                color: 'var(--gray-700)',
                 cursor: 'pointer',
-                padding: '0.5rem',
-                borderRadius: '8px',
+                padding: '0.75rem',
+                minWidth: '48px',
+                minHeight: '48px',
+                borderRadius: '12px',
                 display: 'flex',
                 alignItems: 'center',
-                justifyContent: 'center'
+                justifyContent: 'center',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'rgba(6, 182, 212, 0.2)',
+                transition: 'all 0.2s',
+                userSelect: 'none',
+                WebkitUserSelect: 'none'
+              }}
+              onTouchStart={(e) => {
+                e.currentTarget.style.opacity = '0.7';
+                e.currentTarget.style.transform = 'scale(0.95)';
+              }}
+              onTouchEnd={(e) => {
+                setTimeout(() => {
+                  e.currentTarget.style.opacity = '1';
+                  e.currentTarget.style.transform = 'scale(1)';
+                }, 150);
               }}
             >
               {sidebarOpen ? <X size={24} /> : <Menu size={24} />}
@@ -592,14 +628,10 @@ export default function DashboardLayout({
                 e.currentTarget.style.opacity = '1';
               }}
             >
-              <img 
-                src="/logo.svg?v=5" 
-                alt="MAVI Logistikk AS" 
-                style={{
-                  width: '32px',
-                  height: '32px',
-                  objectFit: 'contain'
-                }}
+              <DriftProLogo 
+                variant="icon" 
+                size={32}
+                className=""
               />
               <span style={{
                 fontSize: '1.125rem',
@@ -664,7 +696,8 @@ export default function DashboardLayout({
             left: 0,
             right: 0,
             bottom: 0,
-            height: '60px',
+            height: '70px',
+            minHeight: '70px',
             background: 'var(--card-background)',
             borderTop: '0.5px solid var(--border-color)',
             display: 'flex',
@@ -691,6 +724,7 @@ export default function DashboardLayout({
                 style={{
                   flex: 1,
                   height: '100%',
+                  minHeight: '60px',
                   border: 'none',
                   background: 'none',
                   display: 'flex',
@@ -698,25 +732,34 @@ export default function DashboardLayout({
                   alignItems: 'center',
                   justifyContent: 'center',
                   color: active ? 'var(--primary)' : 'var(--gray-500)',
-                  fontSize: '0.6875rem',
+                  fontSize: '0.75rem',
                   fontWeight: active ? 600 : 500,
-                  gap: '0.125rem',
+                  gap: '0.25rem',
                   cursor: 'pointer',
                   transition: 'all 0.2s ease',
-                  padding: '0.5rem 0.25rem',
-                  touchAction: 'manipulation'
+                  padding: '0.75rem 0.5rem',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'rgba(6, 182, 212, 0.2)',
+                  userSelect: 'none',
+                  WebkitUserSelect: 'none'
                 }}
                 onTouchStart={(e) => {
                   e.currentTarget.style.opacity = '0.7';
+                  e.currentTarget.style.transform = 'scale(0.95)';
                 }}
                 onTouchEnd={(e) => {
-                  e.currentTarget.style.opacity = '1';
+                  setTimeout(() => {
+                    e.currentTarget.style.opacity = '1';
+                    e.currentTarget.style.transform = 'scale(1)';
+                  }, 150);
                 }}
               >
                 <div
                   style={{
-                    width: '32px',
-                    height: '32px',
+                    width: '36px',
+                    height: '36px',
+                    minWidth: '36px',
+                    minHeight: '36px',
                     borderRadius: '9999px',
                     display: 'flex',
                     alignItems: 'center',
@@ -729,9 +772,10 @@ export default function DashboardLayout({
                   {item.icon}
                 </div>
                 <span style={{ 
-                  fontSize: '0.6875rem',
-                  lineHeight: '1',
-                  marginTop: '0.125rem'
+                  fontSize: '0.75rem',
+                  lineHeight: '1.2',
+                  marginTop: '0.125rem',
+                  whiteSpace: 'nowrap'
                 }}>{item.label}</span>
               </button>
             );

@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService, Shift } from '@/lib/firebase-services';
+import { firebaseService, Shift, createUserAccessContext } from '@/lib/firebase-services';
 import { 
   Calendar, 
   Plus, 
@@ -59,7 +59,8 @@ export default function ShiftsPage() {
 
     try {
       setLoading(true);
-      const data = await firebaseService.getShifts();
+      const userContext = createUserAccessContext(userProfile);
+      const data = await firebaseService.getShifts(userContext || undefined);
       setShifts(data);
     } catch (error) {
       console.error('Error loading shifts:', error);
@@ -79,7 +80,8 @@ export default function ShiftsPage() {
         updatedAt: new Date().toISOString()
       };
 
-      await firebaseService.createShift(shiftData);
+      const userContext = createUserAccessContext(userProfile);
+      await firebaseService.createShift(shiftData, userContext || undefined);
       setShowAddModal(false);
       setNewShift({
         employeeId: '',
@@ -110,7 +112,8 @@ export default function ShiftsPage() {
   const handleDeleteShift = async (shiftId: string) => {
     if (confirm('Er du sikker på at du vil slette denne vakten?')) {
       try {
-        await firebaseService.updateShift(shiftId, { status: 'cancelled' });
+        const userContext = createUserAccessContext(userProfile);
+        await firebaseService.updateShift(shiftId, { status: 'cancelled' }, userContext || undefined);
         loadData();
       } catch (error) {
         console.error('Error deleting shift:', error);

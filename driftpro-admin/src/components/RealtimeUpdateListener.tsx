@@ -27,3 +27,5 @@ export default function RealtimeUpdateListener({ autoRefresh = false }: Realtime
   // Return null since this component doesn't render anything
   return null;
 }
+
+

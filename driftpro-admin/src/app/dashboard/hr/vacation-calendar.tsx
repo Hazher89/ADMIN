@@ -6,8 +6,12 @@ import { firebaseService, Employee, Vacation, VacationAllocation, createUserAcce
 import { 
   Calendar, CalendarDays, ChevronLeft, ChevronRight, 
   User, Plane, CheckCircle, XCircle, Clock, Plus,
-  Settings, Info, AlertCircle, Save, X, Edit, Trash2
+  Settings, Info, AlertCircle, Save, X, Edit, Trash2,
+  Gift, ArrowRight, Building2, List
 } from 'lucide-react';
+import { notificationService } from '@/lib/notification-service';
+import { db } from '@/lib/firebase';
+import { collection, query, getDocs, addDoc, updateDoc, deleteDoc, doc, writeBatch, setDoc } from 'firebase/firestore';
 
 interface VacationCalendarProps {
   employees: Employee[];
@@ -317,11 +321,24 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
   const [showEditVacationModal, setShowEditVacationModal] = useState(false);
   const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
   const [showSettingsModal, setShowSettingsModal] = useState(false);
+  const [showOverviewModal, setShowOverviewModal] = useState(false);
   const [selectedAllocation, setSelectedAllocation] = useState<VacationAllocation | null>(null);
   const [selectedVacation, setSelectedVacation] = useState<Vacation | null>(null);
   const [vacationToDelete, setVacationToDelete] = useState<Vacation | null>(null);
   const [transferDays, setTransferDays] = useState<number>(0);
   const [transferToYear, setTransferToYear] = useState<number>(currentYear + 1);
+  
+  // Calendar date selection states
+  const [selectedStartDate, setSelectedStartDate] = useState<Date | null>(null);
+  const [selectedEndDate, setSelectedEndDate] = useState<Date | null>(null);
+  const [isSelectingRange, setIsSelectingRange] = useState(false);
+  const [allocateYear, setAllocateYear] = useState(currentYear + 1);
+  const [transferDaysMap, setTransferDaysMap] = useState<Record<string, number>>({});
+  const [allocateDaysPerEmployee, setAllocateDaysPerEmployee] = useState(25);
+  const [selectedEmployeesForAllocation, setSelectedEmployeesForAllocation] = useState<Record<string, boolean>>({});
+  const [selectedEmployeesForTransfer, setSelectedEmployeesForTransfer] = useState<Record<string, boolean>>({});
+  const [selectAllForAllocation, setSelectAllForAllocation] = useState(false);
+  const [selectAllForTransfer, setSelectAllForTransfer] = useState(false);
   const [newVacation, setNewVacation] = useState({
     employeeId: '',
     startDate: '',
@@ -550,11 +567,466 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
     }
   };
 
+  // Helper functions
+  const isDateInRange = (date: Date, start: Date, end: Date): boolean => {
+    return date >= start && date <= end;
+  };
+
+  const isDateInSelectedRange = (date: Date): boolean => {
+    if (!selectedStartDate || !selectedEndDate) return false;
+    return isDateInRange(date, selectedStartDate, selectedEndDate);
+  };
+
+  const calculateDaysBetween = (startDate: string | Date, endDate: string | Date): number => {
+    const start = typeof startDate === 'string' ? new Date(startDate) : startDate;
+    const end = typeof endDate === 'string' ? new Date(endDate) : endDate;
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    return Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1;
+  };
+
+  const formatDate = (date: string | Date): string => {
+    const d = typeof date === 'string' ? new Date(date) : date;
+    return d.toLocaleDateString('no-NO', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  };
+
+  // Handle register vacation from calendar selection
+  const handleRegisterVacation = async () => {
+    if (!userProfile || !selectedEmployeeId || selectedEmployeeId === 'all' || !selectedStartDate || !selectedEndDate) {
+      alert('Vennligst velg ansatt og datoer');
+      return;
+    }
+
+    try {
+      const userContext = createUserAccessContext(userProfile);
+      const employee = employees.find(e => e.id === selectedEmployeeId);
+      const days = calculateDaysBetween(selectedStartDate, selectedEndDate);
+
+      // Determine status based on user role
+      // Admin and department leaders can approve directly, employees need approval
+      const isAdminOrLeader = isAdmin || isDepartmentLeader;
+      const status: 'pending' | 'approved' | 'rejected' = isAdminOrLeader ? 'approved' : 'pending';
+      
+      const vacationData: Omit<Vacation, 'id' | 'createdAt' | 'updatedAt'> = {
+        employeeId: selectedEmployeeId,
+        employeeName: employee?.name || employee?.displayName || 'Ukjent',
+        startDate: selectedStartDate.toISOString().split('T')[0],
+        endDate: selectedEndDate.toISOString().split('T')[0],
+        type: 'vacation',
+        days,
+        notes: '',
+        status: status,
+        requestedBy: userProfile.id,
+        approvedBy: isAdminOrLeader ? userProfile.email || userProfile.displayName : undefined,
+        approvedAt: isAdminOrLeader ? new Date().toISOString() : undefined
+      };
+
+      const vacationId = await firebaseService.createVacation(vacationData, userContext);
+
+      // Reset selection
+      setSelectedStartDate(null);
+      setSelectedEndDate(null);
+      setIsSelectingRange(false);
+
+      alert('Ferie registrert!');
+      await loadVacationData();
+    } catch (error) {
+      console.error('Error creating vacation:', error);
+      alert('Feil ved registrering av ferie');
+    }
+  };
+
+  // Handle edit vacation
+  const handleEditVacationFromCalendar = async () => {
+    if (!editVacation || !selectedStartDate || !selectedEndDate) return;
+
+    try {
+      const userContext = createUserAccessContext(userProfile!);
+      const days = calculateDaysBetween(selectedStartDate, selectedEndDate);
+
+      await firebaseService.updateVacation(editVacation.id, {
+        startDate: selectedStartDate.toISOString().split('T')[0],
+        endDate: selectedEndDate.toISOString().split('T')[0],
+        days
+      }, userContext);
+
+      setShowEditVacationModal(false);
+      setEditVacation({
+        id: '',
+        employeeId: '',
+        startDate: '',
+        endDate: '',
+        days: 0,
+        notes: ''
+      });
+      setSelectedStartDate(null);
+      setSelectedEndDate(null);
+      alert('Ferie oppdatert!');
+      await loadVacationData();
+    } catch (error) {
+      console.error('Error updating vacation:', error);
+      alert('Feil ved oppdatering av ferie');
+    }
+  };
+
+  // Handle delete vacation
+  const handleDeleteVacationFromCalendar = async () => {
+    if (!vacationToDelete) return;
+
+    if (!confirm('Er du sikker på at du vil slette denne ferien?')) {
+      return;
+    }
+
+    try {
+      const userContext = createUserAccessContext(userProfile!);
+      await firebaseService.deleteVacation(vacationToDelete.id, userContext);
+
+      setShowDeleteConfirmModal(false);
+      setVacationToDelete(null);
+      alert('Ferie slettet!');
+      await loadVacationData();
+    } catch (error) {
+      console.error('Error deleting vacation:', error);
+      alert('Feil ved sletting av ferie');
+    }
+  };
+
+  // Allocate vacation days for new year
+  const handleAllocateNewYear = async () => {
+    if (!userProfile || !isAdmin) return;
+
+    const targetYear = allocateYear;
+    const selectedEmployees = Object.keys(selectedEmployeesForAllocation).filter(
+      id => selectedEmployeesForAllocation[id]
+    );
+
+    if (selectedEmployees.length === 0) {
+      alert('Vennligst velg minst én ansatt');
+      return;
+    }
+
+    if (allocateDaysPerEmployee <= 0) {
+      alert('Antall dager må være større enn 0');
+      return;
+    }
+
+    try {
+      const userContext = createUserAccessContext(userProfile);
+      const batch = writeBatch(db);
+
+      for (const employeeId of selectedEmployees) {
+        const employee = employees.find(e => e.id === employeeId);
+        if (!employee) continue;
+
+        const existingAlloc = allocations.find(
+          a => a.employeeId === employeeId && a.year === targetYear
+        );
+
+        if (!existingAlloc) {
+          const allocRef = doc(collection(db, 'vacationAllocations'));
+          batch.set(allocRef, {
+            employeeId: employeeId,
+            year: targetYear,
+            allocatedDays: allocateDaysPerEmployee,
+            usedDays: 0,
+            transferredDays: 0,
+            remainingDays: allocateDaysPerEmployee,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          });
+        } else {
+          // Update existing allocation
+          const allocRef = doc(db, 'vacationAllocations', existingAlloc.id);
+          batch.update(allocRef, {
+            allocatedDays: allocateDaysPerEmployee,
+            remainingDays: allocateDaysPerEmployee - existingAlloc.usedDays,
+            updatedAt: new Date().toISOString()
+          });
+        }
+      }
+
+      await batch.commit();
+      setShowAllocationModal(false);
+      setSelectedEmployeesForAllocation({});
+      setSelectAllForAllocation(false);
+      alert(`${allocateDaysPerEmployee} feriedager tildelt til ${selectedEmployees.length} ansatt(e) for ${targetYear}!`);
+      await loadVacationData();
+    } catch (error) {
+      console.error('Error allocating days:', error);
+      alert('Feil ved tildeling av feriedager');
+    }
+  };
+
+  // Transfer days from this year to next year
+  const handleTransferDaysBulk = async () => {
+    if (!userProfile || !isAdmin) return; // Kun admin kan overføre dager
+
+    const currentYear = new Date().getFullYear();
+    const nextYear = currentYear + 1;
+
+    const selectedEmployees = Object.keys(selectedEmployeesForTransfer).filter(
+      id => selectedEmployeesForTransfer[id]
+    );
+
+    if (selectedEmployees.length === 0) {
+      alert('Vennligst velg minst én ansatt');
+      return;
+    }
+
+    try {
+      const userContext = createUserAccessContext(userProfile);
+      const batch = writeBatch(db);
+      let transferredCount = 0;
+
+      for (const employeeId of selectedEmployees) {
+        const employee = employees.find(e => e.id === employeeId);
+        if (!employee) continue;
+
+        const currentAlloc = allocations.find(
+          a => a.employeeId === employeeId && a.year === currentYear
+        );
+        const daysToTransfer = transferDaysMap[employeeId] || 0;
+
+        if (daysToTransfer > 0 && currentAlloc && currentAlloc.remainingDays >= daysToTransfer) {
+          // Update current year
+          const currentRef = doc(db, 'vacationAllocations', currentAlloc.id);
+          batch.update(currentRef, {
+            remainingDays: currentAlloc.remainingDays - daysToTransfer,
+            updatedAt: new Date().toISOString()
+          });
+
+          // Update or create next year
+          const nextAlloc = allocations.find(
+            a => a.employeeId === employeeId && a.year === nextYear
+          );
+
+          if (nextAlloc) {
+            const nextRef = doc(db, 'vacationAllocations', nextAlloc.id);
+            batch.update(nextRef, {
+              allocatedDays: nextAlloc.allocatedDays + daysToTransfer,
+              transferredDays: (nextAlloc.transferredDays || 0) + daysToTransfer,
+              remainingDays: nextAlloc.remainingDays + daysToTransfer,
+              updatedAt: new Date().toISOString()
+            });
+          } else {
+            const nextRef = doc(collection(db, 'vacationAllocations'));
+            batch.set(nextRef, {
+              employeeId: employeeId,
+              year: nextYear,
+              allocatedDays: 25 + daysToTransfer,
+              usedDays: 0,
+              transferredDays: daysToTransfer,
+              remainingDays: 25 + daysToTransfer,
+              createdAt: new Date().toISOString(),
+              updatedAt: new Date().toISOString()
+            });
+          }
+          transferredCount++;
+        }
+      }
+
+      await batch.commit();
+      setShowTransferModal(false);
+      setTransferDaysMap({});
+      setSelectedEmployeesForTransfer({});
+      setSelectAllForTransfer(false);
+      alert(`${transferredCount} ansatt(e) har fått dager overført!`);
+      await loadVacationData();
+    } catch (error) {
+      console.error('Error transferring days:', error);
+      alert('Feil ved overføring av dager');
+    }
+  };
+
+  // Get overview by department
+  const overviewByDepartment = useMemo(() => {
+    const overview: Record<string, {
+      employees: Employee[];
+      vacations: Vacation[];
+      totalDays: number;
+      pending: number;
+      approved: number;
+    }> = {};
+
+    const departments = new Set(employees.map(e => e.department).filter(Boolean));
+    
+    departments.forEach(dept => {
+      if (!dept) return;
+      const deptEmployees = employees.filter(e => e.department === dept);
+      const deptVacations = vacations.filter(v => {
+        const emp = employees.find(e => e.id === v.employeeId);
+        return emp?.department === dept;
+      });
+      
+      overview[dept] = {
+        employees: deptEmployees,
+        vacations: deptVacations,
+        totalDays: deptVacations.filter(v => v.status === 'approved').reduce((sum, v) => sum + (v.days || 0), 0),
+        pending: deptVacations.filter(v => v.status === 'pending').length,
+        approved: deptVacations.filter(v => v.status === 'approved').length
+      };
+    });
+
+    return overview;
+  }, [employees, vacations]);
+
   const currentAllocation = getCurrentAllocation();
-  const isAdmin = userProfile?.role === 'admin';
+  const isAdmin = userProfile?.role === 'admin' || userProfile?.role === 'super_admin';
+  const isDepartmentLeader = userProfile?.role === 'department_leader';
+  const canApprove = isAdmin || isDepartmentLeader; // Avdelingsledere kan også godkjenne
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+      {/* 3 Action Buttons for Admin (kun admin, ikke avdelingsledere) */}
+      {isAdmin && (
+        <div style={{
+          display: 'flex',
+          gap: '1rem',
+          flexWrap: 'wrap',
+          padding: '1.5rem',
+          background: 'var(--card-background)',
+          borderRadius: '12px',
+          border: '1px solid var(--border-color)'
+        }}>
+          <button
+            onClick={() => {
+              const selectedData: Record<string, boolean> = {};
+              employees.forEach(emp => {
+                selectedData[emp.id] = false;
+              });
+              setSelectedEmployeesForAllocation(selectedData);
+              setSelectAllForAllocation(false);
+              setAllocateDaysPerEmployee(25);
+              setShowAllocationModal(true);
+            }}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#10b981',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Gift size={20} />
+            Tildel feriedager for nytt år
+          </button>
+          <button
+            onClick={() => {
+              const currentYear = new Date().getFullYear();
+              const transferData: Record<string, number> = {};
+              const selectedData: Record<string, boolean> = {};
+              employees.forEach(emp => {
+                const alloc = allocations.find(a => a.employeeId === emp.id && a.year === currentYear);
+                if (alloc && alloc.remainingDays > 0) {
+                  transferData[emp.id] = 0;
+                  selectedData[emp.id] = false;
+                }
+              });
+              setTransferDaysMap(transferData);
+              setSelectedEmployeesForTransfer(selectedData);
+              setSelectAllForTransfer(false);
+              setShowTransferModal(true);
+            }}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#f59e0b',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <ArrowRight size={20} />
+            Overfør dager fra i år til neste år
+          </button>
+          <button
+            onClick={() => setShowOverviewModal(true)}
+            style={{
+              padding: '0.75rem 1.5rem',
+              background: '#8b5cf6',
+              color: 'white',
+              border: 'none',
+              borderRadius: '8px',
+              cursor: 'pointer',
+              fontWeight: 600,
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Building2 size={20} />
+            Full oversikt over ferie for ansatte
+          </button>
+        </div>
+      )}
+
+      {/* Selected Range Display */}
+      {selectedStartDate && selectedEndDate && selectedEmployeeId !== 'all' && (
+        <div style={{
+          padding: '1rem',
+          background: 'rgba(59, 130, 246, 0.1)',
+          border: '2px solid rgba(59, 130, 246, 0.5)',
+          borderRadius: '8px',
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'center',
+          flexWrap: 'wrap',
+          gap: '1rem'
+        }}>
+          <div style={{ color: 'var(--text-color)' }}>
+            <strong>Valgt periode:</strong> {formatDate(selectedStartDate)} - {formatDate(selectedEndDate)}
+            <br />
+            <strong>Antall dager:</strong> {calculateDaysBetween(selectedStartDate, selectedEndDate)}
+          </div>
+          <div style={{ display: 'flex', gap: '0.5rem' }}>
+            <button
+              onClick={handleRegisterVacation}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#10b981',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 600,
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.5rem'
+              }}
+            >
+              <Save size={18} />
+              Registrer ferie
+            </button>
+            <button
+              onClick={() => {
+                setSelectedStartDate(null);
+                setSelectedEndDate(null);
+                setIsSelectingRange(false);
+              }}
+              style={{
+                padding: '0.75rem 1.5rem',
+                background: '#6b7280',
+                color: 'white',
+                border: 'none',
+                borderRadius: '8px',
+                cursor: 'pointer',
+                fontWeight: 600
+              }}
+            >
+              Avbryt
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header with employee selector and year navigation */}
       <div style={{
         display: 'flex',
@@ -798,17 +1270,78 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
             return (
               <div
                 key={index}
-                onClick={() => {
-                  if (isAdmin && selectedEmployeeId !== 'all' && calendarDay.isCurrentMonth) {
-                    const dateStr = `${selectedYear}-${String(selectedMonth + 1).padStart(2, '0')}-${String(calendarDay.day).padStart(2, '0')}`;
-                    setNewVacation({
-                      employeeId: selectedEmployeeId,
-                      startDate: dateStr,
-                      endDate: dateStr,
-                      days: 1,
-                      notes: ''
-                    });
-                    setShowAddVacationModal(true);
+                onClick={(e) => {
+                  // Don't trigger if clicking on existing vacation
+                  if ((e.target as HTMLElement).closest('[data-vacation-item]')) {
+                    return;
+                  }
+                  
+                  if (selectedEmployeeId === 'all') {
+                    alert('Vennligst velg en ansatt først');
+                    return;
+                  }
+                  
+                  if (!calendarDay.isCurrentMonth) return;
+                  
+                  const clickedDate = calendarDay.date;
+                  
+                  // Check if there's an existing vacation on this date
+                  // Avdelingsledere kan se alle ferier i sin avdeling, ansatte kun sine egne
+                  const existingVacation = vacations.find(v => {
+                    if (v.employeeId !== selectedEmployeeId) return false;
+                    // Avdelingsledere kan se alle statuser, ansatte kun approved
+                    if (userProfile?.role === 'employee' && v.status !== 'approved') return false;
+                    const start = new Date(v.startDate);
+                    const end = new Date(v.endDate);
+                    return clickedDate >= start && clickedDate <= end;
+                  });
+                  
+                  if (existingVacation) {
+                    // Click on existing vacation - show edit/delete (kun admin og avdelingsledere kan redigere)
+                    if (canApprove || existingVacation.employeeId === userProfile?.id) {
+                      setSelectedVacation(existingVacation);
+                      setEditVacation({
+                        id: existingVacation.id,
+                        employeeId: existingVacation.employeeId,
+                        startDate: existingVacation.startDate,
+                        endDate: existingVacation.endDate,
+                        days: existingVacation.days,
+                        notes: existingVacation.notes || ''
+                      });
+                      setSelectedStartDate(new Date(existingVacation.startDate));
+                      setSelectedEndDate(new Date(existingVacation.endDate));
+                      setShowEditVacationModal(true);
+                    }
+                    return;
+                  }
+                  
+                  // Only admin and department leaders can create new vacations
+                  if (!canApprove && selectedEmployeeId !== userProfile?.id) {
+                    alert('Du kan kun registrere ferie for deg selv');
+                    return;
+                  }
+                  
+                  // Start or continue date range selection
+                  if (!selectedStartDate) {
+                    // Start new selection
+                    setSelectedStartDate(clickedDate);
+                    setSelectedEndDate(clickedDate);
+                    setIsSelectingRange(true);
+                  } else if (isSelectingRange) {
+                    // Set end date
+                    if (clickedDate < selectedStartDate) {
+                      // If clicked date is before start, swap them
+                      setSelectedEndDate(selectedStartDate);
+                      setSelectedStartDate(clickedDate);
+                    } else {
+                      setSelectedEndDate(clickedDate);
+                    }
+                    setIsSelectingRange(false);
+                  } else {
+                    // Start new selection
+                    setSelectedStartDate(clickedDate);
+                    setSelectedEndDate(clickedDate);
+                    setIsSelectingRange(true);
                   }
                 }}
                 style={{
@@ -816,11 +1349,12 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                   padding: '0.5rem',
                   border: '1px solid var(--border-color)',
                   borderRadius: '8px',
-                    background: calendarDay.isCurrentMonth
-                    ? (isToday ? 'rgba(6, 182, 212, 0.1)' : 'var(--card-background)')
+                  background: calendarDay.isCurrentMonth
+                    ? (isDateInSelectedRange(calendarDay.date) ? 'rgba(59, 130, 246, 0.2)' :
+                       isToday ? 'rgba(6, 182, 212, 0.1)' : 'var(--card-background)')
                     : 'var(--gray-50)',
                   opacity: calendarDay.isCurrentMonth ? 1 : 0.5,
-                  cursor: (isAdmin && selectedEmployeeId !== 'all' && calendarDay.isCurrentMonth) ? 'pointer' : 'default',
+                  cursor: (selectedEmployeeId !== 'all' && calendarDay.isCurrentMonth) ? 'pointer' : 'default',
                   transition: 'all 0.2s',
                   position: 'relative'
                 }}
@@ -929,11 +1463,11 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                             : vacation.status === 'rejected' 
                             ? 'rgba(239, 68, 68, 0.3)' 
                             : 'rgba(245, 158, 11, 0.3)'}`,
-                          cursor: isAdmin ? 'pointer' : 'default',
+                          cursor: (canApprove || selectedEmployeeId === userProfile?.id) ? 'pointer' : 'default',
                           transition: 'all 0.2s'
                         }}
                         onMouseEnter={(e) => {
-                          if (isAdmin) {
+                          if (canApprove || vacation.employeeId === userProfile?.id) {
                             e.currentTarget.style.transform = 'scale(1.05)';
                             e.currentTarget.style.boxShadow = '0 2px 4px rgba(0, 0, 0, 0.2)';
                           }
@@ -1029,10 +1563,11 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                   </label>
                   <input
                     type="date"
-                    value={editVacation.startDate}
+                    value={selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : editVacation.startDate}
                     onChange={(e) => {
                       const startDate = e.target.value;
-                      const endDate = editVacation.endDate;
+                      setSelectedStartDate(new Date(startDate));
+                      const endDate = selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : editVacation.endDate;
                       let days = 0;
                       if (startDate && endDate) {
                         const start = new Date(startDate);
@@ -1059,10 +1594,11 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                   </label>
                   <input
                     type="date"
-                    value={editVacation.endDate}
+                    value={selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : editVacation.endDate}
                     onChange={(e) => {
                       const endDate = e.target.value;
-                      const startDate = editVacation.startDate;
+                      setSelectedEndDate(new Date(endDate));
+                      const startDate = selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : editVacation.startDate;
                       let days = 0;
                       if (startDate && endDate) {
                         const start = new Date(startDate);
@@ -1152,7 +1688,10 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                 </button>
                 <button
                   onClick={async () => {
-                    if (!editVacation.employeeId || !editVacation.startDate || !editVacation.endDate || !userProfile?.companyId) {
+                    const startDate = selectedStartDate ? selectedStartDate.toISOString().split('T')[0] : editVacation.startDate;
+                    const endDate = selectedEndDate ? selectedEndDate.toISOString().split('T')[0] : editVacation.endDate;
+                    
+                    if (!editVacation.employeeId || !startDate || !endDate || !userProfile?.companyId) {
                       alert('Vennligst fyll ut alle påkrevde felt');
                       return;
                     }
@@ -1164,15 +1703,16 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                     try {
                       const oldVacation = selectedVacation;
                       const oldYear = new Date(oldVacation.startDate).getFullYear();
-                      const newYear = new Date(editVacation.startDate).getFullYear();
+                      const newYear = new Date(startDate).getFullYear();
+                      const days = calculateDaysBetween(startDate, endDate);
                       
                       // Update vacation
                       await firebaseService.updateVacation(editVacation.id, {
                         employeeId: editVacation.employeeId,
                         employeeName: employee.displayName,
-                        startDate: editVacation.startDate,
-                        endDate: editVacation.endDate,
-                        days: editVacation.days,
+                        startDate: startDate,
+                        endDate: endDate,
+                        days: days,
                         notes: editVacation.notes || undefined,
                         year: newYear
                       });
@@ -1184,7 +1724,7 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                           a => a.employeeId === editVacation.employeeId && a.year === newYear
                         );
                         if (allocation) {
-                          const dayDifference = editVacation.days - oldVacation.days;
+                          const dayDifference = days - oldVacation.days;
                           await firebaseService.createOrUpdateVacationAllocation({
                             employeeId: editVacation.employeeId,
                                                         year: newYear,
@@ -1219,18 +1759,18 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                             employeeId: editVacation.employeeId,
                                                         year: newYear,
                             allocatedDays: newAllocation.allocatedDays,
-                            usedDays: newAllocation.usedDays + editVacation.days,
+                            usedDays: newAllocation.usedDays + days,
                             transferredDays: newAllocation.transferredDays || 0,
-                            remainingDays: newAllocation.remainingDays - editVacation.days
+                            remainingDays: newAllocation.remainingDays - days
                           });
                         } else {
                           await firebaseService.createOrUpdateVacationAllocation({
                             employeeId: editVacation.employeeId,
                                                         year: newYear,
                             allocatedDays: 25,
-                            usedDays: editVacation.days,
+                            usedDays: days,
                             transferredDays: 0,
-                            remainingDays: 25 - editVacation.days
+                            remainingDays: 25 - days
                           });
                         }
                       }
@@ -1238,6 +1778,8 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
                       await loadVacationData();
                       setShowEditVacationModal(false);
                       setSelectedVacation(null);
+                      setSelectedStartDate(null);
+                      setSelectedEndDate(null);
                       alert('Ferie oppdatert');
                     } catch (error) {
                       console.error('Error updating vacation:', error);
@@ -2306,6 +2848,567 @@ export default function VacationCalendar({ employees, absences = [] }: VacationC
               >
                 Lukk
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Allocate New Year Modal */}
+      {showAllocationModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'var(--card-background)',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '500px',
+            width: '100%'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-color)' }}>Tildel feriedager for nytt år</h2>
+              <button
+                onClick={() => setShowAllocationModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-color)' }}>
+                  År
+                </label>
+                <input
+                  type="number"
+                  value={allocateYear}
+                  onChange={(e) => setAllocateYear(parseInt(e.target.value) || currentYear + 1)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid var(--border-color)',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)'
+                  }}
+                />
+              </div>
+
+              <div>
+                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600, color: 'var(--text-color)' }}>
+                  Antall feriedager per ansatt
+                </label>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  value={allocateDaysPerEmployee}
+                  onChange={(e) => setAllocateDaysPerEmployee(parseInt(e.target.value) || 25)}
+                  style={{
+                    width: '100%',
+                    padding: '0.75rem',
+                    border: '2px solid var(--border-color)',
+                    borderRadius: '8px',
+                    fontSize: '0.875rem',
+                    background: 'var(--card-background)',
+                    color: 'var(--text-color)'
+                  }}
+                />
+              </div>
+
+              <div style={{
+                padding: '1rem',
+                background: 'rgba(59, 130, 246, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(59, 130, 246, 0.3)',
+                marginBottom: '0.5rem'
+              }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                  <strong style={{ color: 'var(--text-color)' }}>Velg ansatte:</strong>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-color)' }}>
+                    <input
+                      type="checkbox"
+                      checked={selectAllForAllocation}
+                      onChange={(e) => {
+                        setSelectAllForAllocation(e.target.checked);
+                        const newSelected: Record<string, boolean> = {};
+                        employees.forEach(emp => {
+                          newSelected[emp.id] = e.target.checked;
+                        });
+                        setSelectedEmployeesForAllocation(newSelected);
+                      }}
+                    />
+                    Velg alle ({employees.length})
+                  </label>
+                </div>
+                <div style={{ fontSize: '0.875rem', color: 'var(--gray-400)' }}>
+                  Valgt: {Object.values(selectedEmployeesForAllocation).filter(Boolean).length} av {employees.length} ansatte
+                </div>
+              </div>
+
+              <div style={{
+                maxHeight: '300px',
+                overflowY: 'auto',
+                border: '1px solid var(--border-color)',
+                borderRadius: '8px',
+                padding: '0.5rem'
+              }}>
+                {employees.map(employee => (
+                  <label
+                    key={employee.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.75rem',
+                      cursor: 'pointer',
+                      borderRadius: '6px',
+                      transition: 'background 0.2s',
+                      color: 'var(--text-color)'
+                    }}
+                    onMouseEnter={(e) => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.05)'}
+                    onMouseLeave={(e) => e.currentTarget.style.background = 'transparent'}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={selectedEmployeesForAllocation[employee.id] || false}
+                      onChange={(e) => {
+                        setSelectedEmployeesForAllocation({
+                          ...selectedEmployeesForAllocation,
+                          [employee.id]: e.target.checked
+                        });
+                        // Update select all if all are selected or none
+                        const allSelected = employees.every(emp => 
+                          emp.id === employee.id ? e.target.checked : selectedEmployeesForAllocation[emp.id]
+                        );
+                        setSelectAllForAllocation(allSelected);
+                      }}
+                    />
+                    <span style={{ color: 'var(--text-color)' }}>{employee.name || employee.displayName}</span>
+                  </label>
+                ))}
+              </div>
+
+              <div style={{
+                padding: '1rem',
+                background: 'rgba(16, 185, 129, 0.1)',
+                borderRadius: '8px',
+                border: '1px solid rgba(16, 185, 129, 0.3)'
+              }}>
+                <strong style={{ color: 'var(--text-color)' }}>Oppsummering:</strong>
+                <br />
+                <strong style={{ color: 'var(--text-color)' }}>Antall valgte ansatte:</strong> <span style={{ color: 'var(--text-color)' }}>{Object.values(selectedEmployeesForAllocation).filter(Boolean).length}</span>
+                <br />
+                <strong style={{ color: 'var(--text-color)' }}>Dager per ansatt:</strong> <span style={{ color: 'var(--text-color)' }}>{allocateDaysPerEmployee}</span>
+                <br />
+                <strong style={{ color: 'var(--text-color)' }}>Totalt dager:</strong> <span style={{ color: 'var(--text-color)' }}>{Object.values(selectedEmployeesForAllocation).filter(Boolean).length * allocateDaysPerEmployee}</span>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', marginTop: '1rem' }}>
+                <button
+                  onClick={handleAllocateNewYear}
+                  disabled={Object.values(selectedEmployeesForAllocation).filter(Boolean).length === 0}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: Object.values(selectedEmployeesForAllocation).filter(Boolean).length === 0 ? '#9ca3af' : '#10b981',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: Object.values(selectedEmployeesForAllocation).filter(Boolean).length === 0 ? 'not-allowed' : 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  Tildel
+                </button>
+                <button
+                  onClick={() => {
+                    setShowAllocationModal(false);
+                    setSelectedEmployeesForAllocation({});
+                    setSelectAllForAllocation(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    padding: '0.75rem',
+                    background: '#6b7280',
+                    color: 'white',
+                    border: 'none',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600
+                  }}
+                >
+                  Avbryt
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Transfer Days Modal */}
+      {showTransferModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'var(--card-background)',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '700px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0, color: 'var(--text-color)' }}>Overfør dager fra i år til neste år</h2>
+              <button
+                onClick={() => setShowTransferModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div style={{
+              padding: '1rem',
+              background: 'rgba(245, 158, 11, 0.1)',
+              borderRadius: '8px',
+              border: '1px solid rgba(245, 158, 11, 0.3)',
+              marginBottom: '1rem'
+            }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <strong style={{ color: 'var(--text-color)' }}>Velg ansatte:</strong>
+                <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer', color: 'var(--text-color)' }}>
+                  <input
+                    type="checkbox"
+                    checked={selectAllForTransfer}
+                    onChange={(e) => {
+                      setSelectAllForTransfer(e.target.checked);
+                      const newSelected: Record<string, boolean> = {};
+                      const currentYear = new Date().getFullYear();
+                      employees.forEach(emp => {
+                        const alloc = allocations.find(a => a.employeeId === emp.id && a.year === currentYear);
+                        if (alloc && alloc.remainingDays > 0) {
+                          newSelected[emp.id] = e.target.checked;
+                        }
+                      });
+                      setSelectedEmployeesForTransfer(newSelected);
+                    }}
+                  />
+                  Velg alle
+                </label>
+              </div>
+              <div style={{ fontSize: '0.875rem', color: 'var(--gray-400)', marginTop: '0.5rem' }}>
+                Valgt: {Object.values(selectedEmployeesForTransfer).filter(Boolean).length} ansatte med feriedager til gode
+              </div>
+            </div>
+
+            <div style={{
+              maxHeight: '400px',
+              overflowY: 'auto',
+              display: 'flex',
+              flexDirection: 'column',
+              gap: '1rem',
+              marginBottom: '1.5rem'
+            }}>
+              {employees.map(employee => {
+                const currentYear = new Date().getFullYear();
+                const alloc = allocations.find(a => a.employeeId === employee.id && a.year === currentYear);
+                const remaining = alloc?.remainingDays || 0;
+
+                if (remaining <= 0) return null;
+
+                return (
+                  <div key={employee.id} style={{
+                    padding: '1rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    background: selectedEmployeesForTransfer[employee.id] ? 'rgba(59, 130, 246, 0.15)' : 'var(--card-background)',
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    gap: '1rem'
+                  }}>
+                    <label style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer', flex: 1 }}>
+                      <input
+                        type="checkbox"
+                        checked={selectedEmployeesForTransfer[employee.id] || false}
+                        onChange={(e) => {
+                          setSelectedEmployeesForTransfer({
+                            ...selectedEmployeesForTransfer,
+                            [employee.id]: e.target.checked
+                          });
+                          // Update select all
+                          const currentYear = new Date().getFullYear();
+                          const employeesWithDays = employees.filter(emp => {
+                            const alloc = allocations.find(a => a.employeeId === emp.id && a.year === currentYear);
+                            return alloc && alloc.remainingDays > 0;
+                          });
+                          const allSelected = employeesWithDays.every(emp => 
+                            emp.id === employee.id ? e.target.checked : selectedEmployeesForTransfer[emp.id]
+                          );
+                          setSelectAllForTransfer(allSelected);
+                        }}
+                      />
+                      <div>
+                        <strong style={{ color: 'var(--text-color)' }}>{employee.name || employee.displayName}</strong>
+                        <br />
+                        <span style={{ color: 'var(--gray-400)', fontSize: '0.875rem' }}>
+                          Gjenstående: {remaining} dager
+                        </span>
+                      </div>
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      max={remaining}
+                      value={transferDaysMap[employee.id] || 0}
+                      onChange={(e) => {
+                        const days = parseInt(e.target.value) || 0;
+                        setTransferDaysMap({
+                          ...transferDaysMap,
+                          [employee.id]: Math.min(days, remaining)
+                        });
+                      }}
+                      disabled={!selectedEmployeesForTransfer[employee.id]}
+                      style={{
+                        width: '100px',
+                        padding: '0.5rem',
+                        border: '2px solid var(--border-color)',
+                        borderRadius: '8px',
+                        fontSize: '0.875rem',
+                        opacity: selectedEmployeesForTransfer[employee.id] ? 1 : 0.5,
+                        cursor: selectedEmployeesForTransfer[employee.id] ? 'text' : 'not-allowed'
+                      }}
+                      placeholder="0"
+                    />
+                  </div>
+                );
+              })}
+              {employees.filter(emp => {
+                const currentYear = new Date().getFullYear();
+                const alloc = allocations.find(a => a.employeeId === emp.id && a.year === currentYear);
+                return alloc && alloc.remainingDays > 0;
+              }).length === 0 && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--gray-400)' }}>
+                  Ingen ansatte har feriedager til gode
+                </div>
+              )}
+            </div>
+
+            <div style={{ display: 'flex', gap: '1rem' }}>
+              <button
+                onClick={handleTransferDaysBulk}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#10b981',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                Overfør
+              </button>
+              <button
+                onClick={() => setShowTransferModal(false)}
+                style={{
+                  flex: 1,
+                  padding: '0.75rem',
+                  background: '#6b7280',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '8px',
+                  cursor: 'pointer',
+                  fontWeight: 600
+                }}
+              >
+                Avbryt
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Overview Modal */}
+      {showOverviewModal && (
+        <div style={{
+          position: 'fixed',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+          background: 'rgba(0,0,0,0.5)',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          zIndex: 1000,
+          padding: '1rem'
+        }}>
+          <div style={{
+            background: 'var(--card-background)',
+            borderRadius: '16px',
+            padding: '2rem',
+            maxWidth: '900px',
+            width: '100%',
+            maxHeight: '90vh',
+            overflowY: 'auto'
+          }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+              <h2 style={{ fontSize: '1.5rem', fontWeight: 700, margin: 0 }}>Full oversikt over ferie for ansatte</h2>
+              <button
+                onClick={() => setShowOverviewModal(false)}
+                style={{
+                  background: 'transparent',
+                  border: 'none',
+                  cursor: 'pointer',
+                  padding: '0.5rem'
+                }}
+              >
+                <X size={24} />
+              </button>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {employees.map(employee => {
+                const employeeVacations = vacations.filter(v => v.employeeId === employee.id);
+                const approvedVacations = employeeVacations.filter(v => v.status === 'approved');
+                const pendingVacations = employeeVacations.filter(v => v.status === 'pending');
+                const rejectedVacations = employeeVacations.filter(v => v.status === 'rejected');
+                const totalDays = approvedVacations.reduce((sum, v) => sum + (v.days || 0), 0);
+                const currentYear = new Date().getFullYear();
+                const alloc = allocations.find(a => a.employeeId === employee.id && a.year === currentYear);
+
+                return (
+                  <div key={employee.id} style={{
+                    padding: '1.5rem',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '12px',
+                    background: 'var(--card-background)'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                      <div>
+                        <h3 style={{ fontSize: '1.125rem', fontWeight: 700, margin: '0 0 0.5rem 0', color: 'var(--text-color)' }}>
+                          {employee.name || employee.displayName}
+                        </h3>
+                        {employee.department && (
+                          <div style={{ fontSize: '0.875rem', color: 'var(--gray-400)' }}>
+                            Avdeling: {employee.department}
+                          </div>
+                        )}
+                      </div>
+                      <div style={{ textAlign: 'right' }}>
+                        {alloc && (
+                          <>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--gray-400)' }}>
+                              Tildelt: {alloc.allocatedDays} dager
+                            </div>
+                            <div style={{ fontSize: '0.875rem', color: 'var(--gray-400)' }}>
+                              Brukt: {alloc.usedDays} dager
+                            </div>
+                            <div style={{ fontSize: '0.875rem', fontWeight: 600, color: alloc.remainingDays > 0 ? '#10b981' : '#ef4444' }}>
+                              Gjenstående: {alloc.remainingDays} dager
+                            </div>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: '1rem', marginBottom: '1rem', padding: '0.75rem', background: 'rgba(255, 255, 255, 0.05)', borderRadius: '8px' }}>
+                      <div style={{ color: 'var(--text-color)' }}>
+                        <strong>Totale feriedager:</strong> {totalDays}
+                      </div>
+                      <div style={{ color: 'var(--text-color)' }}>
+                        <strong>Godkjent:</strong> {approvedVacations.length}
+                      </div>
+                      <div style={{ color: 'var(--text-color)' }}>
+                        <strong>Venter:</strong> {pendingVacations.length} | <strong>Avvist:</strong> {rejectedVacations.length}
+                      </div>
+                    </div>
+
+                    <div>
+                      <strong style={{ fontSize: '0.875rem', color: 'var(--text-color)' }}>Ferieoversikt:</strong>
+                      <div style={{ marginTop: '0.5rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                        {employeeVacations.length === 0 ? (
+                          <div style={{ color: 'var(--gray-400)', fontStyle: 'italic', fontSize: '0.875rem' }}>
+                            Ingen ferier registrert
+                          </div>
+                        ) : (
+                          employeeVacations.map(v => (
+                            <div key={v.id} style={{
+                              padding: '0.75rem',
+                              background: v.status === 'approved' ? 'rgba(16, 185, 129, 0.1)' : v.status === 'rejected' ? 'rgba(239, 68, 68, 0.1)' : 'rgba(245, 158, 11, 0.1)',
+                              borderRadius: '6px',
+                              border: `1px solid ${v.status === 'approved' ? 'rgba(16, 185, 129, 0.3)' : v.status === 'rejected' ? 'rgba(239, 68, 68, 0.3)' : 'rgba(245, 158, 11, 0.3)'}`,
+                              fontSize: '0.875rem'
+                            }}>
+                              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <div>
+                                  <strong style={{ color: 'var(--text-color)' }}>{formatDate(v.startDate)} - {formatDate(v.endDate)}</strong>
+                                  <br />
+                                  <span style={{ color: 'var(--gray-400)' }}>
+                                    {v.days} dager
+                                  </span>
+                                </div>
+                                <span style={{
+                                  padding: '0.25rem 0.75rem',
+                                  borderRadius: '9999px',
+                                  fontSize: '0.75rem',
+                                  fontWeight: 600,
+                                  background: v.status === 'approved' ? '#10b981' : v.status === 'rejected' ? '#ef4444' : '#f59e0b',
+                                  color: 'white'
+                                }}>
+                                  {v.status === 'approved' ? 'Godkjent' : v.status === 'rejected' ? 'Avvist' : 'Venter'}
+                                </span>
+                              </div>
+                              {v.notes && (
+                                <div style={{ marginTop: '0.5rem', color: 'var(--gray-400)', fontSize: '0.75rem' }}>
+                                  Notat: {v.notes}
+                                </div>
+                              )}
+                            </div>
+                          ))
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
         </div>

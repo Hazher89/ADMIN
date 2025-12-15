@@ -99,3 +99,5 @@ GRAPH_SENDER_UPN=drifpro@mavilogistikk.no
 - Systemet leser bare e-poster, det endrer ikke på e-postene (med mindre du har lagt til Mail.ReadWrite som Application permission)
 
 
+
+

@@ -255,22 +255,91 @@ export default function SMSLogsPage() {
     }}>
       {/* Mobile Header */}
       {isMobile && (
-        <div style={{
-          padding: '0.625rem 0.75rem 0.5rem',
-          marginBottom: '0.5rem',
-          borderBottom: '0.5px solid var(--border-color)',
-          background: 'var(--card-background)'
-        }}>
-          <h1 style={{
-            fontSize: '1.125rem',
-            fontWeight: 600,
-            color: 'var(--text-color)',
-            margin: 0,
-            lineHeight: '1.3'
+        <>
+          <div style={{
+            padding: '0.625rem 0.75rem 0.5rem',
+            marginBottom: '0.5rem',
+            borderBottom: '0.5px solid var(--border-color)',
+            background: 'var(--card-background)'
           }}>
-            SMS Logg
-          </h1>
-        </div>
+            <h1 style={{
+              fontSize: '1.125rem',
+              fontWeight: 600,
+              color: 'var(--text-color)',
+              margin: 0,
+              lineHeight: '1.3'
+            }}>
+              SMS Logg
+            </h1>
+          </div>
+          {/* Mobile Tab Navigation */}
+          <div style={{ 
+            marginBottom: '1rem', 
+            overflowX: 'auto', 
+            WebkitOverflowScrolling: 'touch',
+            padding: '0 0.75rem'
+          }}>
+            <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0' }}>
+              <button
+                onClick={() => setActiveTab('logs')}
+                style={{
+                  padding: '1.25rem 1.5rem',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'logs' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: activeTab === 'logs' ? 'var(--primary)' : 'var(--gray-600)',
+                  fontWeight: activeTab === 'logs' ? '600' : '500',
+                  fontSize: '1rem',
+                  minHeight: '56px',
+                  touchAction: 'manipulation',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span style={{ marginRight: '0.5rem' }}>📋</span>
+                SMS Logg
+              </button>
+              <button
+                onClick={() => setActiveTab('phonebook')}
+                style={{
+                  padding: '1.25rem 1.5rem',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'phonebook' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: activeTab === 'phonebook' ? 'var(--primary)' : 'var(--gray-600)',
+                  fontWeight: activeTab === 'phonebook' ? '600' : '500',
+                  fontSize: '1rem',
+                  minHeight: '56px',
+                  touchAction: 'manipulation',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span style={{ marginRight: '0.5rem' }}>👥</span>
+                Telefonbok
+              </button>
+              <button
+                onClick={() => setActiveTab('send')}
+                style={{
+                  padding: '1.25rem 1.5rem',
+                  border: 'none',
+                  background: 'transparent',
+                  cursor: 'pointer',
+                  borderBottom: activeTab === 'send' ? '2px solid var(--primary)' : '2px solid transparent',
+                  color: activeTab === 'send' ? 'var(--primary)' : 'var(--gray-600)',
+                  fontWeight: activeTab === 'send' ? '600' : '500',
+                  fontSize: '1rem',
+                  minHeight: '56px',
+                  touchAction: 'manipulation',
+                  whiteSpace: 'nowrap'
+                }}
+              >
+                <span style={{ marginRight: '0.5rem' }}>📤</span>
+                Send SMS
+              </button>
+            </div>
+          </div>
+        </>
       )}
 
       {/* Desktop Page Header */}
@@ -289,19 +358,21 @@ export default function SMSLogsPage() {
         </div>
 
         {/* Tab Navigation */}
-        <div style={{ marginBottom: '1rem', overflowX: 'auto' }}>
+        <div style={{ marginBottom: '1rem', overflowX: 'auto', WebkitOverflowScrolling: 'touch' }}>
           <div style={{ display: 'flex', borderBottom: '2px solid var(--gray-200)', gap: '0' }}>
             <button
               onClick={() => setActiveTab('logs')}
               style={{
-                padding: '1rem 2rem',
+                padding: isMobile ? '1.25rem 1.5rem' : '1rem 2rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'logs' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'logs' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'logs' ? '600' : '500',
-                fontSize: 'var(--font-size-base)'
+                fontSize: isMobile ? '1rem' : 'var(--font-size-base)',
+                minHeight: isMobile ? '56px' : 'auto',
+                touchAction: 'manipulation'
               }}
             >
               <span style={{ marginRight: '0.5rem' }}>📋</span>
@@ -310,14 +381,16 @@ export default function SMSLogsPage() {
             <button
               onClick={() => setActiveTab('phonebook')}
               style={{
-                padding: '1rem 2rem',
+                padding: isMobile ? '1.25rem 1.5rem' : '1rem 2rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'phonebook' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'phonebook' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'phonebook' ? '600' : '500',
-                fontSize: 'var(--font-size-base)'
+                fontSize: isMobile ? '1rem' : 'var(--font-size-base)',
+                minHeight: isMobile ? '56px' : 'auto',
+                touchAction: 'manipulation'
               }}
             >
               <span style={{ marginRight: '0.5rem' }}>👥</span>
@@ -326,14 +399,16 @@ export default function SMSLogsPage() {
             <button
               onClick={() => setActiveTab('send')}
               style={{
-                padding: '1rem 2rem',
+                padding: isMobile ? '1.25rem 1.5rem' : '1rem 2rem',
                 border: 'none',
                 background: 'transparent',
                 cursor: 'pointer',
                 borderBottom: activeTab === 'send' ? '2px solid var(--primary)' : '2px solid transparent',
                 color: activeTab === 'send' ? 'var(--primary)' : 'var(--gray-600)',
                 fontWeight: activeTab === 'send' ? '600' : '500',
-                fontSize: 'var(--font-size-base)'
+                fontSize: isMobile ? '1rem' : 'var(--font-size-base)',
+                minHeight: isMobile ? '56px' : 'auto',
+                touchAction: 'manipulation'
               }}
             >
               <span style={{ marginRight: '0.5rem' }}>📤</span>
@@ -382,20 +457,20 @@ export default function SMSLogsPage() {
 
       {/* SMS Logs Tab */}
       {activeTab === 'logs' && (
-        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: '2rem 1rem' }}>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '1rem 0.75rem' : '2rem 1rem' }}>
           {/* Search and Filters */}
           <div className="card" style={{ marginBottom: '2rem' }}>
-            <div style={{ display: 'flex', flexDirection: 'row', gap: '1rem' }}>
+            <div style={{ display: 'flex', flexDirection: isMobile ? 'column' : 'row', gap: '1rem' }}>
               <div style={{ flex: '1' }}>
                 <div style={{ position: 'relative' }}>
                   <Search style={{ 
                     position: 'absolute', 
-                    left: '12px', 
+                    left: isMobile ? '16px' : '12px', 
                     top: '50%', 
                     transform: 'translateY(-50%)', 
                     color: '#6b7280',
-                    width: '20px',
-                    height: '20px'
+                    width: isMobile ? '22px' : '20px',
+                    height: isMobile ? '22px' : '20px'
                   }} />
                   <input
                     type="text"
@@ -404,10 +479,11 @@ export default function SMSLogsPage() {
                     onChange={(e) => setSearchTerm(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '12px 12px 12px 40px',
+                      padding: isMobile ? '1rem 1rem 1rem 3.5rem' : '12px 12px 12px 40px',
                       border: '1px solid var(--gray-300)',
-                      borderRadius: '0.375rem',
-                      fontSize: 'var(--font-size-base)'
+                      borderRadius: isMobile ? '12px' : '0.375rem',
+                      fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                      minHeight: isMobile ? '56px' : 'auto'
                     }}
                   />
                 </div>
@@ -416,11 +492,12 @@ export default function SMSLogsPage() {
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value as any)}
                 style={{
-                  padding: '12px',
+                  padding: isMobile ? '1rem 1.25rem' : '12px',
                   border: '1px solid var(--gray-300)',
-                  borderRadius: '0.375rem',
-                  fontSize: 'var(--font-size-base)',
-                  minWidth: '150px'
+                  borderRadius: isMobile ? '12px' : '0.375rem',
+                  fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                  minWidth: isMobile ? '100%' : '150px',
+                  minHeight: isMobile ? '56px' : 'auto'
                 }}
               >
                 <option value="all">Alle statuser</option>
@@ -431,104 +508,143 @@ export default function SMSLogsPage() {
             </div>
           </div>
 
-          <div className="card" style={{ overflow: 'hidden' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
-                <thead style={{ background: 'var(--gray-50)' }}>
-                  <tr>
-                    <th style={{ 
-                      padding: '12px 24px', 
-                      textAlign: 'left', 
-                      fontSize: '0.75rem', 
-                      fontWeight: '500', 
-                      color: 'var(--gray-500)', 
-                      textTransform: 'uppercase',
-                      borderBottom: '1px solid var(--gray-200)'
-                    }}>
-                      Status
-                    </th>
-                    <th style={{ 
-                      padding: '12px 24px', 
-                      textAlign: 'left', 
-                      fontSize: '0.75rem', 
-                      fontWeight: '500', 
-                      color: 'var(--gray-500)', 
-                      textTransform: 'uppercase',
-                      borderBottom: '1px solid var(--gray-200)'
-                    }}>
-                      Til
-                    </th>
-                    <th style={{ 
-                      padding: '12px 24px', 
-                      textAlign: 'left', 
-                      fontSize: '0.75rem', 
-                      fontWeight: '500', 
-                      color: 'var(--gray-500)', 
-                      textTransform: 'uppercase',
-                      borderBottom: '1px solid var(--gray-200)'
-                    }}>
-                      Melding
-                    </th>
-                    <th style={{ 
-                      padding: '12px 24px', 
-                      textAlign: 'left', 
-                      fontSize: '0.75rem', 
-                      fontWeight: '500', 
-                      color: 'var(--gray-500)', 
-                      textTransform: 'uppercase',
-                      borderBottom: '1px solid var(--gray-200)'
-                    }}>
-                      Tidspunkt
-                    </th>
-                    <th style={{ 
-                      padding: '12px 24px', 
-                      textAlign: 'left', 
-                      fontSize: '0.75rem', 
-                      fontWeight: '500', 
-                      color: 'var(--gray-500)', 
-                      textTransform: 'uppercase',
-                      borderBottom: '1px solid var(--gray-200)'
-                    }}>
-                      Kostnad
-                    </th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {filteredLogs.map((log) => (
-                    <tr key={log.id} style={{ 
-                      borderBottom: '1px solid var(--gray-200)',
-                      transition: 'background-color 0.2s'
-                    }} onMouseEnter={(e) => {
-                      e.currentTarget.style.backgroundColor = 'var(--gray-50)';
-                    }} onMouseLeave={(e) => {
-                      e.currentTarget.style.backgroundColor = 'transparent';
-                    }}>
-                      <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
-                        <div style={{ display: 'flex', alignItems: 'center' }}>
-                          {getStatusIcon(log.status)}
-                          <span style={{ marginLeft: '8px', fontSize: '0.875rem', color: 'var(--gray-900)' }}>
-                            {getStatusText(log.status)}
-                          </span>
-                        </div>
-                      </td>
-                      <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-900)' }}>
-                        {log.to}
-                      </td>
-                      <td style={{ padding: '16px 24px', fontSize: '0.875rem', color: 'var(--gray-900)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                        {log.message}
-                      </td>
-                      <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-500)' }}>
+          {isMobile ? (
+            /* Mobile Card Layout */
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
+              {filteredLogs.map((log) => (
+                <div key={log.id} className="card" style={{ padding: '1.25rem' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '1rem' }}>
+                    {getStatusIcon(log.status)}
+                    <span style={{ fontSize: '0.9375rem', fontWeight: '600', color: 'var(--gray-900)' }}>
+                      {getStatusText(log.status)}
+                    </span>
+                  </div>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>Til</div>
+                    <div style={{ fontSize: '1rem', color: 'var(--gray-900)', fontWeight: '500' }}>{log.to}</div>
+                  </div>
+                  <div style={{ marginBottom: '0.75rem' }}>
+                    <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>Melding</div>
+                    <div style={{ fontSize: '0.9375rem', color: 'var(--gray-900)' }}>{log.message}</div>
+                  </div>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '0.75rem', borderTop: '1px solid var(--gray-200)' }}>
+                    <div>
+                      <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>Tidspunkt</div>
+                      <div style={{ fontSize: '0.875rem', color: 'var(--gray-700)' }}>
                         {log.timestamp.toLocaleString('nb-NO')}
-                      </td>
-                      <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-500)' }}>
+                      </div>
+                    </div>
+                    <div style={{ textAlign: 'right' }}>
+                      <div style={{ fontSize: '0.8125rem', color: 'var(--gray-500)', marginBottom: '0.25rem' }}>Kostnad</div>
+                      <div style={{ fontSize: '0.9375rem', fontWeight: '600', color: 'var(--gray-900)' }}>
                         {log.cost ? `kr ${log.cost.toFixed(2)}` : '-'}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ))}
             </div>
-          </div>
+          ) : (
+            /* Desktop Table Layout */
+            <div className="card" style={{ overflow: 'hidden' }}>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ minWidth: '100%', borderCollapse: 'collapse' }}>
+                  <thead style={{ background: 'var(--gray-50)' }}>
+                    <tr>
+                      <th style={{ 
+                        padding: '12px 24px', 
+                        textAlign: 'left', 
+                        fontSize: '0.75rem', 
+                        fontWeight: '500', 
+                        color: 'var(--gray-500)', 
+                        textTransform: 'uppercase',
+                        borderBottom: '1px solid var(--gray-200)'
+                      }}>
+                        Status
+                      </th>
+                      <th style={{ 
+                        padding: '12px 24px', 
+                        textAlign: 'left', 
+                        fontSize: '0.75rem', 
+                        fontWeight: '500', 
+                        color: 'var(--gray-500)', 
+                        textTransform: 'uppercase',
+                        borderBottom: '1px solid var(--gray-200)'
+                      }}>
+                        Til
+                      </th>
+                      <th style={{ 
+                        padding: '12px 24px', 
+                        textAlign: 'left', 
+                        fontSize: '0.75rem', 
+                        fontWeight: '500', 
+                        color: 'var(--gray-500)', 
+                        textTransform: 'uppercase',
+                        borderBottom: '1px solid var(--gray-200)'
+                      }}>
+                        Melding
+                      </th>
+                      <th style={{ 
+                        padding: '12px 24px', 
+                        textAlign: 'left', 
+                        fontSize: '0.75rem', 
+                        fontWeight: '500', 
+                        color: 'var(--gray-500)', 
+                        textTransform: 'uppercase',
+                        borderBottom: '1px solid var(--gray-200)'
+                      }}>
+                        Tidspunkt
+                      </th>
+                      <th style={{ 
+                        padding: '12px 24px', 
+                        textAlign: 'left', 
+                        fontSize: '0.75rem', 
+                        fontWeight: '500', 
+                        color: 'var(--gray-500)', 
+                        textTransform: 'uppercase',
+                        borderBottom: '1px solid var(--gray-200)'
+                      }}>
+                        Kostnad
+                      </th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredLogs.map((log) => (
+                      <tr key={log.id} style={{ 
+                        borderBottom: '1px solid var(--gray-200)',
+                        transition: 'background-color 0.2s'
+                      }} onMouseEnter={(e) => {
+                        e.currentTarget.style.backgroundColor = 'var(--gray-50)';
+                      }} onMouseLeave={(e) => {
+                        e.currentTarget.style.backgroundColor = 'transparent';
+                      }}>
+                        <td style={{ padding: '16px 24px', whiteSpace: 'nowrap' }}>
+                          <div style={{ display: 'flex', alignItems: 'center' }}>
+                            {getStatusIcon(log.status)}
+                            <span style={{ marginLeft: '8px', fontSize: '0.875rem', color: 'var(--gray-900)' }}>
+                              {getStatusText(log.status)}
+                            </span>
+                          </div>
+                        </td>
+                        <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-900)' }}>
+                          {log.to}
+                        </td>
+                        <td style={{ padding: '16px 24px', fontSize: '0.875rem', color: 'var(--gray-900)', maxWidth: '300px', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                          {log.message}
+                        </td>
+                        <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-500)' }}>
+                          {log.timestamp.toLocaleString('nb-NO')}
+                        </td>
+                        <td style={{ padding: '16px 24px', whiteSpace: 'nowrap', fontSize: '0.875rem', color: 'var(--gray-500)' }}>
+                          {log.cost ? `kr ${log.cost.toFixed(2)}` : '-'}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -637,73 +753,164 @@ export default function SMSLogsPage() {
 
       {/* Send SMS Tab */}
       {activeTab === 'send' && (
-        <div className="max-w-2xl">
-          <div className="bg-white rounded-lg shadow p-6">
-            <h3 className="text-lg font-medium text-gray-900 mb-4">Send SMS</h3>
+        <div style={{ maxWidth: '1280px', margin: '0 auto', padding: isMobile ? '1rem 0.75rem' : '2rem 1rem' }}>
+          <div className="card" style={{ padding: isMobile ? '1.5rem 1.25rem' : '2rem' }}>
+            <h3 style={{ 
+              fontSize: isMobile ? '1.25rem' : '1.5rem', 
+              fontWeight: '600', 
+              color: 'var(--text-color)', 
+              marginBottom: '1.5rem' 
+            }}>
+              Send SMS
+            </h3>
             
-            <div className="space-y-4">
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: isMobile ? '0.9375rem' : '0.875rem', 
+                  fontWeight: '600', 
+                  color: 'var(--gray-700)', 
+                  marginBottom: '0.75rem' 
+                }}>
                   Til (telefonnummer)
                 </label>
-                <div className="flex space-x-2">
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
                   <input
                     type="tel"
                     placeholder="+47 123 45 678"
                     value={newSMS.to}
                     onChange={(e) => setNewSMS({ ...newSMS, to: e.target.value })}
-                    className="flex-1 px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                    style={{
+                      flex: 1,
+                      padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: isMobile ? '12px' : '0.375rem',
+                      fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                      minHeight: isMobile ? '56px' : 'auto',
+                      outline: 'none'
+                    }}
                   />
                   <button
                     onClick={() => setActiveTab('phonebook')}
-                    className="px-3 py-2 text-sm text-blue-600 hover:text-blue-700 border border-blue-300 rounded-md hover:bg-blue-50"
+                    style={{
+                      padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
+                      color: 'var(--primary)',
+                      border: '1px solid var(--primary)',
+                      borderRadius: isMobile ? '12px' : '0.375rem',
+                      background: 'transparent',
+                      cursor: 'pointer',
+                      minHeight: isMobile ? '56px' : 'auto',
+                      minWidth: isMobile ? '56px' : 'auto',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      touchAction: 'manipulation'
+                    }}
                   >
-                    <Phone className="w-4 h-4" />
+                    <Phone size={isMobile ? 22 : 20} />
                   </button>
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: isMobile ? '0.9375rem' : '0.875rem', 
+                  fontWeight: '600', 
+                  color: 'var(--gray-700)', 
+                  marginBottom: '0.75rem' 
+                }}>
                   Melding
                 </label>
                 <textarea
-                  rows={4}
+                  rows={isMobile ? 6 : 4}
                   placeholder="Skriv din melding her..."
                   value={newSMS.message}
                   onChange={(e) => setNewSMS({ ...newSMS, message: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  style={{
+                    width: '100%',
+                    padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: isMobile ? '12px' : '0.375rem',
+                    fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                    minHeight: isMobile ? '140px' : 'auto',
+                    outline: 'none',
+                    lineHeight: '1.5',
+                    fontFamily: 'inherit'
+                  }}
                 />
-                <div className="mt-1 text-sm text-gray-500">
+                <div style={{ 
+                  marginTop: '0.5rem', 
+                  fontSize: isMobile ? '0.875rem' : '0.8125rem', 
+                  color: 'var(--gray-500)' 
+                }}>
                   {newSMS.message.length}/160 tegn
                 </div>
               </div>
 
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
+                <label style={{ 
+                  display: 'block', 
+                  fontSize: isMobile ? '0.9375rem' : '0.875rem', 
+                  fontWeight: '600', 
+                  color: 'var(--gray-700)', 
+                  marginBottom: '0.75rem' 
+                }}>
                   Fra (avsender)
                 </label>
                 <input
                   type="text"
                   value={newSMS.from}
                   onChange={(e) => setNewSMS({ ...newSMS, from: e.target.value })}
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  style={{
+                    width: '100%',
+                    padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
+                    border: '1px solid var(--gray-300)',
+                    borderRadius: isMobile ? '12px' : '0.375rem',
+                    fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                    minHeight: isMobile ? '56px' : 'auto',
+                    outline: 'none'
+                  }}
                 />
               </div>
 
               <button
                 onClick={sendSMS}
                 disabled={sendingSMS || !newSMS.to || !newSMS.message}
-                className="w-full inline-flex justify-center items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  width: '100%',
+                  padding: isMobile ? '1.25rem 1.5rem' : '0.875rem 1.25rem',
+                  background: (sendingSMS || !newSMS.to || !newSMS.message) ? 'var(--gray-400)' : 'var(--primary)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: isMobile ? '12px' : '0.375rem',
+                  fontWeight: '600',
+                  fontSize: isMobile ? '1.125rem' : '1rem',
+                  cursor: (sendingSMS || !newSMS.to || !newSMS.message) ? 'not-allowed' : 'pointer',
+                  minHeight: isMobile ? '56px' : 'auto',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  gap: '0.5rem',
+                  touchAction: 'manipulation'
+                }}
               >
                 {sendingSMS ? (
                   <>
-                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    <div style={{ 
+                      width: '20px', 
+                      height: '20px', 
+                      border: '2px solid white', 
+                      borderTopColor: 'transparent', 
+                      borderRadius: '50%',
+                      animation: 'spin 1s linear infinite'
+                    }}></div>
                     Sender...
                   </>
                 ) : (
                   <>
-                    <Send className="w-4 h-4 mr-2" />
+                    <Send size={isMobile ? 22 : 20} />
                     Send SMS
                   </>
                 )}

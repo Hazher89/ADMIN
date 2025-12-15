@@ -529,16 +529,7 @@ export default function PartnersPage() {
         // Super-smart: use the SAME PDF reader as Mass rute tildeling to auto-assign inbound items
         // This fixes many "failed" cases that serverless PDF parsing can't handle reliably.
         // Run automatically when items are loaded (not just when modal is open) to process failed items
-        if (Array.isArray(data.items) && data.items.length > 0) {
-          // Only process if there are items that need processing (auto_pending, failed, pending)
-          const needsProcessing = data.items.some((item: any) => {
-            const status = String(item?.status || '').toLowerCase();
-            return ['auto_pending', 'failed', 'pending'].includes(status);
-          });
-          if (needsProcessing) {
-            await autoAssignInboundUsingMassLogic(data.items);
-          }
-        }
+        // Note: We don't auto-run here - let the user click "Oppdater" to force re-parsing
       } else {
         console.error('❌ Feil ved henting av innkommende ruter:', data);
         if (!res.ok) {
@@ -611,69 +602,165 @@ export default function PartnersPage() {
   const extractVehicleNumberFromPdf = async (file: File): Promise<string | null> => {
     // Super smart: try pdfjs text; if not found, OCR fallback with Tesseract.
     const parseFromText = (text: string): string | null => {
+      // Search through ENTIRE text, not just first 30000 chars
       const searchText = text;
-      const primary = searchText.slice(0, 30000); // Increased window for better detection
+      const fullText = searchText; // Use full text for better detection
       
+      // Strategy 1: Look for "Resource ID" patterns (most reliable)
       const pickFromResourceId = (): string | null => {
-        const idx = primary.toLowerCase().indexOf('resource id');
-        if (idx >= 0) {
-          const window = primary.slice(Math.max(0, idx - 100), idx + 500); // Wider context
-          const m = window.match(/NO[_A-Z\s-]*M0*(\d{1,6})/i);
-          if (m?.[1]) {
-            const norm = normalizeVehicleNumber(m[1]);
-            if (norm) return norm;
-          }
-        }
-        const globalMatch = searchText.match(/NO[_A-Z\s-]*M0*(\d{1,6})/i);
-        if (globalMatch?.[1]) {
-          const norm = normalizeVehicleNumber(globalMatch[1]);
-          if (norm) return norm;
-        }
-        const collapsed = searchText.replace(/[\s\r\n]+/g, '');
-        const collapsedMatch = collapsed.match(/NO[_A-Z]*_?M0*(\d{1,6})/i) || collapsed.match(/M0*(\d{1,6})/i);
-        if (collapsedMatch?.[1]) {
-          const norm = normalizeVehicleNumber(collapsedMatch[1]);
-          if (norm) return norm;
-        }
-        return null;
-      };
-
-      const pickFromLabels = (): string | null => {
-        // Backup Form / variants often use labels instead of "Resource ID"
-        const reList = [
-          /(?:vehicle|truck|bil|kjøretøy)\s*(?:id|no|nr|number|nummer)?\s*[:#\-\s]*M?\s*0*([0-9]{1,6})/i,
-          /(?:resource)\s*id[^A-Za-z0-9]*M?\s*0*([0-9]{1,6})/i,
-          /\bM\s*0*([0-9]{1,6})\b/i,
-          // Standalone 3-4 digit numbers that could be vehicle numbers (context-aware)
-          /\b(?:vehicle|bil|truck|kjøretøy)[^0-9]*([0-9]{3,4})\b/i,
-          /\b([0-9]{3,4})\s*(?:vehicle|bil|truck|kjøretøy)\b/i,
+        // Case-insensitive search for "resource id" anywhere in document
+        const resourceIdPatterns = [
+          /resource\s*id[^A-Za-z0-9]*NO[_A-Z\s-]*M0*(\d{1,6})/gi,
+          /resource\s*id[^A-Za-z0-9]*M0*(\d{1,6})/gi,
+          /NO[_A-Z\s-]*M0*(\d{1,6})/gi,
         ];
+        
+        for (const pattern of resourceIdPatterns) {
+          const matches = fullText.matchAll(pattern);
+          for (const match of matches) {
+            if (match[1]) {
+              const norm = normalizeVehicleNumber(match[1]);
+              if (norm) return norm;
+            }
+          }
+        }
+        
+        // Also try collapsed version (no spaces)
+        const collapsed = fullText.replace(/[\s\r\n]+/g, '');
+        const collapsedPatterns = [
+          /NO[_A-Z]*_?M0*(\d{1,6})/gi,
+          /M0*(\d{1,6})/gi,
+        ];
+        for (const pattern of collapsedPatterns) {
+          const matches = collapsed.matchAll(pattern);
+          for (const match of matches) {
+            if (match[1]) {
+              const norm = normalizeVehicleNumber(match[1]);
+              if (norm) return norm;
+            }
+          }
+        }
+        
+        return null;
+      };
+
+      // Strategy 2: Look for labeled patterns (vehicle/truck/bil + number)
+      const pickFromLabels = (): string | null => {
+        const reList = [
+          // Standard patterns with labels
+          /(?:vehicle|truck|bil|kjøretøy|resource|ressurs|kjøretøyet)\s*(?:id|no|nr|number|nummer|nummeret)?\s*[:#\-\s=]*M?\s*0*([0-9]{1,6})/gi,
+          /(?:resource|ressurs)\s*id[^A-Za-z0-9]*M?\s*0*([0-9]{1,6})/gi,
+          // M followed by digits (with or without leading zeros) - more flexible
+          /\bM\s*0*([0-9]{1,6})\b/gi,
+          /\bM0*([0-9]{1,6})\b/gi,
+          // Standalone 2-4 digit numbers near vehicle keywords
+          /\b(?:vehicle|bil|truck|kjøretøy|resource|ressurs|kjøretøyet)[^0-9]*([0-9]{2,4})\b/gi,
+          /\b([0-9]{2,4})\s*(?:vehicle|bil|truck|kjøretøy|resource|ressurs|kjøretøyet)\b/gi,
+          // Pattern: "Bil: 018" or "Vehicle: M018"
+          /(?:bil|vehicle|truck|kjøretøy|kjøretøyet)[\s:]*M?0*([0-9]{1,6})/gi,
+          // Pattern: "018" near "bil" or "vehicle" (within 30 chars - increased)
+          /(?:bil|vehicle|truck|kjøretøy|kjøretøyet)[^0-9]{0,30}([0-9]{2,4})/gi,
+          /([0-9]{2,4})[^0-9]{0,30}(?:bil|vehicle|truck|kjøretøy|kjøretøyet)/gi,
+          // Pattern: Just "M" followed by digits anywhere (very flexible)
+          /M\s*0*([0-9]{2,4})/gi,
+          // Pattern: Standalone 2-4 digit numbers that look like vehicle numbers (009, 018, etc.)
+          /\b0*([0-9]{2,4})\b/g,
+        ];
+        
         for (const re of reList) {
-          const m = primary.match(re);
-          if (m?.[1]) {
-            const norm = normalizeVehicleNumber(m[1]);
-            if (norm) return norm;
+          const matches = fullText.matchAll(re);
+          for (const match of matches) {
+            if (match[1]) {
+              const norm = normalizeVehicleNumber(match[1]);
+              if (norm) return norm;
+            }
           }
         }
 
-        // OCR often confuses O and 0. Try a "digit-corrected" pass.
-        const corrected = primary.replace(/O/g, '0').replace(/o/g, '0');
+        // OCR often confuses O and 0, I and 1, S and 5. Try corrected versions.
+        const corrections = [
+          { from: /O/g, to: '0' },
+          { from: /o/g, to: '0' },
+          { from: /I/g, to: '1' },
+          { from: /l/g, to: '1' },
+          { from: /S/g, to: '5' },
+        ];
+        
+        let corrected = fullText;
+        for (const corr of corrections) {
+          corrected = corrected.replace(corr.from, corr.to);
+        }
+        
         for (const re of reList) {
-          const m = corrected.match(re);
-          if (m?.[1]) {
-            const norm = normalizeVehicleNumber(m[1]);
-            if (norm) return norm;
+          const matches = corrected.matchAll(re);
+          for (const match of matches) {
+            if (match[1]) {
+              const norm = normalizeVehicleNumber(match[1]);
+              if (norm) return norm;
+            }
           }
         }
 
         return null;
       };
 
-      // If we need Driver Name later, we can add, but Resource ID er fasit.
+      // Strategy 3: Look for standalone 2-4 digit numbers that could be vehicle numbers
+      // (only if they appear in context that suggests they're vehicle numbers)
+      const pickFromContext = (): string | null => {
+        // Find all 2-4 digit numbers (including 009, 018, etc.)
+        const numberPattern = /\b0*([0-9]{2,4})\b/g;
+        const matches = fullText.matchAll(numberPattern);
+        
+        // Collect all potential matches with their context
+        const candidates: Array<{ num: string; context: string; score: number }> = [];
+        
+        for (const match of matches) {
+          const num = match[1];
+          const startIdx = match.index || 0;
+          const context = fullText.slice(Math.max(0, startIdx - 100), Math.min(fullText.length, startIdx + num.length + 100)).toLowerCase();
+          
+          // Check if context suggests this is a vehicle number
+          const vehicleKeywords = [
+            'bil', 'vehicle', 'truck', 'kjøretøy', 'kjøretøyet',
+            'resource', 'ressurs', 'm0', 'm00', 'm000', 'm009', 'm018',
+            'nummer', 'number', 'id', 'no', 'nr'
+          ];
+          
+          let score = 0;
+          for (const keyword of vehicleKeywords) {
+            if (context.includes(keyword)) {
+              score += keyword.length; // Longer keywords = more relevant
+            }
+          }
+          
+          // Also check if number is in reasonable range (001-999)
+          const numInt = parseInt(num, 10);
+          if (numInt > 0 && numInt < 1000 && score > 0) {
+            candidates.push({ num, context, score });
+          }
+        }
+        
+        // Sort by score (highest first) and try the best matches
+        candidates.sort((a, b) => b.score - a.score);
+        
+        for (const candidate of candidates.slice(0, 5)) { // Try top 5 candidates
+          const norm = normalizeVehicleNumber(candidate.num);
+          if (norm) return norm;
+        }
+        
+        return null;
+      };
+
+      // Try strategies in order of reliability
       const fromResource = pickFromResourceId();
       if (fromResource) return fromResource;
+      
       const fromLabels = pickFromLabels();
       if (fromLabels) return fromLabels;
+      
+      const fromContext = pickFromContext();
+      if (fromContext) return fromContext;
+      
       return null;
     };
 
@@ -686,12 +773,18 @@ export default function PartnersPage() {
         const data = await file.arrayBuffer();
         const loadingTask = await pdfjs.getDocument({ data });
         const pdf = await loadingTask.promise;
-        const maxPages = Math.min(pdf.numPages || 1, 3);
+        // Read ALL pages (not just first 3) for better detection
+        const maxPages = pdf.numPages || 1;
         let out = '';
         for (let p = 1; p <= maxPages; p++) {
-          const page = await pdf.getPage(p);
-          const txt = await page.getTextContent();
-          out += ' ' + txt.items.map((i: any) => i.str || '').join(' ');
+          try {
+            const page = await pdf.getPage(p);
+            const txt = await page.getTextContent();
+            out += ' ' + txt.items.map((i: any) => i.str || '').join(' ');
+          } catch (pageErr) {
+            console.warn(`Failed to read page ${p}:`, pageErr);
+            // Continue with other pages
+          }
         }
         const str = out.trim();
         return str || null;
@@ -710,19 +803,35 @@ export default function PartnersPage() {
         const data = await file.arrayBuffer();
         const loadingTask = await pdfjs.getDocument({ data });
         const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 1.5 });
+        // Try OCR on first 3 pages (not just page 1) for better detection
+        const maxOcrPages = Math.min(pdf.numPages || 1, 3);
+        let allOcrText = '';
+        
+        for (let pageNum = 1; pageNum <= maxOcrPages; pageNum++) {
+          try {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: ctx, viewport }).promise;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) continue; // Skip this page if canvas context fails
+            
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport }).promise;
 
-        const { recognize } = await import('tesseract.js');
-        const result = await recognize(canvas, 'eng');
-        return result?.data?.text || null;
+            const { recognize } = await import('tesseract.js');
+            const result = await recognize(canvas, 'eng');
+            if (result?.data?.text) {
+              allOcrText += ' ' + result.data.text;
+            }
+          } catch (pageErr) {
+            console.warn(`OCR failed for page ${pageNum}:`, pageErr);
+            // Continue with other pages
+          }
+        }
+        
+        return allOcrText.trim() || null;
       } catch (err) {
         console.warn('OCR parse failed:', err);
         return null;
@@ -806,12 +915,18 @@ export default function PartnersPage() {
         const data = await file.arrayBuffer();
         const loadingTask = await pdfjs.getDocument({ data });
         const pdf = await loadingTask.promise;
-        const maxPages = Math.min(pdf.numPages || 1, 3);
+        // Read ALL pages (not just first 3) for better detection - same as vehicle parsing
+        const maxPages = pdf.numPages || 1;
         let out = '';
         for (let p = 1; p <= maxPages; p++) {
-          const page = await pdf.getPage(p);
-          const txt = await page.getTextContent();
-          out += ' ' + txt.items.map((i: any) => i.str || '').join(' ');
+          try {
+            const page = await pdf.getPage(p);
+            const txt = await page.getTextContent();
+            out += ' ' + txt.items.map((i: any) => i.str || '').join(' ');
+          } catch (pageErr) {
+            console.warn(`Failed to read page ${p} for date extraction:`, pageErr);
+            // Continue with other pages
+          }
         }
         const str = out.trim();
         return str || null;
@@ -830,19 +945,35 @@ export default function PartnersPage() {
         const data = await file.arrayBuffer();
         const loadingTask = await pdfjs.getDocument({ data });
         const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 1.5 });
+        // Try OCR on first 3 pages (not just page 1) for better detection - same as vehicle parsing
+        const maxOcrPages = Math.min(pdf.numPages || 1, 3);
+        let allOcrText = '';
+        
+        for (let pageNum = 1; pageNum <= maxOcrPages; pageNum++) {
+          try {
+            const page = await pdf.getPage(pageNum);
+            const viewport = page.getViewport({ scale: 2.0 }); // Higher scale for better OCR
 
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        if (!ctx) return null;
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-        await page.render({ canvasContext: ctx, viewport }).promise;
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            if (!ctx) continue; // Skip this page if canvas context fails
+            
+            canvas.width = viewport.width;
+            canvas.height = viewport.height;
+            await page.render({ canvasContext: ctx, viewport }).promise;
 
-        const { recognize } = await import('tesseract.js');
-        const result = await recognize(canvas, 'eng');
-        return result?.data?.text || null;
+            const { recognize } = await import('tesseract.js');
+            const result = await recognize(canvas, 'eng');
+            if (result?.data?.text) {
+              allOcrText += ' ' + result.data.text;
+            }
+          } catch (pageErr) {
+            console.warn(`OCR failed for page ${pageNum} (date extraction):`, pageErr);
+            // Continue with other pages
+          }
+        }
+        
+        return allOcrText.trim() || null;
       } catch (err) {
         console.warn('OCR date parse failed:', err);
         return null;
@@ -876,7 +1007,7 @@ export default function PartnersPage() {
     return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, '0')).join('');
   };
 
-  const autoAssignInboundUsingMassLogic = async (items: any[]) => {
+  const autoAssignInboundUsingMassLogic = async (items: any[], forceReparse: boolean = false) => {
     if (!db) return;
     if (inboundAutoRunningRef.current) return;
     inboundAutoRunningRef.current = true;
@@ -884,13 +1015,33 @@ export default function PartnersPage() {
       const nowIso = new Date().toISOString();
       const results: any[] = [];
       const seenHashes = new Set<string>();
-      const parsedCache = new Map<string, { vehicleDigits: string | null; parsedDateFromPdf: string | null }>();
+      // If forceReparse is true, don't use cache - re-parse everything
+      const parsedCache = forceReparse ? new Map<string, { vehicleDigits: string | null; parsedDateFromPdf: string | null }>() : new Map<string, { vehicleDigits: string | null; parsedDateFromPdf: string | null }>();
 
-      // Process newest first
-      for (const item of (Array.isArray(items) ? items : [])) {
+      // Filter items to process
+      const itemsToProcess = (Array.isArray(items) ? items : []).filter(item => {
         const status = String(item?.status || '').toLowerCase();
-        if (!['auto_pending', 'failed', 'pending'].includes(status)) continue;
+        if (!forceReparse && !['auto_pending', 'failed', 'pending'].includes(status)) return false;
+        if (forceReparse && !['auto_pending', 'failed', 'pending', 'manual_review'].includes(status)) return false;
+        return true;
+      });
 
+      // Process in batches to avoid browser timeouts and memory issues
+      // Increased batch size to handle up to 150 routes efficiently
+      const BATCH_SIZE = 20; // Process 20 routes at a time
+      const BATCH_DELAY = 500; // 500ms delay between batches to prevent browser overload
+      
+      console.log(`📦 Prosesserer ${itemsToProcess.length} ruter i batches av ${BATCH_SIZE}...`);
+
+      for (let batchStart = 0; batchStart < itemsToProcess.length; batchStart += BATCH_SIZE) {
+        const batch = itemsToProcess.slice(batchStart, batchStart + BATCH_SIZE);
+        const batchNum = Math.floor(batchStart / BATCH_SIZE) + 1;
+        const totalBatches = Math.ceil(itemsToProcess.length / BATCH_SIZE);
+        
+        console.log(`📦 Prosesserer batch ${batchNum}/${totalBatches} (${batch.length} ruter)...`);
+
+        // Process each item in the current batch
+        for (const item of batch) {
         const atts = Array.isArray(item.attachments) ? item.attachments : [];
         const pdfAtt = atts.find((a: any) => a?.isPdf && a?.fileUrl) || atts.find((a: any) => a?.fileUrl);
         if (!pdfAtt?.fileUrl) {
@@ -969,7 +1120,8 @@ export default function PartnersPage() {
           fallbackDate;
 
         // If driver name detected but no vehicle number, mark for manual review
-        if (!vehicleDigits && detectedDriverName) {
+        // BUT: if forceReparse and we found a vehicle number, don't skip - continue processing
+        if (!vehicleDigits && detectedDriverName && !forceReparse) {
           try {
             await updateDoc(doc(db, 'inboundRoutes', item.id), {
               status: 'manual_review',
@@ -990,6 +1142,11 @@ export default function PartnersPage() {
           continue;
         }
 
+        // Also check if we already have a parsed vehicle from server (might have been extracted earlier)
+        if (!vehicleDigits && item.parsedVehicle) {
+          vehicleDigits = item.parsedVehicle;
+        }
+        
         if (!vehicleDigits) {
           // Update Firestore status so it can be tracked
           try {
@@ -1029,17 +1186,17 @@ export default function PartnersPage() {
 
         const partner = findPartnerByVehicleNumber(vehicleDigits);
         if (!partner) {
-          // Update Firestore status so it can be tracked
+          // Update Firestore status so it can be tracked - but keep the parsed vehicle so it shows in UI
           try {
             await updateDoc(doc(db, 'inboundRoutes', item.id), {
               status: 'failed',
-              error: `Fant ikke partner for bilnummer ${vehicleDigits}`,
+              error: `Fant ikke partner for bilnummer M${vehicleDigits} (${vehicleDigits})`,
               parsedDate: parsedDateFromPdf,
               parsedVehicle: vehicleDigits,
               updatedAt: serverTimestamp(),
             });
           } catch {}
-          results.push({ status: 'failed', message: `Fant ikke partner for bilnummer ${vehicleDigits}`, date: parsedDateFromPdf, fileName: file.name, vehicle: vehicleDigits, inboundId: item.id });
+          results.push({ status: 'failed', message: `Fant ikke partner for bilnummer M${vehicleDigits}`, date: parsedDateFromPdf, fileName: file.name, vehicle: vehicleDigits, inboundId: item.id });
           continue;
         }
 
@@ -1088,9 +1245,43 @@ export default function PartnersPage() {
         try { await deleteDoc(doc(db, 'inboundRoutes', item.id)); } catch {}
 
         results.push({ status: 'sent', message: `Sendt til ${partner.name} (${vehicleDigits})`, date: parsedDateFromPdf, fileName: file.name, vehicle: vehicleDigits, partnerName: partner.name });
+        }
+
+        // Update progress after each batch (outside the inner loop, inside the batch loop)
+        setProcessingReport({
+          total: itemsToProcess.length,
+          sent: results.filter(r => r.status === 'sent').length,
+          failed: results.filter(r => r.status === 'failed').length,
+          manualReview: results.filter(r => r.status === 'manual_review').length,
+          byDate: (() => {
+            const byDate: Record<string, { total: number; sent: number; failed: number; manualReview: number }> = {};
+            for (const r of results) {
+              const dk = r.date || 'ukjent';
+              byDate[dk] = byDate[dk] || { total: 0, sent: 0, failed: 0, manualReview: 0 };
+              byDate[dk].total += 1;
+              if (r.status === 'sent') byDate[dk].sent += 1;
+              else if (r.status === 'manual_review') byDate[dk].manualReview += 1;
+              else if (r.status !== 'duplicate') byDate[dk].failed += 1;
+            }
+            return byDate;
+          })(),
+          details: results,
+          createdAt: nowIso,
+          progress: {
+            processed: batchStart + batch.length,
+            total: itemsToProcess.length,
+            currentBatch: batchNum,
+            totalBatches: totalBatches
+          }
+        });
+
+        // Add delay between batches to prevent browser timeout (except for the last batch)
+        if (batchStart + BATCH_SIZE < itemsToProcess.length) {
+          await new Promise(resolve => setTimeout(resolve, BATCH_DELAY));
+        }
       }
 
-      // Build report for UI
+      // Build final report for UI
       const byDate: Record<string, { total: number; sent: number; failed: number; manualReview: number }> = {};
       for (const r of results) {
         const dk = r.date || 'ukjent';
@@ -2272,7 +2463,7 @@ export default function PartnersPage() {
             </div>
 
             <div style={{ padding: '1.5rem', overflowY: 'auto', maxHeight: '70vh' }}>
-              <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: '1rem', alignItems: 'end' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: isMobile ? '1fr' : '240px 1fr', gap: '1rem', alignItems: 'end' }}>
                 <div>
                   <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: 600 }}>
                     Dato for rutene
@@ -2281,6 +2472,15 @@ export default function PartnersPage() {
                     type="date"
                     value={massAssignDate}
                     onChange={(e) => setMassAssignDate(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
+                      border: '1px solid var(--gray-300)',
+                      borderRadius: isMobile ? '12px' : '8px',
+                      fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                      minHeight: isMobile ? '56px' : 'auto',
+                      outline: 'none'
+                    }}
                   />
                 </div>
                 <div>
@@ -2316,7 +2516,7 @@ export default function PartnersPage() {
                         borderRadius: '14px',
                         padding: '0.9rem 1rem',
                         display: 'grid',
-                        gridTemplateColumns: '1fr 220px 220px',
+                        gridTemplateColumns: isMobile ? '1fr' : '1fr 220px 220px',
                         gap: '0.75rem',
                         alignItems: 'center'
                       }}>
@@ -2342,6 +2542,15 @@ export default function PartnersPage() {
                               setMassResults(prev => prev.map(x => x.file === r.file ? ({ ...x, manualVehicleNumber: v }) : x));
                             }}
                             disabled={massBusy}
+                            style={{
+                              width: '100%',
+                              padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
+                              border: '1px solid var(--gray-300)',
+                              borderRadius: isMobile ? '12px' : '8px',
+                              fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                              minHeight: isMobile ? '56px' : 'auto',
+                              outline: 'none'
+                            }}
                           />
                         </div>
 
@@ -2460,7 +2669,33 @@ export default function PartnersPage() {
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
                 <button
-                  onClick={() => loadInbound(true)}
+                  onClick={async () => {
+                    setInboundLoading(true);
+                    try {
+                      // First sync to get latest emails
+                      await loadInbound(true);
+                      // Wait a bit for state to update, then fetch fresh items
+                      await new Promise(resolve => setTimeout(resolve, 500));
+                      
+                      // Fetch fresh items from API (not from state, which might be stale)
+                      const res = await fetch('/api/inbound/sap');
+                      const data: any = await res.json();
+                      const freshItems = data?.success && Array.isArray(data.items) ? data.items : [];
+                      
+                      if (freshItems.length > 0) {
+                        console.log(`🔄 Tvinger re-analyse av ${freshItems.length} PDF-er for å ekstrahere bilnummer...`);
+                        await autoAssignInboundUsingMassLogic(freshItems, true); // forceReparse = true
+                      }
+                      
+                      // Reload to show updated data with extracted vehicle numbers
+                      await loadInbound(false);
+                    } catch (err) {
+                      console.error('Error updating inbound:', err);
+                      setError(`Feil ved oppdatering: ${err instanceof Error ? err.message : 'Ukjent feil'}`);
+                    } finally {
+                      setInboundLoading(false);
+                    }
+                  }}
                   style={{
                     padding: '0.6rem 0.9rem',
                     background: '#0ea5e9',
@@ -2472,7 +2707,65 @@ export default function PartnersPage() {
                   }}
                   disabled={inboundLoading}
                 >
-                  {inboundLoading ? 'Laster...' : 'Oppdater'}
+                  {inboundLoading ? 'Laster og analyserer...' : 'Oppdater og analyser alle PDF-er'}
+                </button>
+                <button
+                  onClick={async () => {
+                    if (!db) return;
+                    
+                    const confirmMessage = `Er du sikker på at du vil slette ALLE innkommende ruter fra e-post?\n\nDette vil slette ${inboundItems.length} rute(r) permanent.\n\nDenne handlingen kan ikke angres!`;
+                    
+                    if (!confirm(confirmMessage)) {
+                      return;
+                    }
+                    
+                    setInboundLoading(true);
+                    try {
+                      let deletedCount = 0;
+                      let errorCount = 0;
+                      
+                      // Delete all inbound routes
+                      for (const item of inboundItems) {
+                        try {
+                          await deleteDoc(doc(db, 'inboundRoutes', item.id));
+                          deletedCount++;
+                        } catch (err) {
+                          console.error(`Error deleting inbound route ${item.id}:`, err);
+                          errorCount++;
+                        }
+                      }
+                      
+                      if (deletedCount > 0) {
+                        setSuccess(`Slettet ${deletedCount} rute(r) fra e-post${errorCount > 0 ? ` (${errorCount} feilet)` : ''}`);
+                      }
+                      
+                      if (errorCount > 0) {
+                        setError(`Kunne ikke slette ${errorCount} rute(r)`);
+                      }
+                      
+                      // Reload the list
+                      await loadInbound(false);
+                    } catch (err) {
+                      console.error('Error deleting all inbound routes:', err);
+                      setError(`Feil ved sletting: ${err instanceof Error ? err.message : 'Ukjent feil'}`);
+                    } finally {
+                      setInboundLoading(false);
+                    }
+                  }}
+                  style={{
+                    padding: '0.6rem 0.9rem',
+                    background: '#ef4444',
+                    border: '1px solid rgba(239,68,68,0.35)',
+                    color: '#fff',
+                    borderRadius: '10px',
+                    cursor: inboundItems.length === 0 ? 'not-allowed' : 'pointer',
+                    fontWeight: 700,
+                    opacity: inboundItems.length === 0 ? 0.5 : 1
+                  }}
+                  disabled={inboundLoading || inboundItems.length === 0}
+                  title={inboundItems.length === 0 ? 'Ingen ruter å slette' : 'Slett alle innkommende ruter'}
+                >
+                  🗑️ Slett alle ({inboundItems.length})
                 </button>
                 <button
                   onClick={() => setShowInboundModal(false)}
@@ -2509,6 +2802,25 @@ export default function PartnersPage() {
                       {displayProcessingReport.createdAt ? new Date(displayProcessingReport.createdAt).toLocaleString('no-NO') : ''}
                     </div>
                   </div>
+                  {/* Progress indicator for batch processing */}
+                  {displayProcessingReport.progress && (
+                    <div style={{ marginTop: '0.75rem', marginBottom: '0.5rem', padding: '0.5rem', background: 'rgba(6, 182, 212, 0.1)', borderRadius: '8px', border: '1px solid rgba(6, 182, 212, 0.3)' }}>
+                      <div style={{ color: '#06b6d4', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.25rem' }}>
+                        Prosesserer batch {displayProcessingReport.progress.currentBatch} av {displayProcessingReport.progress.totalBatches}...
+                      </div>
+                      <div style={{ width: '100%', height: '6px', background: 'rgba(255, 255, 255, 0.1)', borderRadius: '3px', overflow: 'hidden' }}>
+                        <div style={{ 
+                          width: `${(displayProcessingReport.progress.processed / displayProcessingReport.progress.total) * 100}%`, 
+                          height: '100%', 
+                          background: 'linear-gradient(90deg, #06b6d4 0%, #10b981 100%)',
+                          transition: 'width 0.3s ease'
+                        }} />
+                      </div>
+                      <div style={{ color: '#94a3b8', fontSize: '0.75rem', marginTop: '0.25rem' }}>
+                        {displayProcessingReport.progress.processed} av {displayProcessingReport.progress.total} ruter prosessert
+                      </div>
+                    </div>
+                  )}
                   <div style={{ marginTop: '0.5rem', display: 'flex', gap: '0.75rem', flexWrap: 'wrap' }}>
                     <span className="badge" style={{ background: '#1f2937', color: '#e5e7eb', border: '1px solid #334155' }}>
                       Totalt: {displayProcessingReport.total ?? 0}
@@ -2575,6 +2887,7 @@ export default function PartnersPage() {
                       <th style={{ padding: '0.5rem' }}>Fil(er)</th>
                       <th style={{ padding: '0.5rem' }}>Status</th>
                       <th style={{ padding: '0.5rem' }}>Feilårsak</th>
+                      <th style={{ padding: '0.5rem' }}>Handlinger</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -2589,7 +2902,17 @@ export default function PartnersPage() {
                           {item.parsedDate || item.attachments?.find?.((a: any) => a?.parsedDateFromPdf)?.parsedDateFromPdf || '—'}
                         </td>
                         <td style={{ padding: '0.5rem', color: '#e5e7eb' }}>
-                          {item.parsedVehicle || item.attachments?.find?.((a: any) => a?.parsedVehicleFromPdf)?.parsedVehicleFromPdf || '—'}
+                          {(() => {
+                            const vehicle = item.parsedVehicle || 
+                                           item.attachments?.find?.((a: any) => a?.parsedVehicleFromPdf)?.parsedVehicleFromPdf ||
+                                           item.attachments?.find?.((a: any) => a?.parsedVehicle)?.parsedVehicle ||
+                                           '';
+                            // If we have a 3-digit number, format it nicely
+                            if (vehicle && /^\d{3}$/.test(vehicle)) {
+                              return `M${vehicle}`;
+                            }
+                            return vehicle || '—';
+                          })()}
                         </td>
                         <td style={{ padding: '0.5rem', color: '#a5b4fc' }}>
                           {Array.isArray(item.attachments) && item.attachments.length > 0 ? (
@@ -2661,6 +2984,136 @@ export default function PartnersPage() {
                             {String(item.error || '').slice(0, 160) || '—'}
                           </span>
                         </td>
+                        <td style={{ padding: '0.5rem' }}>
+                          <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                            {/* Last ned alle PDF-ene */}
+                            {Array.isArray(item.attachments) && item.attachments.length > 0 && item.attachments.some((a: any) => a?.fileUrl) && (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (typeof window === 'undefined') return;
+                                  const attachments = Array.isArray(item.attachments) ? item.attachments : [];
+                                  for (let i = 0; i < attachments.length; i++) {
+                                    const att = attachments[i];
+                                    if (!att?.fileUrl) continue;
+                                    try {
+                                      // Add small delay between downloads to avoid browser blocking
+                                      if (i > 0) await new Promise(resolve => setTimeout(resolve, 300));
+                                      
+                                      if (att.fileUrl.startsWith('data:')) {
+                                        // Data URL - convert to blob and download
+                                        const base64 = att.fileUrl.split(',')[1];
+                                        if (base64) {
+                                          const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
+                                          const blob = new Blob([bytes], { type: 'application/pdf' });
+                                          const blobUrl = URL.createObjectURL(blob);
+                                          const a = document.createElement('a');
+                                          a.href = blobUrl;
+                                          a.download = att.fileName || `vedlegg_${i + 1}.pdf`;
+                                          document.body.appendChild(a);
+                                          a.click();
+                                          document.body.removeChild(a);
+                                          setTimeout(() => URL.revokeObjectURL(blobUrl), 100);
+                                        }
+                                      } else {
+                                        // Regular URL - download directly
+                                        const a = document.createElement('a');
+                                        a.href = att.fileUrl;
+                                        a.download = att.fileName || `vedlegg_${i + 1}.pdf`;
+                                        a.target = '_blank';
+                                        document.body.appendChild(a);
+                                        a.click();
+                                        document.body.removeChild(a);
+                                      }
+                                    } catch (err) {
+                                      console.error('Error downloading file:', err);
+                                    }
+                                  }
+                                }}
+                                style={{
+                                  padding: '0.35rem 0.65rem',
+                                  background: '#0ea5e9',
+                                  border: '1px solid rgba(14,165,233,0.35)',
+                                  color: '#fff',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  whiteSpace: 'nowrap',
+                                }}
+                                title="Last ned alle PDF-ene"
+                              >
+                                ⬇ Last ned
+                              </button>
+                            )}
+                            {/* Markér som manuell tildeling */}
+                            {String(item.status || '').toLowerCase() !== 'manual_review' && (
+                              <button
+                                onClick={async (e) => {
+                                  e.stopPropagation();
+                                  if (!db || !item.id) return;
+                                  try {
+                                    await updateDoc(doc(db, 'inboundRoutes', item.id), {
+                                      status: 'manual_review',
+                                      error: 'Markert for manuell tildeling',
+                                      updatedAt: serverTimestamp(),
+                                    });
+                                    await loadInbound(true);
+                                  } catch (err: any) {
+                                    console.error('Error updating status:', err);
+                                    alert(`Feil: ${err?.message || 'Ukjent feil'}`);
+                                  }
+                                }}
+                                style={{
+                                  padding: '0.35rem 0.65rem',
+                                  background: '#fbbf24',
+                                  border: '1px solid rgba(251,191,36,0.35)',
+                                  color: '#000',
+                                  borderRadius: '6px',
+                                  cursor: 'pointer',
+                                  fontSize: '0.8rem',
+                                  fontWeight: 600,
+                                  whiteSpace: 'nowrap',
+                                }}
+                                title="Markér som manuell tildeling"
+                              >
+                                ✋ Manuell
+                              </button>
+                            )}
+                            {/* Slett rute */}
+                            <button
+                              onClick={async (e) => {
+                                e.stopPropagation();
+                                if (!db || !item.id) return;
+                                if (!confirm(`Er du sikker på at du vil slette denne ruten?\n\nFra: ${item.from}\nEmne: ${item.subject}`)) {
+                                  return;
+                                }
+                                try {
+                                  await deleteDoc(doc(db, 'inboundRoutes', item.id));
+                                  // Refresh the list
+                                  await loadInbound(true);
+                                } catch (err: any) {
+                                  console.error('Error deleting inbound route:', err);
+                                  alert(`Feil ved sletting: ${err?.message || 'Ukjent feil'}`);
+                                }
+                              }}
+                              style={{
+                                padding: '0.35rem 0.65rem',
+                                background: '#ef4444',
+                                border: '1px solid rgba(239,68,68,0.35)',
+                                color: '#fff',
+                                borderRadius: '6px',
+                                cursor: 'pointer',
+                                fontSize: '0.8rem',
+                                fontWeight: 600,
+                                whiteSpace: 'nowrap',
+                              }}
+                              title="Slett denne ruten"
+                            >
+                              🗑 Slett
+                            </button>
+                          </div>
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -2718,21 +3171,59 @@ export default function PartnersPage() {
                 {viewingPdf.fileName}
               </div>
               <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <a
-                  href={viewingPdf.url}
-                  download={viewingPdf.fileName}
+                <button
+                  onClick={() => {
+                    if (typeof window === 'undefined' || !viewingPdf) return;
+                    try {
+                      const a = document.createElement('a');
+                      a.href = viewingPdf.url;
+                      a.download = viewingPdf.fileName;
+                      document.body.appendChild(a);
+                      a.click();
+                      document.body.removeChild(a);
+                    } catch (err) {
+                      console.error('Error downloading PDF:', err);
+                      // Fallback: open in new tab
+                      window.open(viewingPdf.url, '_blank');
+                    }
+                  }}
                   style={{
                     padding: '0.5rem 1rem',
                     background: '#0ea5e9',
+                    border: '1px solid rgba(14,165,233,0.35)',
                     color: '#fff',
                     borderRadius: '8px',
-                    textDecoration: 'none',
+                    cursor: 'pointer',
                     fontWeight: 600,
                     fontSize: '0.9rem'
                   }}
                 >
-                  Last ned
-                </a>
+                  ⬇ Last ned
+                </button>
+                <button
+                  onClick={() => {
+                    if (typeof window !== 'undefined' && viewingPdf?.url && viewingPdf.url.startsWith('blob:')) {
+                      try {
+                        URL.revokeObjectURL(viewingPdf.url);
+                      } catch (e) {
+                        // Ignore cleanup errors
+                      }
+                    }
+                    setViewingPdf(null);
+                  }}
+                  style={{
+                    padding: '0.5rem 1rem',
+                    background: 'rgba(255,255,255,0.1)',
+                    border: '1px solid rgba(255,255,255,0.2)',
+                    color: '#e5e7eb',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    fontSize: '0.9rem'
+                  }}
+                >
+                  ✕ Lukk
+                </button>
                 <button
                   onClick={() => {
                     if (typeof window !== 'undefined' && viewingPdf.url && viewingPdf.url.startsWith('blob:')) {

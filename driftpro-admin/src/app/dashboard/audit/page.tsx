@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { hasPermission } from '@/lib/permissions';
 import AccessDenied from '@/components/AccessDenied';
-import { firebaseService, InternalAudit, Deviation as FirestoreDeviation, Employee, Department, AuditDocument, AuditComment, RiskAssessment, FollowUpAction, Checkpoint } from '@/lib/firebase-services';
+import { firebaseService, InternalAudit, Deviation as FirestoreDeviation, Employee, Department, AuditDocument, AuditComment, RiskAssessment, FollowUpAction, Checkpoint, createUserAccessContext } from '@/lib/firebase-services';
 import { 
   Shield, 
   Plus, 
@@ -704,13 +704,14 @@ export default function AuditPage() {
         assignedTo = assignedToIds[0]; // Keep for backward compatibility
       }
 
+      const userContext = createUserAccessContext(userProfile);
       const deviationId = await firebaseService.createDeviation({
         ...newDeviation,
                 reportedBy: userProfile.id,
         status: 'reported',
         assignedTo,
         assignedToIds: assignedToIds.length > 0 ? assignedToIds : undefined
-      });
+      }, userContext || undefined);
       
       // Upload files if any
       const filesToUpload = selectedFiles['deviation-add'] || [];

@@ -280,12 +280,14 @@ export default function DeliverySystemPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '0.75rem 0.75rem 0.75rem 2.5rem',
+                  padding: isMobile ? '1rem 1rem 1rem 3rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
                   border: '1px solid var(--border-color)',
-                  borderRadius: '0.5rem',
+                  borderRadius: isMobile ? '12px' : '0.5rem',
                   fontSize: '16px',
+                  minHeight: isMobile ? '56px' : 'auto',
                   background: 'var(--card-background)',
-                  color: 'var(--text-color)'
+                  color: 'var(--text-color)',
+                  outline: 'none'
                 }}
               />
             </div>
@@ -309,12 +311,14 @@ export default function DeliverySystemPage() {
             onChange={(e) => setFilterStatus(e.target.value)}
             style={{
               width: '100%',
-              padding: '0.75rem',
+              padding: isMobile ? '1rem 1.25rem' : '0.75rem',
               border: '1px solid var(--border-color)',
-              borderRadius: '0.5rem',
+              borderRadius: isMobile ? '12px' : '0.5rem',
               fontSize: '16px',
+              minHeight: isMobile ? '56px' : 'auto',
               background: 'var(--card-background)',
-              color: 'var(--text-color)'
+              color: 'var(--text-color)',
+              outline: 'none'
             }}
           >
             <option value="all">Alle status</option>
@@ -629,6 +633,13 @@ export default function DeliverySystemPage() {
                     className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                     rows={3}
                     placeholder="Legg til notater om leveringen..."
+                    style={{
+                      fontSize: isMobile ? '16px' : undefined,
+                      padding: isMobile ? '1rem 1.25rem' : undefined,
+                      minHeight: isMobile ? '140px' : undefined,
+                      borderRadius: isMobile ? '12px' : undefined,
+                      outline: 'none'
+                    }}
                   />
                 </div>
                 <div className="flex items-center justify-end space-x-3 pt-4">

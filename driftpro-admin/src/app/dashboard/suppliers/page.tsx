@@ -152,12 +152,14 @@ export default function SuppliersPage() {
                 onChange={(e) => setSearchTerm(e.target.value)}
                 style={{
                   width: '100%',
-                  padding: '0.75rem 0.75rem 0.75rem 2.5rem',
+                  padding: isMobile ? '1rem 1rem 1rem 3rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
                   border: '1px solid var(--border-color)',
-                  borderRadius: '0.5rem',
+                  borderRadius: isMobile ? '12px' : '0.5rem',
                   fontSize: '16px',
+                  minHeight: isMobile ? '56px' : 'auto',
                   background: 'var(--card-background)',
-                  color: 'var(--text-color)'
+                  color: 'var(--text-color)',
+                  outline: 'none'
                 }}
               />
             </div>
@@ -181,12 +183,14 @@ export default function SuppliersPage() {
             onChange={(e) => setFilterCategory(e.target.value)}
             style={{
               width: '100%',
-              padding: '0.75rem',
+              padding: isMobile ? '1rem 1.25rem' : '0.75rem',
               border: '1px solid var(--border-color)',
-              borderRadius: '0.5rem',
+              borderRadius: isMobile ? '12px' : '0.5rem',
               fontSize: '16px',
+              minHeight: isMobile ? '56px' : 'auto',
               background: 'var(--card-background)',
-              color: 'var(--text-color)'
+              color: 'var(--text-color)',
+              outline: 'none'
             }}
           >
             <option value="all">Alle kategorier</option>

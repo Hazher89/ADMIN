@@ -267,9 +267,11 @@ export default function NotificationsPage() {
                   onChange={(e) => setSearchTerm(e.target.value)}
                   style={{ 
                     width: '100%', 
-                    padding: '0.75rem 0.75rem 0.75rem 2.5rem', 
+                    padding: isMobile ? '1rem 1rem 1rem 3rem' : '0.75rem 0.75rem 0.75rem 2.5rem', 
                     border: '1px solid var(--gray-300)', 
-                    borderRadius: 'var(--radius-lg)', 
+                    borderRadius: isMobile ? '12px' : 'var(--radius-lg)', 
+                    fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                    minHeight: isMobile ? '56px' : 'auto',
                     outline: 'none'
                   }}
                 />
@@ -279,9 +281,11 @@ export default function NotificationsPage() {
               value={selectedType}
               onChange={(e) => setSelectedType(e.target.value)}
               style={{ 
-                padding: '0.75rem', 
+                padding: isMobile ? '1rem 1.25rem' : '0.75rem', 
                 border: '1px solid var(--gray-300)', 
-                borderRadius: 'var(--radius-lg)', 
+                borderRadius: isMobile ? '12px' : 'var(--radius-lg)', 
+                fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                minHeight: isMobile ? '56px' : 'auto',
                 outline: 'none',
                 minWidth: isMobile ? '100%' : '150px'
               }}

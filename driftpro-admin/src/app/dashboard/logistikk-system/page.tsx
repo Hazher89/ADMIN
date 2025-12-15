@@ -823,7 +823,12 @@ export default function LogistikkSystemPage() {
 
       {/* Tabs */}
       <div className="card" style={{ marginBottom: '2rem' }}>
-        <div style={{ display: 'flex', borderBottom: '1px solid var(--gray-200)', overflowX: 'auto' }}>
+        <div style={{ 
+          display: 'flex', 
+          borderBottom: '1px solid var(--gray-200)', 
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch'
+        }}>
           {tabs.map(tab => (
             <button
               key={tab.id}
@@ -833,17 +838,21 @@ export default function LogistikkSystemPage() {
                 borderRadius: 0,
                 borderBottom: activeTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
                 whiteSpace: 'nowrap',
-                minWidth: '120px'
+                minWidth: isMobile ? '140px' : '120px',
+                padding: isMobile ? '1.25rem 1.5rem' : '1rem 1.5rem',
+                minHeight: isMobile ? '56px' : 'auto',
+                fontSize: isMobile ? '1rem' : 'var(--font-size-base)',
+                touchAction: 'manipulation'
               }}
             >
-              <tab.icon size={16} style={{ marginRight: '0.5rem' }} />
+              <tab.icon size={isMobile ? 20 : 16} style={{ marginRight: '0.5rem' }} />
               {tab.name}
             </button>
           ))}
         </div>
 
         {/* Tab Content */}
-        <div style={{ padding: '1.5rem' }}>
+        <div style={{ padding: isMobile ? '1.25rem 1rem' : '1.5rem' }}>
           {/* BUD Priser Tab - Complete implementation */}
           {activeTab === 'bud-priser' && (
             <div>
@@ -855,7 +864,13 @@ export default function LogistikkSystemPage() {
               </p>
 
               {/* BUD Priser Tabs */}
-              <div style={{ display: 'flex', borderBottom: '1px solid var(--gray-200)', marginBottom: '2rem' }}>
+              <div style={{ 
+                display: 'flex', 
+                borderBottom: '1px solid var(--gray-200)', 
+                marginBottom: '2rem',
+                overflowX: 'auto',
+                WebkitOverflowScrolling: 'touch'
+              }}>
                 {[
                   { id: 'search', name: 'Søk Priser', icon: Search },
                   { id: 'history', name: 'Søkehistorikk', icon: History },
@@ -869,10 +884,14 @@ export default function LogistikkSystemPage() {
                       borderRadius: 0,
                       borderBottom: budPriserTab === tab.id ? '2px solid var(--primary)' : '2px solid transparent',
                       whiteSpace: 'nowrap',
-                      minWidth: '120px'
+                      minWidth: isMobile ? '140px' : '120px',
+                      padding: isMobile ? '1.25rem 1.5rem' : '1rem 1.5rem',
+                      minHeight: isMobile ? '56px' : 'auto',
+                      fontSize: isMobile ? '1rem' : 'var(--font-size-base)',
+                      touchAction: 'manipulation'
                     }}
                   >
-                    <tab.icon size={16} style={{ marginRight: '0.5rem' }} />
+                    <tab.icon size={isMobile ? 20 : 16} style={{ marginRight: '0.5rem' }} />
                     {tab.name}
                   </button>
                 ))}
@@ -901,10 +920,11 @@ export default function LogistikkSystemPage() {
                           placeholder="Søk postnummer..."
                           style={{
                             width: '100%',
-                            padding: '0.75rem',
+                            padding: isMobile ? '1rem 1.25rem' : '0.75rem',
                             border: '1px solid var(--gray-300)',
-                            borderRadius: 'var(--radius-md)',
-                            fontSize: 'var(--font-size-base)',
+                            borderRadius: isMobile ? '12px' : 'var(--radius-md)',
+                            fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                            minHeight: isMobile ? '56px' : 'auto',
                             outline: 'none'
                           }}
                         />
@@ -925,10 +945,11 @@ export default function LogistikkSystemPage() {
                           placeholder="Velg adresse..."
                           style={{
                             width: '100%',
-                            padding: '0.75rem',
+                            padding: isMobile ? '1rem 1.25rem' : '0.75rem',
                             border: '1px solid var(--gray-300)',
-                            borderRadius: 'var(--radius-md)',
-                            fontSize: 'var(--font-size-base)',
+                            borderRadius: isMobile ? '12px' : 'var(--radius-md)',
+                            fontSize: isMobile ? '16px' : 'var(--font-size-base)',
+                            minHeight: isMobile ? '56px' : 'auto',
                             outline: 'none'
                           }}
                         />

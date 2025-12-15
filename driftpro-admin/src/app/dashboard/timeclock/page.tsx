@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
-import { firebaseService, TimeClock, Employee, Department } from '@/lib/firebase-services';
+import { firebaseService, TimeClock, Employee, Department, createUserAccessContext } from '@/lib/firebase-services';
 import { 
   Search, Filter, Clock, Users, Building, Calendar, Plus, Edit, Trash2,
   Eye, MoreHorizontal, CheckCircle, AlertTriangle, XCircle, Play, MapPin
@@ -38,10 +38,11 @@ export default function TimeclockPage() {
     try {
       setLoading(true);
       
-      // Load real data from Firebase
+      // Load real data from Firebase with GDPR filtering
+      const userContext = createUserAccessContext(userProfile);
       const [timeEntriesData, employeesData, departmentsData] = await Promise.all([
-        firebaseService.getTimeClocks(),
-        firebaseService.getEmployees(userProfile.companyId),
+        firebaseService.getTimeClocks(userContext || undefined),
+        firebaseService.getEmployees(userContext || undefined),
         firebaseService.getDepartments()
       ]);
       
@@ -168,7 +169,8 @@ export default function TimeclockPage() {
     if (!confirm('Er du sikker på at du vil tvinge utstempling?')) return;
 
     try {
-      await firebaseService.clockOut(timeClockId);
+      const userContext = createUserAccessContext(userProfile);
+      await firebaseService.clockOut(timeClockId, userContext || undefined);
       await loadData(); // Reload the data
       alert('Utstempling tvunget');
     } catch (error) {

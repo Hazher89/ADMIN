@@ -1,4 +1,4 @@
-interface BrrgCompany {
+export interface BrrgCompany {
   organisasjonsnummer: string;
   navn: string;
   organisasjonsform: string;
@@ -202,6 +202,88 @@ export class BrrgService {
       throw error;
     }
   }
+
+  // Update admin
+  async updateAdmin(adminId: string, adminData: {
+    email?: string;
+    name?: string;
+    role?: string;
+    permissions?: string[];
+  }) {
+    try {
+      console.log('👤 Updating admin user:', adminId, adminData);
+      
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/admins/${adminId}`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(adminData)
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to update admin');
+      }
+
+      const result = await response.json();
+      console.log('✅ Admin updated successfully:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error updating admin:', error);
+      throw error;
+    }
+  }
+
+  // Remove admin
+  async removeAdmin(adminId: string) {
+    try {
+      console.log('👤 Removing admin user:', adminId);
+      
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
+      const response = await fetch(`${baseUrl}/api/admins/${adminId}`, {
+        method: 'DELETE',
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to remove admin');
+      }
+
+      const result = await response.json();
+      console.log('✅ Admin removed successfully:', result);
+      
+      return result;
+    } catch (error) {
+      console.error('❌ Error removing admin:', error);
+      throw error;
+    }
+  }
+
+  // Get company info (alias for getCompanyDetails)
+  async getCompanyInfo(orgNumber: string): Promise<BrrgCompany | null> {
+    return this.getCompanyDetails(orgNumber);
+  }
+
+  // Validate organization number
+  validateOrgNumber(orgNumber: string): boolean {
+    // Norwegian organization numbers are 9 digits
+    return /^\d{9}$/.test(orgNumber.trim());
+  }
+}
+
+export interface BRRGAdmin {
+  id: string;
+  email: string;
+  name: string;
+  role: 'admin' | 'super_admin';
+  permissions: string[];
+  companyId?: string;
+  companyName?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export const brrgService = new BrrgService();

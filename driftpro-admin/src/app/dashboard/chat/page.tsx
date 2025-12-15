@@ -1462,9 +1462,10 @@ export default function ChatPage() {
                     alignItems: 'center',
                     gap: '0.5rem',
                     background: 'var(--gray-100)',
-                    borderRadius: '12px',
-                    padding: '0.5rem 0.75rem',
-                    border: '1px solid var(--border-color)'
+                    borderRadius: isMobile ? '16px' : '12px',
+                    padding: isMobile ? '0.75rem 1rem' : '0.5rem 0.75rem',
+                    border: '1px solid var(--border-color)',
+                    minHeight: isMobile ? '56px' : 'auto'
                   }}>
                     <button
                       onClick={() => {
@@ -1505,12 +1506,15 @@ export default function ChatPage() {
                         flex: 1,
                         border: 'none',
                         background: 'transparent',
-                        fontSize: '0.875rem',
+                        fontSize: isMobile ? '16px' : '0.875rem',
                         color: 'var(--text-color)',
                         resize: 'none',
-                        maxHeight: '120px',
+                        maxHeight: isMobile ? '140px' : '120px',
+                        minHeight: isMobile ? '56px' : 'auto',
+                        padding: isMobile ? '0.75rem 0' : '0.5rem 0',
                         outline: 'none',
-                        fontFamily: 'inherit'
+                        fontFamily: 'inherit',
+                        lineHeight: '1.5'
                       }}
                     />
 
@@ -1675,23 +1679,26 @@ export default function ChatPage() {
                   onClick={sendMessage}
                   disabled={!newMessage.trim()}
                   style={{
-                    padding: '0.75rem',
+                    padding: isMobile ? '1rem' : '0.75rem',
                     background: newMessage.trim() ? 'var(--primary)' : 'var(--gray-300)',
                     color: 'white',
                     border: 'none',
-                    borderRadius: '50%',
-                    width: '48px',
-                    height: '48px',
+                    borderRadius: isMobile ? '12px' : '50%',
+                    width: isMobile ? '56px' : '48px',
+                    height: isMobile ? '56px' : '48px',
+                    minWidth: isMobile ? '56px' : '48px',
+                    minHeight: isMobile ? '56px' : '48px',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
                     cursor: newMessage.trim() ? 'pointer' : 'not-allowed',
                     transition: 'all 0.2s',
-                    flexShrink: 0
+                    flexShrink: 0,
+                    touchAction: 'manipulation'
                   }}
                   title="Send melding"
                 >
-                  <Send size={20} />
+                  <Send size={isMobile ? 22 : 20} />
                 </button>
               </div>
 
@@ -1809,12 +1816,14 @@ export default function ChatPage() {
                     onChange={(e) => setNewChatName(e.target.value)}
                     style={{
                       width: '100%',
-                      padding: '0.75rem',
+                      padding: isMobile ? '1rem 1.25rem' : '0.75rem',
                       border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
+                      borderRadius: isMobile ? '12px' : '8px',
+                      fontSize: isMobile ? '16px' : '0.875rem',
+                      minHeight: isMobile ? '56px' : 'auto',
                       background: 'var(--card-background)',
-                      color: 'var(--text-color)'
+                      color: 'var(--text-color)',
+                      outline: 'none'
                     }}
                   />
                 </div>
@@ -1833,12 +1842,14 @@ export default function ChatPage() {
                     onChange={(e) => setNewChatType(e.target.value as 'private' | 'group')}
                     style={{
                       width: '100%',
-                      padding: '0.75rem',
+                      padding: isMobile ? '1rem 1.25rem' : '0.75rem',
                       border: '1px solid var(--border-color)',
-                      borderRadius: '8px',
-                      fontSize: '0.875rem',
+                      borderRadius: isMobile ? '12px' : '8px',
+                      fontSize: isMobile ? '16px' : '0.875rem',
+                      minHeight: isMobile ? '56px' : 'auto',
                       background: 'var(--card-background)',
-                      color: 'var(--text-color)'
+                      color: 'var(--text-color)',
+                      outline: 'none'
                     }}
                   >
                     <option value="private">Privat</option>
@@ -1960,14 +1971,16 @@ export default function ChatPage() {
                   setSelectedUsers([]);
                 }}
                 style={{
-                  padding: '0.75rem 1.5rem',
+                  padding: isMobile ? '1.25rem 1.5rem' : '0.75rem 1.5rem',
                   background: 'var(--gray-100)',
                   color: 'var(--text-color)',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
+                  borderRadius: isMobile ? '12px' : '8px',
+                  fontSize: isMobile ? '1rem' : '0.875rem',
                   fontWeight: '600',
-                  cursor: 'pointer'
+                  cursor: 'pointer',
+                  minHeight: isMobile ? '56px' : 'auto',
+                  touchAction: 'manipulation'
                 }}
               >
                 Avbryt
@@ -2014,14 +2027,16 @@ export default function ChatPage() {
                 }}
                 disabled={!newChatName.trim() || selectedUsers.length === 0}
                 style={{
-                  padding: '0.75rem 1.5rem',
+                  padding: isMobile ? '1.25rem 1.5rem' : '0.75rem 1.5rem',
                   background: (!newChatName.trim() || selectedUsers.length === 0) ? 'var(--gray-300)' : 'var(--primary)',
                   color: 'white',
                   border: 'none',
-                  borderRadius: '8px',
-                  fontSize: '0.875rem',
+                  borderRadius: isMobile ? '12px' : '8px',
+                  fontSize: isMobile ? '1rem' : '0.875rem',
                   fontWeight: '600',
-                  cursor: (!newChatName.trim() || selectedUsers.length === 0) ? 'not-allowed' : 'pointer'
+                  cursor: (!newChatName.trim() || selectedUsers.length === 0) ? 'not-allowed' : 'pointer',
+                  minHeight: isMobile ? '56px' : 'auto',
+                  touchAction: 'manipulation'
                 }}
               >
                 Opprett chat

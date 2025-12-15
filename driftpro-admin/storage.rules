@@ -1,0 +1,66 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    
+    // Helper function to get user data
+    function getUserData() {
+      return firestore.get(/databases/(default)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             getUserData().role in ['admin', 'super_admin'];
+    }
+    
+    // Helper function to check if user is department leader
+    function isDepartmentLeader() {
+      return request.auth != null && 
+             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'department_leader';
+    }
+    
+    // Helper function to check if user is employee
+    function isEmployee() {
+      return request.auth != null && 
+             firestore.exists(/databases/(default)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'employee';
+    }
+    
+    // Documents - company-based access
+    match /documents/{companyId}/{allPaths=**} {
+      // Admin can access all documents
+      allow read, write: if isAdmin();
+      
+      // Department leaders can access documents from their department
+      allow read, write: if isDepartmentLeader();
+      
+      // Employees can access their own documents
+      allow read, write: if isEmployee() && 
+                            request.resource.metadata.uploadedBy == request.auth.uid;
+    }
+    
+    // Partner files - all authenticated users have access
+    match /partner-files/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Partner assignment files
+    match /partners/{companyId}/{allPaths=**} {
+      allow read, write: if request.auth != null;
+    }
+    
+    // Chat files
+    match /chat-files/{chatId}/{allPaths=**} {
+      // Users can access chat files if they are part of the chat
+      allow read, write: if request.auth != null;
+    }
+    
+    // Default deny
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

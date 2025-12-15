@@ -121,7 +121,7 @@ export async function POST(request: NextRequest) {
 
       // Send welcome email to existing user
       try {
-        const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${userId}&email=${encodeURIComponent(email)}`;
+        const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${existingUser.id}&email=${encodeURIComponent(email)}`;
         await globalEmailService.sendPasswordResetEmail(email, setupUrl, name);
       } catch (emailError) {
         console.error('Error sending welcome email:', emailError);
@@ -151,7 +151,7 @@ export async function POST(request: NextRequest) {
 
       // Send password setup email to new admin
       try {
-        const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${userId}&email=${encodeURIComponent(email)}`;
+        const setupUrl = `${process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'}/setup-password?token=${docRef.id}&email=${encodeURIComponent(email)}`;
         await globalEmailService.sendPasswordResetEmail(email, setupUrl, name);
       } catch (emailError) {
         console.error('Error sending password setup email:', emailError);

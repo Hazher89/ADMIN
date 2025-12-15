@@ -101,6 +101,13 @@ export async function POST(request: NextRequest) {
     }
     
     employeeData = employeeDoc.data();
+    if (!employeeData) {
+      return NextResponse.json(
+        { error: 'Employee data not found' },
+        { status: 404 }
+      );
+    }
+    
     const employeeEmail = employeeData.email;
     const actualEmployeeId = employeeDoc.id; // Use the actual document ID
 

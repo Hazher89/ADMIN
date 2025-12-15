@@ -76,3 +76,5 @@ Når permissions er lagt til og consent er gitt:
 - ✅ Vent 1-2 minutter etter consent før du tester
 
 
+
+

@@ -146,8 +146,8 @@ export default function StempelPage() {
       // Load real data from Firebase with GDPR filtering
       const userContext = createUserAccessContext(userProfile);
       const [employeesData, timeClocksData] = await Promise.all([
-        firebaseService.getEmployees(userContext),
-        firebaseService.getTimeClocks()
+        firebaseService.getEmployees(userContext || undefined),
+        firebaseService.getTimeClocks(userContext || undefined)
       ]);
 
       // Convert TimeClock data to StempelEntry format

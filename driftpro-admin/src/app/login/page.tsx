@@ -28,11 +28,20 @@ export default function LoginPage() {
   const [error, setError] = useState('');
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-  // Force dark mode on login page
+  // Force dark mode on login page and detect mobile
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', 'dark');
     setMounted(true);
+    
+    // Detect mobile
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
+    return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
   // Redirect if already authenticated
@@ -67,7 +76,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div 
+      <div 
       style={{
         position: 'fixed',
         top: 0,
@@ -81,8 +90,10 @@ export default function LoginPage() {
         justifyContent: 'center',
         background: 'var(--background-color)',
         color: 'var(--text-color)',
-        padding: '1rem',
-        overflow: 'hidden'
+        padding: isMobile ? '0.75rem' : '1rem',
+        overflow: 'hidden',
+        WebkitOverflowScrolling: 'touch',
+        overscrollBehavior: 'contain'
       }}
     >
       {/* Premium Animated Background */}
@@ -182,12 +193,13 @@ export default function LoginPage() {
             backdropFilter: 'blur(20px) saturate(180%)',
             WebkitBackdropFilter: 'blur(20px) saturate(180%)',
             borderRadius: 'var(--radius-2xl)',
-            padding: '2rem 2rem',
+            padding: isMobile ? '1.5rem 1.25rem' : '2rem 2rem',
             boxShadow: 'var(--shadow-xl), 0 0 0 1px var(--border-color)',
             border: '1px solid var(--border-color)',
             overflow: 'hidden',
             maxHeight: '95vh',
-            overflowY: 'auto'
+            overflowY: 'auto',
+            WebkitOverflowScrolling: 'touch'
           }}
         >
 
@@ -258,12 +270,12 @@ export default function LoginPage() {
                 }}
               ></div>
               
-              {/* Logo container with border glow */}
+              {/* Logo container with border glow - MOBIL OPTIMALISERT */}
               <div 
                 style={{
                   position: 'relative',
                   zIndex: 10,
-                  padding: '1rem',
+                  padding: isMobile ? '0.75rem' : '1rem',
                   borderRadius: 'var(--radius-xl)',
                   background: 'linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(14, 165, 233, 0.1) 100%)',
                   border: '2px solid',
@@ -276,9 +288,10 @@ export default function LoginPage() {
                   display: 'flex',
                   alignItems: 'center',
                   justifyContent: 'center',
-                  width: '280px',
-                  height: '280px',
-                  overflow: 'visible'
+                  width: isMobile ? '200px' : '280px',
+                  height: isMobile ? '200px' : '280px',
+                  overflow: 'visible',
+                  margin: '0 auto'
                 }}
               >
                 {/* DriftPro Logo */}
@@ -293,8 +306,8 @@ export default function LoginPage() {
                   <div 
                     className="animated-logo-container"
                     style={{ 
-                      width: '260px', 
-                      height: '260px', 
+                      width: isMobile ? '180px' : '260px', 
+                      height: isMobile ? '180px' : '260px', 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center'
@@ -302,7 +315,7 @@ export default function LoginPage() {
                   >
                     <DriftProLogo 
                       variant="icon" 
-                      size={260}
+                      size={isMobile ? 180 : 260}
                       className="driftpro-login-logo"
                     />
                   </div>
@@ -374,7 +387,7 @@ export default function LoginPage() {
             {/* Brand name */}
             <h1 
               style={{ 
-                fontSize: '2.5rem',
+                fontSize: isMobile ? '2rem' : '2.5rem',
                 fontWeight: 800,
                 marginBottom: '0.75rem',
                 letterSpacing: '-0.02em',
@@ -522,23 +535,30 @@ export default function LoginPage() {
                 required
                   style={{
                     width: '100%',
-                    paddingLeft: '3rem',
-                    paddingRight: '1rem',
-                    paddingTop: '1rem',
-                    paddingBottom: '1rem',
+                    paddingLeft: '3.5rem',
+                    paddingRight: '1.5rem',
+                    paddingTop: '1.25rem',
+                    paddingBottom: '1.25rem',
+                    minHeight: '56px', // Minimum touch target size
                     borderRadius: 'var(--radius-xl)',
                     transition: 'all 0.2s',
                     outline: 'none',
-                    fontSize: '0.9375rem',
+                    fontSize: '16px', // Minimum 16px to prevent zoom on iOS
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
                     background: 'var(--gray-200)',
                     border: `2px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}`,
                     color: 'var(--text-color)',
                     boxShadow: focusedField === 'email' 
                       ? '0 0 0 4px rgba(6, 182, 212, 0.1), 0 4px 12px rgba(6, 182, 212, 0.1)' 
                       : '0 2px 4px rgba(0, 0, 0, 0.05)',
-                    transform: focusedField === 'email' ? 'translateY(-2px)' : 'translateY(0)'
+                    transform: focusedField === 'email' ? 'translateY(-2px)' : 'translateY(0)',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent'
                   }}
                   placeholder="navn@bedrift.no"
+                  autoComplete="email"
+                  inputMode="email"
                 />
                 {email && !error && (
                   <div style={{ position: 'absolute', right: '1rem', top: '50%', transform: 'translateY(-50%)' }}>
@@ -586,23 +606,29 @@ export default function LoginPage() {
                 required
                   style={{
                     width: '100%',
-                    paddingLeft: '3rem',
-                    paddingRight: '3rem',
-                    paddingTop: '1rem',
-                    paddingBottom: '1rem',
+                    paddingLeft: '3.5rem',
+                    paddingRight: '3.5rem',
+                    paddingTop: '1.25rem',
+                    paddingBottom: '1.25rem',
+                    minHeight: '56px', // Minimum touch target size
                     borderRadius: 'var(--radius-xl)',
                     transition: 'all 0.2s',
                     outline: 'none',
-                    fontSize: '0.9375rem',
+                    fontSize: '16px', // Minimum 16px to prevent zoom on iOS
+                    WebkitAppearance: 'none',
+                    appearance: 'none',
                     background: 'var(--gray-200)',
                     border: `2px solid ${focusedField === 'password' ? 'var(--primary)' : 'var(--border-color)'}`,
                     color: 'var(--text-color)',
                     boxShadow: focusedField === 'password' 
                       ? '0 0 0 4px rgba(6, 182, 212, 0.1), 0 4px 12px rgba(6, 182, 212, 0.1)' 
                       : '0 2px 4px rgba(0, 0, 0, 0.05)',
-                    transform: focusedField === 'password' ? 'translateY(-2px)' : 'translateY(0)'
+                    transform: focusedField === 'password' ? 'translateY(-2px)' : 'translateY(0)',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'transparent'
                   }}
                 placeholder="••••••••"
+                autoComplete="current-password"
               />
               <button
                 type="button"
@@ -612,13 +638,20 @@ export default function LoginPage() {
                     right: '0.75rem',
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    padding: '0.5rem',
+                    padding: '0.75rem',
+                    minWidth: '44px',
+                    minHeight: '44px',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
                     transition: 'all 0.2s',
                     borderRadius: 'var(--radius-md)',
                     background: 'transparent',
                     border: 'none',
                     cursor: 'pointer',
-                    color: 'var(--gray-400)'
+                    color: 'var(--gray-400)',
+                    touchAction: 'manipulation',
+                    WebkitTapHighlightColor: 'rgba(6, 182, 212, 0.2)'
                   }}
                   onMouseEnter={(e) => {
                     e.currentTarget.style.color = 'var(--primary)';
@@ -628,8 +661,18 @@ export default function LoginPage() {
                     e.currentTarget.style.color = 'var(--gray-400)';
                     e.currentTarget.style.background = 'transparent';
                   }}
+                  onTouchStart={(e) => {
+                    e.currentTarget.style.color = 'var(--primary)';
+                    e.currentTarget.style.background = 'rgba(6, 182, 212, 0.1)';
+                  }}
+                  onTouchEnd={(e) => {
+                    setTimeout(() => {
+                      e.currentTarget.style.color = 'var(--gray-400)';
+                      e.currentTarget.style.background = 'transparent';
+                    }, 200);
+                  }}
                 >
-                  {showPassword ? <EyeOff size={20} /> : <Eye size={20} />}
+                  {showPassword ? <EyeOff size={22} /> : <Eye size={22} />}
               </button>
             </div>
           </div>
@@ -639,11 +682,17 @@ export default function LoginPage() {
             <a 
               href="/forgot-password" 
                 style={{
-                  fontSize: '0.875rem',
+                  fontSize: '0.9375rem',
                   fontWeight: 500,
                   transition: 'color 0.2s',
                   color: 'var(--primary)',
-                  textDecoration: 'none'
+                  textDecoration: 'none',
+                  padding: '0.5rem',
+                  minHeight: '44px',
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  touchAction: 'manipulation',
+                  WebkitTapHighlightColor: 'rgba(6, 182, 212, 0.2)'
                 }}
                 onMouseEnter={(e) => {
                   e.currentTarget.style.color = 'var(--primary-light)';
@@ -656,20 +705,21 @@ export default function LoginPage() {
             </a>
           </div>
 
-            {/* Submit Button - AVANSERT */}
+            {/* Submit Button - AVANSERT - MOBIL OPTIMALISERT */}
           <button
             type="submit"
             disabled={loading}
             style={{
                 width: '100%',
-                paddingTop: '1.25rem',
-                paddingBottom: '1.25rem',
-                paddingLeft: '1.25rem',
-                paddingRight: '1.25rem',
+                paddingTop: '1.5rem',
+                paddingBottom: '1.5rem',
+                paddingLeft: '1.5rem',
+                paddingRight: '1.5rem',
+                minHeight: '56px', // Minimum touch target size
                 borderRadius: 'var(--radius-xl)',
                 color: '#ffffff',
                 fontWeight: 700,
-                fontSize: '1rem',
+                fontSize: '1.125rem', // Larger font for mobile
                 boxShadow: loading 
                   ? 'none' 
                   : '0 10px 25px -5px rgba(6, 182, 212, 0.4), 0 0 0 1px rgba(6, 182, 212, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2)',
@@ -683,7 +733,10 @@ export default function LoginPage() {
                 background: loading ? 'var(--gray-400)' : 'var(--gradient-primary)',
                 cursor: loading ? 'not-allowed' : 'pointer',
                 opacity: loading ? 0.7 : 1,
-                border: 'none'
+                border: 'none',
+                touchAction: 'manipulation',
+                WebkitTapHighlightColor: 'rgba(6, 182, 212, 0.3)',
+                userSelect: 'none'
               }}
               onMouseEnter={(e) => {
                 if (!loading) {
@@ -1305,6 +1358,584 @@ export default function LoginPage() {
         
         .dp-burst-dot {
           animation: dp-burst-dot-bounce 1.2s ease-in-out infinite;
+        }
+        
+        /* ============================================
+           ADVANCED LOGO ANIMATIONS - Quantum System
+           ============================================ */
+        
+        /* Quantum Field Pulse */
+        @keyframes quantum-field-pulse {
+          0%, 100% {
+            opacity: 0.15;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 0.25;
+            transform: scale(1.1);
+          }
+        }
+        
+        /* Orbital Ring Rotations - Complex Elliptical */
+        @keyframes orbital-ring-1-rotate {
+          from {
+            transform: rotate(0deg) scaleX(1) scaleY(1);
+          }
+          25% {
+            transform: rotate(90deg) scaleX(1.2) scaleY(0.8);
+          }
+          50% {
+            transform: rotate(180deg) scaleX(1) scaleY(1);
+          }
+          75% {
+            transform: rotate(270deg) scaleX(0.8) scaleY(1.2);
+          }
+          to {
+            transform: rotate(360deg) scaleX(1) scaleY(1);
+          }
+        }
+        
+        @keyframes orbital-ring-2-rotate {
+          from {
+            transform: rotate(0deg) scaleX(1) scaleY(1);
+          }
+          25% {
+            transform: rotate(-90deg) scaleX(0.8) scaleY(1.2);
+          }
+          50% {
+            transform: rotate(-180deg) scaleX(1) scaleY(1);
+          }
+          75% {
+            transform: rotate(-270deg) scaleX(1.2) scaleY(0.8);
+          }
+          to {
+            transform: rotate(-360deg) scaleX(1) scaleY(1);
+          }
+        }
+        
+        @keyframes orbital-ring-3-rotate {
+          from {
+            transform: rotate(0deg) scaleX(1) scaleY(1);
+          }
+          33% {
+            transform: rotate(120deg) scaleX(1.15) scaleY(0.85);
+          }
+          66% {
+            transform: rotate(240deg) scaleX(0.85) scaleY(1.15);
+          }
+          to {
+            transform: rotate(360deg) scaleX(1) scaleY(1);
+          }
+        }
+        
+        /* Hexagonal Core Animations */
+        @keyframes hex-outer-rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        @keyframes hex-middle-rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(-360deg);
+          }
+        }
+        
+        @keyframes hex-inner-pulse {
+          0%, 100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 0.6;
+          }
+          25% {
+            transform: scale(1.1) rotate(60deg);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.15) rotate(120deg);
+            opacity: 1;
+          }
+          75% {
+            transform: scale(1.1) rotate(180deg);
+            opacity: 0.8;
+          }
+        }
+        
+        /* Quantum Core Morphing */
+        @keyframes morph-hex-morph {
+          0%, 100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 0.9;
+          }
+          16.66% {
+            transform: scale(1.1) rotate(60deg);
+            opacity: 1;
+          }
+          33.33% {
+            transform: scale(1.15) rotate(120deg);
+            opacity: 1;
+          }
+          50% {
+            transform: scale(1.1) rotate(180deg);
+            opacity: 1;
+          }
+          66.66% {
+            transform: scale(1.15) rotate(240deg);
+            opacity: 1;
+          }
+          83.33% {
+            transform: scale(1.1) rotate(300deg);
+            opacity: 1;
+          }
+        }
+        
+        @keyframes core-glow-pulse {
+          0%, 100% {
+            opacity: 0.8;
+            transform: scale(1);
+          }
+          50% {
+            opacity: 1;
+            transform: scale(1.2);
+          }
+        }
+        
+        @keyframes core-pulse-intense {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.95;
+          }
+          25% {
+            transform: scale(1.3);
+            opacity: 0.9;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 0.85;
+          }
+          75% {
+            transform: scale(1.2);
+            opacity: 0.9;
+          }
+        }
+        
+        @keyframes core-center-rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        /* Quantum Particle Orbital */
+        @keyframes quantum-particle-orbit {
+          0% {
+            transform: rotate(0deg) translateX(22px) rotate(0deg) scale(1);
+            opacity: 0.9;
+          }
+          25% {
+            transform: rotate(90deg) translateX(22px) rotate(-90deg) scale(1.1);
+            opacity: 1;
+          }
+          50% {
+            transform: rotate(180deg) translateX(22px) rotate(-180deg) scale(1);
+            opacity: 0.95;
+          }
+          75% {
+            transform: rotate(270deg) translateX(22px) rotate(-270deg) scale(1.1);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(360deg) translateX(22px) rotate(-360deg) scale(1);
+            opacity: 0.9;
+          }
+        }
+        
+        @keyframes orbital-particle-rotate {
+          from {
+            transform: rotate(0deg);
+          }
+          to {
+            transform: rotate(360deg);
+          }
+        }
+        
+        @keyframes particle-connection-flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.15;
+          }
+          50% {
+            stroke-dashoffset: -8;
+            opacity: 0.3;
+          }
+          100% {
+            stroke-dashoffset: -16;
+            opacity: 0.15;
+          }
+        }
+        
+        /* Wave Ring Expansion */
+        @keyframes wave-ring-expand {
+          0% {
+            transform: scale(0.8);
+            opacity: 0.2;
+            stroke-width: 1;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 0.1;
+            stroke-width: 0.8;
+          }
+          100% {
+            transform: scale(2.2);
+            opacity: 0;
+            stroke-width: 0.5;
+          }
+        }
+        
+        /* Energy Beam Pulse */
+        @keyframes energy-beam-pulse {
+          0%, 100% {
+            stroke-opacity: 0.4;
+            stroke-width: 1.5;
+          }
+          50% {
+            stroke-opacity: 0.8;
+            stroke-width: 2.5;
+          }
+        }
+        
+        @keyframes beam-node-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.8;
+          }
+          50% {
+            transform: scale(1.3);
+            opacity: 1;
+          }
+        }
+        
+        /* Data Particle Float */
+        @keyframes data-particle-float {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.9;
+          }
+          25% {
+            transform: translate(2px, -3px) scale(1.2);
+            opacity: 1;
+          }
+          50% {
+            transform: translate(-2px, -4px) scale(1.1);
+            opacity: 0.95;
+          }
+          75% {
+            transform: translate(1px, -2px) scale(1.15);
+            opacity: 1;
+          }
+        }
+        
+        /* Morphing Triangle */
+        @keyframes morph-triangle-morph {
+          0%, 100% {
+            transform: scale(1) rotate(0deg);
+            opacity: 0.5;
+          }
+          33% {
+            transform: scale(1.2) rotate(120deg);
+            opacity: 0.7;
+          }
+          66% {
+            transform: scale(1.1) rotate(240deg);
+            opacity: 0.6;
+          }
+        }
+        
+        /* Additional Animations for New Elements */
+        @keyframes circular-ring-rotate {
+          from {
+            transform: rotate(0deg);
+            stroke-dashoffset: 0;
+          }
+          to {
+            transform: rotate(360deg);
+            stroke-dashoffset: -20;
+          }
+        }
+        
+        @keyframes secondary-wave-expand {
+          0% {
+            transform: scale(0.9);
+            opacity: 0.15;
+          }
+          50% {
+            transform: scale(1.3);
+            opacity: 0.08;
+          }
+          100% {
+            transform: scale(1.8);
+            opacity: 0;
+          }
+        }
+        
+        @keyframes secondary-particle-float {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+            opacity: 0.7;
+          }
+          25% {
+            transform: translate(1.5px, -2px) scale(1.3);
+            opacity: 0.9;
+          }
+          50% {
+            transform: translate(-1.5px, -3px) scale(1.1);
+            opacity: 0.8;
+          }
+          75% {
+            transform: translate(1px, -1.5px) scale(1.2);
+            opacity: 0.85;
+          }
+        }
+        
+        @keyframes morph-square-rotate {
+          from {
+            transform: rotate(0deg) scale(1);
+            opacity: 0.4;
+          }
+          50% {
+            transform: rotate(180deg) scale(1.2);
+            opacity: 0.6;
+          }
+          to {
+            transform: rotate(360deg) scale(1);
+            opacity: 0.4;
+          }
+        }
+        
+        @keyframes morph-diamond-morph {
+          0%, 100% {
+            transform: rotate(0deg) scale(1);
+            opacity: 0.45;
+          }
+          25% {
+            transform: rotate(90deg) scale(1.15);
+            opacity: 0.6;
+          }
+          50% {
+            transform: rotate(180deg) scale(1.1);
+            opacity: 0.55;
+          }
+          75% {
+            transform: rotate(270deg) scale(1.15);
+            opacity: 0.6;
+          }
+        }
+        
+        @keyframes connection-line-flow {
+          0% {
+            stroke-dashoffset: 0;
+            opacity: 0.1;
+          }
+          50% {
+            stroke-dashoffset: -5;
+            opacity: 0.2;
+          }
+          100% {
+            stroke-dashoffset: -10;
+            opacity: 0.1;
+          }
+        }
+        
+        @keyframes glow-particle-pulse {
+          0%, 100% {
+            transform: scale(1);
+            opacity: 0.6;
+          }
+          50% {
+            transform: scale(1.5);
+            opacity: 0.9;
+          }
+        }
+        
+        /* Apply Advanced Animations - Faster speeds for more movement */
+        .quantum-field {
+          animation: quantum-field-pulse 3s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .orbital-ring-1 {
+          animation: orbital-ring-1-rotate 15s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .orbital-ring-2 {
+          animation: orbital-ring-2-rotate 18s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .orbital-ring-3 {
+          animation: orbital-ring-3-rotate 22s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .circular-ring-1 {
+          animation: circular-ring-rotate 12s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .circular-ring-2 {
+          animation: circular-ring-rotate 10s linear infinite reverse;
+          transform-origin: 32px 32px;
+        }
+        
+        .hex-outer {
+          animation: hex-outer-rotate 12s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .hex-middle {
+          animation: hex-middle-rotate 10s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .hex-inner {
+          animation: hex-inner-pulse 2.5s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .morph-hex {
+          animation: morph-hex-morph 3s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .core-glow {
+          animation: core-glow-pulse 1.5s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .core-pulse {
+          animation: core-pulse-intense 1.2s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .core-center {
+          animation: core-center-rotate 2.5s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .quantum-particle-group {
+          animation: quantum-particle-orbit 6s linear infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .orbital-particle {
+          animation: orbital-particle-rotate 3s linear infinite;
+          transform-origin: 0 0;
+        }
+        
+        .particle-connection {
+          animation: particle-connection-flow 2.5s linear infinite;
+        }
+        
+        .wave-ring {
+          animation: wave-ring-expand 2.5s ease-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .secondary-wave {
+          animation: secondary-wave-expand 2s ease-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .energy-beam {
+          animation: energy-beam-pulse 1.5s ease-in-out infinite;
+          transform-origin: 32px 32px;
+        }
+        
+        .beam-node {
+          animation: beam-node-pulse 1.2s ease-in-out infinite;
+          transform-origin: 0 0;
+        }
+        
+        .data-particle {
+          animation: data-particle-float 2.5s ease-in-out infinite;
+        }
+        
+        .secondary-particle {
+          animation: secondary-particle-float 2s ease-in-out infinite;
+        }
+        
+        .morph-triangle {
+          animation: morph-triangle-morph 3s ease-in-out infinite;
+        }
+        
+        .morph-square {
+          animation: morph-square-rotate 4s linear infinite;
+        }
+        
+        .morph-diamond {
+          animation: morph-diamond-morph 3.5s ease-in-out infinite;
+        }
+        
+        .connection-line {
+          animation: connection-line-flow 2s linear infinite;
+        }
+        
+        .glow-particle {
+          animation: glow-particle-pulse 2s ease-in-out infinite;
+        }
+        
+        /* Advanced Logo Container - More movement */
+        .advanced-logo-container {
+          transform-origin: 32px 32px;
+          animation: logo-container-float 8s ease-in-out infinite;
+        }
+        
+        @keyframes logo-container-float {
+          0%, 100% {
+            transform: translate(0, 0) scale(1);
+          }
+          25% {
+            transform: translate(1px, -1px) scale(1.01);
+          }
+          50% {
+            transform: translate(0, -1.5px) scale(1);
+          }
+          75% {
+            transform: translate(-1px, -1px) scale(1.01);
+          }
+        }
+        
+        .advanced-logo:hover .quantum-field {
+          animation-duration: 1.5s;
+        }
+        
+        .advanced-logo:hover .orbital-particle {
+          animation-duration: 1.5s;
+        }
+        
+        .advanced-logo:hover .morph-hex {
+          animation-duration: 1.5s;
+        }
+        
+        .advanced-logo:hover .quantum-particle-group {
+          animation-duration: 4s;
+        }
+        
+        .advanced-logo:hover .hex-outer {
+          animation-duration: 8s;
+        }
+        
+        .advanced-logo:hover .hex-middle {
+          animation-duration: 7s;
         }
 
         /* Company name overlay animation - ultra advanced reveal */

@@ -295,11 +295,12 @@ export default function CustomersPage() {
             onChange={(e) => setSearchTerm(e.target.value)}
               style={{
                 width: '100%',
-                padding: isMobile ? '0.875rem 0.875rem 0.875rem 2.75rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
+                padding: isMobile ? '1rem 1rem 1rem 3rem' : '0.75rem 0.75rem 0.75rem 2.5rem',
                 border: '1px solid var(--border-color)',
-                borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+                borderRadius: isMobile ? '12px' : 'var(--radius-lg)',
                 outline: 'none',
                 fontSize: isMobile ? '16px' : undefined,
+                minHeight: isMobile ? '56px' : 'auto',
                 background: 'var(--card-background)'
               }}
           />
@@ -309,12 +310,13 @@ export default function CustomersPage() {
             onChange={(e) => setFilterType(e.target.value)}
             style={{
               width: isMobile ? '100%' : 'auto',
-              padding: isMobile ? '0.875rem' : '0.75rem 1rem',
+              padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
               border: '1px solid var(--border-color)',
-              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              borderRadius: isMobile ? '12px' : 'var(--radius-lg)',
               fontSize: isMobile ? '16px' : undefined,
               background: 'var(--card-background)',
-              minHeight: isMobile ? '44px' : undefined
+              minHeight: isMobile ? '56px' : undefined,
+              outline: 'none'
             }}
           >
             <option value="all">Alle typer</option>
@@ -326,12 +328,13 @@ export default function CustomersPage() {
             onChange={(e) => setFilterStatus(e.target.value)}
             style={{
               width: isMobile ? '100%' : 'auto',
-              padding: isMobile ? '0.875rem' : '0.75rem 1rem',
+              padding: isMobile ? '1rem 1.25rem' : '0.75rem 1rem',
               border: '1px solid var(--border-color)',
-              borderRadius: isMobile ? '0.5rem' : 'var(--radius-lg)',
+              borderRadius: isMobile ? '12px' : 'var(--radius-lg)',
               fontSize: isMobile ? '16px' : undefined,
               background: 'var(--card-background)',
-              minHeight: isMobile ? '44px' : undefined
+              minHeight: isMobile ? '56px' : undefined,
+              outline: 'none'
             }}
           >
             <option value="all">Alle statuser</option>

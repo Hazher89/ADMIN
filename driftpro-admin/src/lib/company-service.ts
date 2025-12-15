@@ -757,7 +757,10 @@ export interface Comment {
 
 // SUPER AVANSERT COMPANY SERVICE
 export class CompanyService {
-  private   constructor(    this.companyId = companyId;
+  private companyId: string;
+
+  constructor(companyId: string) {
+    this.companyId = companyId;
   }
 
   // PROTOCOL MANAGEMENT - SUPER AVANSERT

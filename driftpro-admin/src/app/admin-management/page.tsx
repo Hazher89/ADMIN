@@ -64,7 +64,7 @@ export default function AdminManagementPage() {
       const company = JSON.parse(selectedCompany);
       setCompanyId(company.id);
       setCompanyName(company.name); // Set company name
-      loadAdmins(company.id);
+      loadAdmins();
     }
   }, []);
 
@@ -412,7 +412,7 @@ export default function AdminManagementPage() {
                     Tillatelser:
                   </p>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-                    {admin.permissions.map((permission) => (
+                    {admin.permissions.map((permission: string) => (
                       <span
                         key={permission}
                         style={{

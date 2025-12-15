@@ -1,0 +1,292 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper function to get user data
+    function getUserData() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+    
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role in ['admin', 'super_admin'];
+    }
+    
+    // Helper function to check if user is department leader
+    function isDepartmentLeader() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'department_leader';
+    }
+    
+    // Helper function to check if user is employee
+    function isEmployee() {
+      return request.auth != null && 
+             exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+             getUserData().role == 'employee';
+    }
+    
+    // Helper function to get user's department
+    function getUserDepartment() {
+      return getUserData().departmentId;
+    }
+    
+    // Helper function to check if employee is in user's department
+    function isEmployeeInMyDepartment(employeeId) {
+      let employeeData = get(/databases/$(database)/documents/users/$(employeeId)).data;
+      return employeeData.departmentId == getUserDepartment();
+    }
+    
+    // Users collection - strict access control
+    match /users/{userId} {
+      // Users can read their own data
+      allow read: if request.auth != null && request.auth.uid == userId;
+      
+      // Admin can read all users
+      allow read: if isAdmin();
+      
+      // Department leaders can read users in their department
+      allow read: if isDepartmentLeader() && 
+                     resource.data.departmentId == getUserDepartment();
+      
+      // Users can update their own data (but not role/permissions)
+      allow update: if request.auth != null && 
+                       request.auth.uid == userId &&
+                       request.resource.data.diff(resource.data).affectedKeys()
+                         .hasOnly(['displayName', 'email', 'phone', 'avatar', 'bio', 'address', 'emergencyContact', 'birthDate']);
+      
+      // Admin can create/update/delete any user
+      allow create, update, delete: if isAdmin();
+      
+      // Department leaders can create users in their department
+      allow create: if isDepartmentLeader() && 
+                       request.resource.data.departmentId == getUserDepartment();
+    }
+    
+    // Departments collection
+    match /departments/{departmentId} {
+      // Admin can read/write all departments
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read their own department
+      allow read: if isDepartmentLeader() && 
+                     resource.data.id == getUserDepartment();
+      
+      // Employees cannot access departments directly
+      allow read, write: if false;
+    }
+    
+    // Absences collection - GDPR filtering
+    match /absences/{absenceId} {
+      // Admin can read/write all absences
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read/write absences from their department employees
+      allow read: if isDepartmentLeader() && 
+                     isEmployeeInMyDepartment(resource.data.employeeId);
+      allow create: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(request.resource.data.employeeId);
+      allow update: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(resource.data.employeeId);
+      allow delete: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(resource.data.employeeId);
+      
+      // Employees can only read/write their own absences
+      allow read, write: if isEmployee() && 
+                            resource.data.employeeId == request.auth.uid;
+      allow create: if isEmployee() && 
+                       request.resource.data.employeeId == request.auth.uid;
+    }
+    
+    // Vacations collection - GDPR filtering
+    match /vacations/{vacationId} {
+      // Admin can read/write all vacations
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read/write vacations from their department employees
+      allow read: if isDepartmentLeader() && 
+                     isEmployeeInMyDepartment(resource.data.employeeId);
+      allow create: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(request.resource.data.employeeId);
+      allow update: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(resource.data.employeeId);
+      allow delete: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(resource.data.employeeId);
+      
+      // Employees can only read/write their own vacations
+      allow read, write: if isEmployee() && 
+                            resource.data.employeeId == request.auth.uid;
+      allow create: if isEmployee() && 
+                       request.resource.data.employeeId == request.auth.uid;
+    }
+    
+    // Vacation Allocations collection
+    match /vacationAllocations/{allocationId} {
+      // Admin can read/write all allocations
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read allocations for their department employees
+      allow read: if isDepartmentLeader() && 
+                     isEmployeeInMyDepartment(resource.data.employeeId);
+      
+      // Employees can only read their own allocations
+      allow read: if isEmployee() && 
+                     resource.data.employeeId == request.auth.uid;
+      
+      // Only admin can create/update/delete allocations
+      allow create, update, delete: if isAdmin();
+    }
+    
+    // Shifts collection - GDPR filtering
+    match /shifts/{shiftId} {
+      // Admin can read/write all shifts
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read/write shifts for their department employees
+      allow read: if isDepartmentLeader() && 
+                     isEmployeeInMyDepartment(resource.data.employeeId);
+      allow create: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(request.resource.data.employeeId);
+      allow update: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(resource.data.employeeId);
+      allow delete: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(resource.data.employeeId);
+      
+      // Employees can only read/write their own shifts
+      allow read, write: if isEmployee() && 
+                            resource.data.employeeId == request.auth.uid;
+      allow create: if isEmployee() && 
+                       request.resource.data.employeeId == request.auth.uid;
+    }
+    
+    // Timeclocks collection - GDPR filtering
+    match /timeclocks/{timeclockId} {
+      // Admin can read/write all timeclocks
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read/write timeclocks for their department employees (but not themselves)
+      allow read: if isDepartmentLeader() && 
+                     isEmployeeInMyDepartment(resource.data.employeeId) &&
+                     resource.data.employeeId != request.auth.uid;
+      allow create: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(request.resource.data.employeeId) &&
+                       request.resource.data.employeeId != request.auth.uid;
+      allow update: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(resource.data.employeeId) &&
+                       resource.data.employeeId != request.auth.uid;
+      allow delete: if isDepartmentLeader() && 
+                       isEmployeeInMyDepartment(resource.data.employeeId) &&
+                       resource.data.employeeId != request.auth.uid;
+      
+      // Employees can only read/write their own timeclocks
+      allow read, write: if isEmployee() && 
+                            resource.data.employeeId == request.auth.uid;
+      allow create: if isEmployee() && 
+                       request.resource.data.employeeId == request.auth.uid;
+    }
+    
+    // Deviations collection - GDPR filtering
+    match /deviations/{deviationId} {
+      // Admin can read/write all deviations
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read/write deviations from their department
+      allow read: if isDepartmentLeader() && 
+                     resource.data.departmentId == getUserDepartment();
+      allow create: if isDepartmentLeader() && 
+                       request.resource.data.departmentId == getUserDepartment();
+      allow update: if isDepartmentLeader() && 
+                       resource.data.departmentId == getUserDepartment();
+      allow delete: if isDepartmentLeader() && 
+                       resource.data.departmentId == getUserDepartment();
+      
+      // Employees can only read/write their own deviations
+      allow read, write: if isEmployee() && 
+                            resource.data.reportedBy == request.auth.uid;
+      allow create: if isEmployee() && 
+                       request.resource.data.reportedBy == request.auth.uid;
+    }
+    
+    // Partners collection - all authenticated users have full access
+    match /partners/{partnerId} {
+      // All authenticated users (employees, department leaders, admin) have full access
+      allow read, write: if request.auth != null;
+    }
+    
+    // Documents collection
+    match /documents/{documentId} {
+      // Admin can read/write all documents
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read/write documents from their department
+      allow read: if isDepartmentLeader() && 
+                     resource.data.departmentId == getUserDepartment();
+      allow create: if isDepartmentLeader() && 
+                       request.resource.data.departmentId == getUserDepartment();
+      allow update: if isDepartmentLeader() && 
+                       resource.data.departmentId == getUserDepartment();
+      allow delete: if isDepartmentLeader() && 
+                       resource.data.departmentId == getUserDepartment();
+      
+      // Employees can only read/write their own documents
+      allow read, write: if isEmployee() && 
+                            resource.data.uploadedBy == request.auth.uid;
+      allow create: if isEmployee() && 
+                       request.resource.data.uploadedBy == request.auth.uid;
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Users can only read their own notifications
+      allow read: if request.auth != null && 
+                     resource.data.userId == request.auth.uid;
+      
+      // Admin can read all notifications
+      allow read: if isAdmin();
+      
+      // Only system/admin can create notifications
+      allow create: if isAdmin();
+      
+      // Users can update their own notifications (mark as read)
+      allow update: if request.auth != null && 
+                       resource.data.userId == request.auth.uid;
+    }
+    
+    // Audit logs - only admin can access
+    match /auditLogs/{logId} {
+      allow read, write: if isAdmin();
+    }
+    
+    // Route assignments
+    match /routeAssignments/{assignmentId} {
+      // Admin can read/write all
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read assignments
+      allow read: if isDepartmentLeader();
+      
+      // Employees can read assignments
+      allow read: if request.auth != null;
+    }
+    
+    // Inbound routes
+    match /inboundRoutes/{routeId} {
+      // Admin can read/write all
+      allow read, write: if isAdmin();
+      
+      // Department leaders can read
+      allow read: if isDepartmentLeader();
+      
+      // Employees can read
+      allow read: if request.auth != null;
+    }
+    
+    // Default deny for all other collections
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}
+

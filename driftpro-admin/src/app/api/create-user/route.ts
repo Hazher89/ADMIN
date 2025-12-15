@@ -5,7 +5,19 @@ import { getFirebaseAuth, getFirebaseDb, isFirebaseAvailable } from '@/lib/fireb
 import { v4 as uuidv4 } from 'uuid';
 
 export async function POST(request: NextRequest) {
+  // Extract request data first so it's available in catch block
+  let email: string = '';
+  let displayName: string = '';
+  let companyName: string = '';
+  let role: string = 'employee';
+  
   try {
+    const requestData = await request.json();
+    email = requestData.email || '';
+    displayName = requestData.displayName || '';
+    companyName = requestData.companyName || '';
+    role = requestData.role || 'employee';
+    
     // Check if Firebase is available
     const auth = getFirebaseAuth();
     const db = getFirebaseDb();
@@ -16,8 +28,6 @@ export async function POST(request: NextRequest) {
         { status: 500 }
       );
     }
-
-    const { email, displayName, role = 'employee', companyName } = await request.json();
 
     if (!email || !displayName) {
       return NextResponse.json(
@@ -125,8 +135,19 @@ export async function POST(request: NextRequest) {
     if (error.code === 'auth/email-already-in-use') {
       // If user exists, try to find their UID in Firestore
       try {
+        // Ensure db and auth are available
+        const firestoreDb = getFirebaseDb();
+        const firebaseAuth = getFirebaseAuth();
+        
+        if (!firestoreDb || !firebaseAuth) {
+          return NextResponse.json(
+            { error: 'Database not available' },
+            { status: 500 }
+          );
+        }
+        
         // Try to find user by email in Firestore
-        const usersRef = collection(db, 'users');
+        const usersRef = collection(firestoreDb, 'users');
         const { query: firestoreQuery, where: firestoreWhere, getDocs } = await import('firebase/firestore');
         const emailQuery = firestoreQuery(usersRef, firestoreWhere('email', '==', email));
         const emailSnapshot = await getDocs(emailQuery);
@@ -158,7 +179,7 @@ export async function POST(request: NextRequest) {
         
         // Send password reset email
         try {
-          await sendPasswordResetEmail(auth, email);
+          await sendPasswordResetEmail(firebaseAuth, email);
           console.log('✅ Password reset email sent from Firebase Auth');
         } catch (resetEmailError) {
           console.error('⚠️ Failed to send password reset email from Firebase Auth:', resetEmailError);
@@ -171,7 +192,7 @@ export async function POST(request: NextRequest) {
 
         // Store setup token in Firestore (use Timestamp for expiresAt to match setup-password expectations)
         if (existingUserId) {
-          await addDoc(collection(db, 'setupTokens'), {
+          await addDoc(collection(firestoreDb, 'setupTokens'), {
             token: setupToken,
             userId: existingUserId,
             email: email,

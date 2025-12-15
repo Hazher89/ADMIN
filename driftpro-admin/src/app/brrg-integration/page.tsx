@@ -17,7 +17,7 @@ import {
   CheckCircle,
   AlertCircle
 } from 'lucide-react';
-import { brrgService, BRRGCompany } from '@/lib/brrg-service';
+import { brrgService, BrrgCompany } from '@/lib/brrg-service';
 
 // Prevent pre-rendering since this page uses useRouter
 export const dynamic = 'force-dynamic';
@@ -26,8 +26,8 @@ export default function BRRGIntegrationPage() {
   const router = useRouter();
   const [searchTerm, setSearchTerm] = useState('');
   const [orgNumber, setOrgNumber] = useState('');
-  const [company, setCompany] = useState<BRRGCompany | null>(null);
-  const [searchResults, setSearchResults] = useState<BRRGCompany[]>([]);
+  const [company, setCompany] = useState<BrrgCompany | null>(null);
+  const [searchResults, setSearchResults] = useState<BrrgCompany[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +87,7 @@ export default function BRRGIntegrationPage() {
     }
   };
 
-  const handleSyncCompany = async (companyData: BRRGCompany) => {
+  const handleSyncCompany = async (companyData: BrrgCompany) => {
     try {
       setLoading(true);
       setError(null);

@@ -13,6 +13,15 @@ import {
   getDoc,
   setDoc
 } from 'firebase/firestore';
+import { globalEmailService } from './global-email-service';
+
+export interface Employee {
+  id: string;
+  email?: string;
+  role?: string;
+  departmentId?: string;
+  companyId?: string;
+}
 
 export interface Notification {
   id: string;
@@ -38,7 +47,67 @@ export interface NotificationSettings {
 }
 
 class NotificationService {
-  // Create notification
+  // Helper function to get user email
+  private async getUserEmail(userId: string): Promise<string | null> {
+    try {
+      const userDoc = await getDoc(doc(db!, 'users', userId));
+      if (userDoc.exists()) {
+        const userData = userDoc.data();
+        return userData.email || null;
+      }
+      return null;
+    } catch (error) {
+      console.error('Error getting user email:', error);
+      return null;
+    }
+  }
+
+  // Helper function to get all admins
+  private async getAllAdmins(companyId?: string): Promise<Employee[]> {
+    if (!db) return [];
+    try {
+      const q = query(
+        collection(db, 'users'),
+        where('role', 'in', ['admin', 'super_admin'])
+      );
+      const snapshot = await getDocs(q);
+      const admins = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Employee)).filter(emp => 
+        !companyId || emp.companyId === companyId
+      );
+      return admins;
+    } catch (error) {
+      console.error('Error getting admins:', error);
+      return [];
+    }
+  }
+
+  // Helper function to get department leaders for a specific department
+  private async getDepartmentLeaders(departmentId: string, companyId?: string): Promise<Employee[]> {
+    if (!db) return [];
+    try {
+      const q = query(
+        collection(db, 'users'),
+        where('role', '==', 'department_leader'),
+        where('departmentId', '==', departmentId)
+      );
+      const snapshot = await getDocs(q);
+      const leaders = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      } as Employee)).filter(emp => 
+        !companyId || emp.companyId === companyId
+      );
+      return leaders;
+    } catch (error) {
+      console.error('Error getting department leaders:', error);
+      return [];
+    }
+  }
+
+  // Create notification with email
   async createNotification(notificationData: {
     userId: string;
     title: string;
@@ -48,16 +117,67 @@ class NotificationService {
     actionUrl?: string;
     actionText?: string;
     metadata?: Record<string, unknown>;
+    sendEmail?: boolean;
+    departmentId?: string;
+    companyId?: string;
   }): Promise<void> {
     if (!db) return;
     
     try {
+      // Create in-app notification
       await addDoc(collection(db, 'notifications'), {
-        ...notificationData,
+        userId: notificationData.userId,
+        title: notificationData.title,
+        message: notificationData.message,
+        type: notificationData.type,
+        priority: notificationData.priority,
         status: 'unread',
+        actionUrl: notificationData.actionUrl,
+        actionText: notificationData.actionText,
+        metadata: {
+          ...notificationData.metadata,
+          departmentId: notificationData.departmentId,
+          companyId: notificationData.companyId
+        },
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+
+      // Send email if requested
+      if (notificationData.sendEmail !== false) {
+        try {
+          const userEmail = await this.getUserEmail(notificationData.userId);
+          if (userEmail) {
+            const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no';
+            const emailHtml = `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px;">
+                <h2 style="color: #2563eb;">${notificationData.title}</h2>
+                <p>${notificationData.message}</p>
+                ${notificationData.actionUrl ? `
+                  <div style="margin: 20px 0;">
+                    <a href="${baseUrl}${notificationData.actionUrl}" 
+                       style="display: inline-block; padding: 12px 24px; background: #2563eb; color: white; text-decoration: none; border-radius: 8px; font-weight: 600;">
+                      ${notificationData.actionText || 'Se detaljer'}
+                    </a>
+                  </div>
+                ` : ''}
+                <p style="color: #6b7280; font-size: 0.875rem; margin-top: 30px;">
+                  Dette er en automatisk varsel fra DriftPro-systemet.
+                </p>
+              </div>
+            `;
+            
+            await globalEmailService.sendEmail({
+              to: userEmail,
+              subject: notificationData.title,
+              html: emailHtml
+            });
+          }
+        } catch (emailError) {
+          console.error('Error sending notification email:', emailError);
+          // Don't fail notification creation if email fails
+        }
+      }
     } catch (error) {
       console.error('Error creating notification:', error);
     }
@@ -198,168 +318,302 @@ class NotificationService {
     }
   }
 
-  // Create deviation notification
+  // Create deviation notification - sends to admin and department leaders
   async createDeviationNotification(
     deviationId: string,
     deviationTitle: string,
     reporterName: string,
-    department: string,
-        recipientIds: string[]
+    reporterId: string,
+    departmentId: string,
+    companyId: string
   ): Promise<void> {
-    const notificationData = {
-      type: 'deviation' as const,
-      title: 'Nytt avvik rapportert',
-      message: `${reporterName} har rapportert et nytt avvik: "${deviationTitle}"`,
-      priority: 'high' as const,
-      recipientId: '', // Will be set for each recipient
-      recipientRole: 'admin' as const,
-      senderName: reporterName,
-      relatedId: deviationId,
-      relatedType: 'deviation',
-      actionUrl: `/dashboard/deviations?id=${deviationId}`,
-      actionText: 'Se avvik',
-      metadata: {
-        department,
-        companyId,
-        deviationTitle
-      }
-    };
+    try {
+      // Get all admins
+      const admins = await this.getAllAdmins(companyId);
+      
+      // Get department leaders for this department
+      const departmentLeaders = await this.getDepartmentLeaders(departmentId, companyId);
+      
+      // Combine all recipients (admins + department leaders)
+      const allRecipients = [...admins, ...departmentLeaders];
+      const uniqueRecipients = Array.from(new Map(allRecipients.map(emp => [emp.id, emp])).values());
+      
+      const notificationData = {
+        type: 'deviation' as const,
+        title: 'Nytt avvik rapportert',
+        message: `${reporterName} har rapportert et nytt avvik: "${deviationTitle}"`,
+        priority: 'high' as const,
+        actionUrl: `/dashboard/deviations?id=${deviationId}`,
+        actionText: 'Se avvik',
+        metadata: {
+          departmentId,
+          companyId,
+          deviationTitle,
+          reporterId,
+          reporterName
+        }
+      };
 
-    // Create notification for each recipient
-    for (const recipientId of recipientIds) {
-      await this.createNotification({
-        userId: recipientId,
-        title: notificationData.title,
-        message: notificationData.message,
-        type: notificationData.type,
-        priority: notificationData.priority,
-        actionUrl: notificationData.actionUrl,
-        actionText: notificationData.actionText,
-        metadata: notificationData.metadata
-      });
+      // Create notification for each recipient (admin and department leaders)
+      for (const recipient of uniqueRecipients) {
+        await this.createNotification({
+          userId: recipient.id,
+          title: notificationData.title,
+          message: notificationData.message,
+          type: notificationData.type,
+          priority: notificationData.priority,
+          actionUrl: notificationData.actionUrl,
+          actionText: notificationData.actionText,
+          metadata: notificationData.metadata,
+          departmentId,
+          companyId,
+          sendEmail: true
+        });
+      }
+    } catch (error) {
+      console.error('Error creating deviation notification:', error);
     }
   }
 
-  // Create vacation request notification
+  // Create vacation request notification - sends to admin and department leaders
   async createVacationNotification(
     vacationId: string,
     employeeName: string,
+    employeeId: string,
     startDate: string,
     endDate: string,
-    department: string,
-        recipientIds: string[]
+    departmentId: string,
+    companyId: string
   ): Promise<void> {
-    const notificationData = {
-      type: 'vacation' as const,
-      title: 'Ny ferieforespørsel',
-      message: `${employeeName} har søkt om ferie fra ${startDate} til ${endDate}`,
-      priority: 'medium' as const,
-      recipientId: '',
-      recipientRole: 'department_leader' as const,
-      senderName: employeeName,
-      relatedId: vacationId,
-      relatedType: 'vacation',
-      actionUrl: `/dashboard/vacation?id=${vacationId}`,
-      actionText: 'Godkjenn/Avvis',
-      metadata: {
-        department,
-        companyId,
-        startDate,
-        endDate
-      }
-    };
+    try {
+      // Get all admins
+      const admins = await this.getAllAdmins(companyId);
+      
+      // Get department leaders for this department
+      const departmentLeaders = await this.getDepartmentLeaders(departmentId, companyId);
+      
+      // Combine all recipients (admins + department leaders)
+      const allRecipients = [...admins, ...departmentLeaders];
+      const uniqueRecipients = Array.from(new Map(allRecipients.map(emp => [emp.id, emp])).values());
+      
+      const notificationData = {
+        type: 'vacation' as const,
+        title: 'Ny ferieforespørsel',
+        message: `${employeeName} har søkt om ferie fra ${startDate} til ${endDate}`,
+        priority: 'medium' as const,
+        actionUrl: `/dashboard/hr?vacationId=${vacationId}`,
+        actionText: 'Godkjenn/Avvis',
+        metadata: {
+          departmentId,
+          companyId,
+          startDate,
+          endDate,
+          employeeId,
+          employeeName,
+          vacationId
+        }
+      };
 
-    for (const recipientId of recipientIds) {
-      await this.createNotification({
-        userId: recipientId,
-        title: notificationData.title,
-        message: notificationData.message,
-        type: notificationData.type,
-        priority: notificationData.priority,
-        actionUrl: notificationData.actionUrl,
-        actionText: notificationData.actionText,
-        metadata: notificationData.metadata
-      });
+      // Create notification for each recipient (admin and department leaders)
+      for (const recipient of uniqueRecipients) {
+        await this.createNotification({
+          userId: recipient.id,
+          title: notificationData.title,
+          message: notificationData.message,
+          type: notificationData.type,
+          priority: notificationData.priority,
+          actionUrl: notificationData.actionUrl,
+          actionText: notificationData.actionText,
+          metadata: notificationData.metadata,
+          departmentId,
+          companyId,
+          sendEmail: true
+        });
+      }
+    } catch (error) {
+      console.error('Error creating vacation notification:', error);
     }
   }
 
-  // Create absence notification
+  // Create vacation approval/rejection notification - sends to employee
+  async createVacationStatusNotification(
+    vacationId: string,
+    employeeId: string,
+    employeeName: string,
+    status: 'approved' | 'rejected',
+    approvedBy: string,
+    startDate: string,
+    endDate: string,
+    companyId: string
+  ): Promise<void> {
+    try {
+      const statusText = status === 'approved' ? 'godkjent' : 'avslått';
+      const statusColor = status === 'approved' ? '#10b981' : '#ef4444';
+      
+      await this.createNotification({
+        userId: employeeId,
+        title: `Ferie ${statusText}`,
+        message: `Din ferieforespørsel fra ${startDate} til ${endDate} har blitt ${statusText} av ${approvedBy}`,
+        type: 'vacation',
+        priority: status === 'approved' ? 'medium' : 'high',
+        actionUrl: `/dashboard/hr?vacationId=${vacationId}`,
+        actionText: 'Se detaljer',
+        metadata: {
+          vacationId,
+          status,
+          approvedBy,
+          startDate,
+          endDate,
+          companyId
+        },
+        companyId,
+        sendEmail: true
+      });
+    } catch (error) {
+      console.error('Error creating vacation status notification:', error);
+    }
+  }
+
+  // Create absence notification - sends to admin and department leaders
   async createAbsenceNotification(
     absenceId: string,
     employeeName: string,
+    employeeId: string,
     absenceType: string,
-    date: string,
-    department: string,
-        recipientIds: string[]
+    startDate: string,
+    endDate: string,
+    departmentId: string,
+    companyId: string
   ): Promise<void> {
-    const notificationData = {
-      type: 'absence' as const,
-      title: 'Ny fraværsmelding',
-      message: `${employeeName} har meldt fravær: ${absenceType} den ${date}`,
-      priority: 'medium' as const,
-      recipientId: '',
-      recipientRole: 'department_leader' as const,
-      senderName: employeeName,
-      relatedId: absenceId,
-      relatedType: 'absence',
-      actionUrl: `/dashboard/absence?id=${absenceId}`,
-      actionText: 'Se fravær',
-      metadata: {
-        department,
-        companyId,
-        absenceType,
-        date
-      }
-    };
+    try {
+      // Get all admins
+      const admins = await this.getAllAdmins(companyId);
+      
+      // Get department leaders for this department
+      const departmentLeaders = await this.getDepartmentLeaders(departmentId, companyId);
+      
+      // Combine all recipients (admins + department leaders)
+      const allRecipients = [...admins, ...departmentLeaders];
+      const uniqueRecipients = Array.from(new Map(allRecipients.map(emp => [emp.id, emp])).values());
+      
+      const dateRange = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+      const notificationData = {
+        type: 'absence' as const,
+        title: 'Ny fraværsmelding',
+        message: `${employeeName} har meldt fravær: ${absenceType} fra ${dateRange}`,
+        priority: 'medium' as const,
+        actionUrl: `/dashboard/hr?absenceId=${absenceId}`,
+        actionText: 'Se fravær',
+        metadata: {
+          departmentId,
+          companyId,
+          absenceType,
+          startDate,
+          endDate,
+          employeeId,
+          employeeName,
+          absenceId
+        }
+      };
 
-    for (const recipientId of recipientIds) {
-      await this.createNotification({
-        userId: recipientId,
-        title: notificationData.title,
-        message: notificationData.message,
-        type: notificationData.type,
-        priority: notificationData.priority,
-        actionUrl: notificationData.actionUrl,
-        actionText: notificationData.actionText,
-        metadata: notificationData.metadata
-      });
+      // Create notification for each recipient (admin and department leaders)
+      for (const recipient of uniqueRecipients) {
+        await this.createNotification({
+          userId: recipient.id,
+          title: notificationData.title,
+          message: notificationData.message,
+          type: notificationData.type,
+          priority: notificationData.priority,
+          actionUrl: notificationData.actionUrl,
+          actionText: notificationData.actionText,
+          metadata: notificationData.metadata,
+          departmentId,
+          companyId,
+          sendEmail: true
+        });
+      }
+    } catch (error) {
+      console.error('Error creating absence notification:', error);
     }
   }
 
-  // Create shift assignment notification
+  // Create absence approval/rejection notification - sends to employee
+  async createAbsenceStatusNotification(
+    absenceId: string,
+    employeeId: string,
+    employeeName: string,
+    status: 'approved' | 'rejected',
+    approvedBy: string,
+    absenceType: string,
+    startDate: string,
+    endDate: string,
+    companyId: string
+  ): Promise<void> {
+    try {
+      const statusText = status === 'approved' ? 'godkjent' : 'avslått';
+      const dateRange = startDate === endDate ? startDate : `${startDate} - ${endDate}`;
+      
+      await this.createNotification({
+        userId: employeeId,
+        title: `Fravær ${statusText}`,
+        message: `Din fraværsmelding (${absenceType}) for ${dateRange} har blitt ${statusText} av ${approvedBy}`,
+        type: 'absence',
+        priority: status === 'approved' ? 'medium' : 'high',
+        actionUrl: `/dashboard/hr?absenceId=${absenceId}`,
+        actionText: 'Se detaljer',
+        metadata: {
+          absenceId,
+          status,
+          approvedBy,
+          absenceType,
+          startDate,
+          endDate,
+          companyId
+        },
+        companyId,
+        sendEmail: true
+      });
+    } catch (error) {
+      console.error('Error creating absence status notification:', error);
+    }
+  }
+
+  // Create shift assignment notification - sends to employee
   async createShiftNotification(
     shiftId: string,
+    employeeId: string,
     employeeName: string,
     shiftDate: string,
     shiftTime: string,
     assignedBy: string,
-    department: string,
-        recipientId: string
+    departmentId: string,
+    companyId: string
   ): Promise<void> {
-    const notificationData = {
-      title: 'Ny vakt tildelt',
-      message: `${assignedBy} har tildelt deg en vakt: ${shiftDate} ${shiftTime}`,
-      priority: 'medium' as const,
-      type: 'shift' as const,
-      metadata: {
-        shiftId,
-        employeeName,
-        shiftDate,
-        shiftTime,
-        assignedBy,
-        department,
-        companyId
-      }
-    };
-
-    await this.createNotification({
-      userId: recipientId,
-      title: notificationData.title,
-      message: notificationData.message,
-      type: notificationData.type,
-      priority: notificationData.priority,
-      metadata: notificationData.metadata
-    });
+    try {
+      await this.createNotification({
+        userId: employeeId,
+        title: 'Ny vakt tildelt',
+        message: `${assignedBy} har tildelt deg en vakt: ${shiftDate} ${shiftTime}`,
+        type: 'shift',
+        priority: 'medium',
+        actionUrl: `/dashboard/shifts?id=${shiftId}`,
+        actionText: 'Se vakt',
+        metadata: {
+          shiftId,
+          employeeName,
+          shiftDate,
+          shiftTime,
+          assignedBy,
+          departmentId,
+          companyId
+        },
+        departmentId,
+        companyId,
+        sendEmail: true
+      });
+    } catch (error) {
+      console.error('Error creating shift notification:', error);
+    }
   }
 
   // Create document shared notification

@@ -957,7 +957,7 @@ export default function SettingsPage() {
               value={String(tempValue || '')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: e.target.value })}
               className="form-input"
-              style={{ width: '100%', padding: '0.5rem' }}
+              style={{ width: '100%', padding: isMobile ? '1rem 1.25rem' : '0.5rem', fontSize: isMobile ? '16px' : undefined, minHeight: isMobile ? '56px' : undefined }}
             />
           );
         
@@ -968,7 +968,7 @@ export default function SettingsPage() {
               value={String(tempValue || '')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: Number(e.target.value) })}
               className="form-input"
-              style={{ width: '100%', padding: '0.5rem' }}
+              style={{ width: '100%', padding: isMobile ? '1rem 1.25rem' : '0.5rem', fontSize: isMobile ? '16px' : undefined, minHeight: isMobile ? '56px' : undefined }}
             />
           );
         
@@ -978,7 +978,7 @@ export default function SettingsPage() {
               value={String(tempValue || '')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: e.target.value })}
               className="form-select"
-              style={{ width: '100%', padding: '0.5rem' }}
+              style={{ width: '100%', padding: isMobile ? '1rem 1.25rem' : '0.5rem', fontSize: isMobile ? '16px' : undefined, minHeight: isMobile ? '56px' : undefined }}
             >
               {setting.options?.map(option => (
                 <option key={option} value={option}>{option}</option>
@@ -992,7 +992,7 @@ export default function SettingsPage() {
               value={String(tempValue || '')}
               onChange={(e) => setTempValues({ ...tempValues, [setting.id]: e.target.value })}
               className="form-textarea"
-              style={{ width: '100%', padding: '0.5rem', minHeight: '80px' }}
+              style={{ width: '100%', padding: isMobile ? '1rem 1.25rem' : '0.5rem', fontSize: isMobile ? '16px' : undefined, minHeight: isMobile ? '140px' : '80px' }}
             />
           );
         
@@ -1017,7 +1017,7 @@ export default function SettingsPage() {
                 }
               }}
               className="form-input"
-              style={{ width: '100%', padding: '0.5rem' }}
+              style={{ width: '100%', padding: isMobile ? '1rem 1.25rem' : '0.5rem', fontSize: isMobile ? '16px' : undefined, minHeight: isMobile ? '56px' : undefined }}
             />
           );
         

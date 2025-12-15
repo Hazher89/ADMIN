@@ -21,7 +21,12 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+  userScalable: true,
   themeColor: "#4f46e5",
+  viewportFit: 'cover',
 };
 
 export default function RootLayout({

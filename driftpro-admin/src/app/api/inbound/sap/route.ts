@@ -167,8 +167,9 @@ export async function GET() {
   }
 
   // Robust: hent siste N og filtrer i kode (unngår Firestore composite-index problemer)
+  // Increased limit to 200 to support up to 150 routes (with some buffer for filtering)
   const snap = await getDocs(
-    query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'), limit(250))
+    query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'), limit(200))
   );
   const allItems = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
   const items = allItems.filter((it) =>

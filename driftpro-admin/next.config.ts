@@ -6,7 +6,12 @@ const nextConfig: NextConfig = {
     optimizePackageImports: ['lucide-react']
   },
   images: {
-    domains: ['firebasestorage.googleapis.com'],
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com',
+      },
+    ],
     unoptimized: true,
   },
   env: {
@@ -14,11 +19,6 @@ const nextConfig: NextConfig = {
   },
   generateBuildId: async () => {
     return 'build-' + Date.now();
-  },
-  eslint: {
-    // Warning: This allows production builds to successfully complete even if
-    // your project has ESLint errors.
-    ignoreDuringBuilds: true,
   },
   typescript: {
     // Warning: This allows production builds to successfully complete even if

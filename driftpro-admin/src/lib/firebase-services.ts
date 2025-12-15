@@ -22,6 +22,7 @@ import {
 import { ref, uploadBytes, getDownloadURL, deleteObject } from 'firebase/storage';
 import { db, storage } from './firebase';
 import { microsoftGraphService } from './microsoft-graph-service';
+import { notificationService } from './notification-service';
 import type {
   EmailCase,
   EmailCaseLink,
@@ -186,17 +187,33 @@ export interface Shift {
   totalHours?: number;
 }
 
+export interface DeviationMedia {
+  id: string;
+  url: string;
+  type: 'image' | 'video' | 'document' | 'audio';
+  fileName: string;
+  fileSize: number;
+  thumbnailUrl?: string;
+  uploadedBy: string;
+  uploadedAt: string;
+  description?: string;
+}
+
 export interface Deviation {
   id: string;
   title: string;
   description: string;
+  richDescription?: string; // HTML/rich text content
   type: 'safety' | 'quality' | 'security' | 'process' | 'environmental' | 'health' | 'other';
   severity: 'low' | 'medium' | 'high' | 'critical';
   status: 'reported' | 'investigating' | 'resolved' | 'closed' | 'in_progress';
   reportedBy: string;
+  reportedByName?: string;
   assignedTo?: string;
   assignedToIds?: string[]; // Multiple assigned persons
+  assignedToNames?: string[]; // Names of assigned persons
   departmentId: string;
+  departmentName?: string;
   location?: string;
   equipment?: string;
   cost?: number;
@@ -206,14 +223,25 @@ export interface Deviation {
   correctiveActions?: string;
   preventiveActions?: string;
   witnesses?: string[];
+  witnessNames?: string[];
   investigationRequired?: boolean;
   regulatoryReport?: boolean;
   createdAt: string;
   updatedAt: string;
   resolvedAt?: string;
   attachments?: string[]; // Legacy - kept for backward compatibility
-  documents?: AuditDocument[]; // New - full document objects with metadata
+  documents?: AuditDocument[]; // Legacy documents
+  media?: DeviationMedia[]; // New - full media objects with metadata (images, videos, etc.)
   comments?: DeviationComment[];
+  tags?: string[];
+  priority?: 'low' | 'normal' | 'high' | 'urgent';
+  dueDate?: string;
+  estimatedResolutionTime?: string;
+  actualResolutionTime?: string;
+  recurrence?: boolean;
+  relatedDeviations?: string[];
+  notificationSent?: boolean;
+  notificationRecipients?: string[];
 }
 
 export interface DeviationComment {
@@ -987,70 +1015,207 @@ class FirebaseService {
       }
       
       // Ensure permissions, vacationAccess, and leadership are always present (even if empty)
-      // DEFAULT PERMISSIONS: Employees get minimal access by default
+      // DEFAULT PERMISSIONS: Set based on role
       if (!cleanEmployeeData.permissions) {
-        cleanEmployeeData.permissions = {
-          dashboard: true, // Everyone can see their dashboard
-          // All other permissions default to false for security
-          employees: false,
-          departments: false,
-          projects: false,
-          tasks: false,
-          inventory: false,
-          suppliers: false,
-          finance: false,
-          invoicing: false,
-          payments: false,
-          hr: false,
-          crm: false,
-          delivery: false,
-          settings: false,
-          mail: false,
-          reports: false,
-          analytics: false,
-          notifications: false,
-          calendar: false,
-          documents: false,
-          training: false,
-          compliance: false,
-          maintenance: false,
-          quality: false,
-          safety: false,
-          procurement: false,
-          logistics: false,
-          production: false,
-          sales: false,
-          marketing: false,
-          customerService: false,
-          it: false,
-          legal: false,
-          audit: false,
-          internkontrollOgSamsvar: false,
-          internrevisjon: false,
-          avvik: false,
-          risikovurdering: false,
-          oppfølgingstiltak: false,
-          kontrollpunkter: false,
-          internkontrollRapporter: false,
-          chat: false,
-          emailSystem: false,
-          smsLogs: false,
-          partners: false,
-          logistikkBudPriser: false,
-          logistikkLevering: false,
-          logistikkPlanlegging: false,
-          logistikkKunder: false,
-          logistikkLeverandorer: false,
-          logistikkProdukter: false,
-          logistikkLager: false,
-          logistikkFakturering: false,
-          logistikkFinans: false,
-          hrAnsatte: false,
-          hrVakter: false,
-          hrFravær: false,
-          hrFerie: false,
-          hrAvdelinger: false
-        };
+        if (cleanEmployeeData.role === 'employee') {
+          // Vanlig ansatt: ferie, fravær, avvik, samarbeidspartnere, vakter, stemple
+          cleanEmployeeData.permissions = {
+            dashboard: true,
+            notifications: true,
+            calendar: true,
+            // HR permissions - ansatte kan se sin egen data
+            hrFravær: true, // Fravær - kun egen data
+            hrFerie: true, // Ferie - kun egen data
+            hrVakter: true, // Vakter - kun egne vakter
+            // Avvik - kun egne avvik
+            avvik: true,
+            // Samarbeidspartnere - full tilgang
+            partners: true,
+            // Stemple - kun egen stempling
+            // All other permissions default to false
+            employees: false,
+            departments: false,
+            projects: false,
+            tasks: false,
+            inventory: false,
+            suppliers: false,
+            finance: false,
+            invoicing: false,
+            payments: false,
+            hr: false,
+            hrAnsatte: false,
+            hrAvdelinger: false,
+            crm: false,
+            delivery: false,
+            settings: false,
+            mail: false,
+            reports: false,
+            analytics: false,
+            documents: false,
+            training: false,
+            compliance: false,
+            maintenance: false,
+            quality: false,
+            safety: false,
+            procurement: false,
+            logistics: false,
+            production: false,
+            sales: false,
+            marketing: false,
+            customerService: false,
+            it: false,
+            legal: false,
+            audit: false,
+            internkontrollOgSamsvar: false,
+            internrevisjon: false,
+            risikovurdering: false,
+            oppfølgingstiltak: false,
+            kontrollpunkter: false,
+            internkontrollRapporter: false,
+            chat: false,
+            emailSystem: false,
+            smsLogs: false,
+            logistikkBudPriser: false,
+            logistikkLevering: false,
+            logistikkPlanlegging: false,
+            logistikkKunder: false,
+            logistikkLeverandorer: false,
+            logistikkProdukter: false,
+            logistikkLager: false,
+            logistikkFakturering: false,
+            logistikkFinans: false
+          };
+        } else if (cleanEmployeeData.role === 'department_leader') {
+          // Avdelingsleder: alt en ansatt har + kan se data fra sine ansatte
+          cleanEmployeeData.permissions = {
+            dashboard: true,
+            notifications: true,
+            calendar: true,
+            // HR permissions - kan se data fra sine ansatte
+            hrFravær: true, // Fravær - kan se fra sine ansatte
+            hrFerie: true, // Ferie - kan se fra sine ansatte
+            hrVakter: true, // Vakter - kan se og sette opp for sine ansatte
+            // Avvik - kan se og håndtere fra sine ansatte
+            avvik: true,
+            // Samarbeidspartnere - full tilgang
+            partners: true,
+            // All other permissions default to false (admin må gi tilatelse)
+            employees: false,
+            departments: false,
+            projects: false,
+            tasks: false,
+            inventory: false,
+            suppliers: false,
+            finance: false,
+            invoicing: false,
+            payments: false,
+            hr: false,
+            hrAnsatte: false,
+            hrAvdelinger: false,
+            crm: false,
+            delivery: false,
+            settings: false,
+            mail: false,
+            reports: false,
+            analytics: false,
+            documents: false,
+            training: false,
+            compliance: false,
+            maintenance: false,
+            quality: false,
+            safety: false,
+            procurement: false,
+            logistics: false,
+            production: false,
+            sales: false,
+            marketing: false,
+            customerService: false,
+            it: false,
+            legal: false,
+            audit: false,
+            internkontrollOgSamsvar: false,
+            internrevisjon: false,
+            risikovurdering: false,
+            oppfølgingstiltak: false,
+            kontrollpunkter: false,
+            internkontrollRapporter: false,
+            chat: false,
+            emailSystem: false,
+            smsLogs: false,
+            logistikkBudPriser: false,
+            logistikkLevering: false,
+            logistikkPlanlegging: false,
+            logistikkKunder: false,
+            logistikkLeverandorer: false,
+            logistikkProdukter: false,
+            logistikkLager: false,
+            logistikkFakturering: false,
+            logistikkFinans: false
+          };
+        } else {
+          // Admin/Super admin - all permissions default to true
+          cleanEmployeeData.permissions = {
+            dashboard: true,
+            employees: true,
+            departments: true,
+            projects: true,
+            tasks: true,
+            inventory: true,
+            suppliers: true,
+            finance: true,
+            invoicing: true,
+            payments: true,
+            hr: true,
+            hrAnsatte: true,
+            hrVakter: true,
+            hrFravær: true,
+            hrFerie: true,
+            hrAvdelinger: true,
+            crm: true,
+            delivery: true,
+            settings: true,
+            mail: true,
+            reports: true,
+            analytics: true,
+            notifications: true,
+            calendar: true,
+            documents: true,
+            training: true,
+            compliance: true,
+            maintenance: true,
+            quality: true,
+            safety: true,
+            procurement: true,
+            logistics: true,
+            production: true,
+            sales: true,
+            marketing: true,
+            customerService: true,
+            it: true,
+            legal: true,
+            audit: true,
+            internkontrollOgSamsvar: true,
+            internrevisjon: true,
+            avvik: true,
+            risikovurdering: true,
+            oppfølgingstiltak: true,
+            kontrollpunkter: true,
+            internkontrollRapporter: true,
+            chat: true,
+            emailSystem: true,
+            smsLogs: true,
+            partners: true,
+            logistikkBudPriser: true,
+            logistikkLevering: true,
+            logistikkPlanlegging: true,
+            logistikkKunder: true,
+            logistikkLeverandorer: true,
+            logistikkProdukter: true,
+            logistikkLager: true,
+            logistikkFakturering: true,
+            logistikkFinans: true
+          };
+        }
       }
       if (!cleanEmployeeData.vacationAccess) {
         cleanEmployeeData.vacationAccess = {
@@ -1656,24 +1821,91 @@ class FirebaseService {
   }
 
   // Shift Management
-  async getShifts(filters?: { departmentId?: string; status?: string; date?: string }): Promise<Shift[]> {
+  async getShifts(userContext?: UserAccessContext, filters?: { departmentId?: string; status?: string; date?: string; employeeId?: string }): Promise<Shift[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(collection(firestore, 'shifts'));
+      let q;
+      
+      // GDPR: Filter based on role and department
+      if (userContext) {
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Superadmin and admin see all shifts
+          q = query(collection(firestore, 'shifts'));
+        } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          // Department leaders see shifts from their department employees
+          // First, get all employees in the department
+          const departmentEmployees = await this.getEmployees(userContext);
+          const employeeIds = departmentEmployees.map(emp => emp.id);
+          
+          if (employeeIds.length === 0) {
+            return [];
+          }
+          
+          // Firestore 'in' query supports up to 10 items, so we need to batch if more
+          if (employeeIds.length <= 10) {
+            q = query(
+              collection(firestore, 'shifts'),
+              where('employeeId', 'in', employeeIds)
+            );
+          } else {
+            // If more than 10, we need to fetch all and filter in memory
+            q = query(collection(firestore, 'shifts'));
+          }
+        } else if (userContext.role === 'employee') {
+          // Employees only see their own shifts
+          q = query(
+            collection(firestore, 'shifts'),
+            where('employeeId', '==', userContext.userId)
+          );
+        } else {
+          return [];
+        }
+      } else {
+        // No context: deny access for security
+        return [];
+      }
 
+      // Apply additional filters
       if (filters?.departmentId) {
         q = query(q, where('departmentId', '==', filters.departmentId));
       }
       if (filters?.status) {
         q = query(q, where('status', '==', filters.status));
       }
+      if (filters?.employeeId) {
+        // Additional filter for specific employee (if user has access)
+        if (userContext) {
+          if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+            q = query(q, where('employeeId', '==', filters.employeeId));
+          } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+            // Check if employee is in their department
+            const departmentEmployees = await this.getEmployees(userContext);
+            if (departmentEmployees.some(emp => emp.id === filters.employeeId)) {
+              q = query(q, where('employeeId', '==', filters.employeeId));
+            } else {
+              return []; // No access to this employee's shifts
+            }
+          } else if (userContext.role === 'employee' && filters.employeeId === userContext.userId) {
+            q = query(q, where('employeeId', '==', filters.employeeId));
+          } else {
+            return []; // No access
+          }
+        }
+      }
 
       const snapshot = await getDocs(q);
-      const shifts = snapshot.docs.map(doc => ({
+      let shifts = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as Shift[];
+      
+      // If department leader has more than 10 employees, filter in memory
+      if (userContext && userContext.role === 'department_leader' && userContext.departmentId) {
+        const departmentEmployees = await this.getEmployees(userContext);
+        const employeeIds = departmentEmployees.map(emp => emp.id);
+        shifts = shifts.filter(shift => employeeIds.includes(shift.employeeId));
+      }
       
       // Sort by startTime in memory
       shifts.sort((a, b) => new Date(b.startTime).getTime() - new Date(a.startTime).getTime());
@@ -1684,16 +1916,64 @@ class FirebaseService {
     }
   }
 
-  async createShift(shiftData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async createShift(shiftData: Omit<Shift, 'id' | 'createdAt' | 'updatedAt'>, userContext?: UserAccessContext): Promise<string> {
     const firestore = ensureDb();
 
     try {
+      // GDPR: Check if user has permission to create shifts
+      if (userContext) {
+        // Superadmin and admin can create shifts for anyone
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        } 
+        // Department leaders can create shifts for employees in their department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === shiftData.employeeId)) {
+            throw new Error('Du kan kun opprette vakter for ansatte i din avdeling');
+          }
+        }
+        // Employees can only create shifts for themselves
+        else if (userContext.role === 'employee') {
+          if (shiftData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun opprette vakter for deg selv');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å opprette vakter');
+        }
+      }
+
       const now = new Date().toISOString();
       const docRef = await addDoc(collection(firestore, 'shifts'), {
         ...shiftData,
         createdAt: now,
         updatedAt: now
       });
+
+      // Get employee data for notifications
+      const employee = await this.getEmployee(shiftData.employeeId, userContext);
+      const employeeName = employee?.displayName || employee?.name || 'Ukjent ansatt';
+      const companyId = employee?.companyId || ''; // Fallback
+      const assignedByName = userContext ? (await this.getEmployee(userContext.userId, userContext))?.displayName || 'System' : 'System';
+
+      // Send notification to employee if shift was created by admin/leader (not by employee themselves)
+      if (userContext && companyId && (userContext.role === 'admin' || userContext.role === 'super_admin' || userContext.role === 'department_leader')) {
+        try {
+          await notificationService.createShiftNotification(
+            docRef.id,
+            shiftData.employeeId,
+            employeeName,
+            shiftData.startTime.split('T')[0],
+            shiftData.startTime,
+            assignedByName,
+            shiftData.departmentId,
+            companyId
+          );
+        } catch (notifError) {
+          console.error('Error sending shift notification:', notifError);
+          // Don't fail shift creation if notification fails
+        }
+      }
 
       await this.createActivity({
         type: 'shift_created',
@@ -1710,10 +1990,40 @@ class FirebaseService {
     }
   }
 
-  async updateShift(id: string, data: Partial<Shift>): Promise<void> {
+  async updateShift(id: string, data: Partial<Shift>, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get shift data before update for access check
+      const shiftDoc = await getDoc(doc(firestore, 'shifts', id));
+      if (!shiftDoc.exists()) {
+        throw new Error('Vakt ikke funnet');
+      }
+      const shiftData = shiftDoc.data() as Shift;
+
+      // GDPR: Check if user has permission to update this shift
+      if (userContext) {
+        // Superadmin and admin can update any shift
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        } 
+        // Department leaders can update shifts for employees in their department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === shiftData.employeeId)) {
+            throw new Error('Du kan kun endre vakter for ansatte i din avdeling');
+          }
+        }
+        // Employees can only update their own shifts
+        else if (userContext.role === 'employee') {
+          if (shiftData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun endre dine egne vakter');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å endre vakter');
+        }
+      }
+
       await updateDoc(doc(firestore, 'shifts', id), {
         ...data,
         updatedAt: new Date().toISOString()
@@ -1725,13 +2035,13 @@ class FirebaseService {
   }
 
   // Deviation Management
-  async getDeviations(filters?: { status?: string; type?: string; severity?: string }): Promise<Deviation[]> {
+  async getDeviations(userContext?: UserAccessContext, filters?: { status?: string; type?: string; severity?: string }): Promise<Deviation[]> {
     const firestore = ensureDb();
 
     try {
       let q;
       
-      // Filter based on role and department
+      // GDPR: Filter based on role and department
       if (userContext) {
         if (userContext.role === 'super_admin' || userContext.role === 'admin') {
           // Superadmin and admin see all deviations
@@ -1752,8 +2062,8 @@ class FirebaseService {
           return [];
         }
       } else {
-        // Fallback: if no context provided, return all
-        q = query(collection(firestore, 'deviations'));
+        // No context: deny access for security
+        return [];
       }
 
       if (filters?.status) {
@@ -1791,7 +2101,7 @@ class FirebaseService {
     }
   }
 
-  async createDeviation(deviationData: Omit<Deviation, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
+  async createDeviation(deviationData: Omit<Deviation, 'id' | 'createdAt' | 'updatedAt'>, userContext?: UserAccessContext): Promise<string> {
     const firestore = ensureDb();
 
     try {
@@ -1802,13 +2112,35 @@ class FirebaseService {
         updatedAt: now
       });
 
+      // Get reporter data for notifications
+      const reporter = await this.getEmployee(deviationData.reportedBy, userContext);
+      const reporterName = reporter?.displayName || reporter?.name || 'Ukjent';
+      const companyId = reporter?.companyId || ''; // Fallback
+
+      // Send notifications to admin and department leaders
+      if (deviationData.departmentId && companyId) {
+        try {
+          await notificationService.createDeviationNotification(
+            docRef.id,
+            deviationData.title,
+            reporterName,
+            deviationData.reportedBy,
+            deviationData.departmentId,
+            companyId
+          );
+        } catch (notifError) {
+          console.error('Error sending deviation notification:', notifError);
+          // Don't fail deviation creation if notification fails
+        }
+      }
+
       await this.createActivity({
         type: 'deviation_reported',
         title: 'Avvik rapportert',
         description: deviationData.title,
         userId: deviationData.reportedBy,
         userName: 'System',
-              });
+      });
 
       return docRef.id;
     } catch (error) {
@@ -2026,21 +2358,85 @@ class FirebaseService {
   }
 
   // Time Clock Management
-  async getTimeClocks(): Promise<TimeClock[]> {
+  async getTimeClocks(userContext?: UserAccessContext, filters?: { employeeId?: string }): Promise<TimeClock[]> {
     const firestore = ensureDb();
 
     try {
-      let q = query(collection(firestore, 'timeclocks'));
+      let q;
+      
+      // GDPR: Filter based on role and department
+      if (userContext) {
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Superadmin and admin see all time clocks
+          q = query(collection(firestore, 'timeclocks'));
+        } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          // Department leaders see time clocks from their department employees
+          // First, get all employees in the department
+          const departmentEmployees = await this.getEmployees(userContext);
+          const employeeIds = departmentEmployees.map(emp => emp.id);
+          
+          if (employeeIds.length === 0) {
+            return [];
+          }
+          
+          // Firestore 'in' query supports up to 10 items, so we need to batch if more
+          if (employeeIds.length <= 10) {
+            q = query(
+              collection(firestore, 'timeclocks'),
+              where('employeeId', 'in', employeeIds)
+            );
+          } else {
+            // If more than 10, we need to fetch all and filter in memory
+            q = query(collection(firestore, 'timeclocks'));
+          }
+        } else if (userContext.role === 'employee') {
+          // Employees only see their own time clocks
+          q = query(
+            collection(firestore, 'timeclocks'),
+            where('employeeId', '==', userContext.userId)
+          );
+        } else {
+          return [];
+        }
+      } else {
+        // No context: deny access for security
+        return [];
+      }
 
+      // Apply additional filters
       if (filters?.employeeId) {
-        q = query(q, where('employeeId', '==', filters.employeeId));
+        // Additional filter for specific employee (if user has access)
+        if (userContext) {
+          if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+            q = query(q, where('employeeId', '==', filters.employeeId));
+          } else if (userContext.role === 'department_leader' && userContext.departmentId) {
+            // Check if employee is in their department
+            const departmentEmployees = await this.getEmployees(userContext);
+            if (departmentEmployees.some(emp => emp.id === filters.employeeId)) {
+              q = query(q, where('employeeId', '==', filters.employeeId));
+            } else {
+              return []; // No access to this employee's time clocks
+            }
+          } else if (userContext.role === 'employee' && filters.employeeId === userContext.userId) {
+            q = query(q, where('employeeId', '==', filters.employeeId));
+          } else {
+            return []; // No access
+          }
+        }
       }
 
       const snapshot = await getDocs(q);
-      const timeClocks = snapshot.docs.map(doc => ({
+      let timeClocks = snapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       })) as TimeClock[];
+
+      // If department leader has more than 10 employees, filter in memory
+      if (userContext && userContext.role === 'department_leader' && userContext.departmentId) {
+        const departmentEmployees = await this.getEmployees(userContext);
+        const employeeIds = departmentEmployees.map(emp => emp.id);
+        timeClocks = timeClocks.filter(tc => employeeIds.includes(tc.employeeId));
+      }
 
       // Sort by creation date (newest first) in memory
       return timeClocks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
@@ -2050,10 +2446,36 @@ class FirebaseService {
     }
   }
 
-  async clockIn(employeeId: string, location?: string): Promise<string> {
+  async clockIn(employeeId: string, location?: string, userContext?: UserAccessContext): Promise<string> {
     const firestore = ensureDb();
 
     try {
+      // GDPR: Check if user has permission to clock in
+      if (userContext) {
+        // Superadmin and admin can clock in anyone
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can clock in employees in their department (but not themselves)
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          if (employeeId === userContext.userId) {
+            throw new Error('Avdelingsledere kan ikke registrere timer for seg selv. Kun admin kan gjøre dette.');
+          }
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === employeeId)) {
+            throw new Error('Du kan kun stemple inn ansatte i din avdeling');
+          }
+        }
+        // Employees can only clock in themselves
+        else if (userContext.role === 'employee') {
+          if (employeeId !== userContext.userId) {
+            throw new Error('Du kan kun stemple inn deg selv');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å stemple inn');
+        }
+      }
+
       const now = new Date().toISOString();
       const docRef = await addDoc(collection(firestore, 'timeclocks'), {
         employeeId,
@@ -2078,10 +2500,43 @@ class FirebaseService {
     }
   }
 
-  async clockOut(timeClockId: string): Promise<void> {
+  async clockOut(timeClockId: string, userContext?: UserAccessContext): Promise<void> {
     const firestore = ensureDb();
 
     try {
+      // Get time clock data before update for access check
+      const timeClockDoc = await getDoc(doc(firestore, 'timeclocks', timeClockId));
+      if (!timeClockDoc.exists()) {
+        throw new Error('Stempling ikke funnet');
+      }
+      const timeClockData = timeClockDoc.data() as TimeClock;
+
+      // GDPR: Check if user has permission to clock out
+      if (userContext) {
+        // Superadmin and admin can clock out anyone
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can clock out employees in their department (but not themselves)
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          if (timeClockData.employeeId === userContext.userId) {
+            throw new Error('Avdelingsledere kan ikke endre sine egne timer. Kun admin kan gjøre dette.');
+          }
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === timeClockData.employeeId)) {
+            throw new Error('Du kan kun stemple ut ansatte i din avdeling');
+          }
+        }
+        // Employees can only clock out themselves
+        else if (userContext.role === 'employee') {
+          if (timeClockData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun stemple ut deg selv');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å stemple ut');
+        }
+      }
+
       const now = new Date().toISOString();
       await updateDoc(doc(firestore, 'timeclocks', timeClockId), {
         clockOutTime: now,
@@ -2089,6 +2544,53 @@ class FirebaseService {
       });
     } catch (error) {
       console.error('Error clocking out:', error);
+      throw error;
+    }
+  }
+
+  async updateTimeClock(id: string, data: Partial<TimeClock>, userContext?: UserAccessContext): Promise<void> {
+    const firestore = ensureDb();
+
+    try {
+      // Get time clock data before update for access check
+      const timeClockDoc = await getDoc(doc(firestore, 'timeclocks', id));
+      if (!timeClockDoc.exists()) {
+        throw new Error('Stempling ikke funnet');
+      }
+      const timeClockData = timeClockDoc.data() as TimeClock;
+
+      // GDPR: Check if user has permission to update this time clock
+      if (userContext) {
+        // Superadmin and admin can update any time clock
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can update time clocks for employees in their department (but not themselves)
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          if (timeClockData.employeeId === userContext.userId) {
+            throw new Error('Avdelingsledere kan ikke endre sine egne timer. Kun admin kan gjøre dette.');
+          }
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === timeClockData.employeeId)) {
+            throw new Error('Du kan kun endre timer for ansatte i din avdeling');
+          }
+        }
+        // Employees can only update their own time clocks
+        else if (userContext.role === 'employee') {
+          if (timeClockData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun endre dine egne timer');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å endre timer');
+        }
+      }
+
+      await updateDoc(doc(firestore, 'timeclocks', id), {
+        ...data,
+        updatedAt: new Date().toISOString()
+      });
+    } catch (error) {
+      console.error('Error updating time clock:', error);
       throw error;
     }
   }
@@ -2197,12 +2699,59 @@ class FirebaseService {
     const firestore = ensureDb();
 
     try {
+      // GDPR: Check if user has permission to create absence
+      if (userContext) {
+        // Superadmin and admin can create absences for anyone
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can create absences for employees in their department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === absenceData.employeeId)) {
+            throw new Error('Du kan kun opprette fravær for ansatte i din avdeling');
+          }
+        }
+        // Employees can only create absences for themselves
+        else if (userContext.role === 'employee') {
+          if (absenceData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun opprette fravær for deg selv');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å opprette fravær');
+        }
+      }
+
       const now = new Date().toISOString();
       const docRef = await addDoc(collection(firestore, 'absences'), {
         ...absenceData,
         createdAt: now,
         updatedAt: now
       });
+      
+      // Get employee data for notifications
+      const employee = await this.getEmployee(absenceData.employeeId, userContext);
+      const employeeDepartmentId = employee?.departmentId || ''; // Fallback
+      const companyId = employee?.companyId || ''; // Fallback
+      
+      // Send notifications to admin and department leaders (only if created by employee, not admin/leader)
+      if (userContext?.role === 'employee' && employeeDepartmentId && companyId) {
+        try {
+          await notificationService.createAbsenceNotification(
+            docRef.id,
+            absenceData.employeeName,
+            absenceData.employeeId,
+            absenceData.type,
+            absenceData.startDate,
+            absenceData.endDate,
+            employeeDepartmentId,
+            companyId
+          );
+        } catch (notifError) {
+          console.error('Error sending absence notification:', notifError);
+          // Don't fail absence creation if notification fails
+        }
+      }
       
       // Log access for audit trail
       if (userContext) {
@@ -2214,7 +2763,6 @@ class FirebaseService {
           endDate: absenceData.endDate,
           status: absenceData.status
         };
-        // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
         await this.logAccess('create_absence', userContext.userId, 'absence', docRef.id, logMetadata);
       }
       
@@ -2229,14 +2777,67 @@ class FirebaseService {
     const firestore = ensureDb();
 
     try {
-      // Get absence data before update for audit log
+      // Get absence data before update for access check
       const absenceDoc = await getDoc(doc(firestore, 'absences', id));
-      const absenceData = absenceDoc.exists() ? absenceDoc.data() as Absence : null;
+      if (!absenceDoc.exists()) {
+        throw new Error('Fravær ikke funnet');
+      }
+      const absenceData = absenceDoc.data() as Absence;
+
+      // GDPR: Check if user has permission to update this absence
+      if (userContext) {
+        // Superadmin and admin can update any absence
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can update absences for employees in their department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === absenceData.employeeId)) {
+            throw new Error('Du kan kun endre fravær for ansatte i din avdeling');
+          }
+        }
+        // Employees can only update their own absences
+        else if (userContext.role === 'employee') {
+          if (absenceData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun endre ditt eget fravær');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å endre fravær');
+        }
+      }
       
       await updateDoc(doc(firestore, 'absences', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
+      
+      // Send notification to employee if status changed (approved/rejected)
+      if (data.status && (data.status === 'approved' || data.status === 'rejected') && absenceData && userContext) {
+        try {
+          const approver = await this.getEmployee(userContext.userId, userContext);
+          const approverName = approver?.displayName || approver?.name || userContext.userId || 'System';
+          const employee = await this.getEmployee(absenceData.employeeId, userContext);
+          const companyId = employee?.companyId || '';
+          
+          if (companyId) {
+            await notificationService.createAbsenceStatusNotification(
+              id,
+              absenceData.employeeId,
+              absenceData.employeeName,
+              data.status,
+              approverName,
+              absenceData.type,
+              absenceData.startDate,
+              absenceData.endDate,
+              companyId
+            );
+          }
+        } catch (notifError) {
+          console.error('Error sending absence status notification:', notifError);
+          // Don't fail update if notification fails
+        }
+      }
       
       // Log access for audit trail
       if (userContext && absenceData) {
@@ -2246,7 +2847,6 @@ class FirebaseService {
           type: absenceData.type,
           updatedFields: Object.keys(data)
         };
-        // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
         await this.logAccess('update_absence', userContext.userId, 'absence', id, logMetadata);
       }
     } catch (error) {
@@ -2259,9 +2859,35 @@ class FirebaseService {
     const firestore = ensureDb();
 
     try {
-      // Get absence data before deletion for audit log
+      // Get absence data before deletion for access check
       const absenceDoc = await getDoc(doc(firestore, 'absences', id));
-      const absenceData = absenceDoc.exists() ? absenceDoc.data() as Absence : null;
+      if (!absenceDoc.exists()) {
+        throw new Error('Fravær ikke funnet');
+      }
+      const absenceData = absenceDoc.data() as Absence;
+
+      // GDPR: Check if user has permission to delete this absence
+      if (userContext) {
+        // Superadmin and admin can delete any absence
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can delete absences for employees in their department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === absenceData.employeeId)) {
+            throw new Error('Du kan kun slette fravær for ansatte i din avdeling');
+          }
+        }
+        // Employees can only delete their own absences
+        else if (userContext.role === 'employee') {
+          if (absenceData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun slette ditt eget fravær');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å slette fravær');
+        }
+      }
       
       await deleteDoc(doc(firestore, 'absences', id));
       
@@ -2274,7 +2900,6 @@ class FirebaseService {
           startDate: absenceData.startDate,
           endDate: absenceData.endDate
         };
-        // Note: departmentId is not part of Absence interface, but can be derived from employee if needed
         await this.logAccess('delete_absence', userContext.userId, 'absence', id, logMetadata);
       }
     } catch (error) {
@@ -2390,12 +3015,58 @@ class FirebaseService {
     const firestore = ensureDb();
 
     try {
+      // GDPR: Check if user has permission to create vacation
+      if (userContext) {
+        // Superadmin and admin can create vacations for anyone
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can create vacations for employees in their department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === vacationData.employeeId)) {
+            throw new Error('Du kan kun opprette ferie for ansatte i din avdeling');
+          }
+        }
+        // Employees can only create vacations for themselves
+        else if (userContext.role === 'employee') {
+          if (vacationData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun opprette ferie for deg selv');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å opprette ferie');
+        }
+      }
+
       const now = new Date().toISOString();
       const docRef = await addDoc(collection(firestore, 'vacations'), {
         ...vacationData,
         createdAt: now,
         updatedAt: now
       });
+      
+      // Get employee data for notifications
+      const employee = await this.getEmployee(vacationData.employeeId, userContext);
+      const employeeDepartmentId = employee?.departmentId || ''; // Fallback
+      const companyId = employee?.companyId || ''; // Fallback
+      
+      // Send notifications to admin and department leaders (only if created by employee, not admin/leader)
+      if (userContext?.role === 'employee' && employeeDepartmentId && companyId) {
+        try {
+          await notificationService.createVacationNotification(
+            docRef.id,
+            vacationData.employeeName,
+            vacationData.employeeId,
+            vacationData.startDate,
+            vacationData.endDate,
+            employeeDepartmentId,
+            companyId
+          );
+        } catch (notifError) {
+          console.error('Error sending vacation notification:', notifError);
+          // Don't fail vacation creation if notification fails
+        }
+      }
       
       // Log access for audit trail
       if (userContext) {
@@ -2421,14 +3092,66 @@ class FirebaseService {
     const firestore = ensureDb();
 
     try {
-      // Get vacation data before update for audit log
+      // Get vacation data before update for access check
       const vacationDoc = await getDoc(doc(firestore, 'vacations', id));
-      const vacationData = vacationDoc.exists() ? vacationDoc.data() as Vacation : null;
+      if (!vacationDoc.exists()) {
+        throw new Error('Ferie ikke funnet');
+      }
+      const vacationData = vacationDoc.data() as Vacation;
+
+      // GDPR: Check if user has permission to update this vacation
+      if (userContext) {
+        // Superadmin and admin can update any vacation
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can update vacations for employees in their department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === vacationData.employeeId)) {
+            throw new Error('Du kan kun endre ferie for ansatte i din avdeling');
+          }
+        }
+        // Employees can only update their own vacations
+        else if (userContext.role === 'employee') {
+          if (vacationData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun endre din egen ferie');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å endre ferie');
+        }
+      }
       
       await updateDoc(doc(firestore, 'vacations', id), {
         ...data,
         updatedAt: new Date().toISOString()
       });
+      
+      // Send notification to employee if status changed (approved/rejected)
+      if (data.status && (data.status === 'approved' || data.status === 'rejected') && vacationData && userContext) {
+        try {
+          const approver = await this.getEmployee(userContext.userId, userContext);
+          const approverName = approver?.displayName || approver?.name || userContext.userId || 'System';
+          const employee = await this.getEmployee(vacationData.employeeId, userContext);
+          const companyId = employee?.companyId || '';
+          
+          if (companyId) {
+            await notificationService.createVacationStatusNotification(
+              id,
+              vacationData.employeeId,
+              vacationData.employeeName,
+              data.status,
+              approverName,
+              vacationData.startDate,
+              vacationData.endDate,
+              companyId
+            );
+          }
+        } catch (notifError) {
+          console.error('Error sending vacation status notification:', notifError);
+          // Don't fail update if notification fails
+        }
+      }
       
       // Log access for audit trail
       if (userContext && vacationData) {
@@ -2450,9 +3173,35 @@ class FirebaseService {
     const firestore = ensureDb();
 
     try {
-      // Get vacation data before deletion for audit log
+      // Get vacation data before deletion for access check
       const vacationDoc = await getDoc(doc(firestore, 'vacations', id));
-      const vacationData = vacationDoc.exists() ? vacationDoc.data() as Vacation : null;
+      if (!vacationDoc.exists()) {
+        throw new Error('Ferie ikke funnet');
+      }
+      const vacationData = vacationDoc.data() as Vacation;
+
+      // GDPR: Check if user has permission to delete this vacation
+      if (userContext) {
+        // Superadmin and admin can delete any vacation
+        if (userContext.role === 'super_admin' || userContext.role === 'admin') {
+          // Allowed
+        }
+        // Department leaders can delete vacations for employees in their department
+        else if (userContext.role === 'department_leader' && userContext.departmentId) {
+          const departmentEmployees = await this.getEmployees(userContext);
+          if (!departmentEmployees.some(emp => emp.id === vacationData.employeeId)) {
+            throw new Error('Du kan kun slette ferie for ansatte i din avdeling');
+          }
+        }
+        // Employees can only delete their own vacations
+        else if (userContext.role === 'employee') {
+          if (vacationData.employeeId !== userContext.userId) {
+            throw new Error('Du kan kun slette din egen ferie');
+          }
+        } else {
+          throw new Error('Du har ikke tilgang til å slette ferie');
+        }
+      }
       
       await deleteDoc(doc(firestore, 'vacations', id));
       
