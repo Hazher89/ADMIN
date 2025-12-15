@@ -550,7 +550,7 @@ export default function LoginPage() {
                     appearance: 'none',
                     background: 'var(--gray-200)',
                     border: isMobile ? `4px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}` : `3px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}`,
-                    marginBottom: isMobile ? '1.5rem' : '1rem'
+                    marginBottom: isMobile ? '1.5rem' : '1rem',
                     color: 'var(--text-color)',
                     boxShadow: focusedField === 'email' 
                       ? '0 0 0 4px rgba(6, 182, 212, 0.15), 0 4px 12px rgba(6, 182, 212, 0.15)' 
