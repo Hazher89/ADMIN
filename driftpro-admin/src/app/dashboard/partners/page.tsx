@@ -198,14 +198,16 @@ export default function PartnersPage() {
     let failed = 0;
     let pending = 0;
     let autoPending = 0;
+    let manualReview = 0;
     for (const it of items) {
       total += 1;
       const s = String(it?.status || 'pending').toLowerCase();
       if (s === 'failed') failed += 1;
       else if (s === 'auto_pending') autoPending += 1;
+      else if (s === 'manual_review') manualReview += 1;
       else pending += 1; // pending/unknown
     }
-    return { total, failed, pending, autoPending };
+    return { total, failed, pending, autoPending, manualReview };
   }, [inboundItems]);
 
   const displayProcessingReport = useMemo(() => {
@@ -217,7 +219,7 @@ export default function PartnersPage() {
     // ALWAYS use the actual table counts as the source of truth
     // The stored report might be from an old sync run, but the table shows current reality
     const items = Array.isArray(inboundItems) ? inboundItems : [];
-    const byDate: Record<string, { total: number; sent: number; failed: number }> = {};
+    const byDate: Record<string, { total: number; sent: number; failed: number; manualReview: number }> = {};
     
     const pickDateKey = (it: any): string => {
       // Prefer the date parsed from the PDF (source of truth for “rutedato”).
@@ -240,11 +242,14 @@ export default function PartnersPage() {
     for (const it of items) {
       const dateKey = pickDateKey(it);
 
-      byDate[dateKey] = byDate[dateKey] || { total: 0, sent: 0, failed: 0 };
+      if (!byDate[dateKey]) {
+        byDate[dateKey] = { total: 0, sent: 0, failed: 0, manualReview: 0 };
+      }
       byDate[dateKey].total += 1;
       const s = String(it?.status || 'pending').toLowerCase();
       if (s === 'failed') byDate[dateKey].failed += 1;
       else if (s === 'processed' || s === 'sent') byDate[dateKey].sent += 1;
+      else if (s === 'manual_review') byDate[dateKey].manualReview += 1;
     }
 
     // Merge stored report metadata (like createdAt) with accurate counts from table
@@ -254,9 +259,10 @@ export default function PartnersPage() {
       // Inbound table typically contains pending/failed. We keep "sent" from stored report (when present).
       sent: prSent,
       failed: inboundDerived.failed > 0 ? inboundDerived.failed : prFailed,
+      manualReview: inboundDerived.manualReview > 0 ? inboundDerived.manualReview : (pr?.manualReview || 0),
       byDate: Object.keys(byDate).length > 0 ? byDate : (pr?.byDate || {}),
     };
-  }, [processingReport, inboundDerived.total, inboundDerived.failed, inboundDerived.pending, inboundDerived.autoPending, inboundItems]);
+  }, [processingReport, inboundDerived.total, inboundDerived.failed, inboundDerived.manualReview, inboundDerived.pending, inboundDerived.autoPending, inboundItems]);
 
   // Auto-refresh inbound while modal is open (keeps it "instant" without DevTools)
   useEffect(() => {
@@ -585,22 +591,40 @@ export default function PartnersPage() {
     return upper;
   };
 
+  // Known driver names that should NOT be auto-assigned (manual review needed)
+  const KNOWN_DRIVER_NAMES = ['olav', 'dawid', 'jim', 'david', 'ole', 'olev'];
+
+  const extractDriverNameFromText = (text: string): string | null => {
+    const lower = text.toLowerCase();
+    for (const name of KNOWN_DRIVER_NAMES) {
+      // Match whole word (not part of another word)
+      const re = new RegExp(`\\b${name}\\b`, 'i');
+      if (re.test(lower)) {
+        // Return original case if found
+        const match = text.match(re);
+        return match ? match[0] : name;
+      }
+    }
+    return null;
+  };
+
   const extractVehicleNumberFromPdf = async (file: File): Promise<string | null> => {
     // Super smart: try pdfjs text; if not found, OCR fallback with Tesseract.
     const parseFromText = (text: string): string | null => {
       const searchText = text;
-      const primary = searchText.slice(0, 20000);
+      const primary = searchText.slice(0, 30000); // Increased window for better detection
+      
       const pickFromResourceId = (): string | null => {
         const idx = primary.toLowerCase().indexOf('resource id');
         if (idx >= 0) {
-          const window = primary.slice(idx, idx + 400);
-          const m = window.match(/NO[_A-Z]*_M0*(\d{1,6})/i);
+          const window = primary.slice(Math.max(0, idx - 100), idx + 500); // Wider context
+          const m = window.match(/NO[_A-Z\s-]*M0*(\d{1,6})/i);
           if (m?.[1]) {
             const norm = normalizeVehicleNumber(m[1]);
-            if (norm) return norm; // "018", "023"
+            if (norm) return norm;
           }
         }
-        const globalMatch = searchText.match(/NO[_A-Z]*_M0*(\d{1,6})/i);
+        const globalMatch = searchText.match(/NO[_A-Z\s-]*M0*(\d{1,6})/i);
         if (globalMatch?.[1]) {
           const norm = normalizeVehicleNumber(globalMatch[1]);
           if (norm) return norm;
@@ -617,9 +641,12 @@ export default function PartnersPage() {
       const pickFromLabels = (): string | null => {
         // Backup Form / variants often use labels instead of "Resource ID"
         const reList = [
-          /(?:vehicle|truck|bil)\s*(?:id|no|nr|number|nummer)?\s*[:#\-\s]*M?\s*0*([0-9]{1,6})/i,
+          /(?:vehicle|truck|bil|kjøretøy)\s*(?:id|no|nr|number|nummer)?\s*[:#\-\s]*M?\s*0*([0-9]{1,6})/i,
           /(?:resource)\s*id[^A-Za-z0-9]*M?\s*0*([0-9]{1,6})/i,
           /\bM\s*0*([0-9]{1,6})\b/i,
+          // Standalone 3-4 digit numbers that could be vehicle numbers (context-aware)
+          /\b(?:vehicle|bil|truck|kjøretøy)[^0-9]*([0-9]{3,4})\b/i,
+          /\b([0-9]{3,4})\s*(?:vehicle|bil|truck|kjøretøy)\b/i,
         ];
         for (const re of reList) {
           const m = primary.match(re);
@@ -892,13 +919,42 @@ export default function PartnersPage() {
 
         let vehicleDigits: string | null = null;
         let parsedDateFromPdf: string | null = null;
+        let detectedDriverName: string | null = null;
         const cached = parsedCache.get(hash);
         if (cached) {
           vehicleDigits = cached.vehicleDigits;
           parsedDateFromPdf = cached.parsedDateFromPdf;
         } else {
-          vehicleDigits = await extractVehicleNumberFromPdf(file);
-          parsedDateFromPdf = await extractDateFromPdf(file);
+          // Extract text for both vehicle and driver detection
+          const pdfText = await (async () => {
+            try {
+              const pdfjs = await import('pdfjs-dist');
+              // @ts-ignore
+              pdfjs.GlobalWorkerOptions.workerSrc = new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).toString();
+              const data = await file.arrayBuffer();
+              const loadingTask = await pdfjs.getDocument({ data });
+              const pdf = await loadingTask.promise;
+              const maxPages = Math.min(pdf.numPages || 1, 3);
+              let out = '';
+              for (let p = 1; p <= maxPages; p++) {
+                const page = await pdf.getPage(p);
+                const txt = await page.getTextContent();
+                out += ' ' + txt.items.map((i: any) => i.str || '').join(' ');
+              }
+              return out.trim() || null;
+            } catch (err) {
+              return null;
+            }
+          })();
+          
+          if (pdfText) {
+            vehicleDigits = await extractVehicleNumberFromPdf(file);
+            parsedDateFromPdf = await extractDateFromPdf(file);
+            detectedDriverName = extractDriverNameFromText(pdfText);
+          } else {
+            vehicleDigits = await extractVehicleNumberFromPdf(file);
+            parsedDateFromPdf = await extractDateFromPdf(file);
+          }
           parsedCache.set(hash, { vehicleDigits, parsedDateFromPdf });
         }
         const fallbackDate = item.receivedAt?.split('T')?.[0] || new Date().toISOString().split('T')[0];
@@ -911,6 +967,28 @@ export default function PartnersPage() {
           parsedDateFromPdf ||
           (existingParsedDate && /^\d{4}-\d{2}-\d{2}$/.test(existingParsedDate) ? existingParsedDate : '') ||
           fallbackDate;
+
+        // If driver name detected but no vehicle number, mark for manual review
+        if (!vehicleDigits && detectedDriverName) {
+          try {
+            await updateDoc(doc(db, 'inboundRoutes', item.id), {
+              status: 'manual_review',
+              error: `Sjåførnavn funnet (${detectedDriverName}) - krever manuell tildeling`,
+              parsedDate: parsedDateFromPdf || undefined,
+              detectedDriverName: detectedDriverName,
+              updatedAt: serverTimestamp(),
+            });
+          } catch {}
+          results.push({ 
+            status: 'manual_review', 
+            message: `Sjåførnavn funnet: ${detectedDriverName} - krever manuell tildeling`, 
+            date: parsedDateFromPdf || routeDate, 
+            fileName: file.name, 
+            inboundId: item.id,
+            driverName: detectedDriverName
+          });
+          continue;
+        }
 
         if (!vehicleDigits) {
           // Update Firestore status so it can be tracked
@@ -1013,12 +1091,13 @@ export default function PartnersPage() {
       }
 
       // Build report for UI
-      const byDate: Record<string, { total: number; sent: number; failed: number }> = {};
+      const byDate: Record<string, { total: number; sent: number; failed: number; manualReview: number }> = {};
       for (const r of results) {
         const dk = r.date || 'ukjent';
-        byDate[dk] = byDate[dk] || { total: 0, sent: 0, failed: 0 };
+        byDate[dk] = byDate[dk] || { total: 0, sent: 0, failed: 0, manualReview: 0 };
         byDate[dk].total += 1;
         if (r.status === 'sent') byDate[dk].sent += 1;
+        else if (r.status === 'manual_review') byDate[dk].manualReview += 1;
         else if (r.status !== 'duplicate') byDate[dk].failed += 1;
       }
 
@@ -1026,6 +1105,7 @@ export default function PartnersPage() {
         total: results.length,
         sent: results.filter(r => r.status === 'sent').length,
         failed: results.filter(r => r.status === 'failed').length,
+        manualReview: results.filter(r => r.status === 'manual_review').length,
         byDate,
         details: results,
         createdAt: nowIso,
@@ -2439,6 +2519,11 @@ export default function PartnersPage() {
                     <span className="badge" style={{ background: '#7f1d1d', color: '#ef4444', border: '1px solid #991b1b' }}>
                       Feilet: {displayProcessingReport.failed ?? 0}
                     </span>
+                    {(displayProcessingReport.manualReview ?? 0) > 0 && (
+                      <span className="badge" style={{ background: '#78350f', color: '#fbbf24', border: '1px solid #92400e' }}>
+                        Manuell: {displayProcessingReport.manualReview ?? 0}
+                      </span>
+                    )}
                   </div>
                   {displayProcessingReport.byDate && (
                     <div style={{ marginTop: '0.75rem', color: '#cbd5e1', fontSize: '0.9rem' }}>
@@ -2446,12 +2531,18 @@ export default function PartnersPage() {
                         const total = stats?.total ?? 0;
                         const sent = stats?.sent ?? 0;
                         const failed = stats?.failed ?? 0;
+                        const manualReview = stats?.manualReview ?? 0;
                         const dateLabel = date !== 'ukjent'
                           ? new Date(date + 'T00:00:00').toLocaleDateString('no-NO', { weekday: 'long', day: '2-digit', month: '2-digit' })
                           : 'Ukjent dato';
+                        const parts: string[] = [];
+                        if (sent > 0) parts.push(`${sent} sendt`);
+                        if (manualReview > 0) parts.push(`${manualReview} krever manuell tildeling`);
+                        if (failed > 0) parts.push(`${failed} feilet`);
                         return (
                           <div key={date} style={{ marginTop: '0.25rem' }}>
-                            {`Alle rutene for ${dateLabel}: ${sent}/${total} sendt`}{failed > 0 ? `, ${failed} ikke sendt (se under).` : ', ingen ruter mangler ✅'}
+                            {`Alle rutene for ${dateLabel}: ${parts.length > 0 ? parts.join(', ') : '0 sendt'}`}
+                            {sent === total && failed === 0 && manualReview === 0 ? ' ✅' : ' (se under).'}
                           </div>
                         );
                       })}
@@ -2556,12 +2647,14 @@ export default function PartnersPage() {
                             color:
                               String(item.status || 'pending').toLowerCase() === 'failed'
                                 ? '#ef4444'
+                                : String(item.status || 'pending').toLowerCase() === 'manual_review'
+                                ? '#fbbf24'
                                 : String(item.status || 'pending').toLowerCase() === 'auto_pending'
                                 ? '#38bdf8'
                                 : '#f59e0b',
                           }}
                         >
-                          {String(item.status || 'pending')}
+                          {String(item.status || 'pending') === 'manual_review' ? 'Manuell tildeling' : String(item.status || 'pending')}
                         </td>
                         <td style={{ padding: '0.5rem', color: '#cbd5e1', maxWidth: '380px' }}>
                           <span title={String(item.error || '')}>

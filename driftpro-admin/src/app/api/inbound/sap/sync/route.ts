@@ -177,16 +177,36 @@ const normalizeVehicle = (val: string): string => {
   return `M${n}`;
 };
 
+// Known driver names that should NOT be auto-assigned (manual review needed)
+const KNOWN_DRIVER_NAMES = ['olav', 'dawid', 'jim', 'david', 'ole', 'olev'];
+
+const extractDriverNameFromText = (text: string): string | null => {
+  const lower = String(text || '').toLowerCase();
+  for (const name of KNOWN_DRIVER_NAMES) {
+    // Match whole word (not part of another word)
+    const re = new RegExp(`\\b${name}\\b`, 'i');
+    if (re.test(lower)) {
+      // Return original case if found
+      const match = String(text || '').match(re);
+      return match ? match[0] : name;
+    }
+  }
+  return null;
+};
+
 const extractVehicleFromText = (text: string): string | null => {
   const primary = String(text || '').slice(0, 50000);
   const corrected = primary.replace(/O/g, '0').replace(/o/g, '0');
   const checks = [
-    /NO[_\s-]?O[_\s-]?M0*?(\d{1,4})/i,
+    /NO[_A-Z\s-]*M0*?(\d{1,4})/i,
     /RESOURCE\s*ID[^A-Za-z0-9]+M0*?(\d{1,4})/i,
     /\bM0*?(\d{1,4})\b/i,
     // Backup Form / label-based variants (sometimes vehicle is digits-only in mail body)
-    /(?:vehicle|truck|bil)\s*(?:id|no|nr|number|nummer)?\s*[:#\-\s]*M?\s*0*([0-9]{1,4})/i,
+    /(?:vehicle|truck|bil|kjøretøy)\s*(?:id|no|nr|number|nummer)?\s*[:#\-\s]*M?\s*0*([0-9]{1,4})/i,
     /(?:resource)\s*id[^A-Za-z0-9]*M?\s*0*([0-9]{1,4})/i,
+    // Standalone 3-4 digit numbers that could be vehicle numbers (context-aware)
+    /\b(?:vehicle|bil|truck|kjøretøy)[^0-9]*([0-9]{3,4})\b/i,
+    /\b([0-9]{3,4})\s*(?:vehicle|bil|truck|kjøretøy)\b/i,
   ];
   for (const re of checks) {
     const m = primary.match(re) || corrected.match(re);
@@ -365,7 +385,8 @@ export async function POST(req: NextRequest) {
       date?: string;
       vehicle?: string;
       partnerName?: string;
-      status: 'sent' | 'no_vehicle' | 'no_partner' | 'duplicate' | 'failed';
+      driverName?: string;
+      status: 'sent' | 'no_vehicle' | 'no_partner' | 'duplicate' | 'failed' | 'manual_review';
       error?: string;
     }> = [];
 
@@ -574,17 +595,40 @@ export async function POST(req: NextRequest) {
         // Try PDF text first, then fall back to email subject/body (Backup Form is often image-based PDF).
         const parsedVehicle = combined ? extractVehicleFromText(combined) : null;
         const parsedDate = combined ? extractDateFromText(combined) : null;
+        const detectedDriverName = combined ? extractDriverNameFromText(combined) : null;
         const routeDate = parsedDate || inboundData.parsedDate || null;
 
-        if (parsedVehicle || parsedDate) {
+        if (parsedVehicle || parsedDate || detectedDriverName) {
           // Persist parsed hints for UI/debugging
           try {
             await updateDoc(doc(db, 'inboundRoutes', inboundId), {
               parsedVehicle: parsedVehicle || inboundData.parsedVehicle || undefined,
               parsedDate: parsedDate || inboundData.parsedDate || undefined,
+              detectedDriverName: detectedDriverName || inboundData.detectedDriverName || undefined,
               updatedAt: Timestamp.now(),
             });
           } catch {}
+        }
+
+        // If driver name detected but no vehicle number, mark for manual review
+        if (!parsedVehicle && detectedDriverName) {
+          await updateDoc(doc(db, 'inboundRoutes', inboundId), {
+            status: 'manual_review',
+            error: `Sjåførnavn funnet (${detectedDriverName}) - krever manuell tildeling`,
+            parsedDate: parsedDate || inboundData.parsedDate || undefined,
+            detectedDriverName: detectedDriverName,
+            updatedAt: Timestamp.now(),
+          });
+          reportDetails.push({
+            messageId,
+            inboundId,
+            fileName,
+            date: routeDate || 'ukjent',
+            status: 'manual_review',
+            error: `Sjåførnavn funnet (${detectedDriverName}) - krever manuell tildeling`,
+            driverName: detectedDriverName,
+          });
+          continue;
         }
 
         if (!routeDate) {
@@ -666,19 +710,21 @@ export async function POST(req: NextRequest) {
     }
 
     // Lag en enkel rapport per dato (som du beskrev)
-    const byDate: Record<string, { total: number; sent: number; failed: number }> = {};
+    const byDate: Record<string, { total: number; sent: number; failed: number; manualReview: number }> = {};
     for (const d of reportDetails) {
       const dateKey = d.date || 'ukjent';
-      byDate[dateKey] = byDate[dateKey] || { total: 0, sent: 0, failed: 0 };
+      byDate[dateKey] = byDate[dateKey] || { total: 0, sent: 0, failed: 0, manualReview: 0 };
       byDate[dateKey].total += 1;
       if (d.status === 'sent') byDate[dateKey].sent += 1;
+      else if (d.status === 'manual_review') byDate[dateKey].manualReview += 1;
       else byDate[dateKey].failed += 1;
     }
 
     const report = {
       total: reportDetails.length,
       sent: reportDetails.filter((d) => d.status === 'sent').length,
-      failed: reportDetails.filter((d) => d.status !== 'sent').length,
+      failed: reportDetails.filter((d) => d.status !== 'sent' && d.status !== 'manual_review').length,
+      manualReview: reportDetails.filter((d) => d.status === 'manual_review').length,
       byDate,
       details: reportDetails,
       createdAt: new Date().toISOString(),

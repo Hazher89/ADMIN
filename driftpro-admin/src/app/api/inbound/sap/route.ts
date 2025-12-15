@@ -139,7 +139,7 @@ export async function GET() {
   );
   const allItems = snap.docs.map((d) => ({ id: d.id, ...d.data() })) as any[];
   const items = allItems.filter((it) =>
-    ['pending', 'auto_pending', 'failed'].includes((it as any)?.status)
+    ['pending', 'auto_pending', 'failed', 'manual_review'].includes((it as any)?.status)
   );
 
   // Hent siste rapport (hvis finnes)
