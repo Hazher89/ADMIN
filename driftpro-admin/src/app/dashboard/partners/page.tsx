@@ -271,8 +271,12 @@ export default function PartnersPage() {
   // Cleanup blob URLs when component unmounts or PDF viewer closes
   useEffect(() => {
     return () => {
-      if (viewingPdf?.url.startsWith('blob:')) {
-        URL.revokeObjectURL(viewingPdf.url);
+      if (typeof window !== 'undefined' && viewingPdf?.url && viewingPdf.url.startsWith('blob:')) {
+        try {
+          URL.revokeObjectURL(viewingPdf.url);
+        } catch (e) {
+          // Ignore cleanup errors
+        }
       }
     };
   }, [viewingPdf]);
@@ -2501,11 +2505,15 @@ export default function PartnersPage() {
                             item.attachments.map((a: any, idx: number) => {
                               const handlePdfClick = (e: React.MouseEvent) => {
                                 e.preventDefault();
-                                if (a.fileUrl) {
+                                if (a.fileUrl && typeof window !== 'undefined') {
                                   // For data URLs, create a blob URL for better browser support
                                   if (a.fileUrl.startsWith('data:')) {
                                     try {
                                       const base64 = a.fileUrl.split(',')[1];
+                                      if (!base64) {
+                                        window.open(a.fileUrl, '_blank');
+                                        return;
+                                      }
                                       const bytes = Uint8Array.from(atob(base64), c => c.charCodeAt(0));
                                       const blob = new Blob([bytes], { type: 'application/pdf' });
                                       const blobUrl = URL.createObjectURL(blob);
@@ -2585,8 +2593,12 @@ export default function PartnersPage() {
           zIndex: 1300,
           padding: '1rem'
         }} onClick={() => {
-          if (viewingPdf?.url.startsWith('blob:')) {
-            URL.revokeObjectURL(viewingPdf.url);
+          if (typeof window !== 'undefined' && viewingPdf?.url && viewingPdf.url.startsWith('blob:')) {
+            try {
+              URL.revokeObjectURL(viewingPdf.url);
+            } catch (e) {
+              // Ignore cleanup errors
+            }
           }
           setViewingPdf(null);
         }}>
@@ -2630,8 +2642,12 @@ export default function PartnersPage() {
                 </a>
                 <button
                   onClick={() => {
-                    if (viewingPdf.url.startsWith('blob:')) {
-                      URL.revokeObjectURL(viewingPdf.url);
+                    if (typeof window !== 'undefined' && viewingPdf.url && viewingPdf.url.startsWith('blob:')) {
+                      try {
+                        URL.revokeObjectURL(viewingPdf.url);
+                      } catch (e) {
+                        // Ignore cleanup errors
+                      }
                     }
                     setViewingPdf(null);
                   }}
