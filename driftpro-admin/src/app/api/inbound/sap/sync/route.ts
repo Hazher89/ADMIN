@@ -524,6 +524,35 @@ export async function POST(req: NextRequest) {
       }
     });
 
+    // Cleanup: Slett alle ruter med status 'sent' eller 'processed' først (de skal ikke vises i listen)
+    try {
+      const cleanupSnap = await getDocs(
+        query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'), limit(500))
+      );
+      const toDelete: string[] = [];
+      for (const docSnap of cleanupSnap.docs) {
+        const data = docSnap.data();
+        const status = String(data?.status || '').toLowerCase();
+        // Slett ruter som er sendt/behandlet (de skal ikke vises i listen)
+        if (status === 'sent' || status === 'processed') {
+          toDelete.push(docSnap.id);
+        }
+        // Slett også ruter som har assignmentId (de er allerede tildelt)
+        if (data?.assignmentId || (Array.isArray(data?.assignmentIds) && data.assignmentIds.length > 0)) {
+          toDelete.push(docSnap.id);
+        }
+      }
+      // Slett alle i bulk (parallel)
+      await Promise.all(
+        toDelete.map((id) => deleteDoc(doc(db, 'inboundRoutes', id)).catch((err) => console.warn(`Failed to delete inbound ${id}:`, err)))
+      );
+      if (toDelete.length > 0) {
+        console.log(`🧹 Sync cleanup: Slettet ${toDelete.length} sendte/behandlede ruter fra inboundRoutes`);
+      }
+    } catch (cleanupErr) {
+      console.warn('Sync cleanup feilet (ikke kritisk):', cleanupErr);
+    }
+
     // Robust query: pull latest N and filter in code (avoids composite-index headaches).
     const recentSnap = await getDocs(
       query(collection(db, 'inboundRoutes'), orderBy('createdAt', 'desc'), limit(250))
