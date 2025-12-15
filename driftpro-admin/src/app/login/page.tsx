@@ -308,8 +308,8 @@ export default function LoginPage() {
                   <div 
                     className="animated-logo-container"
                     style={{ 
-                      width: isMobile ? '180px' : '260px', 
-                      height: isMobile ? '180px' : '260px', 
+                      width: isMobile ? '120px' : '260px', 
+                      height: isMobile ? '120px' : '260px', 
                       display: 'flex', 
                       alignItems: 'center', 
                       justifyContent: 'center'
@@ -317,7 +317,7 @@ export default function LoginPage() {
                   >
                     <DriftProLogo 
                       variant="icon" 
-                      size={isMobile ? 180 : 260}
+                      size={isMobile ? 120 : 260}
                       className="driftpro-login-logo"
                     />
                   </div>
@@ -389,7 +389,7 @@ export default function LoginPage() {
             {/* Brand name */}
             <h1 
               style={{ 
-                fontSize: isMobile ? '2rem' : '2.5rem',
+                fontSize: isMobile ? '1.75rem' : '2.5rem',
                 fontWeight: 800,
                 marginBottom: '0.75rem',
                 letterSpacing: '-0.02em',
@@ -537,19 +537,20 @@ export default function LoginPage() {
                 required
                   style={{
                     width: '100%',
-                    paddingLeft: isMobile ? '3.75rem' : '3.5rem',
-                    paddingRight: isMobile ? '1.75rem' : '1.5rem',
-                    paddingTop: isMobile ? '1.5rem' : '1.25rem',
-                    paddingBottom: isMobile ? '1.5rem' : '1.25rem',
-                    minHeight: isMobile ? '64px' : '56px', // Larger on mobile
-                    borderRadius: 'var(--radius-xl)',
+                    paddingLeft: isMobile ? '4rem' : '3.5rem',
+                    paddingRight: isMobile ? '2rem' : '1.5rem',
+                    paddingTop: isMobile ? '1.75rem' : '1.25rem',
+                    paddingBottom: isMobile ? '1.75rem' : '1.25rem',
+                    minHeight: isMobile ? '72px' : '56px', // Even larger on mobile
+                    borderRadius: isMobile ? '16px' : 'var(--radius-xl)',
                     transition: 'all 0.2s',
                     outline: 'none',
-                    fontSize: isMobile ? '18px' : '16px', // Larger font on mobile
+                    fontSize: isMobile ? '20px' : '16px', // Even larger font on mobile
                     WebkitAppearance: 'none',
                     appearance: 'none',
                     background: 'var(--gray-200)',
-                    border: `3px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}`,
+                    border: isMobile ? `4px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}` : `3px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}`,
+                    marginBottom: isMobile ? '1.5rem' : '1rem'
                     color: 'var(--text-color)',
                     boxShadow: focusedField === 'email' 
                       ? '0 0 0 4px rgba(6, 182, 212, 0.15), 0 4px 12px rgba(6, 182, 212, 0.15)' 
