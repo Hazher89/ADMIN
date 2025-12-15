@@ -389,124 +389,128 @@ export default function LoginPage() {
             {/* Brand name */}
             <h1 
               style={{ 
-                fontSize: isMobile ? '1.75rem' : '2.5rem',
+                fontSize: isMobile ? '1.5rem' : '2.5rem',
                 fontWeight: 800,
-                marginBottom: '0.75rem',
+                marginBottom: isMobile ? '0.5rem' : '0.75rem',
                 letterSpacing: '-0.02em',
                 background: 'var(--gradient-primary)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
-                filter: 'drop-shadow(0 2px 10px rgba(6, 182, 212, 0.3))'
+                filter: isMobile ? 'none' : 'drop-shadow(0 2px 10px rgba(6, 182, 212, 0.3))'
               }}
             >
               DriftPro
           </h1>
             
-            {/* Divider */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', margin: '1rem 0' }}>
-              <div 
-                style={{ 
-                  height: '1px',
-                  flex: 1,
-                  maxWidth: '60px',
-                  background: 'linear-gradient(90deg, transparent, var(--border-color))'
-                }}
-              ></div>
-              <div 
-                style={{ 
-                  width: '6px',
-                  height: '6px',
-                  borderRadius: '50%',
-                  background: 'var(--primary)',
-                  boxShadow: '0 0 10px rgba(6, 182, 212, 0.5)',
-                  animation: 'pulse-dot 2s ease-in-out infinite'
-                }}
-              ></div>
-              <div 
-                style={{ 
-                  height: '1px',
-                  flex: 1,
-                  maxWidth: '60px',
-                  background: 'linear-gradient(90deg, var(--border-color), transparent)'
-                }}
-              ></div>
-            </div>
+            {/* Divider - hide on mobile */}
+            {!isMobile && (
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.75rem', margin: '1rem 0' }}>
+                <div 
+                  style={{ 
+                    height: '1px',
+                    flex: 1,
+                    maxWidth: '60px',
+                    background: 'linear-gradient(90deg, transparent, var(--border-color))'
+                  }}
+                ></div>
+                <div 
+                  style={{ 
+                    width: '6px',
+                    height: '6px',
+                    borderRadius: '50%',
+                    background: 'var(--primary)',
+                    boxShadow: '0 0 10px rgba(6, 182, 212, 0.5)',
+                    animation: 'pulse-dot 2s ease-in-out infinite'
+                  }}
+                ></div>
+                <div 
+                  style={{ 
+                    height: '1px',
+                    flex: 1,
+                    maxWidth: '60px',
+                    background: 'linear-gradient(90deg, var(--border-color), transparent)'
+                  }}
+                ></div>
+              </div>
+            )}
             
-            {/* Subtitle */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
-              <p 
-                style={{ 
-                  fontSize: '0.7rem',
-                  fontWeight: 600,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.2em',
-                  color: 'var(--gray-400)'
-                }}
-              >
-                Bedriftsstyring og Operasjonsplattform
-              </p>
-              <p 
-                style={{ 
-                  fontSize: '0.7rem',
-                  fontWeight: 300,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.25em',
-                  color: 'var(--gray-500)',
-                  marginTop: '0.75rem'
-                }}
-              >
-                Utviklet for
-              </p>
-              <p 
-                style={{ 
-                  fontSize: '1rem',
-                  fontWeight: 700,
-                  letterSpacing: '0.05em',
-                  color: 'var(--text-color)',
-                  marginTop: '0.25rem'
-                }}
-              >
-                MAVI LOGISTIKK AS
-              </p>
-            </div>
+            {/* Subtitle - hide on mobile */}
+            {!isMobile && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                <p 
+                  style={{ 
+                    fontSize: '0.7rem',
+                    fontWeight: 600,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.2em',
+                    color: 'var(--gray-400)'
+                  }}
+                >
+                  Bedriftsstyring og Operasjonsplattform
+                </p>
+                <p 
+                  style={{ 
+                    fontSize: '0.7rem',
+                    fontWeight: 300,
+                    textTransform: 'uppercase',
+                    letterSpacing: '0.25em',
+                    color: 'var(--gray-500)',
+                    marginTop: '0.75rem'
+                  }}
+                >
+                  Utviklet for
+                </p>
+                <p 
+                  style={{ 
+                    fontSize: '1rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.05em',
+                    color: 'var(--text-color)',
+                    marginTop: '0.25rem'
+                  }}
+                >
+                  MAVI LOGISTIKK AS
+                </p>
+              </div>
+            )}
         </div>
 
         {/* Error message */}
         {error && (
             <div 
               style={{
-                marginBottom: '1rem',
-                padding: '0.875rem',
-                borderRadius: 'var(--radius-xl)',
+                marginBottom: isMobile ? '1.5rem' : '1rem',
+                padding: isMobile ? '1rem' : '0.875rem',
+                borderRadius: isMobile ? '12px' : 'var(--radius-xl)',
                 display: 'flex',
                 alignItems: 'flex-start',
-                gap: '0.75rem',
+                gap: isMobile ? '1rem' : '0.75rem',
                 position: 'relative',
                 overflow: 'hidden',
                 background: 'rgba(239, 68, 68, 0.1)',
-                border: '1px solid rgba(239, 68, 68, 0.2)',
+                border: isMobile ? '2px solid rgba(239, 68, 68, 0.3)' : '1px solid rgba(239, 68, 68, 0.2)',
                 backdropFilter: 'blur(8px)'
               }}
             >
-              <AlertCircle size={18} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
+              <AlertCircle size={isMobile ? 24 : 18} style={{ color: 'var(--danger)', flexShrink: 0, marginTop: '2px' }} />
               <div style={{ flex: 1 }}>
-                <p style={{ fontSize: '0.8125rem', fontWeight: 600, marginBottom: '0.25rem', color: 'var(--danger)' }}>Innlogging feilet</p>
-                <p style={{ fontSize: '0.8125rem', lineHeight: '1.5', color: 'var(--danger)' }}>{error}</p>
+                <p style={{ fontSize: isMobile ? '1rem' : '0.8125rem', fontWeight: 600, marginBottom: '0.5rem', color: 'var(--danger)' }}>Innlogging feilet</p>
+                <p style={{ fontSize: isMobile ? '0.9375rem' : '0.8125rem', lineHeight: '1.5', color: 'var(--danger)' }}>{error}</p>
               </div>
           </div>
         )}
 
         {/* Login Form */}
-          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1rem', position: 'relative', zIndex: 10 }}>
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: isMobile ? '1.5rem' : '1rem', position: 'relative', zIndex: 10 }}>
             {/* Email Field - STOR */}
           <div>
             <label 
               htmlFor="email" 
                 style={{ 
                   display: 'block',
-                  marginBottom: '0.5rem',
-                  fontSize: '0.875rem',
+                  marginBottom: isMobile ? '0.75rem' : '0.5rem',
+                  fontSize: isMobile ? '1rem' : '0.875rem',
                   fontWeight: 600,
                   color: 'var(--text-color)'
                 }}
@@ -550,7 +554,6 @@ export default function LoginPage() {
                     appearance: 'none',
                     background: 'var(--gray-200)',
                     border: isMobile ? `4px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}` : `3px solid ${focusedField === 'email' ? 'var(--primary)' : 'var(--border-color)'}`,
-                    marginBottom: isMobile ? '1.5rem' : '1rem',
                     color: 'var(--text-color)',
                     boxShadow: focusedField === 'email' 
                       ? '0 0 0 4px rgba(6, 182, 212, 0.15), 0 4px 12px rgba(6, 182, 212, 0.15)' 
@@ -579,8 +582,8 @@ export default function LoginPage() {
               htmlFor="password" 
                 style={{ 
                   display: 'block',
-                  marginBottom: '0.5rem',
-                  fontSize: '0.875rem',
+                  marginBottom: isMobile ? '0.75rem' : '0.5rem',
+                  fontSize: isMobile ? '1rem' : '0.875rem',
                   fontWeight: 600,
                   color: 'var(--text-color)'
                 }}
@@ -633,7 +636,6 @@ export default function LoginPage() {
                     WebkitTapHighlightColor: 'transparent',
                     WebkitUserSelect: 'text',
                     userSelect: 'text',
-                    marginBottom: isMobile ? '1.5rem' : '1rem'
                   }}
                 placeholder="••••••••"
                 autoComplete="current-password"
