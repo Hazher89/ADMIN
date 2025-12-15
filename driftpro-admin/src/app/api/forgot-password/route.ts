@@ -1,21 +1,31 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { globalEmailService } from '@/lib/global-email-service';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, addDoc, serverTimestamp, query, where, getDocs } from 'firebase/firestore';
+import { getAuth, sendPasswordResetEmail } from 'firebase/auth';
+import { getFirestore, collection, query, where, getDocs } from 'firebase/firestore';
+import { initializeApp, getApps } from 'firebase/app';
 
 // Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-  authDomain: "driftpro-40ccd.firebaseapp.com",
-  projectId: "driftpro-40ccd",
-  storageBucket: "driftpro-40ccd.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
+let app;
+let auth;
+let db;
+
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
+
+auth = getAuth(app);
+db = getFirestore(app);
 
 export async function POST(request: NextRequest) {
   try {
@@ -24,76 +34,67 @@ export async function POST(request: NextRequest) {
 
     if (!email) {
       return NextResponse.json(
-        { error: 'Email is required' },
+        { error: 'E-postadresse er påkrevd' },
         { status: 400 }
       );
     }
 
-    console.log('📧 Processing forgot password request via Microsoft Graph:', {
-      email,
-      provider: 'microsoft_graph'
-    });
+    console.log('📧 Processing forgot password request for:', email);
 
-    // Check if user exists
+    // Check if user exists in Firestore
     const usersQuery = query(collection(db, 'users'), where('email', '==', email));
     const usersSnapshot = await getDocs(usersQuery);
 
     if (usersSnapshot.empty) {
-      return NextResponse.json(
-        { error: 'No user found with this email address' },
-        { status: 404 }
-      );
-    }
-
-    const userDoc = usersSnapshot.docs[0];
-    const userData = userDoc.data();
-
-    // Generate reset token
-    const resetToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-    const resetUrl = `https://admin.driftpro.no/reset-password?token=${resetToken}&email=${encodeURIComponent(email)}`;
-
-    // Store reset token in Firestore
-    await addDoc(collection(db, 'passwordResetTokens'), {
-      email: email,
-      token: resetToken,
-      userId: userDoc.id,
-      expiresAt: new Date(Date.now() + 60 * 60 * 1000), // 1 hour
-      createdAt: serverTimestamp(),
-      used: false
-    });
-
-    console.log('📧 Sending password reset email via Microsoft Graph');
-
-    // Send password reset email using Microsoft Graph
-    const result = await globalEmailService.sendPasswordResetEmail(email, resetUrl, userData.displayName || 'User');
-
-    if (result.success) {
-      console.log('✅ Password reset email sent successfully via Microsoft Graph');
-      return NextResponse.json({
-        success: true,
-        message: 'Password reset email sent successfully via Microsoft Graph',
-        provider: 'microsoft_graph'
-      });
-    } else {
-      console.error('❌ Password reset email sending failed:', result.error);
+      // Don't reveal if user exists or not for security
       return NextResponse.json(
         { 
-          error: 'Failed to send password reset email',
-          details: result.error,
-          provider: 'microsoft_graph'
+          message: 'Hvis en bruker med denne e-postadressen eksisterer, vil du motta en e-post med instruksjoner for å tilbakestille passordet.',
+          success: true
         },
-        { status: 500 }
+        { status: 200 }
       );
     }
-  } catch (error) {
+
+    // User exists, send password reset email using Firebase
+    try {
+      await sendPasswordResetEmail(auth, email, {
+        url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no'}/reset-password`,
+        handleCodeInApp: true
+      });
+
+      console.log('✅ Password reset email sent successfully via Firebase');
+
+      return NextResponse.json({
+        success: true,
+        message: 'E-post for tilbakestilling av passord er sendt! Sjekk innboksen din og følg lenken for å sette et nytt passord.'
+      });
+    } catch (firebaseError: any) {
+      console.error('❌ Firebase error sending password reset email:', firebaseError);
+      
+      // Handle specific Firebase errors
+      if (firebaseError.code === 'auth/user-not-found') {
+        // Don't reveal if user exists
+        return NextResponse.json(
+          { 
+            message: 'Hvis en bruker med denne e-postadressen eksisterer, vil du motta en e-post med instruksjoner for å tilbakestille passordet.',
+            success: true
+          },
+          { status: 200 }
+        );
+      }
+      
+      throw firebaseError;
+    }
+  } catch (error: any) {
     console.error('❌ Error in forgot-password API:', error);
+    
     return NextResponse.json(
       { 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'microsoft_graph'
+        error: error.message || 'Kunne ikke sende e-post for tilbakestilling av passord. Prøv igjen senere.',
+        code: error.code
       },
       { status: 500 }
     );
   }
-} 
+}

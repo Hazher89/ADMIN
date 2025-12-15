@@ -11,7 +11,7 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 	const [open, setOpen] = useState(false);
 	const [cockpitActive, setCockpitActive] = useState(false);
 	const pathname = usePathname();
-	const { isAuthenticated } = useAuth();
+	const { isAuthenticated, loading } = useAuth();
 	
 	// Check if cockpit is active - only on advanced-planning page
 	useEffect(() => {
@@ -31,7 +31,8 @@ export default function AppShell({ children }: { children: React.ReactNode }) {
 	
 	// Don't show Topbar, BottomNav, or CommandPalette on login page, when not authenticated, or when cockpit is active
 	const isLoginPage = pathname === '/login' || pathname === '/forgot-password' || pathname === '/setup-password';
-	const shouldShowShell = !isLoginPage && isAuthenticated && !cockpitActive;
+	// Wait for auth to finish loading before deciding to show shell
+	const shouldShowShell = !isLoginPage && !loading && isAuthenticated && !cockpitActive;
 
 	useEffect(() => {
 		const onResize = () => {

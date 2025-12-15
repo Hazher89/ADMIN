@@ -14,6 +14,7 @@ import {
   Loader2
 } from 'lucide-react';
 import DriftProLogo from '@/components/DriftProLogo';
+import MobileLogin from '@/components/MobileLogin';
 
 // Prevent pre-rendering since this page uses useRouter and localStorage
 export const dynamic = 'force-dynamic';
@@ -29,6 +30,7 @@ export default function LoginPage() {
   const [focusedField, setFocusedField] = useState<string | null>(null);
   const [mounted, setMounted] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [loginSuccess, setLoginSuccess] = useState(false);
 
   // Force dark mode on login page and detect mobile
   useEffect(() => {
@@ -44,30 +46,47 @@ export default function LoginPage() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
-  // Redirect if already authenticated
+  // Redirect if already authenticated or after successful login
   useEffect(() => {
-    if (isAuthenticated) {
-      router.push('/dashboard');
+    if (isAuthenticated && (loginSuccess || !loading)) {
+      // Small delay to ensure all state is updated
+      const timer = setTimeout(() => {
+        router.push('/dashboard');
+        // Refresh router to ensure all components re-render with new auth state
+        setTimeout(() => {
+          router.refresh();
+        }, 200);
+      }, 150);
+      return () => clearTimeout(timer);
     }
-  }, [isAuthenticated, router]);
+  }, [isAuthenticated, loginSuccess, loading, router]);
 
   if (isAuthenticated) {
     return null;
+  }
+
+  // Use dedicated mobile login component for mobile devices
+  if (mounted && isMobile) {
+    return <MobileLogin />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
     setError('');
+    setLoginSuccess(false);
 
     try {
       await login(email, password);
-      router.push('/dashboard');
+      // Mark login as successful - useEffect will handle redirect when isAuthenticated becomes true
+      setLoginSuccess(true);
+      // Don't set loading to false here - let the redirect happen
     } catch (error) {
       console.error('Login error:', error);
       const errorMessage = error instanceof Error ? error.message : 'Feil e-post eller passord. Prøv igjen.';
       setError(errorMessage);
       setLoading(false);
+      setLoginSuccess(false);
     }
   };
 
@@ -78,21 +97,21 @@ export default function LoginPage() {
   return (
       <div 
       style={{
-        position: isMobile ? 'relative' : 'fixed',
+        position: isMobile ? 'relative' : 'relative',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
         width: '100vw',
         minHeight: '100vh',
-        height: isMobile ? 'auto' : '100vh',
+        height: isMobile ? 'auto' : 'auto',
         display: 'flex',
         alignItems: isMobile ? 'flex-start' : 'center',
         justifyContent: 'center',
         background: 'var(--background-color)',
         color: 'var(--text-color)',
         padding: isMobile ? '0' : '1rem',
-        overflow: isMobile ? 'auto' : 'hidden',
+        overflow: 'auto',
         WebkitOverflowScrolling: 'touch',
         overscrollBehavior: 'contain'
       }}
@@ -179,12 +198,14 @@ export default function LoginPage() {
           zIndex: 10,
           width: '100%',
           maxWidth: '520px',
-          minHeight: isMobile ? '100vh' : 'auto',
+          minHeight: isMobile ? '100vh' : '100vh',
           margin: isMobile ? '0' : 'auto',
           display: 'flex',
           alignItems: isMobile ? 'flex-start' : 'center',
           justifyContent: 'center',
-          padding: isMobile ? '1rem' : '0'
+          padding: isMobile ? '1rem' : '1rem',
+          paddingTop: isMobile ? '1rem' : '2rem',
+          paddingBottom: isMobile ? '2rem' : '2rem'
         }}
       >
         <div 

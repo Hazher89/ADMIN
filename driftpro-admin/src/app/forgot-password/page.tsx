@@ -1,13 +1,8 @@
 'use client';
 
 import { useState } from 'react';
-import { sendPasswordResetEmail } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
 import { Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
-import { db } from '@/lib/firebase';
-// import { emailService } from '@/lib/email-service'; // Removed - nodemailer not available on client side
 
 export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
@@ -33,7 +28,7 @@ export default function ForgotPasswordPage() {
       const result = await response.json();
 
       if (response.ok) {
-        setSuccess(result.message || 'E-post for tilbakestilling av passord er sendt! Sjekk innboksen din.');
+        setSuccess(result.message || 'E-post for tilbakestilling av passord er sendt! Sjekk innboksen din og følg lenken for å sette et nytt passord.');
         setEmail('');
       } else {
         setError(result.error || 'Kunne ikke sende e-post. Prøv igjen senere.');
@@ -59,13 +54,13 @@ export default function ForgotPasswordPage() {
                 E-post sendt!
               </h2>
               <p className="mt-2 text-sm text-gray-600">
-                Vi har sendt en lenke for å tilbakestille passordet ditt til {email}.
+                Vi har sendt en lenke for å tilbakestille passordet ditt til e-postadressen du oppga.
               </p>
               <p className="mt-2 text-sm text-gray-600">
-                Sjekk innboksen din og klikk på lenken for å sette et nytt passord.
+                Sjekk innboksen din (inkludert spam-mappen) og klikk på lenken i e-posten for å sette et nytt passord.
               </p>
               <p className="mt-2 text-sm text-gray-500">
-                <strong>Merk:</strong> E-posten kommer fra Firebase og er på engelsk.
+                <strong>Merk:</strong> Lenken er gyldig i 1 time. Hvis du ikke mottar e-posten, sjekk spam-mappen eller prøv igjen.
               </p>
             </div>
             

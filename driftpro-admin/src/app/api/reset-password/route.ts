@@ -1,170 +1,120 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { initializeApp } from 'firebase/app';
-import { getFirestore, collection, query, where, getDocs, updateDoc, doc, deleteDoc } from 'firebase/firestore';
-import { getAuth, createUserWithEmailAndPassword, updatePassword } from 'firebase/auth';
+import { getAuth, confirmPasswordReset, verifyPasswordResetCode } from 'firebase/auth';
+import { getFirestore, collection, query, where, getDocs, updateDoc, doc } from 'firebase/firestore';
+import { initializeApp, getApps } from 'firebase/app';
 
 // Firebase config
 const firebaseConfig = {
-  apiKey: "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
-  authDomain: "driftpro-40ccd.firebaseapp.com",
-  projectId: "driftpro-40ccd",
-  storageBucket: "driftpro-40ccd.appspot.com",
-  messagingSenderId: "123456789",
-  appId: "1:123456789:web:abcdef123456"
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
 };
 
 // Initialize Firebase
-const app = initializeApp(firebaseConfig);
-const db = getFirestore(app);
-const auth = getAuth(app);
+let app;
+let auth;
+let db;
+
+if (getApps().length === 0) {
+  app = initializeApp(firebaseConfig);
+} else {
+  app = getApps()[0];
+}
+
+auth = getAuth(app);
+db = getFirestore(app);
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    const { token, password } = body;
+    const { oobCode, password } = body;
 
-    if (!token || !password) {
+    if (!oobCode || !password) {
       return NextResponse.json(
-        { error: 'Token and password are required' },
+        { error: 'Reset-kode og passord er påkrevd' },
         { status: 400 }
       );
     }
 
-    console.log('🔐 Processing password reset via Cloudflare Email Routing:', {
-      token: token.substring(0, 10) + '...',
-      provider: 'cloudflare_email_routing'
-    });
-
-    // Find the reset token
-    const tokensQuery = query(collection(db, 'passwordResetTokens'), where('token', '==', token));
-    const tokensSnapshot = await getDocs(tokensQuery);
-
-    if (tokensSnapshot.empty) {
+    // Validate password strength
+    if (password.length < 8) {
       return NextResponse.json(
-        { error: 'Invalid or expired token' },
+        { error: 'Passordet må være minst 8 tegn langt' },
         { status: 400 }
       );
     }
 
-    const tokenDoc = tokensSnapshot.docs[0];
-    const tokenData = tokenDoc.data();
-
-    // Check if token is expired
-    if (tokenData.expiresAt && new Date(tokenData.expiresAt.toDate()) < new Date()) {
-      // Delete expired token
-      await deleteDoc(tokenDoc.ref);
-      return NextResponse.json(
-        { error: 'Token has expired' },
-        { status: 400 }
-      );
-    }
-
-    // Check if token is already used
-    if (tokenData.used) {
-      return NextResponse.json(
-        { error: 'Token has already been used' },
-        { status: 400 }
-      );
-    }
-
-    // Find the user
-    const usersQuery = query(collection(db, 'users'), where('email', '==', tokenData.email));
-    const usersSnapshot = await getDocs(usersQuery);
-
-    if (usersSnapshot.empty) {
-      return NextResponse.json(
-        { error: 'User not found' },
-        { status: 404 }
-      );
-    }
-
-    const userDoc = usersSnapshot.docs[0];
-    const userData = userDoc.data();
+    console.log('🔐 Processing password reset with Firebase actionCode');
 
     try {
-      // Check if user has a Firebase UID in the database
-      if (!userData.uid) {
+      // Verify the reset code first
+      const email = await verifyPasswordResetCode(auth, oobCode);
+      console.log('✅ Reset code verified for email:', email);
+
+      // Confirm password reset
+      await confirmPasswordReset(auth, oobCode, password);
+      console.log('✅ Password reset confirmed successfully');
+
+      // Update user document in Firestore
+      const usersQuery = query(collection(db, 'users'), where('email', '==', email));
+      const usersSnapshot = await getDocs(usersQuery);
+
+      if (!usersSnapshot.empty) {
+        const userDoc = usersSnapshot.docs[0];
+        await updateDoc(doc(db, 'users', userDoc.id), {
+          passwordSet: true,
+          passwordUpdatedAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString()
+        });
+        console.log('✅ User document updated in Firestore');
+      }
+
+      return NextResponse.json({
+        success: true,
+        message: 'Passordet ditt har blitt tilbakestilt. Du kan nå logge inn med ditt nye passord.',
+        email: email
+      });
+
+    } catch (firebaseError: any) {
+      console.error('❌ Firebase error during password reset:', firebaseError);
+      
+      // Handle specific Firebase errors
+      if (firebaseError.code === 'auth/expired-action-code') {
         return NextResponse.json(
-          { error: 'User account not properly set up. Please contact administrator.' },
+          { error: 'Tilbakestillingslenken har utløpt. Vennligst be om en ny lenke.' },
           { status: 400 }
         );
       }
-
-      // For password reset, we need to handle the case where user already exists
-      // We'll try to create a new account, and if it fails due to email already in use,
-      // we'll handle it appropriately
       
-      try {
-        // Try to create new Firebase user with the new password
-        const userCredential = await createUserWithEmailAndPassword(
-          auth,
-          tokenData.email,
-          password
+      if (firebaseError.code === 'auth/invalid-action-code') {
+        return NextResponse.json(
+          { error: 'Ugyldig tilbakestillingslenke. Vennligst be om en ny lenke.' },
+          { status: 400 }
         );
-
-        const firebaseUser = userCredential.user;
-
-        // Update user document with new UID
-        await updateDoc(userDoc.ref, {
-          uid: firebaseUser.uid,
-          passwordUpdatedAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-          passwordReset: true
-        });
-
-        // Mark token as used
-        await updateDoc(tokenDoc.ref, {
-          used: true,
-          usedAt: new Date().toISOString()
-        });
-
-        console.log('✅ Password reset completed successfully - new account created');
-
-        return NextResponse.json({
-          success: true,
-          message: 'Password reset successfully - new account created',
-          userId: firebaseUser.uid,
-          provider: 'firebase_client_sdk'
-        });
-
-      } catch (createError: any) {
-        if (createError.code === 'auth/email-already-in-use') {
-          // User already exists, we can't reset password this way
-          // Return a message asking user to contact admin
-          return NextResponse.json(
-            { 
-              error: 'Account already exists. Please contact your administrator to reset your password.',
-              code: 'email-already-in-use'
-            },
-            { status: 400 }
-          );
-        } else {
-          throw createError;
-        }
       }
-
-    } catch (authError) {
-      console.error('❌ Firebase Auth error:', authError);
       
-      return NextResponse.json(
-        { 
-          error: 'Failed to reset password',
-          details: authError instanceof Error ? authError.message : 'Unknown error',
-          provider: 'firebase_client_sdk'
-        },
-        { status: 500 }
-      );
+      if (firebaseError.code === 'auth/weak-password') {
+        return NextResponse.json(
+          { error: 'Passordet er for svakt. Vennligst velg et sterkere passord.' },
+          { status: 400 }
+        );
+      }
+      
+      throw firebaseError;
     }
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Error in reset-password API:', error);
+    
     return NextResponse.json(
       { 
-        error: 'Internal server error',
-        details: error instanceof Error ? error.message : 'Unknown error',
-        provider: 'firebase_client_sdk'
+        error: error.message || 'Kunne ikke tilbakestille passordet. Prøv igjen senere.',
+        code: error.code
       },
       { status: 500 }
     );
   }
-} 
+}
