@@ -135,9 +135,80 @@ export async function POST(request: NextRequest) {
     // Generate a random password
     const tempPassword = uuidv4();
     
+    console.log('🔐 Creating Firebase Auth user for:', email);
+    
     // Create user in Firebase Auth with temporary password
-    const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
-    const user = userCredential.user;
+    let user;
+    try {
+      const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
+      user = userCredential.user;
+      console.log('✅ Firebase Auth user created successfully:', user.uid);
+    } catch (authError: any) {
+      console.error('❌ Error creating Firebase Auth user:', authError);
+      if (authError.code === 'auth/email-already-in-use') {
+        // User already exists - find their UID
+        const usersQuery = query(collection(db, 'users'), where('email', '==', email));
+        const usersSnapshot = await getDocs(usersQuery);
+        if (!usersSnapshot.empty) {
+          const existingUserDoc = usersSnapshot.docs[0];
+          const existingData = existingUserDoc.data();
+          const existingUid = existingData.uid || existingUserDoc.id;
+          
+          // Return existing user info and send email
+          const setupToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+          const expiresAt = new Date();
+          expiresAt.setHours(expiresAt.getHours() + 72);
+          
+          await addDoc(collection(db, 'setupTokens'), {
+            token: setupToken,
+            userId: existingUid,
+            email: email,
+            expiresAt: Timestamp.fromDate(expiresAt),
+            used: false,
+            createdAt: serverTimestamp(),
+            type: 'employee_welcome',
+            companyName: companyName || 'Mavi Logistikk',
+            adminName: 'System Administrator'
+          });
+          
+          const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://admin.driftpro.no';
+          const setupPasswordUrl = `${appUrl}/setup-password?token=${setupToken}`;
+          
+          // Send welcome email
+          try {
+            const response = await fetch(`${appUrl}/api/send-welcome-email`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                email: email,
+                displayName: displayName,
+                adminName: 'System Administrator',
+                companyName: companyName || 'Mavi Logistikk',
+                resetLink: setupPasswordUrl
+              })
+            });
+            
+            if (response.ok) {
+              const result = await response.json();
+              if (result.success) {
+                console.log('✅ Welcome email sent to existing user');
+              }
+            }
+          } catch (emailError) {
+            console.error('⚠️ Error sending welcome email:', emailError);
+          }
+          
+          return NextResponse.json({
+            success: true,
+            userId: existingUid,
+            setupPasswordUrl: setupPasswordUrl,
+            message: 'User already exists. Welcome email sent.',
+            alreadyExists: true
+          });
+        }
+      }
+      throw authError;
+    }
 
     // Set permissions based on role - Admin gets ALL permissions
     const permissions = (role === 'admin' || role === 'super_admin') 
