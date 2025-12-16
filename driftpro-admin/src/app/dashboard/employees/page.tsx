@@ -503,90 +503,116 @@ export default function EmployeesPage() {
 
       console.log('✅ Employee created successfully with ID:', employeeId);
 
-      // Send welcome email to the new employee with setup password link
-      // Note: /api/create-user already sends a welcome email, but we send another one
-      // with department/position info if we have a setup password URL
+      // ALWAYS send welcome email to the new employee
+      // Try to get setup password URL from Firestore if not provided
+      let finalSetupPasswordUrl = setupPasswordUrl;
+      
+      if (!finalSetupPasswordUrl && employeeId) {
+        try {
+          // Try to find setup token in Firestore
+          const { collection, query, where, getDocs, Timestamp } = await import('firebase/firestore');
+          const { db } = await import('@/lib/firebase');
+          
+          if (db) {
+            const tokensQuery = query(
+              collection(db, 'setupTokens'),
+              where('userId', '==', employeeId),
+              where('email', '==', newEmployee.email),
+              where('type', '==', 'employee_welcome')
+            );
+            const tokensSnapshot = await getDocs(tokensQuery);
+            
+            if (!tokensSnapshot.empty) {
+              const tokenData = tokensSnapshot.docs[0].data();
+              const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no';
+              finalSetupPasswordUrl = `${appUrl}/setup-password?token=${tokenData.token}`;
+              console.log('✅ Found setup token in Firestore');
+            }
+          }
+        } catch (tokenError) {
+          console.warn('⚠️ Could not find setup token:', tokenError);
+        }
+      }
+      
+      // If still no URL, generate a password reset link via Firebase
+      if (!finalSetupPasswordUrl) {
+        try {
+          console.log('📧 Generating password reset link via Firebase...');
+          const resetResponse = await fetch('/api/forgot-password', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ email: newEmployee.email })
+          });
+          
+          if (resetResponse.ok) {
+            console.log('✅ Password reset link generated');
+            // Note: The reset link is sent via email, but we'll still send welcome email
+          }
+        } catch (resetError) {
+          console.warn('⚠️ Could not generate password reset link:', resetError);
+        }
+      }
+
+      // Send welcome email with setup password link
       let emailSent = false;
       let emailError = null;
       
-      if (!setupPasswordUrl) {
-        console.warn('⚠️ No setup password URL available - welcome email should have been sent by /api/create-user');
-        emailError = 'Ingen setup password URL - velkomstmailen skal ha blitt sendt av systemet';
-      } else {
-        try {
-          const departmentName = getDepartmentName(newEmployee.departmentId);
-          const adminName = userProfile?.displayName || 'System Administrator';
-          const companyName = 'Mavi Logistikk';
+      try {
+        const departmentName = getDepartmentName(newEmployee.departmentId);
+        const adminName = userProfile?.displayName || 'System Administrator';
+        const companyName = 'Mavi Logistikk';
 
-          console.log('📧 Sending welcome email to new employee:', {
+        console.log('📧 Sending welcome email to new employee:', {
+          email: newEmployee.email,
+          displayName: newEmployee.displayName,
+          adminName,
+          companyName,
+          departmentName,
+          position: newEmployee.position || 'Ansatt',
+          setupPasswordUrl: finalSetupPasswordUrl || 'Will be sent via password reset'
+        });
+
+        // Send welcome email - use resetLink if available, otherwise it will be sent via password reset
+        const response = await fetch('/api/send-welcome-email', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
             email: newEmployee.email,
             displayName: newEmployee.displayName,
             adminName,
             companyName,
             departmentName,
             position: newEmployee.position || 'Ansatt',
-            setupPasswordUrl
-          });
+            resetLink: finalSetupPasswordUrl || `${typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no'}/forgot-password`
+          })
+        });
 
-          // Send welcome email via app-only authentication (no login required)
-          try {
-            console.log('📧 Attempting to send welcome email to:', newEmployee.email);
-            
-            const response = await fetch('/api/send-welcome-email', {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({
-                email: newEmployee.email,
-                displayName: newEmployee.displayName,
-                adminName,
-                companyName,
-                departmentName,
-                position: newEmployee.position || 'Ansatt',
-                resetLink: setupPasswordUrl // REQUIRED: direct link to /setup-password?token=...
-              })
-            });
+        console.log('📧 Welcome email API response status:', response.status);
 
-            console.log('📧 Welcome email API response status:', response.status);
-
-            if (response.ok) {
-              const result = await response.json();
-              console.log('📧 Welcome email API response:', result);
-              
-              if (result.success) {
-                emailSent = true;
-                console.log('✅ Welcome email sent successfully to:', newEmployee.email);
-              } else {
-                emailError = result.error || result.details?.message || 'Unknown error';
-                emailSent = false;
-                console.error('❌ Failed to send welcome email:', result);
-                
-                // Show error to user
-                alert(`Kunne ikke sende velkomstmail: ${emailError}`);
-              }
-            } else {
-              const errorResult = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
-              emailError = errorResult.error || errorResult.details?.message || 'Unknown error';
-              emailSent = false;
-              console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
-              
-              // Show error to user
-              alert(`Kunne ikke sende velkomstmail: ${emailError}`);
-            }
-          } catch (emailError) {
-            console.error('❌ Error sending welcome email:', emailError);
+        if (response.ok) {
+          const result = await response.json();
+          console.log('📧 Welcome email API response:', result);
+          
+          if (result.success) {
+            emailSent = true;
+            console.log('✅ Welcome email sent successfully to:', newEmployee.email);
+          } else {
+            emailError = result.error || result.details?.message || 'Unknown error';
             emailSent = false;
-            emailError = emailError instanceof Error ? emailError.message : 'Unknown error';
-            
-            // Show error to user
-            alert(`Feil ved sending av velkomstmail: ${emailError}`);
+            console.error('❌ Failed to send welcome email:', result);
           }
-        } catch (emailError) {
-          console.error('❌ Error in welcome email setup:', emailError);
+        } else {
+          const errorResult = await response.json().catch(() => ({ error: `HTTP ${response.status}` }));
+          emailError = errorResult.error || errorResult.details?.message || 'Unknown error';
           emailSent = false;
-          // Don't fail the employee creation if email fails
+          console.error('❌ Failed to send welcome email to:', newEmployee.email, errorResult);
         }
+      } catch (emailError) {
+        console.error('❌ Error sending welcome email:', emailError);
+        emailSent = false;
+        emailError = emailError instanceof Error ? emailError.message : 'Unknown error';
       }
 
       setShowAddModal(false);
