@@ -73,6 +73,17 @@ interface SystemSetting {
 
 export default function SettingsPage() {
   const { userProfile, logout } = useAuth();
+  
+  // Ensure admin has access - check early
+  if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'super_admin')) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <h2>Ingen tilgang</h2>
+        <p>Du har ikke tilgang til innstillinger. Kun administratorer har tilgang til denne siden.</p>
+      </div>
+    );
+  }
+  
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -704,36 +715,40 @@ export default function SettingsPage() {
     // Oppdater feltet slik at brukeren også ser adressen i UI om det brukes senere
     setTestEmailAddress(targetEmail.trim());
 
-    // Check if email service is available
-    if (!globalEmailService.isEmailServiceAvailable()) {
-      setEmailTestMessage('⚠️ Du må logge inn til Microsoft Graph først!');
-      setEmailTestStatus('error');
-      return;
-    }
-
     setEmailTestStatus('testing');
     setEmailTestMessage(`Sender ${template} til ${targetEmail.trim()}...`);
 
     try {
-      const result = await globalEmailService.sendEmail({
-        to: targetEmail.trim(),
-        subject: `DriftPro Test - ${template}`,
-        html: `<h1>Test ${template}</h1><p>Dette er en test-e-post fra DriftPro.</p>`
+      // Use /api/email/send directly (works with Microsoft Graph app-only auth)
+      const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no';
+      const response = await fetch(`${baseUrl}/api/email/send`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          to: targetEmail.trim(),
+          subject: `DriftPro Test - ${template}`,
+          html: `<h1>Test ${template}</h1><p>Dette er en test-e-post fra DriftPro-systemet.</p><p>Sendt: ${new Date().toLocaleString('no-NO')}</p>`,
+          text: `Test ${template}\n\nDette er en test-e-post fra DriftPro-systemet.\n\nSendt: ${new Date().toLocaleString('no-NO')}`
+        })
       });
 
-      if (result.success) {
+      const result = await response.json();
+
+      if (response.ok && result.success) {
         setEmailTestStatus('success');
         const successMsg = `✅ ${template} sendt til ${targetEmail.trim()}!`;
         setEmailTestMessage(successMsg);
         window.alert(successMsg);
       } else {
-        const errorMsg = result.error || 'E-postsending feilet';
+        const errorMsg = result.error || result.details || 'E-postsending feilet';
         setEmailTestStatus('error');
         setEmailTestMessage(errorMsg);
         window.alert(`❌ ${errorMsg}`);
       }
     } catch (error) {
-      const errorMsg = 'Feil ved sending av e-post';
+      const errorMsg = error instanceof Error ? error.message : 'Feil ved sending av e-post';
       setEmailTestStatus('error');
       setEmailTestMessage(errorMsg);
       console.error('Email test error:', error);

@@ -573,7 +573,8 @@ export default function EmployeesPage() {
         });
 
         // Send welcome email - use resetLink if available, otherwise it will be sent via password reset
-        const response = await fetch('/api/send-welcome-email', {
+        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no';
+        const response = await fetch(`${baseUrl}/api/send-welcome-email`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
@@ -585,7 +586,7 @@ export default function EmployeesPage() {
             companyName,
             departmentName,
             position: newEmployee.position || 'Ansatt',
-            resetLink: finalSetupPasswordUrl || `${typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no'}/forgot-password`
+            resetLink: finalSetupPasswordUrl || `${baseUrl}/forgot-password`
           })
         });
 
