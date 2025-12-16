@@ -1,8 +1,37 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { collection, addDoc, doc, setDoc, getDoc, updateDoc, serverTimestamp, Timestamp } from 'firebase/firestore';
-import { createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
-import { getFirebaseAuth, getFirebaseDb, isFirebaseAvailable } from '@/lib/firebase-admin';
+import { collection, addDoc, doc, setDoc, getDoc, updateDoc, serverTimestamp, Timestamp, query, where, getDocs } from 'firebase/firestore';
+import { getAuth, createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase/auth';
+import { getFirebaseDb, isFirebaseAvailable } from '@/lib/firebase-admin';
+import { initializeApp, getApps } from 'firebase/app';
 import { v4 as uuidv4 } from 'uuid';
+
+/**
+ * Get Firebase Auth instance (client SDK for server-side use)
+ */
+function getAuthInstance() {
+  try {
+    const firebaseConfig = {
+      apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || "AIzaSyCyE4S4B5q2JLdtaTtr8kVVvg8y-3Zm7ZE",
+      authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || "driftpro-40ccd.firebaseapp.com",
+      projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || "driftpro-40ccd",
+      storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || "driftpro-40ccd.appspot.com",
+      messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || "123456789",
+      appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || "1:123456789:web:abcdef123456"
+    };
+
+    let app;
+    if (getApps().length === 0) {
+      app = initializeApp(firebaseConfig);
+    } else {
+      app = getApps()[0];
+    }
+
+    return getAuth(app);
+  } catch (error) {
+    console.error('Error getting Firebase Auth instance:', error);
+    return null;
+  }
+}
 
 /**
  * Get all permissions set to true for admin users
@@ -86,7 +115,7 @@ export async function POST(request: NextRequest) {
     role = requestData.role || 'employee';
     
     // Check if Firebase is available
-    const auth = getFirebaseAuth();
+    const auth = getAuthInstance();
     const db = getFirebaseDb();
     
     if (!isFirebaseAvailable() || !auth || !db) {
@@ -214,7 +243,7 @@ export async function POST(request: NextRequest) {
       try {
         // Ensure db and auth are available
         const firestoreDb = getFirebaseDb();
-        const firebaseAuth = getFirebaseAuth();
+        const firebaseAuth = getAuthInstance();
         
         if (!firestoreDb || !firebaseAuth) {
           return NextResponse.json(
@@ -225,8 +254,7 @@ export async function POST(request: NextRequest) {
         
         // Try to find user by email in Firestore
         const usersRef = collection(firestoreDb, 'users');
-        const { query: firestoreQuery, where: firestoreWhere, getDocs } = await import('firebase/firestore');
-        const emailQuery = firestoreQuery(usersRef, firestoreWhere('email', '==', email));
+        const emailQuery = query(usersRef, where('email', '==', email));
         const emailSnapshot = await getDocs(emailQuery);
         
         let existingUserId: string | null = null;
