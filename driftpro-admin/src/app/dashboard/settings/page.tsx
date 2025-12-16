@@ -1090,11 +1090,21 @@ export default function SettingsPage() {
   }
 
   // Ensure admin has access - check after all hooks
-  if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'super_admin')) {
+  // Allow super_admin, admin, or users with settings permission
+  const hasAccess = userProfile && (
+    userProfile.role === 'super_admin' || 
+    userProfile.role === 'admin' || 
+    userProfile.permissions?.settings === true
+  );
+  
+  if (!hasAccess) {
     return (
       <div style={{ padding: '2rem', textAlign: 'center' }}>
         <h2>Ingen tilgang</h2>
         <p>Du har ikke tilgang til innstillinger. Kun administratorer har tilgang til denne siden.</p>
+        <p style={{ fontSize: '0.875rem', color: '#666', marginTop: '0.5rem' }}>
+          Din rolle: {userProfile?.role || 'Ikke satt'}
+        </p>
       </div>
     );
   }

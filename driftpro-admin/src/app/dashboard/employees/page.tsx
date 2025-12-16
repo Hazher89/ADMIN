@@ -534,22 +534,36 @@ export default function EmployeesPage() {
         }
       }
       
-      // If still no URL, generate a password reset link via Firebase
-      if (!finalSetupPasswordUrl) {
+      // If still no URL, create a setup token directly
+      if (!finalSetupPasswordUrl && employeeId) {
         try {
-          console.log('📧 Generating password reset link via Firebase...');
-          const resetResponse = await fetch('/api/forgot-password', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ email: newEmployee.email })
-          });
+          console.log('📧 Creating setup token directly...');
+          const { collection, addDoc, serverTimestamp, Timestamp } = await import('firebase/firestore');
+          const { db } = await import('@/lib/firebase');
           
-          if (resetResponse.ok) {
-            console.log('✅ Password reset link generated');
-            // Note: The reset link is sent via email, but we'll still send welcome email
+          if (db) {
+            const setupToken = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+            const expiresAt = new Date();
+            expiresAt.setHours(expiresAt.getHours() + 72); // Token valid for 72 hours
+
+            await addDoc(collection(db, 'setupTokens'), {
+              token: setupToken,
+              userId: employeeId,
+              email: newEmployee.email,
+              expiresAt: Timestamp.fromDate(expiresAt),
+              used: false,
+              createdAt: serverTimestamp(),
+              type: 'employee_welcome',
+              companyName: 'Mavi Logistikk',
+              adminName: 'System Administrator'
+            });
+
+            const appUrl = typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no';
+            finalSetupPasswordUrl = `${appUrl}/setup-password?token=${setupToken}`;
+            console.log('✅ Created setup token directly:', finalSetupPasswordUrl);
           }
-        } catch (resetError) {
-          console.warn('⚠️ Could not generate password reset link:', resetError);
+        } catch (tokenError) {
+          console.error('❌ Could not create setup token:', tokenError);
         }
       }
 
@@ -557,38 +571,43 @@ export default function EmployeesPage() {
       let emailSent = false;
       let emailError = null;
       
-      try {
-        const departmentName = getDepartmentName(newEmployee.departmentId);
-        const adminName = userProfile?.displayName || 'System Administrator';
-        const companyName = 'Mavi Logistikk';
+      // Only send email if we have a valid resetLink
+      if (!finalSetupPasswordUrl) {
+        console.error('❌ No setup password URL available - cannot send welcome email');
+        emailError = 'Kunne ikke generere passordoppsett-lenke. Ansatten er opprettet, men e-post ble ikke sendt.';
+      } else {
+        try {
+          const departmentName = getDepartmentName(newEmployee.departmentId);
+          const adminName = userProfile?.displayName || 'System Administrator';
+          const companyName = 'Mavi Logistikk';
 
-        console.log('📧 Sending welcome email to new employee:', {
-          email: newEmployee.email,
-          displayName: newEmployee.displayName,
-          adminName,
-          companyName,
-          departmentName,
-          position: newEmployee.position || 'Ansatt',
-          setupPasswordUrl: finalSetupPasswordUrl || 'Will be sent via password reset'
-        });
-
-        // Send welcome email - use resetLink if available, otherwise it will be sent via password reset
-        const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no';
-        const response = await fetch(`${baseUrl}/api/send-welcome-email`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
+          console.log('📧 Sending welcome email to new employee:', {
             email: newEmployee.email,
             displayName: newEmployee.displayName,
             adminName,
             companyName,
             departmentName,
             position: newEmployee.position || 'Ansatt',
-            resetLink: finalSetupPasswordUrl || `${baseUrl}/forgot-password`
-          })
-        });
+            setupPasswordUrl: finalSetupPasswordUrl
+          });
+
+          // Send welcome email - MUST have a valid resetLink
+          const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://admin.driftpro.no';
+          const response = await fetch(`${baseUrl}/api/send-welcome-email`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              email: newEmployee.email,
+              displayName: newEmployee.displayName,
+              adminName,
+              companyName,
+              departmentName,
+              position: newEmployee.position || 'Ansatt',
+              resetLink: finalSetupPasswordUrl // MUST be a valid /setup-password?token=... URL
+            })
+          });
 
         console.log('📧 Welcome email API response status:', response.status);
 
