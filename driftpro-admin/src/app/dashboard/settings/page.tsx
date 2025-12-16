@@ -73,17 +73,6 @@ interface SystemSetting {
 
 export default function SettingsPage() {
   const { userProfile, logout } = useAuth();
-  
-  // Ensure admin has access - check early
-  if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'super_admin')) {
-    return (
-      <div style={{ padding: '2rem', textAlign: 'center' }}>
-        <h2>Ingen tilgang</h2>
-        <p>Du har ikke tilgang til innstillinger. Kun administratorer har tilgang til denne siden.</p>
-      </div>
-    );
-  }
-  
   const [settings, setSettings] = useState<SystemSetting[]>([]);
   const [loading, setLoading] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
@@ -1096,6 +1085,16 @@ export default function SettingsPage() {
       <div className="card" style={{ textAlign: 'center', padding: '3rem' }}>
         <div className="loading" style={{ margin: '0 auto 1rem' }}></div>
         <p style={{ color: '#666' }}>Laster systeminnstillinger...</p>
+      </div>
+    );
+  }
+
+  // Ensure admin has access - check after all hooks
+  if (!userProfile || (userProfile.role !== 'admin' && userProfile.role !== 'super_admin')) {
+    return (
+      <div style={{ padding: '2rem', textAlign: 'center' }}>
+        <h2>Ingen tilgang</h2>
+        <p>Du har ikke tilgang til innstillinger. Kun administratorer har tilgang til denne siden.</p>
       </div>
     );
   }
