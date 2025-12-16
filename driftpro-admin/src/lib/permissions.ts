@@ -13,14 +13,9 @@ export function hasPermission(userProfile: UserProfile | null, permissionKey: st
   // Super admin has full access
   if (userProfile.role === 'super_admin') return true;
   
-  // Admin has access to most things, but check specific permissions for sensitive areas
+  // Admin has FULL access to everything - no restrictions
   if (userProfile.role === 'admin') {
-    // Admins need explicit permission for sensitive areas
-    const sensitivePermissions = ['audit', 'internkontrollOgSamsvar', 'reports', 'emailSystem', 'smsLogs'];
-    if (sensitivePermissions.includes(permissionKey)) {
-      return userProfile.permissions?.[permissionKey as keyof typeof userProfile.permissions] === true;
-    }
-    return true; // Admin has default access to most areas
+    return true; // Admin has full access to all areas
   }
   
   // Department leaders - check specific permissions
@@ -89,24 +84,9 @@ export function canEdit(
   // Super admin can edit everything
   if (userProfile.role === 'super_admin') return true;
   
-  // Admin can edit most things
+  // Admin can edit everything - full access
   if (userProfile.role === 'admin') {
-    // Check if specific permission is required for this resource type
-    const permissionMap: Record<string, string> = {
-      employee: 'employees',
-      department: 'departments',
-      document: 'documents',
-      audit: 'internkontrollOgSamsvar',
-      deviation: 'avvik',
-      vacation: 'hrFerie',
-      absence: 'hrFravær'
-    };
-    
-    const requiredPermission = permissionMap[resourceType];
-    if (requiredPermission) {
-      return userProfile.permissions?.[requiredPermission as keyof typeof userProfile.permissions] === true;
-    }
-    return true;
+    return true; // Admin has full edit access
   }
   
   // Department leaders can edit their department's data
@@ -143,15 +123,13 @@ export function canDelete(
   // Only admin and super_admin can delete
   if (userProfile.role === 'super_admin') return true;
   if (userProfile.role === 'admin') {
-    // Check specific permission for sensitive deletions
-    if (resourceType === 'employee' || resourceType === 'department') {
-      return userProfile.permissions?.employees === true;
-    }
-    return true;
+    return true; // Admin has full delete access
   }
   
   return false;
 }
+
+
 
 
 

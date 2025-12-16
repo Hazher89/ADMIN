@@ -93,7 +93,8 @@ export default function AdminManagementPage() {
         email: formData.email,
         name: formData.name,
         role: formData.role,
-                companyName: companyName, // Add company name
+        companyId: companyId,
+        companyName: companyName,
         permissions: formData.permissions
       });
 

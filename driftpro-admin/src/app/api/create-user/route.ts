@@ -4,6 +4,73 @@ import { createUserWithEmailAndPassword, sendPasswordResetEmail } from 'firebase
 import { getFirebaseAuth, getFirebaseDb, isFirebaseAvailable } from '@/lib/firebase-admin';
 import { v4 as uuidv4 } from 'uuid';
 
+/**
+ * Get all permissions set to true for admin users
+ */
+function getAllAdminPermissions() {
+  return {
+    dashboard: true,
+    employees: true,
+    departments: true,
+    projects: true,
+    tasks: true,
+    inventory: true,
+    suppliers: true,
+    finance: true,
+    invoicing: true,
+    payments: true,
+    hr: true,
+    crm: true,
+    delivery: true,
+    settings: true,
+    mail: true,
+    reports: true,
+    analytics: true,
+    notifications: true,
+    calendar: true,
+    documents: true,
+    training: true,
+    compliance: true,
+    maintenance: true,
+    quality: true,
+    safety: true,
+    procurement: true,
+    logistics: true,
+    production: true,
+    sales: true,
+    marketing: true,
+    customerService: true,
+    it: true,
+    legal: true,
+    audit: true,
+    internkontrollOgSamsvar: true,
+    internrevisjon: true,
+    avvik: true,
+    risikovurdering: true,
+    oppfølgingstiltak: true,
+    kontrollpunkter: true,
+    internkontrollRapporter: true,
+    chat: true,
+    emailSystem: true,
+    smsLogs: true,
+    partners: true,
+    logistikkBudPriser: true,
+    logistikkLevering: true,
+    logistikkPlanlegging: true,
+    logistikkKunder: true,
+    logistikkLeverandorer: true,
+    logistikkProdukter: true,
+    logistikkLager: true,
+    logistikkFakturering: true,
+    logistikkFinans: true,
+    hrAnsatte: true,
+    hrVakter: true,
+    hrFravær: true,
+    hrFerie: true,
+    hrAvdelinger: true
+  };
+}
+
 export async function POST(request: NextRequest) {
   // Extract request data first so it's available in catch block
   let email: string = '';
@@ -43,8 +110,13 @@ export async function POST(request: NextRequest) {
     const userCredential = await createUserWithEmailAndPassword(auth, email, tempPassword);
     const user = userCredential.user;
 
+    // Set permissions based on role - Admin gets ALL permissions
+    const permissions = (role === 'admin' || role === 'super_admin') 
+      ? getAllAdminPermissions() 
+      : undefined; // Other roles get permissions from employee creation flow
+
     // Create user profile in Firestore - ALWAYS include uid
-    const userProfile = {
+    const userProfile: any = {
       id: user.uid,
       uid: user.uid, // CRITICAL: Always set uid field explicitly
       email: user.email,
@@ -56,6 +128,11 @@ export async function POST(request: NextRequest) {
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
+
+    // Add permissions if role is admin
+    if (permissions) {
+      userProfile.permissions = permissions;
+    }
 
     await setDoc(doc(db, 'users', user.uid), userProfile);
 

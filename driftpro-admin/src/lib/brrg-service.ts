@@ -143,11 +143,27 @@ export class BrrgService {
     email: string;
     name: string;
     companyName: string;
+    companyId?: string;
         role?: string;
     permissions?: string[];
   }) {
     try {
       console.log('👤 Adding admin user:', adminData);
+      
+      // Get companyId from localStorage if not provided
+      let companyId = adminData.companyId;
+      if (!companyId && typeof window !== 'undefined') {
+        const selectedCompany = localStorage.getItem('selectedCompany');
+        if (selectedCompany) {
+          const company = JSON.parse(selectedCompany);
+          companyId = company.id;
+        }
+      }
+      
+      // Default to 'mavi' if no companyId found (DriftPro is for Mavi Logistikk)
+      if (!companyId) {
+        companyId = 'mavi';
+      }
       
       // Call the API to add admin
       const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:3000';
@@ -160,7 +176,8 @@ export class BrrgService {
           email: adminData.email,
           name: adminData.name,
           role: adminData.role || 'admin',
-                    companyName: adminData.companyName,
+          companyId: companyId,
+          companyName: adminData.companyName,
           permissions: adminData.permissions || []
         })
       });
